@@ -1,0 +1,31 @@
+add_library(vscript OBJECT
+    vscript.cpp
+    languages/squirrel/vsquirrel/vsquirrel.cpp
+    languages/squirrel/squirrel/sqapi.cpp
+    languages/squirrel/squirrel/sqbaselib.cpp
+    languages/squirrel/squirrel/sqclass.cpp
+    languages/squirrel/squirrel/sqcompiler.cpp
+    languages/squirrel/squirrel/sqdebug.cpp
+    languages/squirrel/squirrel/sqfuncstate.cpp
+    languages/squirrel/squirrel/sqlexer.cpp
+    languages/squirrel/squirrel/sqmem.cpp
+    languages/squirrel/squirrel/sqobject.cpp
+    languages/squirrel/squirrel/sqstate.cpp
+    languages/squirrel/squirrel/sqtable.cpp
+    languages/squirrel/squirrel/sqvm.cpp
+    languages/squirrel/sqdbg/sqrdbg.cpp
+    languages/squirrel/sqdbg/sqdbgserver.cpp
+    languages/squirrel/sqstdlib/sqstdaux.cpp
+    languages/squirrel/sqstdlib/sqstdblob.cpp
+    languages/squirrel/sqstdlib/sqstdmath.cpp
+    languages/squirrel/sqstdlib/sqstdrex.cpp
+    languages/squirrel/sqstdlib/sqstdstream.cpp
+    languages/squirrel/sqstdlib/sqstdstring.cpp
+    languages/squirrel/sqplus/SqPlus.cpp
+    languages/squirrel/sqplus/SquirrelBindingsUtils.cpp
+    languages/squirrel/sqplus/SquirrelObject.cpp
+    languages/squirrel/sqplus/SquirrelVM.cpp
+)
+target_link_libraries(vscript PRIVATE ks_common tier0 memoverride tier1 interfaces vstdlib mathlib)
+target_include_directories(vscript PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/languages/squirrel/include" "${CMAKE_CURRENT_SOURCE_DIR}/languages/squirrel/sqplus")
+target_compile_definitions(vscript PRIVATE VSCRIPT_DLL_EXPORT=1)

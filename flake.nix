@@ -32,7 +32,8 @@
           ];
 
           nativeBuildInputs = with pkgs; [
-            python3
+            cmake
+            ninja
             pkg-config
             mold
             glslang
@@ -42,8 +43,8 @@
             pname = "ks";
             version = "0.1.0";
             src = ./src;
-            nativeBuildInputs = nativeBuildInputs ++ [ pkgs.wafHook ];
-            inherit buildInputs;
+            CMAKE_GENERATOR = "Ninja";
+            inherit buildInputs nativeBuildInputs;
           };
         in
         {
@@ -87,12 +88,9 @@
 
           devShells.default = stdenv.mkDerivation {
             name = "ks-dev";
-            nativeBuildInputs = nativeBuildInputs ++ [
-              pkgs.waf
-              pkgs.ccache
-            ];
-            inherit buildInputs;
+            inherit buildInputs nativeBuildInputs;
             shellHook = ''
+              export CMAKE_GENERATOR=Ninja
               export LD_LIBRARY_PATH="${runtimePath}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
               export XDG_DATA_DIRS="${pkgs.mesa}/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
             '';
