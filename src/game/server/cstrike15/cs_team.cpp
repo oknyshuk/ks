@@ -3,8 +3,6 @@
 
 // Purpose: Team management class. Contains all the details for a specific team
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -66,7 +64,7 @@ CCSTeam::~CCSTeam( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CCSTeam::Precache( void )
+void CCSTeam::Precache_Impl( void )
 {
 }
 
@@ -74,9 +72,9 @@ void CCSTeam::Precache( void )
 //-----------------------------------------------------------------------------
 // Purpose: Called every frame
 //-----------------------------------------------------------------------------
-void CCSTeam::Think( void )
+void CCSTeam::Think_Impl( void )
 {
-	BaseClass::Think();
+	BaseClass::Think_Impl();
 }
 
 

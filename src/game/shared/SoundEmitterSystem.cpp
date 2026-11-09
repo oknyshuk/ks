@@ -5,11 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
-import ks.vstdlib;
 #include "const.h"
 #include "string_t.h"
 #include "predictableid.h"
@@ -26,7 +22,6 @@ import ks.vstdlib;
 #include "cdll_client_int.h"
 #include "engine/ivmodelinfo.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -44,7 +39,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -75,6 +69,11 @@ import ks.math;
 #endif
 
 
+
+#if !defined( CLIENT_DLL )
+// Defined in sceneentity.cpp
+bool AttenuateCaption( const char *token, const Vector& listener, std::vector< Vector >& soundorigins );
+#endif
 
 static void Register_LOG_SND_EMITTERSYSTEM_Tags();
 LoggingChannelID_t LOG_SND_EMITTERSYSTEM = LoggingSystem_RegisterLoggingChannel( "SndEmitterSystem", Register_LOG_SND_EMITTERSYSTEM_Tags, LCF_CONSOLE_ONLY, LS_MESSAGE );
@@ -1041,9 +1040,6 @@ public:
 
 #if !defined( CLIENT_DLL )
 		{
-			// Defined in sceneentity.cpp
-			bool AttenuateCaption( const char *token, const Vector& listener, std::vector< Vector >& soundorigins );
-
 			if ( filterCopy.GetRecipientCount() > 0 )
 			{
 				int c = filterCopy.GetRecipientCount();

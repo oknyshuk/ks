@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -58,14 +55,15 @@ public:
 
 	CPointSpotlight();
 
-	void	Precache(void);
-	void	Spawn(void);
-	virtual void Activate();
+	void	Precache_Impl(void);
+	void	Spawn_Impl(void);
+	void Activate_Impl();
 
-	virtual void OnEntityEvent( EntityEvent_t event, void *pEventData );
+	void OnEntityEvent_Impl( EntityEvent_t event, void *pEventData );
 
 private:
-	int 	UpdateTransmitState();
+	public: int 	UpdateTransmitState_Impl();
+	private:
 	void	SpotlightThink(void);
 	void	SpotlightUpdate(void);
 	Vector	SpotlightCurrentPos(void);
@@ -128,9 +126,9 @@ CPointSpotlight::CPointSpotlight()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPointSpotlight::Precache(void)
+void CPointSpotlight::Precache_Impl(void)
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	// Sprites.
 	m_nHaloSprite = PrecacheModel("sprites/light_glow03.vmt");
@@ -141,7 +139,7 @@ void CPointSpotlight::Precache(void)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPointSpotlight::Spawn(void)
+void CPointSpotlight::Spawn_Impl(void)
 {
 	Precache();
 
@@ -249,9 +247,9 @@ void CPointSpotlight::CreateEfficientSpotlight()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPointSpotlight::Activate(void)
+void CPointSpotlight::Activate_Impl(void)
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( GetMoveParent() )
 	{
@@ -274,7 +272,7 @@ void CPointSpotlight::Activate(void)
 //-------------------------------------------------------------------------------------
 // Optimization to deal with spotlights
 //-------------------------------------------------------------------------------------
-void CPointSpotlight::OnEntityEvent( EntityEvent_t event, void *pEventData )
+void CPointSpotlight::OnEntityEvent_Impl( EntityEvent_t event, void *pEventData )
 {
 	if ( event == ENTITY_EVENT_PARENT_CHANGED )
 	{
@@ -290,7 +288,7 @@ void CPointSpotlight::OnEntityEvent( EntityEvent_t event, void *pEventData )
 		}
 	}
 
-	BaseClass::OnEntityEvent( event, pEventData );
+	BaseClass::OnEntityEvent_Impl( event, pEventData );
 }
 
 	
@@ -299,7 +297,7 @@ void CPointSpotlight::OnEntityEvent( EntityEvent_t event, void *pEventData )
 // Input   :
 // Output  :
 //-------------------------------------------------------------------------------------
-int CPointSpotlight::UpdateTransmitState()
+int CPointSpotlight::UpdateTransmitState_Impl()
 {
 	if ( m_bEfficientSpotlight )
 		return SetTransmitState( FL_EDICT_DONTSEND );

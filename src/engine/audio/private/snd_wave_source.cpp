@@ -22,7 +22,6 @@ import ks.tier1;
 #include "snd_io.h"
 
 #include "audio/private/posix_stubs.h"
-#include "snd_mp3_source.h"
 #include "../../host.h"
 #include "xwvfile.h"
 import std;
@@ -79,7 +78,7 @@ int ADPCMSampleCount( ADPCMWAVEFORMAT *pFormat, int length )
 //-----------------------------------------------------------------------------
 // Purpose: Init to empty wave
 //-----------------------------------------------------------------------------
-CAudioSourceWave::CAudioSourceWave( CSfxTable *pSfx )
+CAudioSourceWave::CAudioSourceWave( AudioSourceKind kind, CSfxTable *pSfx ) : CAudioSource( kind )
 {
 	m_format = 0;
 	m_pHeader = nullptr;
@@ -119,7 +118,7 @@ CAudioSourceWave::CAudioSourceWave( CSfxTable *pSfx )
 	m_bIsRebuildingCache = false;
 }
 
-CAudioSourceWave::CAudioSourceWave( CSfxTable *pSfx, CAudioSourceCachedInfo *info )
+CAudioSourceWave::CAudioSourceWave( AudioSourceKind kind, CSfxTable *pSfx, CAudioSourceCachedInfo *info ) : CAudioSource( kind )
 {
 	m_pSfx = pSfx;
 #ifdef _DEBUG
@@ -262,7 +261,7 @@ bool CAudioSourceWave::IsAsyncLoad()
 
 	if ( !m_AudioCacheHandle.IsValid() )
 	{
-		m_AudioCacheHandle.Get( GetType(), m_pSfx->IsPrecachedSound(), m_pSfx, &m_nCachedDataSize );
+		m_AudioCacheHandle.Get( Source().GetType(), m_pSfx->IsPrecachedSound(), m_pSfx, &m_nCachedDataSize );
 	}
 
 	// If there's a bit of "cached data" then we don't have to lazy/async load (we still async load the remaining data,
@@ -286,7 +285,7 @@ void CAudioSourceWave::CheckAudioSourceCache()
 	}
 
 	// This will "re-cache" this if it's not in this level's cache already
-	m_AudioCacheHandle.Get( GetType(), true, m_pSfx, &m_nCachedDataSize );
+	m_AudioCacheHandle.Get( Source().GetType(), true, m_pSfx, &m_nCachedDataSize );
 }
 
 //-----------------------------------------------------------------------------
@@ -704,7 +703,7 @@ void CAudioSourceWave::Setup( const char *pFormatBuffer, int formatSize, Iterate
 
 	while ( walk.ChunkAvailable() )
 	{
-		ParseChunk( walk, walk.ChunkName() );
+		DispatchParseChunk( walk, walk.ChunkName() );
 		walk.ChunkNext();
 	}
 }
@@ -946,7 +945,7 @@ void CAudioSourceWave::ReferenceRemove( CAudioMixer *pMixer )
 	if ( m_refCount == 0 && ( ( IsPlayOnce() ) ) )
 	{
 		SetPlayOnce( false ); // in case it gets used again
-		CacheUnload();
+		Source().CacheUnload();
 	}
 }
 
@@ -973,58 +972,15 @@ bool CAudioSourceWave::CanDelete( void )
 }
 
 
-// CAudioSourceMemWave is a bunch of wave data that is all in memory.
-// To use it:
-// - derive from CAudioSourceMemWave
-// - call CAudioSourceWave::Init with a WAVEFORMATEX
-// - set m_sampleCount.
-// - implement GetDataPointer
-class CAudioSourceMemWave : public CAudioSourceWave
-{
-public:
-							CAudioSourceMemWave();
-							CAudioSourceMemWave( CSfxTable *pSfx );
-							CAudioSourceMemWave( CSfxTable *pSfx, CAudioSourceCachedInfo *info );
-	virtual					~CAudioSourceMemWave();
-
-	// These are all implemented by CAudioSourceMemWave.
-	virtual CAudioMixer*	CreateMixer( int initialStreamPosition, int skipInitialSamples, bool bUpdateDelayForChoreo, SoundError &soundError );
-	virtual int				GetOutputData( void **pData, int64 samplePosition, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] );
-	virtual int				ZeroCrossingBefore( int sample );
-	virtual int				ZeroCrossingAfter( int sample );
-
-	virtual int				GetCacheStatus( void );
-	virtual void			CacheLoad( void );
-	virtual void			CacheUnload( void );
-
-	// by definition, should already be in memory
-	virtual void			Prefetch() {}
-
-	virtual void			ParseChunk( IterateRIFF &walk, int chunkName );
-	void					ParseDataChunk( IterateRIFF &walk );
-
-protected:								   
-
-	// Whoeover derives must implement this.
-	virtual char			*GetDataPointer( void );
-
-	WaveCacheHandle_t		m_hCache;
-	StreamHandle_t			m_hStream;
-
-private:
-	CAudioSourceMemWave( const CAudioSourceMemWave & ); // not implemented, not accessible
-};
-
-
 CAudioSourceMemWave::CAudioSourceMemWave() :
-	CAudioSourceWave( nullptr )
+	CAudioSourceWave( AudioSourceKind::MemWave, nullptr )
 {
 	m_hCache = 0;
 	m_hStream = INVALID_STREAM_HANDLE;
 }
 
 CAudioSourceMemWave::CAudioSourceMemWave( CSfxTable *pSfx ) : 
-	CAudioSourceWave( pSfx )
+	CAudioSourceWave( AudioSourceKind::MemWave, pSfx )
 {
 	m_hCache = 0;
 	m_hStream = INVALID_STREAM_HANDLE;
@@ -1032,7 +988,7 @@ CAudioSourceMemWave::CAudioSourceMemWave( CSfxTable *pSfx ) :
 }
 
 CAudioSourceMemWave::CAudioSourceMemWave( CSfxTable *pSfx, CAudioSourceCachedInfo *info ) :
-	CAudioSourceWave( pSfx, info )
+	CAudioSourceWave( AudioSourceKind::MemWave, pSfx, info )
 {
 	m_hCache = 0;
 	m_hStream = INVALID_STREAM_HANDLE;
@@ -1466,54 +1422,10 @@ char *CAudioSourceMemWave::GetDataPointer( void )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Wave source for streaming wave files
-// UNDONE: Handle looping
-//-----------------------------------------------------------------------------
-class CAudioSourceStreamWave : public CAudioSourceWave, public IWaveStreamSource
-{
-public:
-	CAudioSourceStreamWave( CSfxTable *pSfx );
-	CAudioSourceStreamWave( CSfxTable *pSfx, CAudioSourceCachedInfo *info );
-	virtual ~CAudioSourceStreamWave();
-
-	CAudioMixer		*CreateMixer( int initialStreamPosition, int skipInitialSamples, bool bUpdateDelayForChoreo, SoundError &soundError );
-	int				GetOutputData( void **pData, int64 samplePosition, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] );
-	void			ParseChunk( IterateRIFF &walk, int chunkName );
-	bool			IsStreaming( void ) { return true; }
-
-	virtual int		GetCacheStatus( void );
-
-	// IWaveStreamSource
-	virtual int64 UpdateLoopingSamplePosition( int64 samplePosition )
-	{
-		return ConvertLoopedPosition( samplePosition );
-	}
-	virtual void UpdateSamples( char *pData, int sampleCount )
-	{
-		ConvertSamples( pData, sampleCount );
-	}
-	virtual int GetLoopingInfo( int *pLoopBlock, int *pNumLeadingSamples, int *pNumTrailingSamples )
-	{
-		return CAudioSourceWave::GetLoopingInfo( pLoopBlock, pNumLeadingSamples, pNumTrailingSamples );
-	}
-
-	virtual void Prefetch();
-
-	virtual int	SampleToStreamPosition( int samplePosition );
-	virtual int	StreamToSamplePosition( int streamPosition );
-
-private:
-	CAudioSourceStreamWave( const CAudioSourceStreamWave & ); // not implemented, not accessible
-
-	// We need this for -tools mode to get access to the raw samples
-	FileHandle_t		m_hWaveFileAccess;
-};
-
-//-----------------------------------------------------------------------------
 // Purpose: Save a copy of the file name for instances to open later
 // Input  : *pFileName - filename
 //-----------------------------------------------------------------------------
-CAudioSourceStreamWave::CAudioSourceStreamWave( CSfxTable *pSfx ) : CAudioSourceWave( pSfx )
+CAudioSourceStreamWave::CAudioSourceStreamWave( CSfxTable *pSfx ) : CAudioSourceWave( AudioSourceKind::StreamWave, pSfx )
 {
 	m_pSfx = pSfx;
 	m_dataStart = -1;
@@ -1523,7 +1435,7 @@ CAudioSourceStreamWave::CAudioSourceStreamWave( CSfxTable *pSfx ) : CAudioSource
 }
 
 CAudioSourceStreamWave::CAudioSourceStreamWave( CSfxTable *pSfx, CAudioSourceCachedInfo *info ) : 
-	CAudioSourceWave( pSfx, info ) 
+	CAudioSourceWave( AudioSourceKind::StreamWave, pSfx, info ) 
 	,m_hWaveFileAccess( FILESYSTEM_INVALID_HANDLE )
 {
 	m_pSfx = pSfx;
@@ -1556,7 +1468,7 @@ CAudioMixer *CAudioSourceStreamWave::CreateMixer( int initialStreamPosition, int
 	const char *pFileName = m_pSfx->GetFileName(fileName, sizeof(fileName));
 
 	// BUGBUG: Source constructs the IWaveData, mixer frees it, fix this?
-	IWaveData *pWaveData = CreateWaveDataStream( *this, static_cast<IWaveStreamSource *>(this), pFileName, m_dataStart, m_dataSize, m_pSfx, initialStreamPosition, skipInitialSamples, soundError );
+	IWaveData *pWaveData = CreateWaveDataStream( *this, this, pFileName, m_dataStart, m_dataSize, m_pSfx, initialStreamPosition, skipInitialSamples, soundError );
 	if ( pWaveData )
 	{
 		CAudioMixer *pMixer = CreateWaveMixer( pWaveData, m_format, m_channels, m_bits, initialStreamPosition, skipInitialSamples, bUpdateDelayForChoreo );
@@ -1567,7 +1479,7 @@ CAudioMixer *CAudioSourceStreamWave::CreateMixer( int initialStreamPosition, int
 		}
 
 		// no mixer, delete the stream buffer/instance
-		delete pWaveData;
+		IWaveData::Delete( pWaveData );
 	}
 
 	return nullptr;
@@ -1761,7 +1673,7 @@ CAudioSource *CreateWave( CSfxTable *pSfx, bool bStreaming )
 	if ( pWave && !pWave->Format() )
 	{
 		// lack of format indicates failure
-		delete pWave;
+		CAudioSource::Delete( pWave );
 		pWave = nullptr;
 	}
 
@@ -1769,18 +1681,36 @@ CAudioSource *CreateWave( CSfxTable *pSfx, bool bStreaming )
 }
 
 
+static bool Audio_IsMP3( const char *pName )
+{
+	int len = std::strlen(pName);
+	if ( len > 4 )
+	{
+		if ( !V_strnicmp( &pName[len - 4], ".mp3", 4 ) )
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+//-----------------------------------------------------------------------------
+// MP3 sounds cannot be played: the decoder was a separate library (vaudio_miles) that is not part of
+// the game, so there is no source for them. Starting one fails with SE_CANT_CREATE_MIXER, which
+// S_StartSound() reports as "Can't create mixer."
+//-----------------------------------------------------------------------------
+
 //-----------------------------------------------------------------------------
 // Purpose: Wrapper for CreateWave()
 //-----------------------------------------------------------------------------
-CAudioSource *Audio_CreateStreamedWave( CSfxTable *pSfx )
+CAudioSource *Audio_CreateStreamedWave( CSfxTable *pSfx, SoundError &soundError )
 {
-#if defined( MP3_SUPPORT )
 	char nameBuf[MAX_PATH];
 	if ( Audio_IsMP3( pSfx->GetFileName( nameBuf, sizeof(nameBuf) ) ) )
 	{
-		return Audio_CreateStreamedMP3( pSfx );
+		soundError = SE_CANT_CREATE_MIXER;
+		return nullptr;
 	}
-#endif
 
 	return CreateWave( pSfx, true );
 }
@@ -1789,13 +1719,13 @@ CAudioSource *Audio_CreateStreamedWave( CSfxTable *pSfx )
 //-----------------------------------------------------------------------------
 // Purpose: Wrapper for CreateWave()
 //-----------------------------------------------------------------------------
-CAudioSource *Audio_CreateMemoryWave( CSfxTable *pSfx )
+CAudioSource *Audio_CreateMemoryWave( CSfxTable *pSfx, SoundError &soundError )
 {
-#if defined( MP3_SUPPORT )
 	char nameBuf[MAX_PATH];
 	if ( Audio_IsMP3( pSfx->GetFileName( nameBuf, sizeof(nameBuf) ) ) )
 	{
-		return Audio_CreateMemoryMP3( pSfx );
+		soundError = SE_CANT_CREATE_MIXER;
+		return nullptr;
 	}
 
 	// In case the WAV file is actually an MP3 file.
@@ -1804,9 +1734,9 @@ CAudioSource *Audio_CreateMemoryWave( CSfxTable *pSfx )
 	CAudioSourceCachedInfo *pInfo = audiosourcecache->GetInfo( CAudioSource::AUDIO_SOURCE_WAV, bIsMapSound, pSfx );
 	if ( pInfo->Type() == CAudioSource::AUDIO_SOURCE_MP3 )
 	{
-		return Audio_CreateMemoryMP3( pSfx );
+		soundError = SE_CANT_CREATE_MIXER;
+		return nullptr;
 	}
-#endif
 
 	return CreateWave( pSfx, false );
 }
@@ -2211,7 +2141,7 @@ void CAudioSourceCachedInfo::Rebuild( char const *filename )
 
 	CAudioSource *as = nullptr;
 
-	// Note though these instantiate a specific AudioSource subclass, it doesn't matter, we just need one for .wav and one for .mp3
+	// Note though this instantiates a specific AudioSource subclass, it doesn't matter, we just need one for .wav
 	switch ( s_CurrentType )
 	{
 	default:
@@ -2225,106 +2155,18 @@ void CAudioSourceCachedInfo::Rebuild( char const *filename )
 			as = memAs;
 		}
 		break;
-	case CAudioSource::AUDIO_SOURCE_MP3:
-#if defined( MP3_SUPPORT )
-		as = new CAudioSourceMP3Cache( s_pSfx );
-#endif
-		break;
 	}
 
 	if ( as )
 	{
 		as->GetCacheData( this );
-		delete as;
+		CAudioSource::Delete( as );
 	}
 }
 
 constexpr auto AUDIOSOURCE_CACHE_VERSION = 3;
-class CAudioSourceCache : public IAudioSourceCache
-{
-public:
-	typedef CCachedFileData< CAudioSourceCachedInfo > CacheType_t;
-
-	CAudioSourceCache()
-	{
-		m_pMasterSoundCache = nullptr;
-		m_pBuildingCache = nullptr;
-		m_nServerCount = -1;
-	}
-
-	bool Init( unsigned int memSize );
-	void Shutdown();
-
-	void LevelInit( char const *mapname );
-	void LevelShutdown();
-
-	virtual CAudioSourceCachedInfo *GetInfo( int audiosourcetype, bool soundisprecached, CSfxTable *sfx );
-	virtual CAudioSourceCachedInfo *GetInfoByName( const char *soundName );
-	virtual void RebuildCacheEntry( int audiosourcetype, bool soundisprecached, CSfxTable *sfx );
-
-	bool BuildMasterPrecachedSoundsCache();
-	bool UpdateMasterPrecachedSoundsCache();
-	void WriteManifest();
-
-	void ValidateSoundCache( char const *pchWavFile );
-private:
-	// Purpose: 
-	CacheType_t *LookUpCacheEntry( const char *fn, int audiosourcetype, bool soundisprecached, CSfxTable *sfx );
-
-	struct AudioSourceUsage_t
-	{
-		AudioSourceUsage_t() :
-			handle( 0 ),
-			count( 0u )
-		{
-		}
-		FileNameHandle_t	handle;
-		unsigned int		count;
-	};
-
-	static bool AudioSourceUsageLessFunc( const AudioSourceUsage_t& lhs, const AudioSourceUsage_t& rhs )
-	{
-		return lhs.handle < rhs.handle;
-	}
-
-	CacheType_t *AllocAudioCache( char const *cachename, bool bNeverCheckDisk );
-	bool LoadMasterCache( char const *pchLanguage, bool bAllowEmpty );
-
-	void RecursiveBuildSoundList( std::set< FileNameHandle_t >& other, const char *pCurrentLanguage, const char *pCurrentDir, const char *pPathID );
-	CacheType_t *BuildCacheFromList( char const *cachename, std::set< FileNameHandle_t >& list, bool showprogress = false, float flProgressStart = 0.0f, float flProgressEnd = 1.0f );
-	bool IsValidCache( char const *cachename );
-	void RemoveCache( char const *cachename );
-
-	void GetAudioCacheLanguageSuffix( std::string &sLanguage );
-	void PrefetchCommandSounds();
-
-	enum
-	{
-		MAX_LIST_SIZE = 1024
-	};
-
-	std::string				m_szMODPath;
-	std::string				m_szMapCacheBase;
-	std::string				m_szMasterCache;
-	std::string				m_szCurrentLanguage;
-
-	typedef enum
-	{
-		CACHE_MASTER,
-		CACHE_BUILDING
-	} SoundCacheType_t;
-
-	void					SetCachePointer( SoundCacheType_t ptrType, CacheType_t *ptr );
-
-	// All sounds (no startup data) referenced anywhere in game
-	CacheType_t				*m_pMasterSoundCache;
-	CacheType_t				*m_pBuildingCache;
-
-	int						m_nServerCount;
-};
-
 static CAudioSourceCache	g_ASCache;
-IAudioSourceCache *audiosourcecache = &g_ASCache;
+CAudioSourceCache *audiosourcecache = &g_ASCache;
 
 unsigned int CAudioSourceCachedInfoHandle_t::s_nCurrentFlushCount = 1;
 
@@ -3171,4 +3013,245 @@ static void snd_updateaudiocache( const CCommand &args )
 void S_ValidateSoundCache( char const *pchWavFile )
 {
 	g_ASCache.ValidateSoundCache( pchWavFile );
+}
+
+//-----------------------------------------------------------------------------
+// CAudioSource dispatch: the sources are a closed set (AudioSourceKind), so the interface switches
+// on the kind and calls the member of the same name of the source's class. A class that does not
+// define one inherits it from CAudioSourceWave.
+//-----------------------------------------------------------------------------
+#define KS_AUDIO_SOURCE_DISPATCH( call ) \
+	switch ( m_Kind ) \
+	{ \
+	case AudioSourceKind::MemWave: return static_cast< CAudioSourceMemWave * >( this )->call; \
+	case AudioSourceKind::StreamWave: return static_cast< CAudioSourceStreamWave * >( this )->call; \
+	case AudioSourceKind::Voice: return static_cast< CAudioSourceVoice * >( this )->call; \
+	} \
+	std::unreachable()
+
+void CAudioSource::Delete( CAudioSource *pSource )
+{
+	if ( !pSource )
+		return;
+	switch ( pSource->m_Kind )
+	{
+	case AudioSourceKind::MemWave: delete static_cast< CAudioSourceMemWave * >( pSource ); return;
+	case AudioSourceKind::StreamWave: delete static_cast< CAudioSourceStreamWave * >( pSource ); return;
+	case AudioSourceKind::Voice: delete static_cast< CAudioSourceVoice * >( pSource ); return;
+	}
+	std::unreachable();
+}
+
+CAudioMixer *CAudioSource::CreateMixer( int initialStreamPosition, int skipInitialSamples, bool bUpdateDelayForChoreo, SoundError &soundError )
+{
+	KS_AUDIO_SOURCE_DISPATCH( CreateMixer( initialStreamPosition, skipInitialSamples, bUpdateDelayForChoreo, soundError ) );
+}
+
+int CAudioSource::GetType( void )
+{
+	KS_AUDIO_SOURCE_DISPATCH( GetType(  ) );
+}
+
+void CAudioSource::GetCacheData( CAudioSourceCachedInfo *info )
+{
+	KS_AUDIO_SOURCE_DISPATCH( GetCacheData( info ) );
+}
+
+int CAudioSource::GetOutputData( void **pData, int64 samplePosition, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] )
+{
+	KS_AUDIO_SOURCE_DISPATCH( GetOutputData( pData, samplePosition, sampleCount, copyBuf ) );
+}
+
+int CAudioSource::SampleRate( void )
+{
+	KS_AUDIO_SOURCE_DISPATCH( SampleRate(  ) );
+}
+
+bool CAudioSource::IsVoiceSource(  )
+{
+	KS_AUDIO_SOURCE_DISPATCH( IsVoiceSource(  ) );
+}
+
+bool CAudioSource::IsPlayerVoice(  )
+{
+	KS_AUDIO_SOURCE_DISPATCH( IsPlayerVoice(  ) );
+}
+
+int CAudioSource::SampleSize( void )
+{
+	KS_AUDIO_SOURCE_DISPATCH( SampleSize(  ) );
+}
+
+int CAudioSource::SampleCount( void )
+{
+	KS_AUDIO_SOURCE_DISPATCH( SampleCount(  ) );
+}
+
+int CAudioSource::Format( void )
+{
+	KS_AUDIO_SOURCE_DISPATCH( Format(  ) );
+}
+
+int CAudioSource::DataSize( void )
+{
+	KS_AUDIO_SOURCE_DISPATCH( DataSize(  ) );
+}
+
+bool CAudioSource::IsLooped( void )
+{
+	KS_AUDIO_SOURCE_DISPATCH( IsLooped(  ) );
+}
+
+bool CAudioSource::IsStereoWav( void )
+{
+	KS_AUDIO_SOURCE_DISPATCH( IsStereoWav(  ) );
+}
+
+bool CAudioSource::IsStreaming( void )
+{
+	KS_AUDIO_SOURCE_DISPATCH( IsStreaming(  ) );
+}
+
+int CAudioSource::GetCacheStatus( void )
+{
+	KS_AUDIO_SOURCE_DISPATCH( GetCacheStatus(  ) );
+}
+
+void CAudioSource::CacheLoad( void )
+{
+	KS_AUDIO_SOURCE_DISPATCH( CacheLoad(  ) );
+}
+
+void CAudioSource::CacheUnload( void )
+{
+	KS_AUDIO_SOURCE_DISPATCH( CacheUnload(  ) );
+}
+
+CSentence *CAudioSource::GetSentence( void )
+{
+	KS_AUDIO_SOURCE_DISPATCH( GetSentence(  ) );
+}
+
+int CAudioSource::GetQuality( void )
+{
+	KS_AUDIO_SOURCE_DISPATCH( GetQuality(  ) );
+}
+
+int CAudioSource::ZeroCrossingBefore( int sample )
+{
+	KS_AUDIO_SOURCE_DISPATCH( ZeroCrossingBefore( sample ) );
+}
+
+int CAudioSource::ZeroCrossingAfter( int sample )
+{
+	KS_AUDIO_SOURCE_DISPATCH( ZeroCrossingAfter( sample ) );
+}
+
+void CAudioSource::ReferenceAdd( CAudioMixer *pMixer )
+{
+	KS_AUDIO_SOURCE_DISPATCH( ReferenceAdd( pMixer ) );
+}
+
+void CAudioSource::ReferenceRemove( CAudioMixer *pMixer )
+{
+	KS_AUDIO_SOURCE_DISPATCH( ReferenceRemove( pMixer ) );
+}
+
+bool CAudioSource::CanDelete( void )
+{
+	KS_AUDIO_SOURCE_DISPATCH( CanDelete(  ) );
+}
+
+void CAudioSource::Prefetch(  )
+{
+	KS_AUDIO_SOURCE_DISPATCH( Prefetch(  ) );
+}
+
+bool CAudioSource::IsAsyncLoad(  )
+{
+	KS_AUDIO_SOURCE_DISPATCH( IsAsyncLoad(  ) );
+}
+
+void CAudioSource::CheckAudioSourceCache(  )
+{
+	KS_AUDIO_SOURCE_DISPATCH( CheckAudioSourceCache(  ) );
+}
+
+char const *CAudioSource::GetFileName( char *pBuf, std::size_t bufLen )
+{
+	KS_AUDIO_SOURCE_DISPATCH( GetFileName( pBuf, bufLen ) );
+}
+
+void CAudioSource::SetPlayOnce( bool isPlayOnce )
+{
+	KS_AUDIO_SOURCE_DISPATCH( SetPlayOnce( isPlayOnce ) );
+}
+
+bool CAudioSource::IsPlayOnce(  )
+{
+	KS_AUDIO_SOURCE_DISPATCH( IsPlayOnce(  ) );
+}
+
+void CAudioSource::SetSentenceWord( bool bIsWord )
+{
+	KS_AUDIO_SOURCE_DISPATCH( SetSentenceWord( bIsWord ) );
+}
+
+bool CAudioSource::IsSentenceWord(  )
+{
+	KS_AUDIO_SOURCE_DISPATCH( IsSentenceWord(  ) );
+}
+
+int CAudioSource::SampleToStreamPosition( int samplePosition )
+{
+	KS_AUDIO_SOURCE_DISPATCH( SampleToStreamPosition( samplePosition ) );
+}
+
+int CAudioSource::StreamToSamplePosition( int streamPosition )
+{
+	KS_AUDIO_SOURCE_DISPATCH( StreamToSamplePosition( streamPosition ) );
+}
+
+// the streamed sources are the data source of a streaming wave data
+int64 CAudioSource::UpdateLoopingSamplePosition( int64 samplePosition )
+{
+	switch ( m_Kind )
+	{
+	case AudioSourceKind::StreamWave: return static_cast< CAudioSourceStreamWave * >( this )->UpdateLoopingSamplePosition( samplePosition );
+	default: break;
+	}
+	std::unreachable();
+}
+
+void CAudioSource::UpdateSamples( char *pData, int sampleCount )
+{
+	switch ( m_Kind )
+	{
+	case AudioSourceKind::StreamWave: static_cast< CAudioSourceStreamWave * >( this )->UpdateSamples( pData, sampleCount ); return;
+	default: break;
+	}
+	std::unreachable();
+}
+
+int CAudioSource::GetLoopingInfo( int *pLoopBlock, int *pNumLeadingSamples, int *pNumTrailingSamples )
+{
+	switch ( m_Kind )
+	{
+	case AudioSourceKind::StreamWave: return static_cast< CAudioSourceStreamWave * >( this )->GetLoopingInfo( pLoopBlock, pNumLeadingSamples, pNumTrailingSamples );
+	default: break;
+	}
+	std::unreachable();
+}
+
+// CAudioSourceWave::Setup() parses the chunks of the file with the ParseChunk of the source's class
+void CAudioSourceWave::DispatchParseChunk( IterateRIFF &walk, int chunkName )
+{
+	switch ( m_Kind )
+	{
+	case AudioSourceKind::MemWave: static_cast< CAudioSourceMemWave * >( this )->ParseChunk( walk, chunkName ); return;
+	case AudioSourceKind::StreamWave: static_cast< CAudioSourceStreamWave * >( this )->ParseChunk( walk, chunkName ); return;
+	case AudioSourceKind::Voice: ParseChunk( walk, chunkName ); return;
+	default: break;
+	}
+	std::unreachable();
 }

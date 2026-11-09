@@ -2,6 +2,8 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
+import ks.core;
+import ks.math;
 import ks.tier1;
 #include "choreochannel.h"
 #include "choreoevent.h"

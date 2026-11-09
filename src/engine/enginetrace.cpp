@@ -52,90 +52,90 @@ class CAsyncOcclusionQuery;
 class CEngineTrace : public IEngineTrace
 {
 public:
-	CEngineTrace()
+	explicit CEngineTrace( kind_t kind ) : IEngineTrace( kind )
 	{
 		m_nOcclusionTestsSuspended = 0;
 	}
 	// Returns the contents mask at a particular world-space position
-	virtual int		GetPointContents( const Vector &vecAbsPosition, int contentsMask, IHandleEntity** ppEntity );
-	virtual int		GetPointContents_WorldOnly( const Vector &vecAbsPosition, int contentsMask );
-	virtual int		GetPointContents_Collideable( ICollideable *pCollide, const Vector &vecAbsPosition );
+	int		GetPointContents( const Vector &vecAbsPosition, int contentsMask, IHandleEntity** ppEntity );
+	int		GetPointContents_WorldOnly( const Vector &vecAbsPosition, int contentsMask );
+	int		GetPointContents_Collideable( ICollideable *pCollide, const Vector &vecAbsPosition );
 
 	// Traces a ray against a particular edict
-	virtual void	ClipRayToEntity( const Ray_t &ray, unsigned int fMask, IHandleEntity *pEntity, trace_t *pTrace );
+	void	ClipRayToEntity( const Ray_t &ray, unsigned int fMask, IHandleEntity *pEntity, trace_t *pTrace );
 
 	// A version that simply accepts a ray (can work as a traceline or tracehull)
-	virtual void	TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace );
+	void	TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace );
 
 	// A version that sets up the leaf and entity lists and allows you to pass those in for collision.
-	virtual void	SetupLeafAndEntityListRay( const Ray_t &ray, ITraceListData *pTraceData );
-	virtual void    SetupLeafAndEntityListBox( const Vector &vecBoxMin, const Vector &vecBoxMax, ITraceListData *pTraceData );
-	virtual void	TraceRayAgainstLeafAndEntityList( const Ray_t &ray, ITraceListData *pTraceData, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace );
+	void	SetupLeafAndEntityListRay( const Ray_t &ray, ITraceListData *pTraceData );
+	void    SetupLeafAndEntityListBox( const Vector &vecBoxMin, const Vector &vecBoxMax, ITraceListData *pTraceData );
+	void	TraceRayAgainstLeafAndEntityList( const Ray_t &ray, ITraceListData *pTraceData, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace );
 
 	// A version that sweeps a collideable through the world
 	// abs start + abs end represents the collision origins you want to sweep the collideable through
 	// vecAngles represents the collision angles of the collideable during the sweep
-	virtual void	SweepCollideable( ICollideable *pCollide, const Vector &vecAbsStart, const Vector &vecAbsEnd, 
+	void	SweepCollideable( ICollideable *pCollide, const Vector &vecAbsStart, const Vector &vecAbsEnd, 
 		const QAngle &vecAngles, unsigned int fMask, ITraceFilter *pTraceFilter, trace_t *pTrace );
 
 	// Enumerates over all entities along a ray
 	// If triggers == true, it enumerates all triggers along a ray
-	virtual void	EnumerateEntities( const Ray_t &ray, bool triggers, IEntityEnumerator *pEnumerator );
+	void	EnumerateEntities( const Ray_t &ray, bool triggers, IEntityEnumerator *pEnumerator );
 
 	// Same thing, but enumerate entitys within a box
-	virtual void	EnumerateEntities( const Vector &vecAbsMins, const Vector &vecAbsMaxs, IEntityEnumerator *pEnumerator );
+	void	EnumerateEntities( const Vector &vecAbsMins, const Vector &vecAbsMaxs, IEntityEnumerator *pEnumerator );
 
-	// FIXME: Different versions for client + server. Eventually we need to make these go away
-	virtual ICollideable *HandleEntityToCollideable( IHandleEntity *pHandleEntity ) = 0;
-	virtual ICollideable *GetWorldCollideable() = 0;
+	// Different versions for client + server: dispatched on the kind (see the end of this file)
+	ICollideable *HandleEntityToCollideable( IHandleEntity *pHandleEntity );
+	ICollideable *GetWorldCollideable();
+	const char *GetDebugName( IHandleEntity *pHandleEntity );
+	void SetTraceEntity( ICollideable *pCollideable, trace_t *pTrace );
+	ICollideable *GetCollideable( IHandleEntity *pEntity );
+	int SpatialPartitionMask() const;
+	int SpatialPartitionTriggerMask() const;
 
 	// Traces a ray against a particular edict
-	virtual void ClipRayToCollideable( const Ray_t &ray, unsigned int fMask, ICollideable *pEntity, trace_t *pTrace );
+	void ClipRayToCollideable( const Ray_t &ray, unsigned int fMask, ICollideable *pEntity, trace_t *pTrace );
 
 	// HACKHACK: Temp
-	virtual int GetStatByIndex( int index, bool bClear );
+	int GetStatByIndex( int index, bool bClear );
 
 	//finds brushes in an AABB, prone to some false positives
-	virtual void GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, CBrushQuery &BrushQuery, int iContentsMask, int cmodelIndex );
-	virtual void GetBrushesInCollideable( ICollideable *pCollideable, CBrushQuery &BrushQuery );
+	void GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, CBrushQuery &BrushQuery, int iContentsMask, int cmodelIndex );
+	void GetBrushesInCollideable( ICollideable *pCollideable, CBrushQuery &BrushQuery );
 
 	//Creates a CPhysCollide out of all displacements wholly or partially contained in the specified AABB
-	virtual CPhysCollide* GetCollidableFromDisplacementsInAABB( const Vector& vMins, const Vector& vMaxs );
-	virtual int GetMeshesFromDisplacementsInAABB( const Vector& vMins, const Vector& vMaxs, virtualmeshlist_t *pOutputMeshes, int iMaxOutputMeshes );
+	CPhysCollide* GetCollidableFromDisplacementsInAABB( const Vector& vMins, const Vector& vMaxs );
+	int GetMeshesFromDisplacementsInAABB( const Vector& vMins, const Vector& vMaxs, virtualmeshlist_t *pOutputMeshes, int iMaxOutputMeshes );
 
 	// gets the number of displacements in the world
-	virtual int GetNumDisplacements( );
+	int GetNumDisplacements( );
 
 	// gets a specific diplacement mesh
-	virtual void GetDisplacementMesh( int nIndex, virtualmeshlist_t *pMeshTriList );
+	void GetDisplacementMesh( int nIndex, virtualmeshlist_t *pMeshTriList );
 
 	//retrieve brush planes and contents, returns zero if the brush doesn't exist, 
 	//returns positive number of sides filled out if the array can hold them all, negative number of slots needed to hold info if the array is too small
-	virtual int GetBrushInfo( int iBrush, int &ContentsOut, BrushSideInfo_t *pBrushSideInfoOut, int iBrushSideInfoArraySize );
+	int GetBrushInfo( int iBrush, int &ContentsOut, BrushSideInfo_t *pBrushSideInfoOut, int iBrushSideInfoArraySize );
 
-	virtual bool PointOutsideWorld( const Vector &ptTest ); //Tests a point to see if it's outside any playable area
+	bool PointOutsideWorld( const Vector &ptTest ); //Tests a point to see if it's outside any playable area
 
 
 	// Walks bsp to find the leaf containing the specified point
-	virtual int GetLeafContainingPoint( const Vector &ptTest );
+	int GetLeafContainingPoint( const Vector &ptTest );
 
-	virtual ITraceListData *AllocTraceListData() { return new CTraceListData; }
-	virtual void FreeTraceListData(ITraceListData *pTraceListData) { delete pTraceListData; }
+	ITraceListData *AllocTraceListData() { return new CTraceListData; }
+	void FreeTraceListData(ITraceListData *pTraceListData) { delete pTraceListData; }
 
 	/// Used only in debugging: get/set/clear/increment the trace debug counter. See comment below for details.
-	virtual int GetSetDebugTraceCounter( int value, DebugTraceCounterBehavior_t behavior );
-	virtual const char *GetDebugName( IHandleEntity *pHandleEntity ) = 0;
+	int GetSetDebugTraceCounter( int value, DebugTraceCounterBehavior_t behavior );
 
-	virtual bool IsFullyOccluded( int nOcclusionKey, const AABB_t &aabb1, const AABB_t &aabb2, const Vector &vShadow ) override;
-	virtual void SuspendOcclusionTests() override{ m_nOcclusionTestsSuspended++; }
-	virtual void ResumeOcclusionTests()override;
-	virtual void FlushOcclusionQueries() override;
-private:
+	bool IsFullyOccluded( int nOcclusionKey, const AABB_t &aabb1, const AABB_t &aabb2, const Vector &vShadow );
+	void SuspendOcclusionTests(){ m_nOcclusionTestsSuspended++; }
+	void ResumeOcclusionTests();
+	void FlushOcclusionQueries();
+public:
 	// FIXME: Different versions for client + server. Eventually we need to make these go away
-	virtual void SetTraceEntity( ICollideable *pCollideable, trace_t *pTrace ) = 0;
-	virtual ICollideable *GetCollideable( IHandleEntity *pEntity ) = 0;
-	virtual int SpatialPartitionMask() const = 0;
-	virtual int SpatialPartitionTriggerMask() const = 0;
 
 	// Figure out point contents for entities at a particular position
 	int EntityContents( const Vector &vecAbsPosition );
@@ -163,7 +163,7 @@ private:
 
 	// Clips a trace to another trace
 	bool ClipTraceToTrace( trace_t &clipTrace, trace_t *pFinalTrace );
-private:
+public:
 	int m_traceStatCounters[NUM_TRACE_STAT_COUNTER];
 	int m_nOcclusionTestsSuspended;
 	// Note: occlusion key MUST be evenly distributed for this to work well. Fortunately, it's just player ids, they're distributed perfectly well
@@ -177,33 +177,37 @@ extern void FlushOcclusionQueries();
 
 class CEngineTraceServer : public CEngineTrace
 {
-private:
-	virtual ICollideable *HandleEntityToCollideable( IHandleEntity *pEnt );
-	virtual const char *GetDebugName( IHandleEntity *pHandleEntity );
-	virtual void SetTraceEntity( ICollideable *pCollideable, trace_t *pTrace );
-	virtual int SpatialPartitionMask() const;
-	virtual int SpatialPartitionTriggerMask() const;
-	virtual ICollideable *GetWorldCollideable();
+public:
+	CEngineTraceServer() : CEngineTrace( kind_t::server ) {}
+public:
+	ICollideable *HandleEntityToCollideable( IHandleEntity *pEnt );
+	const char *GetDebugName( IHandleEntity *pHandleEntity );
+	void SetTraceEntity( ICollideable *pCollideable, trace_t *pTrace );
+	int SpatialPartitionMask() const;
+	int SpatialPartitionTriggerMask() const;
+	ICollideable *GetWorldCollideable();
 	friend void RayBench( const CCommand &args );
 	friend void RayBatchBench( const CCommand &args );
 public:
 	// IEngineTrace
-	virtual ICollideable *GetCollideable( IHandleEntity *pEntity );
+	ICollideable *GetCollideable( IHandleEntity *pEntity );
 };
 
 #ifndef DEDICATED
 class CEngineTraceClient : public CEngineTrace
 {
-private:
-	virtual ICollideable *HandleEntityToCollideable( IHandleEntity *pEnt );
-	virtual const char *GetDebugName( IHandleEntity *pHandleEntity );
-	virtual void SetTraceEntity( ICollideable *pCollideable, trace_t *pTrace );
-	virtual int SpatialPartitionMask() const;
-	virtual int SpatialPartitionTriggerMask() const;
-	virtual ICollideable *GetWorldCollideable();
+public:
+	CEngineTraceClient() : CEngineTrace( kind_t::client ) {}
+public:
+	ICollideable *HandleEntityToCollideable( IHandleEntity *pEnt );
+	const char *GetDebugName( IHandleEntity *pHandleEntity );
+	void SetTraceEntity( ICollideable *pCollideable, trace_t *pTrace );
+	int SpatialPartitionMask() const;
+	int SpatialPartitionTriggerMask() const;
+	ICollideable *GetWorldCollideable();
 public:
 	// IEngineTrace
-	virtual ICollideable *GetCollideable( IHandleEntity *pEntity );
+	ICollideable *GetCollideable( IHandleEntity *pEntity );
 };
 #endif
 
@@ -1293,12 +1297,12 @@ void CEngineTraceClient::SetTraceEntity( ICollideable *pCollideable, trace_t *pT
 	IClientUnknown *pUnk = (IClientUnknown*)pCollideable->GetEntityHandle();
 	if ( !StaticPropMgr()->IsStaticProp( pUnk ) )
 	{
-		pTrace->m_pEnt = (CBaseEntity*)(pUnk->GetIClientEntity());
+		pTrace->m_pEnt = (void*)(pUnk->GetIClientEntity());
 	}
 	else
 	{
 		// For static props, point to the world, hitbox is the prop index
-		pTrace->m_pEnt = (CBaseEntity*)(entitylist->GetClientEntity(0));
+		pTrace->m_pEnt = (void*)(entitylist->GetClientEntity(0));
 		pTrace->hitbox = StaticPropMgr()->GetStaticPropIndex( pUnk ) + 1;
 	}
 }
@@ -1312,12 +1316,12 @@ void CEngineTraceServer::SetTraceEntity( ICollideable *pCollideable, trace_t *pT
 	IHandleEntity *pHandleEntity = pCollideable->GetEntityHandle();
 	if ( !StaticPropMgr()->IsStaticProp( pHandleEntity ) )
 	{
-		pTrace->m_pEnt = (CBaseEntity*)(pHandleEntity);
+		pTrace->m_pEnt = (void*)(pHandleEntity);
 	}
 	else
 	{
 		// For static props, point to the world, hitbox is the prop index
-		pTrace->m_pEnt = (CBaseEntity*)(sv.edicts->GetIServerEntity());
+		pTrace->m_pEnt = (void*)(sv.edicts->GetIServerEntity());
 		pTrace->hitbox = StaticPropMgr()->GetStaticPropIndex( pHandleEntity ) + 1;
 	}
 }
@@ -2074,30 +2078,34 @@ class CAsyncOcclusionQuery;
 std::recursive_mutex s_occlusionQueryMutex;
 std::deque< CAsyncOcclusionQuery* > s_occlusionQueries; // these are the real queries in flight awaiting a job to pick them up
 
-class COcclusionQueryJob : public CJob
+// The work of an occlusion query job. Owned by the job running it (see SpinUpOcclusionJob).
+class COcclusionQueryWork
 {
 public:
 	bool m_bFinished; // true when this 
 public:
-	COcclusionQueryJob() : m_bFinished( false )
+	COcclusionQueryWork() : m_bFinished( false )
 	{
 		s_occlusionStats.nJobs++;
 		s_occlusionStats.nJobsInFlight++;
 	}
-	virtual ~COcclusionQueryJob() override
+	~COcclusionQueryWork()
 	{
 		s_occlusionStats.nJobs--;
 	}
-	virtual JobStatus_t	DoExecute() override;
+	JobStatus_t	Run();
 };
 
-static COcclusionQueryJob *s_pOcclusionQueryJob = nullptr;  // this is the job that was last queued to consume the s_occlusionQueries queue
+static CJob *s_pOcclusionQueryJob = nullptr;  // this is the job that was last queued to consume the s_occlusionQueries queue
+static COcclusionQueryWork *s_pOcclusionQueryWork = nullptr;  // its work; lives as long as the job does
 
 void SpinUpOcclusionJob()
 {
 	if ( s_pOcclusionQueryJob )
 		s_pOcclusionQueryJob->Release();
-	s_pOcclusionQueryJob = new COcclusionQueryJob;
+	std::unique_ptr<COcclusionQueryWork> pWork = std::make_unique<COcclusionQueryWork>();
+	s_pOcclusionQueryWork = pWork.get();
+	s_pOcclusionQueryJob = new CJob( [pWork = std::move( pWork )]() { return pWork->Run(); } );
 	//s_pOcclusionQueryJob->AddRef();
 	uint64 nSpinUpBegin = GetTimebaseRegister();
 	g_pThreadPool->AddJob( s_pOcclusionQueryJob );
@@ -2130,7 +2138,7 @@ static void occlusion_stats( const CCommand &args )
 	}
 }
 
-void OnOcclusionTestAsyncChanged( IConVar *var, const char *pOldValue, float flOldValue )
+void OnOcclusionTestAsyncChanged( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	extern void AdjustThreadPoolThreadCount();
 	AdjustThreadPoolThreadCount();
@@ -2210,7 +2218,7 @@ bool IsFullyOccluded_WithShadow( const AABB_t &aabb1, const AABB_t &aabb2, const
 		);
 }
 
-class alignas(16) CAsyncOcclusionQuery : public CAlignedNewDelete< 16, CRefCounted< CRefCountServiceMT > >
+class alignas(16) CAsyncOcclusionQuery : public CAlignedNewDelete< 16, CRefCounted< CAsyncOcclusionQuery > >
 {
 public:
 	Vector m_vShadow;
@@ -2228,7 +2236,7 @@ public:
 		s_occlusionStats.nQueries++;
 		Init( aabb0, aabb1, vShadow );
 	}
-	virtual ~CAsyncOcclusionQuery() override
+	~CAsyncOcclusionQuery()
 	{
 		if ( !m_bCompleted )
 			s_occlusionStats.nQueriesInFlight--;
@@ -2282,7 +2290,7 @@ public:
 			s_occlusionQueries.push_back( this );
 			if ( s_pOcclusionQueryJob )
 			{
-				if ( !s_pOcclusionQueryJob->m_bFinished )
+				if ( !s_pOcclusionQueryWork->m_bFinished )
 					return;
 			}
 		}
@@ -2292,7 +2300,7 @@ public:
 };
 
 
-JobStatus_t	COcclusionQueryJob::DoExecute()
+JobStatus_t	COcclusionQueryWork::Run()
 {
 	for ( ;; )
 	{
@@ -2349,6 +2357,7 @@ void CEngineTrace::FlushOcclusionQueries()
 	{
 		s_pOcclusionQueryJob->Release();
 		s_pOcclusionQueryJob = nullptr;
+		s_pOcclusionQueryWork = nullptr;
 	}
 }
 
@@ -2830,3 +2839,59 @@ static void test_sweepaabb( const CCommand &args )
 
 
 #endif
+
+
+//-----------------------------------------------------------------------------
+// Calls of the shared implementation to the server / client specific one
+//-----------------------------------------------------------------------------
+ICollideable *CEngineTrace::HandleEntityToCollideable( IHandleEntity *pHandleEntity )
+{
+	if ( m_kind == kind_t::server )
+		return static_cast<CEngineTraceServer *>( this )->HandleEntityToCollideable( pHandleEntity );
+	return static_cast<CEngineTraceClient *>( this )->HandleEntityToCollideable( pHandleEntity );
+}
+
+ICollideable *CEngineTrace::GetWorldCollideable()
+{
+	if ( m_kind == kind_t::server )
+		return static_cast<CEngineTraceServer *>( this )->GetWorldCollideable();
+	return static_cast<CEngineTraceClient *>( this )->GetWorldCollideable();
+}
+
+const char *CEngineTrace::GetDebugName( IHandleEntity *pHandleEntity )
+{
+	if ( m_kind == kind_t::server )
+		return static_cast<CEngineTraceServer *>( this )->GetDebugName( pHandleEntity );
+	return static_cast<CEngineTraceClient *>( this )->GetDebugName( pHandleEntity );
+}
+
+void CEngineTrace::SetTraceEntity( ICollideable *pCollideable, trace_t *pTrace )
+{
+	if ( m_kind == kind_t::server )
+		static_cast<CEngineTraceServer *>( this )->SetTraceEntity( pCollideable, pTrace );
+	else
+		static_cast<CEngineTraceClient *>( this )->SetTraceEntity( pCollideable, pTrace );
+}
+
+ICollideable *CEngineTrace::GetCollideable( IHandleEntity *pEntity )
+{
+	if ( m_kind == kind_t::server )
+		return static_cast<CEngineTraceServer *>( this )->GetCollideable( pEntity );
+	return static_cast<CEngineTraceClient *>( this )->GetCollideable( pEntity );
+}
+
+int CEngineTrace::SpatialPartitionMask() const
+{
+	if ( m_kind == kind_t::server )
+		return static_cast<const CEngineTraceServer *>( this )->SpatialPartitionMask();
+	return static_cast<const CEngineTraceClient *>( this )->SpatialPartitionMask();
+}
+
+int CEngineTrace::SpatialPartitionTriggerMask() const
+{
+	if ( m_kind == kind_t::server )
+		return static_cast<const CEngineTraceServer *>( this )->SpatialPartitionTriggerMask();
+	return static_cast<const CEngineTraceClient *>( this )->SpatialPartitionTriggerMask();
+}
+
+#include "facade/iEngineTrace.inl"

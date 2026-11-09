@@ -2,8 +2,6 @@
 // Copyright (c) Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -72,7 +70,7 @@ bool CPlayerRankManager::Init()
 	ListenForGameEvent( "achievement_info_loaded" );
 	ListenForGameEvent( "seasoncoin_levelup" );
 	
-	g_pMatchFramework->GetEventsSubscription()->Subscribe( this );
+	g_pMatchFramework->GetEventsSubscription()->Subscribe( this, [this]( KeyValues *pEvent ) { OnEvent( pEvent ); } );
 	return true;
 }
 

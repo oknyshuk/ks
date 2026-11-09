@@ -29,7 +29,7 @@ public:
 	virtual	~CPlasma( void );
 	void	EnableSmoke( int state );
 
-	void	Precache( void );
+	void	Precache_Impl( void );
 
 	DECLARE_SERVERCLASS();
 

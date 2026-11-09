@@ -16,21 +16,32 @@ import ks.tier1;
 // Purpose: Maintains lists of resources to use them as filters to prevent access
 // to ensure proper precache behavior in game code
 //-----------------------------------------------------------------------------
-class IPrecacheSystem : public IAppSystem
+class IPrecacheSystem
 {
 public:
+	//--------------------------------------------------------
+	// App system protocol. Not an IAppSystem: CAppSystemGroup drives it by kind (see AppSystemRef).
+	//--------------------------------------------------------
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t Init();
+	void Shutdown();
+	const AppSystemInfo_t *GetDependencies() { return nullptr; }
+	void Reconnect( CreateInterfaceFn factory, const char *pInterfaceName ) { ReconnectInterface( factory, pInterfaceName ); }
+
 	// Precaches/uncaches all resources used by a particular system
-	virtual void Cache( IPrecacheHandler *pPrecacheHandler, PrecacheSystem_t nSystem, 
-		const char *pName, bool bPrecache, ResourceList_t hResourceList, bool bBuildResourceList ) = 0;
+	void Cache( PrecacheHandler_t pPrecacheHandler, PrecacheSystem_t nSystem, 
+		const char *pName, bool bPrecache, ResourceList_t hResourceList, bool bBuildResourceList );
 
-	virtual void UncacheAll( IPrecacheHandler *pPrecacheHandler ) = 0 ;
+	void UncacheAll( PrecacheHandler_t pPrecacheHandler );
 
-	virtual void Register( IResourcePrecacher *pResourcePrecacherFirst, PrecacheSystem_t nSystem ) = 0;
+	void Register( CBaseResourcePrecacher *pResourcePrecacherFirst, PrecacheSystem_t nSystem );
 
 	// Limits resource access to only resources used by this particular system
 	// Use GLOBAL system, and NULL name to disable limited resource access
-	virtual void LimitResourceAccess( PrecacheSystem_t nSystem, const char *pName ) = 0;
-	virtual void EndLimitedResourceAccess() = 0;
+	void LimitResourceAccess( PrecacheSystem_t nSystem, const char *pName );
+	void EndLimitedResourceAccess();
 };
 
 extern IPrecacheSystem *g_pPrecacheSystem;;

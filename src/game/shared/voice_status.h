@@ -10,7 +10,6 @@
 #include "usermessages.h"
 
 class CVoiceStatus;
-class IMaterial;
 
 // This is provided by each mod to access data that may not be the same across mods.
 class IVoiceStatusHelper

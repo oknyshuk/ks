@@ -20,9 +20,9 @@ enum
 class ISerializedEntities
 {
 public:
-	virtual SerializedEntityHandle_t AllocateSerializedEntity( char const *pFile, int nLine ) = 0;
-	virtual void ReleaseSerializedEntity( SerializedEntityHandle_t handle ) = 0;
-	virtual SerializedEntityHandle_t CopySerializedEntity( SerializedEntityHandle_t handle, char const *pFile, int nLine ) = 0;
+	SerializedEntityHandle_t AllocateSerializedEntity( char const *pFile, int nLine );
+	void ReleaseSerializedEntity( SerializedEntityHandle_t handle );
+	SerializedEntityHandle_t CopySerializedEntity( SerializedEntityHandle_t handle, char const *pFile, int nLine );
 };
 
 extern ISerializedEntities *g_pSerializedEntities;

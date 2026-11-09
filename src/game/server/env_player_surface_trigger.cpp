@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -49,7 +47,7 @@ CEnvPlayerSurfaceTrigger::~CEnvPlayerSurfaceTrigger( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvPlayerSurfaceTrigger::Spawn( void )
+void CEnvPlayerSurfaceTrigger::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	SetMoveType( MOVETYPE_NONE );
@@ -63,9 +61,9 @@ void CEnvPlayerSurfaceTrigger::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvPlayerSurfaceTrigger::OnRestore( void )
+void CEnvPlayerSurfaceTrigger::OnRestore_Impl( void )
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	g_PlayerSurfaceTriggers.push_back( this );
 }

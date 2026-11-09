@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -23,7 +21,7 @@ import std;
 #include "view.h"
 #include "viewrender.h"
 
-static void PixelvisDrawChanged( IConVar *pPixelvisVar, const char *pOld, float flOldValue );
+static void PixelvisDrawChanged( ConVar *pPixelvisVar, const char *pOld, float flOldValue );
 
 ConVar r_pixelvisibility_partial( "r_pixelvisibility_partial", "1" );
 //#if defined( DX_TO_GL_ABSTRACTION ) 
@@ -75,6 +73,7 @@ static inline int FindQueryHandlePairIndex( OcclusionQueryHiddenData_t *pData, i
 }
 
 
+extern int ScreenTransform( const Vector& point, Vector& screen );
 float PixelVisibility_DrawProxy( IMatRenderContext *pRenderContext, OcclusionQueryObjectHandle_t queryHandle, Vector origin, float scale, float proxyAspect, IMaterial *pMaterial, bool screenspace )
 {
 	Vector point;
@@ -125,7 +124,6 @@ float PixelVisibility_DrawProxy( IMatRenderContext *pRenderContext, OcclusionQue
 	Vector screen[4];
 	for ( int i = 0; i < 4; i++ )
 	{
-		extern int ScreenTransform( const Vector& point, Vector& screen );
 		if ( ScreenTransform( verts[i+1], screen[i] ) )
 			return -1;
 	}
@@ -750,7 +748,7 @@ CPixelVisSet *CPixelVisibilitySystem::FindOrCreatePixelVisSet( const pixelvis_qu
 }
 
 
-void PixelvisDrawChanged( IConVar *pPixelvisVar, const char *pOld, float flOldValue )
+void PixelvisDrawChanged( ConVar *pPixelvisVar, const char *pOld, float flOldValue )
 {
 	ConVarRef var( pPixelvisVar );
 	g_PixelVisibilitySystem.ShowQueries( var.GetBool() );

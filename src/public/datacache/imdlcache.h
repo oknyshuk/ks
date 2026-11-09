@@ -71,18 +71,17 @@ enum MDLCacheDataType_t
 class IMDLCacheNotify
 {
 public:
-    virtual ~IMDLCacheNotify() { };
 
 	// Called right after the data is loaded
-	virtual void OnDataLoaded( MDLCacheDataType_t type, MDLHandle_t handle ) = 0;
+	void OnDataLoaded( MDLCacheDataType_t type, MDLHandle_t handle );
 
 	// Called right before combiner process data into cache
-	virtual void OnCombinerPreCache( MDLHandle_t OldHandle, MDLHandle_t NewHandle ) = 0;
+	void OnCombinerPreCache( MDLHandle_t OldHandle, MDLHandle_t NewHandle );
 
 	// Called right before the data is unloaded
-	virtual void OnDataUnloaded( MDLCacheDataType_t type, MDLHandle_t handle ) = 0;
+	void OnDataUnloaded( MDLCacheDataType_t type, MDLHandle_t handle );
 
-	virtual bool ShouldSupressLoadWarning( MDLHandle_t handle ) = 0;
+	bool ShouldSupressLoadWarning( MDLHandle_t handle );
 };
 
 
@@ -226,170 +225,181 @@ typedef void (*CombinedModelLoadedCallback)( void *pUserData, MDLHandle_t OldHan
 //-----------------------------------------------------------------------------
 // The main MDL cacher 
 //----------------------------------------------------------------------------- 
-class IMDLCache : public IAppSystem
+class IMDLCache
 {
 public:
+	//--------------------------------------------------------
+	// App system protocol. Not an IAppSystem: CAppSystemGroup drives it by kind (see AppSystemRef).
+	//--------------------------------------------------------
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t Init();
+	void Shutdown();
+	const AppSystemInfo_t *GetDependencies() { return nullptr; }
+	void Reconnect( CreateInterfaceFn factory, const char *pInterfaceName ) { ReconnectInterface( factory, pInterfaceName ); }
+
 	// Used to install callbacks for when data is loaded + unloaded
 	// Returns the prior notify
-	virtual void SetCacheNotify( IMDLCacheNotify *pNotify ) = 0;
+	void SetCacheNotify( IMDLCacheNotify *pNotify );
 
 	// NOTE: This assumes the "GAME" path if you don't use
 	// the UNC method of specifying files. This will also increment
 	// the reference count of the MDL
-	virtual MDLHandle_t FindMDL( const char *pMDLRelativePath ) = 0;
+	MDLHandle_t FindMDL( const char *pMDLRelativePath );
 
 	// Reference counting
-	virtual int AddRef( MDLHandle_t handle ) = 0;
-	virtual int Release( MDLHandle_t handle ) = 0;
-	virtual int GetRef( MDLHandle_t handle ) = 0;
+	int AddRef( MDLHandle_t handle );
+	int Release( MDLHandle_t handle );
+	int GetRef( MDLHandle_t handle );
 
 	// Gets at the various data associated with a MDL
-	virtual studiohdr_t *GetStudioHdr( MDLHandle_t handle ) = 0;
-	virtual studiohwdata_t *GetHardwareData( MDLHandle_t handle ) = 0;
-	virtual vcollide_t *GetVCollide( MDLHandle_t handle ) = 0;
-	virtual unsigned char *GetAnimBlock( MDLHandle_t handle, int nBlock, bool preloadIfMissing ) = 0;
-	virtual bool HasAnimBlockBeenPreloaded( MDLHandle_t handle, int nBlock ) = 0;
-	virtual virtualmodel_t *GetVirtualModel( MDLHandle_t handle ) = 0;
-	virtual int GetAutoplayList( MDLHandle_t handle, unsigned short **pOut ) = 0;
-	virtual vertexFileHeader_t *GetVertexData( MDLHandle_t handle ) = 0;
+	studiohdr_t *GetStudioHdr( MDLHandle_t handle );
+	studiohwdata_t *GetHardwareData( MDLHandle_t handle );
+	vcollide_t *GetVCollide( MDLHandle_t handle );
+	unsigned char *GetAnimBlock( MDLHandle_t handle, int nBlock, bool preloadIfMissing );
+	bool HasAnimBlockBeenPreloaded( MDLHandle_t handle, int nBlock );
+	virtualmodel_t *GetVirtualModel( MDLHandle_t handle );
+	int GetAutoplayList( MDLHandle_t handle, unsigned short **pOut );
+	vertexFileHeader_t *GetVertexData( MDLHandle_t handle );
 
 	// Brings all data associated with an MDL into memory
-	virtual void TouchAllData( MDLHandle_t handle ) = 0;
+	void TouchAllData( MDLHandle_t handle );
 
 	// Gets/sets user data associated with the MDL
-	virtual void SetUserData( MDLHandle_t handle, void* pData ) = 0;
-	virtual void *GetUserData( MDLHandle_t handle ) = 0;
+	void SetUserData( MDLHandle_t handle, void* pData );
+	void *GetUserData( MDLHandle_t handle );
 
 	// Is this MDL using the error model?
-	virtual bool IsErrorModel( MDLHandle_t handle ) = 0;
-	virtual bool IsOverBudget( MDLHandle_t handle ) = 0;
+	bool IsErrorModel( MDLHandle_t handle );
+	bool IsOverBudget( MDLHandle_t handle );
 
 	// Flushes the cache, force a full discard
-	virtual void Flush( MDLCacheFlush_t nFlushFlags = MDLCACHE_FLUSH_ALL ) = 0;
+	void Flush( MDLCacheFlush_t nFlushFlags = MDLCACHE_FLUSH_ALL );
 
 	// Flushes a particular model out of memory
-	virtual void Flush( MDLHandle_t handle, int nFlushFlags = MDLCACHE_FLUSH_ALL ) = 0;
+	void Flush( MDLHandle_t handle, int nFlushFlags = MDLCACHE_FLUSH_ALL );
 
 	// Returns the name of the model (its relative path)
-	virtual const char *GetModelName( MDLHandle_t handle ) = 0;
+	const char *GetModelName( MDLHandle_t handle );
 
-	virtual IDataCacheSection *GetCacheSection( MDLCacheDataType_t type ) =0;
+	IDataCacheSection *GetCacheSection( MDLCacheDataType_t type );
 
 	// faster access when you already have the studiohdr
-	virtual virtualmodel_t *GetVirtualModelFast( const studiohdr_t *pStudioHdr, MDLHandle_t handle ) = 0;
+	virtualmodel_t *GetVirtualModelFast( const studiohdr_t *pStudioHdr, MDLHandle_t handle );
 
 	// all cache entries that subsequently allocated or successfully checked 
 	// are considered "locked" and will not be freed when additional memory is needed
-	virtual void BeginLock() = 0;
+	void BeginLock();
 
 	// reset all protected blocks to normal
-	virtual void EndLock() = 0;
+	void EndLock();
 
 	// returns a pointer to a counter that is incremented every time the cache has been out of the locked state (EVIL)
-	virtual int *GetFrameUnlockCounterPtrOLD() = 0;
+	int *GetFrameUnlockCounterPtrOLD();
 
 	// Finish all pending async operations
-	virtual void FinishPendingLoads() = 0;
+	void FinishPendingLoads();
 
-	virtual vcollide_t *GetVCollideEx( MDLHandle_t handle, bool synchronousLoad = true ) = 0;
-	virtual bool GetVCollideSize( MDLHandle_t handle, int *pVCollideSize ) = 0;
+	vcollide_t *GetVCollideEx( MDLHandle_t handle, bool synchronousLoad = true );
+	bool GetVCollideSize( MDLHandle_t handle, int *pVCollideSize );
 
-	virtual bool GetAsyncLoad( MDLCacheDataType_t type ) = 0;
-	virtual bool SetAsyncLoad( MDLCacheDataType_t type, bool bAsync ) = 0;
+	bool GetAsyncLoad( MDLCacheDataType_t type );
+	bool SetAsyncLoad( MDLCacheDataType_t type, bool bAsync );
 
-	virtual void BeginMapLoad() = 0;
-	virtual void EndMapLoad() = 0;
-	virtual void MarkAsLoaded( MDLHandle_t handle ) = 0;
+	void BeginMapLoad();
+	void EndMapLoad();
+	void MarkAsLoaded( MDLHandle_t handle );
 
-	virtual void InitPreloadData( bool rebuild ) = 0;
-	virtual void ShutdownPreloadData() = 0;
+	void InitPreloadData( bool rebuild );
+	void ShutdownPreloadData();
 
-	virtual bool IsDataLoaded( MDLHandle_t handle, MDLCacheDataType_t type ) = 0;
+	bool IsDataLoaded( MDLHandle_t handle, MDLCacheDataType_t type );
 
-	virtual int *GetFrameUnlockCounterPtr( MDLCacheDataType_t type ) = 0;
+	int *GetFrameUnlockCounterPtr( MDLCacheDataType_t type );
 
-	virtual studiohdr_t *LockStudioHdr( MDLHandle_t handle ) = 0;
-	virtual void UnlockStudioHdr( MDLHandle_t handle ) = 0;
+	studiohdr_t *LockStudioHdr( MDLHandle_t handle );
+	void UnlockStudioHdr( MDLHandle_t handle );
 
-	virtual bool PreloadModel( MDLHandle_t handle ) = 0;
+	bool PreloadModel( MDLHandle_t handle );
 
 	// Hammer uses this. If a model has an error loading in GetStudioHdr, then it is flagged
 	// as an error model and any further attempts to load it will just get the error model.
 	// That is, until you call this function. Then it will load the correct model.
-	virtual void ResetErrorModelStatus( MDLHandle_t handle ) = 0;
+	void ResetErrorModelStatus( MDLHandle_t handle );
 
-	virtual void MarkFrame() = 0;
+	void MarkFrame();
 
 	// Locking for things that we can lock over longer intervals than
 	// resources locked by BeginLock/EndLock
-	virtual void BeginCoarseLock() = 0;
-	virtual void EndCoarseLock() = 0;
+	void BeginCoarseLock();
+	void EndCoarseLock();
 
-	virtual void ReloadVCollide( MDLHandle_t handle ) = 0;
+	void ReloadVCollide( MDLHandle_t handle );
 
-	virtual bool ReleaseAnimBlockAllocator() = 0;
+	bool ReleaseAnimBlockAllocator();
 
-	virtual bool RestoreHardwareData( MDLHandle_t handle, FSAsyncControl_t *pAsyncVTXControl, FSAsyncControl_t *pAsyncVVDControl ) = 0;
+	bool RestoreHardwareData( MDLHandle_t handle, FSAsyncControl_t *pAsyncVTXControl, FSAsyncControl_t *pAsyncVVDControl );
 
-	virtual void DisableVCollideLoad() = 0;
-	virtual void EnableVCollideLoad() = 0;
+	void DisableVCollideLoad();
+	void EnableVCollideLoad();
 
-	virtual void DisableFileNotFoundWarnings() = 0;
-	virtual void EnableFileNotFoundWarnings() = 0;
+	void DisableFileNotFoundWarnings();
+	void EnableFileNotFoundWarnings();
 
-	virtual bool ProcessPendingHardwareRestore() = 0;
+	bool ProcessPendingHardwareRestore();
 
-	virtual void UnloadQueuedHardwareData( ) = 0;
+	void UnloadQueuedHardwareData( );
 
-	virtual void DumpDictionaryState( ) = 0;
+	void DumpDictionaryState( );
 
 	// ========================
 	// combined models
 
 	// This will create a combined model by the name specified in pszModelName and return back a temporary model handle.
 	// May return MDLHANDLE_INVALID if the name is a duplicate of an existing model
-	virtual MDLHandle_t	CreateCombinedModel( const char *pszModelName ) = 0;
+	MDLHandle_t	CreateCombinedModel( const char *pszModelName );
 
 	// This will create a combined model in replace of an existing model handle.  The handle should be valid to use during the entire process.
 	// Returns true if the handle is acceptable to use for the combining process.
-	virtual bool		CreateCombinedModel( MDLHandle_t handle ) = 0;
+	bool		CreateCombinedModel( MDLHandle_t handle );
 
 	// Sets the models for the combining process
-	virtual bool		SetCombineModels( MDLHandle_t handle, const std::vector< SCombinerModelInput_t > &vecModelsToCombine ) = 0;
+	bool		SetCombineModels( MDLHandle_t handle, const std::vector< SCombinerModelInput_t > &vecModelsToCombine );
 
 	// Indicates that you are done with the setup of the combining process.  You must specify a callback function and optionally
 	// a user pointer that will be supplied to you in the callback
-	virtual bool		FinishCombinedModel( MDLHandle_t handle, CombinedModelLoadedCallback pFunc, void *pUserData = nullptr ) = 0;
+	bool		FinishCombinedModel( MDLHandle_t handle, CombinedModelLoadedCallback pFunc, void *pUserData = nullptr );
 
 	// Lets you query a model handle to see if it is a placeholder returned by CreateCombinedModel()
-	virtual bool		IsCombinedPlaceholder( MDLHandle_t handle ) = 0;
+	bool		IsCombinedPlaceholder( MDLHandle_t handle );
 
 	// Lets you query a model handle to see if it is a combined model
-	virtual bool		IsCombinedModel( MDLHandle_t handle ) = 0;
+	bool		IsCombinedModel( MDLHandle_t handle );
 
 	// Returns the number of models contained in the combined model.  Includes primary and all secondary models
-	virtual int			GetNumCombinedSubModels( MDLHandle_t handle ) = 0;
+	int			GetNumCombinedSubModels( MDLHandle_t handle );
 
 	// Gets the file name for a sub model
-	virtual void		GetCombinedSubModelFilename( MDLHandle_t handle, int nSubModelIndex, char *pszResult, int nResultSize ) = 0;
+	void		GetCombinedSubModelFilename( MDLHandle_t handle, int nSubModelIndex, char *pszResult, int nResultSize );
 
 	// Returns the KV of the material set for the model.  You are responsible for calling deleteThis() on the result.
-	virtual KeyValues	*GetCombinedMaterialKV( MDLHandle_t handle, int nAtlasGroup = 0 ) = 0;	
+	KeyValues	*GetCombinedMaterialKV( MDLHandle_t handle, int nAtlasGroup = 0 );	
 
 	// Internal engine use function to help drive the combining process.
-	virtual void		UpdateCombiner( ) = 0;	// should be called from main thread after rendering has completed
+	void		UpdateCombiner( );	// should be called from main thread after rendering has completed
 
 	// Internal engine function to help get access to specific combined assets
-	virtual void		*GetCombinedInternalAsset( ECombinedAsset AssetType, const char *pszAssetID = nullptr, int *nSize = nullptr ) = 0;
+	void		*GetCombinedInternalAsset( ECombinedAsset AssetType, const char *pszAssetID = nullptr, int *nSize = nullptr );
 
 	// Set Combiner Flags
-	virtual void		SetCombinerFlags( unsigned nFlags ) = 0;
+	void		SetCombinerFlags( unsigned nFlags );
 
 	// Clear Combiner Flags
-	virtual void		ClearCombinerFlags( unsigned nFlags ) = 0;
+	void		ClearCombinerFlags( unsigned nFlags );
 
 	// Dump out resident combiner info
-	virtual void		DebugCombinerInfo( ) = 0;
+	void		DebugCombinerInfo( );
 };
 
 extern IMDLCache *g_pMDLCache;;

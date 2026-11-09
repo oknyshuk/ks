@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -510,7 +508,7 @@ void QcCreatePreviewDecal( uint32 nStickerKitDefinition, uint32 nTintID, const t
 
 	CLocalPlayerFilter filter;
 	QcCreateDecalData( g_nPlayerLogoProxyForPreviewKey, nStickerKitDefinition, nTintID, bHasDrips, gpGlobals->curtime - PLAYERDECALS_DURATION_APPLY );
-	TE_PlayerDecal( filter, 0.0f, &trace.endpos, &startPos, pRight, g_nPlayerLogoProxyForPreviewKey, trace.GetEntityIndex(), trace.hitbox, EDF_IMMEDIATECLEANUP );
+	TE_PlayerDecal( filter, 0.0f, &trace.endpos, &startPos, pRight, g_nPlayerLogoProxyForPreviewKey, TraceGetEntityIndex( trace ), trace.hitbox, EDF_IMMEDIATECLEANUP );
 }
 
 IMaterial * QcCreateDecalDataForModelPreviewPanel( int nStickerKitDefinition, int nTintID )

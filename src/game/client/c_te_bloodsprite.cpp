@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -84,49 +82,6 @@ C_TEBloodSprite::~C_TEBloodSprite( void )
 }
 
 
-//-----------------------------------------------------------------------------
-// Recording 
-//-----------------------------------------------------------------------------
-static inline void RecordBloodSprite( const Vector &start, const Vector &direction, 
-	int r, int g, int b, int a, int nSprayModelIndex, int nDropModelIndex, int size )
-{
-	if ( !ToolsEnabled() )
-		return;
-
-	if ( clienttools->IsInRecordingMode() )
-	{
-		Color clr( r, g, b, a );
-
-		const model_t* pSprayModel = (nSprayModelIndex != 0) ? modelinfo->GetModel( nSprayModelIndex ) : nullptr;
-		const model_t* pDropModel = (nDropModelIndex != 0) ? modelinfo->GetModel( nDropModelIndex ) : nullptr;
-		const char *pSprayModelName = pSprayModel ? modelinfo->GetModelName( pSprayModel ) : "";
-		const char *pDropModelName = pDropModel ? modelinfo->GetModelName( pDropModel ) : "";
-
-		KeyValues *msg = new KeyValues( "TempEntity" );
-
- 		msg->SetInt( "te", TE_BLOOD_SPRITE );
- 		msg->SetString( "name", "TE_BloodSprite" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetFloat( "originx", start.x );
-		msg->SetFloat( "originy", start.y );
-		msg->SetFloat( "originz", start.z );
-		msg->SetFloat( "directionx", direction.x );
-		msg->SetFloat( "directiony", direction.y );
-		msg->SetFloat( "directionz", direction.z );
-		msg->SetColor( "color", clr );
-  		msg->SetString( "spraymodel", pSprayModelName );
- 		msg->SetString( "dropmodel", pDropModelName );
-		msg->SetInt( "size", size );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
-}
-
-
-//-----------------------------------------------------------------------------
-// Recording 
-//-----------------------------------------------------------------------------
 void TE_BloodSprite( IRecipientFilter& filter, float delay,
 	const Vector* org, const Vector *dir, int r, int g, int b, int a, int size )
 {
@@ -134,7 +89,6 @@ void TE_BloodSprite( IRecipientFilter& filter, float delay,
 
 	tempents->BloodSprite( offset, r, g, b, a, g_sModelIndexBloodSpray, g_sModelIndexBloodDrop, size );	
 	FX_Blood( offset, (Vector &)*dir, r, g, b, a );
-	RecordBloodSprite( *org, *dir, r, g, b, a, g_sModelIndexBloodSpray, g_sModelIndexBloodDrop, size );
 }
 
 
@@ -149,7 +103,6 @@ void C_TEBloodSprite::PostDataUpdate( DataUpdateType_t updateType )
 
 	tempents->BloodSprite( offset, r, g, b, a, m_nSprayModel, m_nDropModel, m_nSize );	
 	FX_Blood( offset, m_vecDirection, r, g, b, a );
-	RecordBloodSprite( m_vecOrigin, m_vecDirection, r, g, b, a, m_nSprayModel, m_nDropModel, m_nSize );
 }
 
 void TE_BloodSprite( IRecipientFilter& filter, float delay, KeyValues *pKeyValues )

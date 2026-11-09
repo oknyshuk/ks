@@ -4,8 +4,6 @@
 // Purpose: Teleports a named entity to a given position and restores
 //			it's physics state
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -23,7 +21,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -51,15 +48,15 @@ class CPointTeleport : public CBaseEntity
 {
 	DECLARE_CLASS( CPointTeleport, CBaseEntity );
 public:
-	void	Activate( void );
+	void	Activate_Impl( void );
 
 	[[= ks::reflect::Input{ .name = "Teleport", .type = FIELD_VOID } ]] void InputTeleport( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "TeleportEntity", .type = FIELD_STRING } ]] void InputTeleportEntity( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "TeleportToCurrentPos", .type = FIELD_VOID } ]] void InputTeleportToCurrentPos( inputdata_t &inputdata );
 
-	int	ObjectCaps( void )
+	int	ObjectCaps_Impl( void )
 	{ 
-		return (BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION); 
+		return (BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION); 
 	}
 
 private:
@@ -99,7 +96,7 @@ bool CPointTeleport::EntityMayTeleport( CBaseEntity *pTarget )
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-void CPointTeleport::Activate( void )
+void CPointTeleport::Activate_Impl( void )
 {
 	// Start with our origin point
 	m_vSaveOrigin = GetAbsOrigin();
@@ -121,7 +118,7 @@ void CPointTeleport::Activate( void )
 			else
 			{
 				Warning("ERROR: (%s) can't teleport object (%s) as it has a parent (%s)!\n",GetDebugName(),pTarget->GetDebugName(),pTarget->GetMoveParent()->GetDebugName());
-				BaseClass::Activate();
+				BaseClass::Activate_Impl();
 				return;
 			}
 		}
@@ -133,7 +130,7 @@ void CPointTeleport::Activate( void )
 		}
 	}
 
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 }
 
 

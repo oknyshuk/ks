@@ -225,7 +225,7 @@ public:
 		m_pDispHullData =  nullptr;
 	}
 	// Fill out the meshlist for this terrain patch
-	virtual void GetVirtualMesh( void *userData, virtualmeshlist_t *pList )
+	void GetVirtualMesh( void *userData, virtualmeshlist_t *pList )
 	{
 		int index = size_cast< int >( (intp) userData );
 		contract_assert( index >= 0 && index < g_DispCollTreeCount );
@@ -240,14 +240,14 @@ public:
 		}
 	}
 	// returns the bounds for the terrain patch
-	virtual void GetWorldspaceBounds( void *userData, Vector *pMins, Vector *pMaxs )
+	void GetWorldspaceBounds( void *userData, Vector *pMins, Vector *pMaxs )
 	{
 		int index = size_cast< int >( (intp) userData );
 		*pMins = g_pDispBounds[index].mins;
 		*pMaxs = g_pDispBounds[index].maxs;
 	}
 	// Query against the AABB tree to find the list of triangles for this patch in a sphere
-	virtual void GetTrianglesInSphere( void *userData, const Vector &center, float radius, virtualmeshtrianglelist_t *pList )
+	void GetTrianglesInSphere( void *userData, const Vector &center, float radius, virtualmeshtrianglelist_t *pList )
 	{
 		int index = size_cast< int > ( (intp) userData );
 		pList->triangleCount = g_pDispCollTrees[index].AABBTree_GetTrisInSphere( center, radius, pList->triangleIndices, std::size( pList->triangleIndices ) );
@@ -289,10 +289,13 @@ public:
 		m_pDispHullData = nullptr;
 	}
 
-private:
+public:
 	byte			*m_pDispHullData;
 	std::vector< int > m_dispHullOffset;
 };
+
+#include "facade/ivirtualmeshevent.inl"
+
 
 // Singleton to implement the callbacks
 static CVirtualTerrain g_VirtualTerrain;

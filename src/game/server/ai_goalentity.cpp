@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -49,7 +47,7 @@ void CAI_GoalEntity::Spawn()
 
 void CAI_GoalEntity::OnRestore()
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	ExitDormant();
 
@@ -236,7 +234,7 @@ void CAI_GoalEntity::UpdateOnRemove()
 		inputdata_t inputdata;
 		InputDeactivate( inputdata );
 	}
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 //-------------------------------------
@@ -264,7 +262,7 @@ void CAI_GoalEntity::OnEntityDeleted( CBaseEntity *pEntity )
 int CAI_GoalEntity::DrawDebugTextOverlays()
 {
 	char tempstr[512];
-	int offset = BaseClass::DrawDebugTextOverlays();
+	int offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	V_snprintf( tempstr, sizeof(tempstr), "Active: %s", IsActive() ? "yes" : "no" );
 	EntityText( offset, tempstr, 0 );

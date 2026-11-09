@@ -4,22 +4,18 @@
 
 // Purpose: Weapon data file parsing, shared by game & client dlls.
 
-import ks.tier1;
 #include "shareddefs.h"
 #include "GameEventListener.h"
 #include "igamesystem.h"
 #include "datamap.h"
 #include "gamestringpool.h"
 #include "econ/econ_item_schema_minimal.h"
-import std;
 
-class IMaterial;
 
 #ifdef CLIENT_DLL
 #define CEconItemView C_EconItemView
 #endif
 
-class IFileSystem;
 
 //=============================================================================
 // Econ item system stubs (econ system removed)
@@ -499,6 +495,8 @@ protected:
 
 	WEAPON_FILE_INFO_HANDLE FindOrCreateWeaponInfo( const char *name );
 	bool LoadWeaponDataFromFile( IFileSystem* filesystem, const char *szWeaponName, const unsigned char *pICEKey );
+
+public:
 	void FireGameEvent( IGameEvent *event );
 
 private:

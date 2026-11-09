@@ -23,9 +23,7 @@
  *  fallback menu, a wizard can edit the contents of a fallback, specifying primary weapon,
  *  pistol, and equipment.
  */
-import ks.tier1;
 #include "weapon_csbase.h"
-import std;
 
 class BuyPreset;
 class CCSWeaponInfo;

@@ -3,8 +3,6 @@
 
 // Purpose: An entity that spawns and controls a particle system
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -60,7 +58,7 @@ CParticleSystem::CParticleSystem( void ) : m_bNoSave( false )
 //-----------------------------------------------------------------------------
 // Precache 
 //-----------------------------------------------------------------------------
-void CParticleSystem::Precache( void )
+void CParticleSystem::Precache_Impl( void )
 {
 	const char *pParticleSystemName = STRING( m_iszEffectName );
 	if ( pParticleSystemName == nullptr || pParticleSystemName[0] == 0 )
@@ -75,9 +73,9 @@ void CParticleSystem::Precache( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CParticleSystem::Spawn( void )
+void CParticleSystem::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	Precache();
 	m_iEffectIndex = -1;
@@ -86,9 +84,9 @@ void CParticleSystem::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CParticleSystem::Activate( void )
+void CParticleSystem::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	// Find our particle effect index
 	m_iEffectIndex = GetParticleSystemIndex( STRING(m_iszEffectName) );
@@ -103,27 +101,27 @@ void CParticleSystem::Activate( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CParticleSystem::KeyValue( const char *szKeyName, const char *szValue )
+bool CParticleSystem::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if ( FStrEq( szKeyName, "snapshot_file" ) )
 	{
 		V_strncpy( m_szSnapshotFileName.GetForModify(), szValue, MAX_PATH );
 		return true;
 	}
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CParticleSystem::GetKeyValue( const char *szKeyName, char *szValue, int iMaxLen )
+bool CParticleSystem::GetKeyValue_Impl( const char *szKeyName, char *szValue, int iMaxLen )
 {
 	if ( FStrEq( szKeyName, "snapshot_file" ) )
 	{
 		V_snprintf( szValue, iMaxLen, "%s", m_szSnapshotFileName.Get() );
 		return true;
 	}
-	return BaseClass::GetKeyValue( szKeyName, szValue, iMaxLen );
+	return BaseClass::GetKeyValue_Impl( szKeyName, szValue, iMaxLen );
 }
 
 //-----------------------------------------------------------------------------
@@ -137,7 +135,7 @@ void CParticleSystem::StartParticleSystemThink( void )
 //-----------------------------------------------------------------------------
 // Purpose: Always transmitted to clients
 //-----------------------------------------------------------------------------
-int CParticleSystem::UpdateTransmitState()
+int CParticleSystem::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
@@ -244,11 +242,11 @@ bool CParticleSystem::SetControlPointValue( int iControlPoint, const Vector &vVa
 //-----------------------------------------------------------------------------
 // Inline methods 
 //-----------------------------------------------------------------------------
-int CParticleSystem::ObjectCaps( void )
+int CParticleSystem::ObjectCaps_Impl( void )
 { 
 	int flags = 0;
 	if ( m_bNoSave )
 		flags = FCAP_DONT_SAVE;
 	
-	return BaseClass::ObjectCaps() | flags; 
+	return BaseClass::ObjectCaps_Impl() | flags; 
 }

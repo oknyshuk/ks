@@ -236,14 +236,3 @@ public:
 private:
 	char const *m_pszName;
 };
-
-
-//-----------------------------------------------------------------------------
-// Purpose: This interface is here to add more hooks than IGameSystemPerFrame exposes,
-// so we don't pollute it with hooks that only the tool cares about
-//-----------------------------------------------------------------------------
-class IToolFrameworkServer
-{
-public:
-	virtual void PreSetupVisibility() = 0;
-};

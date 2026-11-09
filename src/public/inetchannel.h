@@ -33,77 +33,132 @@ typedef struct netpacket_s
 class INetChannel : public INetChannelInfo
 {
 public:
-	virtual	~INetChannel( void ) {};
 
-	virtual void	SetDataRate(float rate) = 0;
+	void	SetDataRate(float rate);
 
-	virtual bool	RegisterMessage(INetMessageBinder *msg) = 0;
-	virtual bool	UnregisterMessage(INetMessageBinder *msg) = 0;
+	bool	RegisterMessage(INetMessageBinder *msg);
+	bool	UnregisterMessage(INetMessageBinder *msg);
 
-	virtual bool	StartStreaming( unsigned int challengeNr ) = 0;
-	virtual void	ResetStreaming( void ) = 0;
-	virtual void	SetTimeout(float seconds, bool bForceExact = false) = 0;
-	virtual void	SetDemoRecorder(IDemoRecorder *recorder) = 0;
-	virtual void	SetChallengeNr(unsigned int chnr) = 0;
+	bool	StartStreaming( unsigned int challengeNr );
+	void	ResetStreaming( void );
+	void	SetTimeout(float seconds, bool bForceExact = false);
+	void	SetDemoRecorder(IDemoRecorder *recorder);
+	void	SetChallengeNr(unsigned int chnr);
 	
-	virtual void	Reset( void ) = 0;
-	virtual void	Clear( void ) = 0;
-	virtual void	Shutdown(const char *reason) = 0;
+	void	Reset( void );
+	void	Clear( void );
+	void	Shutdown(const char *reason);
 	
-	virtual void	ProcessPlayback( void ) = 0;
-	virtual bool	ProcessStream( void ) = 0;
-	virtual void	ProcessPacket( struct netpacket_s* packet, bool bHasHeader ) = 0;
+	void	ProcessPlayback( void );
+	bool	ProcessStream( void );
+	void	ProcessPacket( struct netpacket_s* packet, bool bHasHeader );
 			
-	virtual bool	SendNetMsg(INetMessage &msg, bool bForceReliable = false, bool bVoice = false ) = 0;
+	bool	SendNetMsg(INetMessage &msg, bool bForceReliable = false, bool bVoice = false );
 	[[gnu::always_inline]] inline bool SendNetMsg(INetMessage const &msg, bool bForceReliable = false, bool bVoice = false ) { return SendNetMsg( *( (INetMessage *) &msg ), bForceReliable, bVoice ); }
-	virtual bool	SendData(bf_write &msg, bool bReliable = true) = 0;
-	virtual bool	SendFile(const char *filename, unsigned int transferID, bool bIsReplayDemoFile ) = 0;
-	virtual void	DenyFile(const char *filename, unsigned int transferID, bool bIsReplayDemoFile ) = 0;
-	virtual void	RequestFile_OLD(const char *filename, unsigned int transferID) = 0;	// get rid of this function when we version the 
-	virtual void	SetChoked( void ) = 0;
-	virtual int		SendDatagram(bf_write *data) = 0;		
-	virtual bool	Transmit(bool onlyReliable = false) = 0;
+	bool	SendData(bf_write &msg, bool bReliable = true);
+	bool	SendFile(const char *filename, unsigned int transferID, bool bIsReplayDemoFile );
+	void	DenyFile(const char *filename, unsigned int transferID, bool bIsReplayDemoFile );
+	void	RequestFile_OLD(const char *filename, unsigned int transferID);	// get rid of this function when we version the 
+	void	SetChoked( void );
+	int		SendDatagram(bf_write *data);		
+	bool	Transmit(bool onlyReliable = false);
 
-	virtual const ns_address &GetRemoteAddress( void ) const = 0;
-	virtual INetChannelHandler *GetMsgHandler( void ) const = 0;
-	virtual int				GetDropNumber( void ) const = 0;
-	virtual int				GetSocket( void ) const = 0;
-	virtual unsigned int	GetChallengeNr( void ) const = 0;
-	virtual void			GetSequenceData( int &nOutSequenceNr, int &nInSequenceNr, int &nOutSequenceNrAck ) = 0;
-	virtual void			SetSequenceData( int nOutSequenceNr, int nInSequenceNr, int nOutSequenceNrAck ) = 0;
+	const ns_address &GetRemoteAddress( void ) const;
+	INetChannelHandler *GetMsgHandler( void ) const;
+	int				GetDropNumber( void ) const;
+	int				GetSocket( void ) const;
+	unsigned int	GetChallengeNr( void ) const;
+	void			GetSequenceData( int &nOutSequenceNr, int &nInSequenceNr, int &nOutSequenceNrAck );
+	void			SetSequenceData( int nOutSequenceNr, int nInSequenceNr, int nOutSequenceNrAck );
 		
-	virtual void	UpdateMessageStats( int msggroup, int bits) = 0;
-	virtual bool	CanPacket( void ) const = 0;
-	virtual bool	IsOverflowed( void ) const = 0;
-	virtual bool	IsTimedOut( void ) const  = 0;
-	virtual bool	HasPendingReliableData( void ) = 0;
+	void	UpdateMessageStats( int msggroup, int bits);
+	bool	CanPacket( void ) const;
+	bool	IsOverflowed( void ) const;
+	bool	IsTimedOut( void ) const;
+	bool	HasPendingReliableData( void );
 
-	virtual void	SetFileTransmissionMode(bool bBackgroundMode) = 0;
-	virtual void	SetCompressionMode( bool bUseCompression ) = 0;
-	virtual unsigned int RequestFile(const char *filename, bool bIsReplayDemoFile ) = 0;
-	virtual float	GetTimeSinceLastReceived( void ) const = 0;	// get time since last received packet in seconds
+	void	SetFileTransmissionMode(bool bBackgroundMode);
+	void	SetCompressionMode( bool bUseCompression );
+	unsigned int RequestFile(const char *filename, bool bIsReplayDemoFile );
+	float	GetTimeSinceLastReceived( void ) const;	// get time since last received packet in seconds
 
-	virtual void	SetMaxBufferSize(bool bReliable, int nBytes, bool bVoice = false ) = 0;
+	void	SetMaxBufferSize(bool bReliable, int nBytes, bool bVoice = false );
 
-	virtual bool	IsNull() const = 0;
-	virtual int		GetNumBitsWritten( bool bReliable ) = 0;
-	virtual void	SetInterpolationAmount( float flInterpolationAmount ) = 0;
-	virtual void	SetRemoteFramerate( float flFrameTime, float flFrameTimeStdDeviation, float flFrameStartTimeStdDeviation ) = 0;
+	bool	IsNull() const;
+	int		GetNumBitsWritten( bool bReliable );
+	void	SetInterpolationAmount( float flInterpolationAmount );
+	void	SetRemoteFramerate( float flFrameTime, float flFrameTimeStdDeviation, float flFrameStartTimeStdDeviation );
 
 	// Max # of payload bytes before we must split/fragment the packet
-	virtual void	SetMaxRoutablePayloadSize( int nSplitSize ) = 0;
-	virtual int		GetMaxRoutablePayloadSize() = 0;
+	void	SetMaxRoutablePayloadSize( int nSplitSize );
+	int		GetMaxRoutablePayloadSize();
 
 	// For routing messages to a different handler
-	virtual bool	SetActiveChannel( INetChannel *pNewChannel ) = 0;
-	virtual void	AttachSplitPlayer( int nSplitPlayerSlot, INetChannel *pChannel ) = 0;
-	virtual void	DetachSplitPlayer( int nSplitPlayerSlot ) = 0;
+	bool	SetActiveChannel( INetChannel *pNewChannel );
+	void	AttachSplitPlayer( int nSplitPlayerSlot, INetChannel *pChannel );
+	void	DetachSplitPlayer( int nSplitPlayerSlot );
 
-	virtual bool	IsRemoteDisconnected() const = 0;
+	bool	IsRemoteDisconnected() const;
 
-	virtual bool	WasLastMessageReliable() const = 0; // True if the last (or currently processing) message was sent via the reliable channel
+	bool	WasLastMessageReliable() const; // True if the last (or currently processing) message was sent via the reliable channel
 
-	virtual const unsigned char * GetChannelEncryptionKey() const = 0;	// Returns a buffer with channel encryption key data (network layer determines the buffer size)
+	const unsigned char * GetChannelEncryptionKey() const;	// Returns a buffer with channel encryption key data (network layer determines the buffer size)
 
-	virtual bool	EnqueueVeryLargeAsyncTransfer( INetMessage &msg ) = 0;	// Enqueues a message for a large async transfer
+	bool	EnqueueVeryLargeAsyncTransfer( INetMessage &msg );	// Enqueues a message for a large async transfer
+};
+
+// Handler registration of one net message type on a net channel. The typed parts (how to
+// parse the message, what to do with it) are callables supplied by CNetMessageBinder::Bind.
+class INetMessageBinder
+{
+public:
+	INetMessageBinder( INetChannel *pNetChannel, int type,
+		std::move_only_function< INetMessage *( bf_read & ) > create,
+		std::move_only_function< bool( const INetMessage & ) > process )
+		: m_NetChannel( pNetChannel )
+		, m_nType( type )
+		, m_Create( std::move( create ) )
+		, m_Process( std::move( process ) )
+	{
+		if ( m_NetChannel )
+		{
+			m_NetChannel->RegisterMessage( this );
+		}
+	}
+
+	~INetMessageBinder()
+	{
+		if ( m_NetChannel )
+		{
+			m_NetChannel->UnregisterMessage( this );
+		}
+	}
+
+	INetMessageBinder( const INetMessageBinder & ) = delete;
+	INetMessageBinder &operator=( const INetMessageBinder & ) = delete;
+
+	int GetType( void ) const { return m_nType; } // returns module specific header tag eg svc_serverinfo
+
+	void SetNetChannel( INetChannel *netchan ) // netchannel this message is from/for
+	{
+		if( m_NetChannel != netchan )
+		{
+			if( m_NetChannel )
+				m_NetChannel->UnregisterMessage( this );
+
+			m_NetChannel = netchan;
+
+			if( m_NetChannel )
+				m_NetChannel->RegisterMessage( this );
+		}
+	}
+
+	INetMessage *CreateFromBuffer( bf_read &buffer ) { return m_Create( buffer ); }
+	bool Process( const INetMessage &src ) { return m_Process( src ); }
+
+private:
+	INetChannel	*m_NetChannel;	// netchannel this message is from/for
+	int m_nType;
+	std::move_only_function< INetMessage *( bf_read & ) > m_Create;
+	std::move_only_function< bool( const INetMessage & ) > m_Process;
 };

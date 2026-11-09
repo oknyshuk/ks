@@ -17,6 +17,8 @@ import std;
 #include "server.h"
 #include "eiface.h"
 #include "cdll_engine_int.h"
+#include "facade/inetworkstringtable.inl"
+#include "facade/inetworkstringtablecontainer.inl"
 
 ConVar sv_dumpstringtables( "sv_dumpstringtables", "0", FCVAR_CHEAT );
 
@@ -90,9 +92,9 @@ public:
 	CNetworkStringTableDictionaryManager();
 
 	// INetworkStringTableDictionaryMananger
-	virtual bool OnLevelLoadStart( char const *pchMapName, CRC32_t *pStringTableCRC );
-	virtual void OnBSPFullyUnloaded();
-	virtual CRC32_t GetCRC() { return m_CRC; }
+	bool OnLevelLoadStart( char const *pchMapName, CRC32_t *pStringTableCRC );
+	void OnBSPFullyUnloaded();
+	CRC32_t GetCRC() { return m_CRC; }
 
 	// Returns -1 if string can't be found in db
 	int	 Find( char const *pchString ) const;
@@ -107,7 +109,7 @@ public:
 	bool	WriteDictionaryToBSP( char const *pchMapName, std::span< const std::byte > buf, bool bCreatingFor360 );
 	void	CacheNewStringTableForWriteToBSPOnLevelShutdown( char const *pchMapName, std::span< const std::byte > buf, bool bCreatingFor360 );
 
-private:
+public:
 
 	void LoadMapStrings( char const *pchMapName, bool bServer );
 	void Clear();
@@ -168,6 +170,9 @@ private:
 
 	CStringTableDictionaryCache		m_BuildStringTableDictionaryCache;
 };
+
+#include "facade/inetworkstringdictmgr.inl"
+
 
 static CNetworkStringTableDictionaryManager g_StringTableDictionary;
 // Expose to rest of engine
@@ -478,7 +483,7 @@ public:
 	{
 	}
 
-	virtual ~CNetworkStringDict() 
+	~CNetworkStringDict() 
 	{ 
 		Purge();
 	}
@@ -531,7 +536,7 @@ public:
 		return m_Items[index].value;
 	}
 
-	virtual void UpdateDictionary( int index )
+	void UpdateDictionary( int index )
 	{
 		if ( !m_bUseDictionary )
 			return;
@@ -539,7 +544,7 @@ public:
 		m_Items[index].key.Update();	// refreshes the dictionary slot; the hash (name only) is unchanged
 	}
 
-	virtual int DictionaryIndex( int index )
+	int DictionaryIndex( int index )
 	{
 		if ( !m_bUseDictionary )
 			return -1;
@@ -547,7 +552,7 @@ public:
 		return m_Items[index].key.GetDictionaryIndex();
 	}
 
-private:
+public:
 	bool	m_bUseDictionary;
 
 	// We use this type of item to avoid having two copies of the strings in memory --
@@ -589,7 +594,7 @@ private:
 			return m_StringHash;
 		}
 		
-	private:
+	public:
 
 		void					ComputeHash()
 		{
@@ -617,6 +622,9 @@ private:
 	std::deque< Entry > m_Items;					// index = network string number; deque: items never move
 	std::multimap< CRC32_t, int > m_ItemsByHash;
 };
+
+#include "facade/inetworkstringdict.inl"
+
 
 void CNetworkStringTable::CheckDictionary( int stringNumber )
 {

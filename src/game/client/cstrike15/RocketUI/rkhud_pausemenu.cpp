@@ -17,8 +17,6 @@
 #include "rkhud_model.h"
 
 #include <rocketui/rmlui.h>
-import ks.core;
-import std;
 
 #include "cdll_client_int.h" // extern globals to interfaces like engineclient
 

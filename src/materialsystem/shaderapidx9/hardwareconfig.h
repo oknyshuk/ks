@@ -145,7 +145,7 @@ struct HardwareCaps_t : public MaterialAdapterInfo_t
 //-----------------------------------------------------------------------------
 // Contains the hardware configuration for the current device
 //-----------------------------------------------------------------------------
-class CHardwareConfig : public IHardwareConfigInternal
+class CHardwareConfig
 {
 public:
 	CHardwareConfig();
@@ -159,85 +159,85 @@ public:
 	HardwareCaps_t& CapsForEdit() { return m_Caps; }
 
 	// Members of IMaterialSystemHardwareConfig
-	virtual bool HasStencilBuffer() const;
-	virtual int	 GetFrameBufferColorDepth() const;
-	virtual int  GetSamplerCount() const;
-	virtual bool HasSetDeviceGammaRamp() const;
-	virtual VertexCompressionType_t SupportsCompressedVertices() const;
-	virtual bool SupportsBorderColor() const;
-	virtual bool SupportsFetch4() const;
-	virtual bool SupportsStaticControlFlow() const;
-	virtual int  MaximumAnisotropicLevel() const;
-	virtual int  MaxTextureWidth() const;
-	virtual int  MaxTextureHeight() const;
-	virtual int	 TextureMemorySize() const;
-	virtual bool SupportsMipmappedCubemaps() const;
-	virtual int	 NumVertexShaderConstants() const;
-	virtual int	 NumBooleanVertexShaderConstants() const;
-	virtual int	 NumIntegerVertexShaderConstants() const;
-	virtual int	 NumPixelShaderConstants() const;
-	virtual int	 NumBooleanPixelShaderConstants() const;
-	virtual int	 NumIntegerPixelShaderConstants() const;
-	virtual int	 MaxNumLights() const;
-	virtual int  MaxTextureAspectRatio() const;
-	virtual int	 MaxVertexShaderBlendMatrices() const;
-	virtual int	 MaxUserClipPlanes() const;
-	virtual bool UseFastClipping() const;
-	virtual int  GetDXSupportLevel() const;
-	virtual const char *GetShaderDLLName() const;
-	virtual bool ReadPixelsFromFrontBuffer() const;
-	virtual bool PreferDynamicTextures() const;
-	virtual bool SupportsHDR() const;
-	virtual bool NeedsAAClamp() const;
-	virtual bool NeedsATICentroidHack() const;
-	virtual int	 GetMaxDXSupportLevel() const;
-	virtual bool SpecifiesFogColorInLinearSpace() const;
-	virtual bool SupportsSRGB() const;
-	virtual bool FakeSRGBWrite() const;
-	virtual bool CanDoSRGBReadFromRTs() const;
-	virtual bool SupportsGLMixedSizeTargets() const;
-	virtual bool IsAAEnabled() const;
-	virtual int  GetVertexSamplerCount() const;
-	virtual int  GetMaxVertexTextureDimension() const;
-	virtual int  MaxTextureDepth() const;
-	virtual HDRType_t GetHDRType() const;
-	virtual HDRType_t GetHardwareHDRType() const;
-	virtual bool SupportsStreamOffset() const;
-	virtual int  StencilBufferBits() const;
-	virtual int  MaxViewports() const;
-	virtual void OverrideStreamOffsetSupport( bool bOverrideEnabled, bool bEnableSupport );
+	bool HasStencilBuffer() const;
+	int	 GetFrameBufferColorDepth() const;
+	int  GetSamplerCount() const;
+	bool HasSetDeviceGammaRamp() const;
+	VertexCompressionType_t SupportsCompressedVertices() const;
+	bool SupportsBorderColor() const;
+	bool SupportsFetch4() const;
+	bool SupportsStaticControlFlow() const;
+	int  MaximumAnisotropicLevel() const;
+	int  MaxTextureWidth() const;
+	int  MaxTextureHeight() const;
+	int	 TextureMemorySize() const;
+	bool SupportsMipmappedCubemaps() const;
+	int	 NumVertexShaderConstants() const;
+	int	 NumBooleanVertexShaderConstants() const;
+	int	 NumIntegerVertexShaderConstants() const;
+	int	 NumPixelShaderConstants() const;
+	int	 NumBooleanPixelShaderConstants() const;
+	int	 NumIntegerPixelShaderConstants() const;
+	int	 MaxNumLights() const;
+	int  MaxTextureAspectRatio() const;
+	int	 MaxVertexShaderBlendMatrices() const;
+	int	 MaxUserClipPlanes() const;
+	bool UseFastClipping() const;
+	int  GetDXSupportLevel() const;
+	const char *GetShaderDLLName() const;
+	bool ReadPixelsFromFrontBuffer() const;
+	bool PreferDynamicTextures() const;
+	bool SupportsHDR() const;
+	bool NeedsAAClamp() const;
+	bool NeedsATICentroidHack() const;
+	int	 GetMaxDXSupportLevel() const;
+	bool SpecifiesFogColorInLinearSpace() const;
+	bool SupportsSRGB() const;
+	bool FakeSRGBWrite() const;
+	bool CanDoSRGBReadFromRTs() const;
+	bool SupportsGLMixedSizeTargets() const;
+	bool IsAAEnabled() const;
+	int  GetVertexSamplerCount() const;
+	int  GetMaxVertexTextureDimension() const;
+	int  MaxTextureDepth() const;
+	HDRType_t GetHDRType() const;
+	HDRType_t GetHardwareHDRType() const;
+	bool SupportsStreamOffset() const;
+	int  StencilBufferBits() const;
+	int  MaxViewports() const;
+	void OverrideStreamOffsetSupport( bool bOverrideEnabled, bool bEnableSupport );
 	
 	// PS30 only supports shadow filter modes 0-2 (there's no use supporting mode 3, which is the ATI_NOPCF pass only used on low end), while PS20B supports all modes
-	virtual ShadowFilterMode_t GetShadowFilterMode( bool bForceLowQualityShadows, bool bPS30 ) const;
+	ShadowFilterMode_t GetShadowFilterMode( bool bForceLowQualityShadows, bool bPS30 ) const;
 
-	virtual int NeedsShaderSRGBConversion() const;
-	virtual bool UsesSRGBCorrectBlending() const;
-	virtual bool HasFastVertexTextures() const;
-	virtual int MaxHWMorphBatchCount() const;
-	virtual float GetShadowDepthBias() const;
-	virtual float GetShadowSlopeScaleDepthBias() const;
-	virtual bool PreferZPrepass() const;
-	virtual bool SuppressPixelShaderCentroidHackFixup() const;
-	virtual bool PreferTexturesInHWMemory() const;
-	virtual bool PreferHardwareSync() const;
-	virtual bool ActualHasFastVertexTextures() const;
-	virtual bool SupportsShadowDepthTextures( void ) const;
-	virtual ImageFormat GetShadowDepthTextureFormat( void ) const;
-	virtual ImageFormat GetHighPrecisionShadowDepthTextureFormat( void ) const;
-	virtual ImageFormat GetNullTextureFormat( void ) const;
-	virtual int	GetMinDXSupportLevel() const;
-	virtual bool IsUnsupported() const;
+	int NeedsShaderSRGBConversion() const;
+	bool UsesSRGBCorrectBlending() const;
+	bool HasFastVertexTextures() const;
+	int MaxHWMorphBatchCount() const;
+	float GetShadowDepthBias() const;
+	float GetShadowSlopeScaleDepthBias() const;
+	bool PreferZPrepass() const;
+	bool SuppressPixelShaderCentroidHackFixup() const;
+	bool PreferTexturesInHWMemory() const;
+	bool PreferHardwareSync() const;
+	bool ActualHasFastVertexTextures() const;
+	bool SupportsShadowDepthTextures( void ) const;
+	ImageFormat GetShadowDepthTextureFormat( void ) const;
+	ImageFormat GetHighPrecisionShadowDepthTextureFormat( void ) const;
+	ImageFormat GetNullTextureFormat( void ) const;
+	int	GetMinDXSupportLevel() const;
+	bool IsUnsupported() const;
 
 	const char *GetHWSpecificShaderDLLName() const;
 	int GetActualSamplerCount() const;
 	int GetActualVertexSamplerCount() const;
 
-	virtual bool SupportsHDRMode( HDRType_t nHDRMode ) const;
+	bool SupportsHDRMode( HDRType_t nHDRMode ) const;
 
 	const HardwareCaps_t& ActualCaps() const { return m_ActualCaps; }
 	const HardwareCaps_t& Caps() const { return m_Caps; }
-	virtual bool GetHDREnabled( void ) const;
-	virtual void SetHDREnabled( bool bEnable );
+	bool GetHDREnabled( void ) const;
+	void SetHDREnabled( bool bEnable );
 
 	float GetLightMapScaleFactor( void ) const;
 	

@@ -30,14 +30,13 @@ class CHLTVFrame : public CClientFrame
 {
 public:
 	CHLTVFrame();
-	virtual ~CHLTVFrame();
+	~CHLTVFrame();
 
 	void	Reset(); // resets all data & buffers
 	void	FreeBuffers();
 	void	AllocBuffers();
 	bool	HasData();
 	void	CopyHLTVData( const CHLTVFrame &frame );
-	virtual bool IsMemPoolAllocated() { return false; }
 
 	uint GetMemSize()const;
 public:
@@ -82,7 +81,7 @@ class CGameClient;
 class CGameServer;
 class IHLTVDirector;
 
-class CHLTVServer : public IGameEventListener2, public CBaseServer, public CClientFrameManager, public IHLTVServer, public IDemoPlayer
+class CHLTVServer : public CBaseServer, public CClientFrameManager, public IHLTVServer, public IDemoPlayer
 {
 	friend class CHLTVClientState;
 
@@ -90,7 +89,7 @@ class CHLTVServer : public IGameEventListener2, public CBaseServer, public CClie
 
 public:
 	CHLTVServer( uint nInstance, float flSnapshotRate );
-	virtual ~CHLTVServer();
+	~CHLTVServer();
 
 public: // CBaseServer interface:
 	void	Init (bool bIsDedicated);
@@ -107,18 +106,16 @@ public: // CBaseServer interface:
 	IClient *ConnectClient ( const ns_address &adr, int protocol, int challenge, int authProtocol, 
 		const char *name, const char *password, const char *hashedCDkey, int cdKeyLen,
 		const SplitPlayerConnects_t &splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
-		const byte *pbEncryptionKey, int nEncryptionKeyIndex ) override;
+		const byte *pbEncryptionKey, int nEncryptionKeyIndex );
 
-	virtual bool GetRedirectAddressForConnectClient( const ns_address &adr, const SplitPlayerConnects_t &splitScreenClients, ns_address *pNetAdrRedirect ) override;
+	bool GetRedirectAddressForConnectClient( const ns_address &adr, const SplitPlayerConnects_t &splitScreenClients, ns_address *pNetAdrRedirect );
 
 	bool	CheckHltvPasswordMatch( const char *szPasswordProvidedByClient, const char *szServerRequiredPassword, CPlayerId playeridClient );
 
-	virtual bool	GetClassBaseline( ServerClass *pClass, SerializedEntityHandle_t *pHandle);
+	bool	GetClassBaseline( ServerClass *pClass, SerializedEntityHandle_t *pHandle);
 
 public:
 	void	FireGameEvent(IGameEvent *event);
-	int		m_nDebugID;
-	int		GetEventDebugID( void );
 
 public: // IHLTVServer interface:
 	IServer	*GetBaseServer( void );
@@ -137,16 +134,16 @@ public: // IHLTVServer interface:
 	const netadr_t *GetRelayAddress( void ); // returns relay address
 
 	void	BroadcastEvent(IGameEvent *event);
-	virtual void	StopRecording( const CGameInfo *pGameInfo = nullptr )		{	StopRecordingAndFreeFrames( false, pGameInfo ); }
+	void	StopRecording( const CGameInfo *pGameInfo = nullptr )		{	StopRecordingAndFreeFrames( false, pGameInfo ); }
 
 	//similar to the standard stop recording, but this allows for specifying a tick before which frames can be dropped. This is very useful for
 	//shutdown to prevent memory spikes
 	void	StopRecordingAndFreeFrames( bool bFreeClientFrames, const CGameInfo *pGameInfo = nullptr );
 
-	virtual bool		IsRecording();
-    virtual const char* GetRecordingDemoFilename();
+	bool		IsRecording();
+    const char* GetRecordingDemoFilename();
 
-	virtual void		StartAutoRecording();
+	void		StartAutoRecording();
 
 public: // IDemoPlayer interface
 	CDemoFile *GetDemoFile();
@@ -154,7 +151,7 @@ public: // IDemoPlayer interface
 	int		GetPlaybackTick( void );
 
 	bool	StartPlayback( const char *filename, bool bAsTimeDemo, CDemoPlaybackParameters_t const *pPlaybackParameters, int );
-	CDemoPlaybackParameters_t const * GetDemoPlaybackParameters() override { return nullptr; }
+	CDemoPlaybackParameters_t const * GetDemoPlaybackParameters() { return nullptr; }
 
 	bool	IsPlayingBack( void )const; // true if demo loaded and playing back
 	bool	IsPlaybackPaused( void )const; // true if playback paused
@@ -226,9 +223,9 @@ public:
 	uint GetInstanceIndex()const { return m_nInstanceIndex; }
 	float GetSnapshotRate()const { return m_flSnapshotRate; }
 	void FixupConvars( CNETMsg_SetConVar_t &convars );
-protected:
+public:
 
-private:
+public:
 	CBaseClient *CreateNewClient( int slot );
 	void		UpdateTick( void );
 	void		UpdateStats( void );
@@ -324,7 +321,7 @@ private:
 	//called to free all delta frames that are queued
 	void				FreeAllDeltaFrames( );
 
-	virtual IDemoStream *GetDemoStream() override { return &m_DemoFile; }
+	CDemoFile *GetDemoStream() { return &m_DemoFile; }
 public:
 
 	CGameClient		*m_MasterClient;		// if != NULL, this is the master HLTV 

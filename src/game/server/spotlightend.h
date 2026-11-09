@@ -14,12 +14,12 @@ class [[= ks::reflect::NetTable{ .name = "DT_SpotlightEnd" } ]]
 public:
 	DECLARE_CLASS( CSpotlightEnd, CBaseEntity );
 
-	void				Spawn( void );
+	void				Spawn_Impl( void );
 
-	int					ObjectCaps( void )
+	int					ObjectCaps_Impl( void )
 	{
 		// Don't save and don't go across transitions
-		return (BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | FCAP_DONT_SAVE; 
+		return (BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION) | FCAP_DONT_SAVE; 
 	}
 
 	DECLARE_SERVERCLASS();

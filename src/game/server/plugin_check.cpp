@@ -4,8 +4,6 @@
 // Purpose: This class allows the game dll to control what functions 3rd party plugins can
 // call on clients.
 
-import std;
-import ks.core;
 #include "eiface.h"
 
 //-----------------------------------------------------------------------------

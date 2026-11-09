@@ -284,3 +284,6 @@ static void voice_show_mute( const CCommand &args )
 		Msg( "No players currently connected who can be muted.\n" );
 	}
 }
+
+//-----------------------------------------------------------------------------
+#include "facade/imatchvoice.inl"

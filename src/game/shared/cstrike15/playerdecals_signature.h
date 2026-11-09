@@ -4,8 +4,6 @@
 
 // Purpose: Player decals signature validation code
 
-import std;
-import ks.tier1;
 #include "usermessages_schema.h"
 
 //

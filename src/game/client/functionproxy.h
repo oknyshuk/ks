@@ -8,7 +8,6 @@
 #include "materialsystem/imaterialproxy.h"
 #include "materialsystem/imaterialvar.h"
 
-class IMaterialVar;
 class C_BaseEntity;
 
 

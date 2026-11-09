@@ -10,17 +10,15 @@ import std;
 import ks.tier1;
 #include "filesystem.h"
 
-class CLog : public IGameEventListener2
+class CLog
 {
 public:
 	CLog();
-	virtual ~CLog();
+	~CLog();
 
-public: // IGameEventListener Interface
+public: // game event listener
 	
 	void FireGameEvent( IGameEvent *event );
-	int  m_nDebugID;
-	int	 GetEventDebugID( void );
 
 public: 
 

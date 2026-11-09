@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
 #include "networkvar.h"
-import std;
 #include "edict.h"
 #include "const.h"
 #include "ai_hull.h"

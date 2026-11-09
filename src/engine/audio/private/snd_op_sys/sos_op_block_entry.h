@@ -27,7 +27,7 @@ struct CSosOperatorBlockEntry_t : CSosOperator_t
 
 class CSosOperatorBlockEntry : public CSosOperator
 {
-	virtual void	StackShutdown( void *pVoidMem, CSosOperatorStack *pStack, int nOpIndex );
-
 	SOS_HEADER_DESC( CSosOperatorBlockEntry )
+
+	void	StackShutdown( void *pVoidMem, CSosOperatorStack *pStack, int nOpIndex );
 };

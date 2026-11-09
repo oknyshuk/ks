@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "nav.h"
 
 class CNavArea;
@@ -16,33 +14,18 @@ class CNavLadder;
 // TODO: Remove duplicate methods from CImprov, and update CImprov to use this class
 
 /**
- * A locomotor owns the movement of an Improv
+ * A locomotor owns the movement of an Improv.
+ * Each method forwards to the concrete class (CHostage or CChicken) according to the Kind
+ * (see hostage/cs_simple_hostage.cpp).
  */
 class CImprovLocomotor
 {
 public:
-	virtual const Vector &GetCentroid( void ) const = 0;
-	virtual const Vector &GetFeet( void ) const = 0;					///< return position of "feet" - point below centroid of improv at feet level
-	virtual const Vector &GetEyes( void ) const = 0;
-	virtual float GetMoveAngle( void ) const = 0;						///< return direction of movement
-
-	virtual CNavArea *GetLastKnownArea( void ) const = 0;
-	virtual bool GetSimpleGroundHeightWithFloor( const Vector &pos, float *height, Vector *normal = nullptr ) = 0;	///< find "simple" ground height, treating current nav area as part of the floor
-
-	virtual void Crouch( void ) = 0;
-	virtual void StandUp( void ) = 0;									///< "un-crouch"
-	virtual bool IsCrouching( void ) const = 0;
-
-	virtual void Jump( void ) = 0;										///< initiate a jump
-	virtual bool IsJumping( void ) const = 0;
-
-	virtual void Run( void ) = 0;										///< set movement speed to running
-	virtual void Walk( void ) = 0;										///< set movement speed to walking
-	virtual bool IsRunning( void ) const = 0;
-
-	virtual void StartLadder( const CNavLadder *ladder, NavTraverseType how, const Vector &approachPos, const Vector &departPos ) = 0;	///< invoked when a ladder is encountered while following a path
-	virtual bool TraverseLadder( const CNavLadder *ladder, NavTraverseType how, const Vector &approachPos, const Vector &departPos, float deltaT ) = 0;	///< traverse given ladder
-	virtual bool IsUsingLadder( void ) const = 0;
+	enum class Kind
+	{
+		Hostage,	///< CHostage
+		Chicken,	///< CChicken
+	};
 
 	enum MoveToFailureType
 	{
@@ -50,7 +33,31 @@ public:
 		FAIL_STUCK,
 		FAIL_FELL_OFF,
 	};
-	virtual void TrackPath( const Vector &pathGoal, float deltaT ) = 0;	///< move along path by following "pathGoal"
-	virtual void OnMoveToSuccess( const Vector &goal ) { }				///< invoked when an improv reaches its MoveTo goal
-	virtual void OnMoveToFailure( const Vector &goal, MoveToFailureType reason ) { }	///< invoked when an improv fails to reach a MoveTo goal
+
+	const Vector & GetCentroid( void ) const;		
+	const Vector & GetFeet( void ) const;		///< return position of "feet" - point below centroid of improv at feet level
+	const Vector & GetEyes( void ) const;		
+	float GetMoveAngle( void ) const;		///< return direction of movement
+	CNavArea * GetLastKnownArea( void ) const;		
+	bool GetSimpleGroundHeightWithFloor( const Vector &pos, float *height, Vector *normal = nullptr );		///< find "simple" ground height, treating current nav area as part of the floor
+	void Crouch( void );		
+	void StandUp( void );		///< "un-crouch"
+	bool IsCrouching( void ) const;		
+	void Jump( void );		///< initiate a jump
+	bool IsJumping( void ) const;		
+	void Run( void );		///< set movement speed to running
+	void Walk( void );		///< set movement speed to walking
+	bool IsRunning( void ) const;		
+	void StartLadder( const CNavLadder *ladder, NavTraverseType how, const Vector &approachPos, const Vector &departPos );		///< invoked when a ladder is encountered while following a path
+	bool TraverseLadder( const CNavLadder *ladder, NavTraverseType how, const Vector &approachPos, const Vector &departPos, float deltaT );		///< traverse given ladder
+	bool IsUsingLadder( void ) const;		
+	void TrackPath( const Vector &pathGoal, float deltaT );		///< move along path by following "pathGoal"
+	void OnMoveToSuccess( const Vector &goal );		///< invoked when an improv reaches its MoveTo goal
+	void OnMoveToFailure( const Vector &goal, MoveToFailureType reason );		///< invoked when an improv fails to reach a MoveTo goal
+
+protected:
+	explicit CImprovLocomotor( Kind kind ) : m_improvKind( kind ) { }
+
+private:
+	Kind m_improvKind;
 };

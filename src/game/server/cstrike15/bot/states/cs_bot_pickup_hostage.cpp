@@ -3,8 +3,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.core;
 #include "cs_bot.h"
 #include "weapon_c4.h"
 #include "cs_simple_hostage.h"

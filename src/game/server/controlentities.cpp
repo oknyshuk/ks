@@ -4,8 +4,6 @@
 // Purpose: contains entities who have no physical representation in the game, and who
 //		must be triggered by other entities to cause their effects.
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -19,7 +17,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -74,7 +71,7 @@ void CTargetCDAudioRep::InputChangeCDTrack( inputdata_t &inputdata )
 	else
 	{
 		// In multiplayer, send it back to the activator
-		CBasePlayer *player = dynamic_cast< CBasePlayer * >( inputdata.pActivator );
+		CBasePlayer *player = entity_cast<CBasePlayer>( inputdata.pActivator );
 		if ( player )
 		{
 			pClient = player->edict();

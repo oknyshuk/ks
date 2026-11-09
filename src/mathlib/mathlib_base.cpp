@@ -5257,7 +5257,7 @@ Vector RandomVectorOnUnitSphere()
 }
 
 
-Vector RandomVectorOnUnitSphere( IUniformRandomStream *pRnd )
+Vector RandomVectorOnUnitSphere( CUniformRandomStream *pRnd )
 {
 	return RandomVectorOnUnitSphere( pRnd->RandomFloat(), pRnd->RandomFloat() );
 }
@@ -5293,7 +5293,7 @@ Vector RandomVectorInUnitSphere()
 	return vOut;
 }
 
-Vector RandomVectorInUnitSphere( IUniformRandomStream *pRnd )
+Vector RandomVectorInUnitSphere( CUniformRandomStream *pRnd )
 {
 	float w = pRnd->RandomFloat();
 	float flRadius = std::powf( w, 1.0f / 3.0f );
@@ -5335,7 +5335,7 @@ const Quaternion RandomQuaternion()
 	return Quaternion( std::cosf( u ), flSinU * std::cosf( v ), flSinU * flSinV * std::cosf( w ), flSinU * flSinV * flSinW );
 }
 
-const Quaternion RandomQuaternion( IUniformRandomStream *pRnd )
+const Quaternion RandomQuaternion( CUniformRandomStream *pRnd )
 {
 	// Guarantee uniform distribution within S^3. Found on the internet, looked through the proof very briefly, looks sound enough to tentatively trust it before testing or checking the proof for real.
 	// http://mathproofs.blogspot.com/2005/05/uniformly-distributed-random-unit.html

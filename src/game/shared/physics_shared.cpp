@@ -7,8 +7,6 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
 #include "predictable_entity.h"
 #include "cdll_util.h"
@@ -23,8 +21,6 @@ import ks.core;
 #include "cdll_client_int.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.tier1;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -42,7 +38,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -735,6 +730,7 @@ IPhysicsObject *PhysCreateWorld_Shared( CBaseEntity *pWorld, vcollide_t *pWorldC
 }
 
 
+#ifndef CLIENT_DLL
 //=============================================================================
 //
 // Physics Game Trace
@@ -776,6 +772,7 @@ bool CPhysicsGameTrace::VehiclePointInWater( const Vector &vecPoint )
 {
 	return ( ( UTIL_PointContents( vecPoint, MASK_WATER ) & MASK_WATER ) != 0 );
 }
+#endif // !CLIENT_DLL
 
 void PhysRecheckObjectPair( IPhysicsObject *pObject0, IPhysicsObject *pObject1 )
 {

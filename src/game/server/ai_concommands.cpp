@@ -3,8 +3,6 @@
 
 // Purpose: Console commands for debugging and manipulating NPCs.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -19,7 +17,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -43,7 +40,6 @@ import ks.tier1;
 #include "ai_networkmanager.h"
 #include "ndebugoverlay.h"
 #include "datacache/imdlcache.h"
-#include "ai_addon.h"
 
 extern void			SetDebugBits( CBasePlayer* pPlayer, const char *name, int bit );
 
@@ -477,7 +473,6 @@ void CC_NPC_Create( const CCommand &args )
 
 	bool allowPrecache = CBaseEntity::IsPrecacheAllowed();
 	CBaseEntity::SetAllowPrecache( true );
-	Vector vecAddonSpawn; // coordinates of the NPC, which is the position to spawn the addon
 
 	// Try to create entity
 	CAI_BaseNPC *baseNPC = dynamic_cast< CAI_BaseNPC * >( CreateEntityByName(args[1]) );
@@ -519,7 +514,6 @@ void CC_NPC_Create( const CCommand &args )
 			Vector	vUpBit = baseNPC->GetAbsOrigin();
 			vUpBit.z += 1;
 
-			vecAddonSpawn = vUpBit; // save the spawn position of the NPC in case we need it for addon spawning
 
 			AI_TraceHull( baseNPC->GetAbsOrigin(), vUpBit, baseNPC->GetHullMins(), baseNPC->GetHullMaxs(), 
 				baseNPC->GetAITraceMask(), baseNPC, COLLISION_GROUP_NONE, &tr );
@@ -532,33 +526,12 @@ void CC_NPC_Create( const CCommand &args )
 		}
 
 		baseNPC->Activate();
-
-		// since the NPC was successfully spawned lets see if we need to attach an addon
-		if ( args.ArgC() >= 4 )
-		{
-			CBaseEntity *pItem = (CBaseEntity *)CreateEntityByName( args[3] );
-			if ( pItem )
-			{
-				pItem->SetAbsOrigin( vecAddonSpawn );
-
-				//  name the addon if the user specified a fourth parameter
-				if ( args.ArgC() >= 5 )
-				{
-					pItem->KeyValue( "targetname", args[4] );
-				};
-
-				pItem->Spawn();
-
-				// install the addon
-				static_cast< CAI_AddOn *>( pItem )->Install( baseNPC );
-			}
-		}
 	}
 
 
 	CBaseEntity::SetAllowPrecache( allowPrecache );
 }
-static ConCommand npc_create("npc_create", CC_NPC_Create, "Creates an NPC of the given type where the player is looking (if the given NPC can actually stand at that location).  \n\tArguments:	[npc_class_name] [name of npc (optional) ] [addon type (optional) ] [name of addon (optional) ]", FCVAR_CHEAT);
+static ConCommand npc_create("npc_create", CC_NPC_Create, "Creates an NPC of the given type where the player is looking (if the given NPC can actually stand at that location).  \n\tArguments:	[npc_class_name] [name of npc (optional) ]", FCVAR_CHEAT);
 
 
 //------------------------------------------------------------------------------

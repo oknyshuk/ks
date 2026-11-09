@@ -4,8 +4,6 @@
 // Purpose: Material Modify control entity.
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -273,7 +271,7 @@ void CMaterialModifyProxy::OnBind( void *pEntity )
 	IClientRenderable *pRend = (IClientRenderable *)pEntity;
 	if ( pRend )
 	{
-		C_BaseEntity *pBaseEntity = pRend->GetIClientUnknown()->GetBaseEntity();
+		C_BaseEntity *pBaseEntity = EntityCast<C_BaseEntity>( pRend->GetIClientUnknown()->GetBaseEntity() );
 		
 		if ( pBaseEntity )
 		{
@@ -500,7 +498,7 @@ float CMaterialModifyProxy::GetAnimationStartTime( void* pArg )
 	if (!pRend)
 		return 0.0f;
 
-	C_BaseEntity* pEntity = pRend->GetIClientUnknown()->GetBaseEntity();
+	C_BaseEntity* pEntity = EntityCast<C_BaseEntity>( pRend->GetIClientUnknown()->GetBaseEntity() );
 	if (pEntity)
 	{
 		return pEntity->GetTextureAnimationStartTime();
@@ -517,7 +515,7 @@ void CMaterialModifyProxy::AnimationWrapped( void* pArg )
 	if (!pRend)
 		return;
 
-	C_BaseEntity* pEntity = pRend->GetIClientUnknown()->GetBaseEntity();
+	C_BaseEntity* pEntity = EntityCast<C_BaseEntity>( pRend->GetIClientUnknown()->GetBaseEntity() );
 	if (pEntity)
 	{
 		pEntity->TextureAnimationWrapped();
@@ -623,7 +621,7 @@ void CMaterialModifyAnimatedProxy::OnBind( void *pEntity )
 	IClientRenderable *pRend = (IClientRenderable *)pEntity;
 	if ( pRend )
 	{
-		C_BaseEntity *pBaseEntity = pRend->GetIClientUnknown()->GetBaseEntity();
+		C_BaseEntity *pBaseEntity = EntityCast<C_BaseEntity>( pRend->GetIClientUnknown()->GetBaseEntity() );
 		if ( pBaseEntity )
 		{
 			for ( C_BaseEntity *pChild = pBaseEntity->FirstMoveChild(); pChild; pChild = pChild->NextMovePeer() )
@@ -751,7 +749,7 @@ float CMaterialModifyAnimatedProxy::GetAnimationStartTime( void* pArg )
 	if (!pRend)
 		return 0.0f;
 
-	C_BaseEntity* pEntity = pRend->GetIClientUnknown()->GetBaseEntity();
+	C_BaseEntity* pEntity = EntityCast<C_BaseEntity>( pRend->GetIClientUnknown()->GetBaseEntity() );
 	if (pEntity)
 	{
 		return pEntity->GetTextureAnimationStartTime();
@@ -768,7 +766,7 @@ void CMaterialModifyAnimatedProxy::AnimationWrapped( void* pArg )
 	if (!pRend)
 		return;
 
-	C_BaseEntity* pEntity = pRend->GetIClientUnknown()->GetBaseEntity();
+	C_BaseEntity* pEntity = EntityCast<C_BaseEntity>( pRend->GetIClientUnknown()->GetBaseEntity() );
 	if (pEntity)
 	{
 		pEntity->TextureAnimationWrapped();

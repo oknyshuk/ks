@@ -7,7 +7,6 @@
 #include "ai_memory.h"
 #include "ai_squadslot.h"
 #include "bitstring.h"
-import std;
 #include "sharedInterface.h"
 
 class CAI_Squad;

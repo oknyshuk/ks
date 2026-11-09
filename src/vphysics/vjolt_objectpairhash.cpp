@@ -79,3 +79,6 @@ int JoltPhysicsObjectPairHash::GetPairListForObject( void *pObject0, int nMaxCou
 	std::copy_n( pNeighbours->begin(), nCount, ppObjectList );
 	return nCount;
 }
+
+//-------------------------------------------------------------------------------------------------
+#include "facade/iphysicsobjectpairhash.inl"

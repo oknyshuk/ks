@@ -29,7 +29,7 @@ CCvarUtilities *ConVarUtilities = &g_CvarUtilities;
 //-----------------------------------------------------------------------------
 // Purpose: Update clients/server when FCVAR_REPLICATED etc vars change
 //-----------------------------------------------------------------------------
-static void ConVarNetworkChangeCallback( IConVar *pConVar, const char *pOldValue, float flOldValue )
+static void ConVarNetworkChangeCallback( ConVar *pConVar, const char *pOldValue, float flOldValue )
 {
 	ConVarRef var( pConVar );
 	if ( !pOldValue )
@@ -91,132 +91,100 @@ static void ConVarNetworkChangeCallback( IConVar *pConVar, const char *pOldValue
 
 
 //-----------------------------------------------------------------------------
-// Implementation of the ICvarQuery interface
+// Purpose: Returns true if the commands can be aliased to one another
+//  Either game/client .dll shared with engine, 
+//  or game and client dll shared and marked FCVAR_REPLICATED
+//  Installed into ICvar by Cvar_InstallEngineHooks.
 //-----------------------------------------------------------------------------
-class CCvarQuery : public CBaseAppSystem< ICvarQuery >
+static bool Cvar_AreConVarsLinkable( const ConVar *child, const ConVar *parent )
 {
-public:
+	// Both parent and child must be marked replicated for this to work
+	bool repchild = child->IsFlagSet( FCVAR_REPLICATED );
+	bool repparent = parent->IsFlagSet( FCVAR_REPLICATED );
 
-	bool m_bCallbackInstalled;
-
-
-	CCvarQuery( void )
+	if ( repchild && repparent )
 	{
-		m_bCallbackInstalled = false;
-	}
-
-	virtual bool Connect( CreateInterfaceFn factory )
-	{
-		ICvar *pCVar = (ICvar*)factory( CVAR_INTERFACE_VERSION, 0 );
-		if ( !pCVar )
+		// Never on protected vars
+		if ( child->IsFlagSet( FCVAR_PROTECTED ) || parent->IsFlagSet( FCVAR_PROTECTED ) )
+		{
+			ConMsg( "FCVAR_REPLICATED can't also be FCVAR_PROTECTED (%s)\n", child->GetName() );
 			return false;
+		}
 
-		pCVar->InstallCVarQuery( this );
+		// Only on ConVars
+		if ( child->IsCommand() || parent->IsCommand() )
+		{
+			ConMsg( "FCVAR_REPLICATED not valid on ConCommands (%s)\n", child->GetName() );
+			return false;
+		}
+
+		// One must be in client .dll and the other in the game .dll, or both in the engine
+		if ( child->IsFlagSet( FCVAR_GAMEDLL ) && !parent->IsFlagSet( FCVAR_CLIENTDLL ) )
+		{
+			ConMsg( "For FCVAR_REPLICATED, ConVar must be defined in client and game .dlls (%s)\n", child->GetName() );
+			return false;
+		}
+
+		if ( child->IsFlagSet( FCVAR_CLIENTDLL ) && !parent->IsFlagSet( FCVAR_GAMEDLL ) )
+		{
+			ConMsg( "For FCVAR_REPLICATED, ConVar must be defined in client and game .dlls (%s)\n", child->GetName() );
+			return false;
+		}
+
+		// Allowable
 		return true;
 	}
 
-	virtual InitReturnVal_t Init()
+	// Otherwise need both to allow linkage
+	if ( repchild || repparent )
 	{
-		// If the value has changed, notify clients/server based on ConVar flags.
-		// NOTE: this will only happen for non-FCVAR_NEVER_AS_STRING vars.
-		// Also, this happened in SetDirect for older clients that don't have the
-		// callback interface.
-		if (! m_bCallbackInstalled )
-		{
-			m_bCallbackInstalled = true;
-			g_pCVar->InstallGlobalChangeCallback( ConVarNetworkChangeCallback );
-		}
-		return INIT_OK;
+		ConMsg( "Both ConVars must be marked FCVAR_REPLICATED for linkage to work (%s)\n", child->GetName() );
+		return false;
 	}
 
-	virtual void Shutdown()
+	if ( parent->IsFlagSet( FCVAR_CLIENTDLL ) )
 	{
-		g_pCVar->RemoveGlobalChangeCallback( ConVarNetworkChangeCallback );
-		m_bCallbackInstalled = false;
+		ConMsg( "Parent cvar in client.dll not allowed (%s)\n", child->GetName() );
+		return false;
 	}
 
-	virtual void *QueryInterface( const char *pInterfaceName )
+	if ( parent->IsFlagSet( FCVAR_GAMEDLL ) )
 	{
-		if ( !V_stricmp( pInterfaceName, CVAR_QUERY_INTERFACE_VERSION ) )
-			return (ICvarQuery*)this;
-		return nullptr;
-
+		ConMsg( "Parent cvar in server.dll not allowed (%s)\n", child->GetName() );
+		return false;
 	}
 
-	// Purpose: Returns true if the commands can be aliased to one another
-	//  Either game/client .dll shared with engine, 
-	//  or game and client dll shared and marked FCVAR_REPLICATED
-	virtual bool AreConVarsLinkable( const ConVar *child, const ConVar *parent )
-	{
-		// Both parent and child must be marked replicated for this to work
-		bool repchild = child->IsFlagSet( FCVAR_REPLICATED );
-		bool repparent = parent->IsFlagSet( FCVAR_REPLICATED );
-
-		if ( repchild && repparent )
-		{
-			// Never on protected vars
-			if ( child->IsFlagSet( FCVAR_PROTECTED ) || parent->IsFlagSet( FCVAR_PROTECTED ) )
-			{
-				ConMsg( "FCVAR_REPLICATED can't also be FCVAR_PROTECTED (%s)\n", child->GetName() );
-				return false;
-			}
-
-			// Only on ConVars
-			if ( child->IsCommand() || parent->IsCommand() )
-			{
-				ConMsg( "FCVAR_REPLICATED not valid on ConCommands (%s)\n", child->GetName() );
-				return false;
-			}
-
-			// One must be in client .dll and the other in the game .dll, or both in the engine
-			if ( child->IsFlagSet( FCVAR_GAMEDLL ) && !parent->IsFlagSet( FCVAR_CLIENTDLL ) )
-			{
-				ConMsg( "For FCVAR_REPLICATED, ConVar must be defined in client and game .dlls (%s)\n", child->GetName() );
-				return false;
-			}
-
-			if ( child->IsFlagSet( FCVAR_CLIENTDLL ) && !parent->IsFlagSet( FCVAR_GAMEDLL ) )
-			{
-				ConMsg( "For FCVAR_REPLICATED, ConVar must be defined in client and game .dlls (%s)\n", child->GetName() );
-				return false;
-			}
-
-			// Allowable
-			return true;
-		}
-
-		// Otherwise need both to allow linkage
-		if ( repchild || repparent )
-		{
-			ConMsg( "Both ConVars must be marked FCVAR_REPLICATED for linkage to work (%s)\n", child->GetName() );
-			return false;
-		}
-
-		if ( parent->IsFlagSet( FCVAR_CLIENTDLL ) )
-		{
-			ConMsg( "Parent cvar in client.dll not allowed (%s)\n", child->GetName() );
-			return false;
-		}
-
-		if ( parent->IsFlagSet( FCVAR_GAMEDLL ) )
-		{
-			ConMsg( "Parent cvar in server.dll not allowed (%s)\n", child->GetName() );
-			return false;
-		}
-
-		return true;
-	}
-};
+	return true;
+}
 
 
 //-----------------------------------------------------------------------------
-// Singleton
+// Engine hooks into the cvar system
 //-----------------------------------------------------------------------------
-static CCvarQuery s_CvarQuery;
-static InterfaceReg s_Reg_CCvarQuery_ICvarQuery( []() -> void * { return static_cast<ICvarQuery *>( &s_CvarQuery ); }, CVAR_QUERY_INTERFACE_VERSION );;
+static bool s_bCallbackInstalled = false;
+
+void Cvar_InstallEngineHooks( ICvar *pCVar )
+{
+	pCVar->InstallCVarQuery( Cvar_AreConVarsLinkable );
+}
+
 void InstallConVarHook( void )
 {
-	s_CvarQuery.Init();
+	// If the value has changed, notify clients/server based on ConVar flags.
+	// NOTE: this will only happen for non-FCVAR_NEVER_AS_STRING vars.
+	// Also, this happened in SetDirect for older clients that don't have the
+	// callback interface.
+	if ( !s_bCallbackInstalled )
+	{
+		s_bCallbackInstalled = true;
+		g_pCVar->InstallGlobalChangeCallback( ConVarNetworkChangeCallback );
+	}
+}
+
+void Cvar_RemoveEngineHooks( void )
+{
+	g_pCVar->RemoveGlobalChangeCallback( ConVarNetworkChangeCallback );
+	s_bCallbackInstalled = false;
 }
 
 
@@ -662,7 +630,7 @@ void CCvarUtilities::WriteVariables( ks::text_writer *buff, const int iSplitscre
 				if ( cv->IsFlagSet( FCVAR_SS_ADDED ) )
 				{
 					// which added player is this relevant to
-					CSplitScreenAddedConVar *pCheck = dynamic_cast< CSplitScreenAddedConVar * >( cv );
+					CSplitScreenAddedConVar *pCheck = ( cv->Kind() == ConKind::VarSplitScreenAdded ) ? static_cast< CSplitScreenAddedConVar * >( cv ) : nullptr;
 					if ( pCheck && pCheck->GetSplitScreenPlayerSlot() != iSplitscreenSlot )
 					{
 						continue;

@@ -8,16 +8,12 @@
 #endif
 
 class CBaseAnimating;
-class CStudioHdr;
-struct studiohdr_t;
 
-import std;
 
 #ifndef CLIENT_DLL
 #include "bone_setup.h"
 #endif
 
-import ks.math;
 
 
 class CBoneMergeCache

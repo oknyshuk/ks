@@ -16,11 +16,11 @@ class [[= ks::reflect::NetTable{ .name = "DT_PlayerResource", .base = false } ]]
 public:
 	DECLARE_SERVERCLASS();
 
-	virtual void Spawn( void );
-	virtual	int	 ObjectCaps( void ) { return BaseClass::ObjectCaps() | FCAP_DONT_SAVE; }
+	void Spawn_Impl( void );
+	int	 ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() | FCAP_DONT_SAVE; }
 	virtual void ResourceThink( void );
 	virtual void UpdatePlayerData( void );
-	virtual int  UpdateTransmitState(void);
+	int  UpdateTransmitState_Impl(void);
 	int GetPlayerSmoothPing( int iClientIndex );
 
 protected:

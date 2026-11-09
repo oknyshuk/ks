@@ -4,8 +4,6 @@
 
 // Purpose: No defuse area ent
 
-import std;
-import ks.math;
 #include "shareddefs.h"
 #include "util.h"
 #include "predictable_entity.h"
@@ -24,6 +22,6 @@ class CNoDefuseArea : public CBaseTrigger
 public:
 	DECLARE_CLASS( CNoDefuseArea, CBaseTrigger );
 
-	void Spawn();
+	void Spawn_Impl();
 	void NoDefuseAreaTouch( CBaseEntity* pOther );
 };

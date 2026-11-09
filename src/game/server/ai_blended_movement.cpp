@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -993,6 +991,7 @@ ConVar ai_path_insert_pause_at_est_end( "ai_path_insert_pause_at_est_end", "1" )
 constexpr auto MIN_VELOCITY = 0.0f;
 constexpr auto MIN_STEER_DOT = 0.0f;
 
+extern ConVar npc_height_adjust;
 void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 {
 
@@ -1020,7 +1019,6 @@ void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 
 	//-------------------------
 
-	extern ConVar npc_height_adjust;
 	if (npc_height_adjust.GetBool() && move.bHasTraced && move.directTrace.flTotalDist != move.thinkTrace.flTotalDist)
 	{
 		float flDist = (move.directTrace.vEndPosition - m_scriptMove[0].vecLocation).Length2D();

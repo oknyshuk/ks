@@ -47,9 +47,9 @@ public:
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
 
-	virtual void Spawn( void );
+	KS_VIRTUAL void Spawn_Impl( void );
 
-	void Think( void );
+	void Think_Impl( void );
 
 	void BuildPropList( void );
 	void BuildPoseIndexList( void );

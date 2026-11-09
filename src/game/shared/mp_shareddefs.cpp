@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2007 Valve Corporation
 
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "vphysics_interface.h"
 #include "debugoverlay_shared.h"

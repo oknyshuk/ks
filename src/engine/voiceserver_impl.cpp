@@ -10,7 +10,7 @@ class CVoiceServer : public IVoiceServer
 {
 public:
 	
-	virtual bool	GetClientListening(int iReceiver, int iSender)
+	bool	GetClientListening(int iReceiver, int iSender)
 	{
 		// Make into client indices..
 		--iReceiver;
@@ -22,7 +22,7 @@ public:
 		return sv.GetClient(iSender)->IsHearingClient( iReceiver );
 	}
 	
-	virtual bool	SetClientListening(int iReceiver, int iSender, bool bListen)
+	bool	SetClientListening(int iReceiver, int iSender, bool bListen)
 	{
 		// Make into client indices..
 		--iReceiver;
@@ -43,7 +43,7 @@ public:
 
 		return true;
 	}	
-	virtual bool	SetClientProximity(int iReceiver, int iSender, bool bUseProximity)
+	bool	SetClientProximity(int iReceiver, int iSender, bool bUseProximity)
 	{
 		// Make into client indices..
 		--iReceiver;
@@ -59,6 +59,9 @@ public:
 		return true;
 	}	
 };
+
+#include "facade/ivoiceserver.inl"
+
 
 
 static CVoiceServer s_Singleton_CVoiceServer;

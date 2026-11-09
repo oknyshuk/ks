@@ -52,21 +52,22 @@ public:
 
 	DECLARE_SERVERCLASS();
 
-	void Spawn( void );
-	void Precache( void );
-	bool CreateVPhysics();
-	bool KeyValue( const char *szKeyName, const char *szValue );
-	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	bool CreateVPhysics_Impl();
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
-	virtual void StartBlocked( CBaseEntity *pOther );
-	virtual void Blocked( CBaseEntity *pOther );
-	virtual void EndBlocked( void );
+	void StartBlocked_Impl( CBaseEntity *pOther );
+	void Blocked_Impl( CBaseEntity *pOther );
+	void EndBlocked_Impl( void );
 
-	void Activate( void );
+	void Activate_Impl( void );
 
-	virtual int	ObjectCaps( void ) 
+	int	ObjectCaps_Impl( void ) 
 	{
-		int flags = BaseClass::ObjectCaps();
+		int flags = BaseClass::ObjectCaps_Impl();
 		if ( HasSpawnFlags( SF_DOOR_PUSE ) )
 			return flags | FCAP_IMPULSE_USE | FCAP_USE_IN_RADIUS;
 
@@ -80,7 +81,7 @@ public:
 	virtual void SetToggleState( int state );
 
 	virtual bool IsRotatingDoor() { return false; }
-	virtual bool ShouldSavePhysics();
+	bool ShouldSavePhysics_Impl();
 	// used to selectivly override defaults
 	void DoorTouch( CBaseEntity *pOther );
 

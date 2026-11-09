@@ -6,8 +6,6 @@
 //			   to ignite a target entity.
 //			2) An entity that can be created at runtime to ignite a target entity.
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -88,7 +86,7 @@ CEntityDissolve::~CEntityDissolve( void )
 //-----------------------------------------------------------------------------
 // Precache
 //-----------------------------------------------------------------------------
-void CEntityDissolve::Precache()
+void CEntityDissolve::Precache_Impl()
 {
 	if ( NULL_STRING == GetModelName() )
 	{
@@ -104,9 +102,9 @@ void CEntityDissolve::Precache()
 //-----------------------------------------------------------------------------
 // Spawn
 //-----------------------------------------------------------------------------
-void CEntityDissolve::Spawn()
+void CEntityDissolve::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	Precache();
 	UTIL_SetModel( this, STRING( GetModelName() ) );
 

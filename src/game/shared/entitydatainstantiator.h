@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
 
 // This is the hash key type, but it could just as easily be and int or void *
 class CBaseEntity;

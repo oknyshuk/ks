@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -89,9 +87,9 @@ CAI_ScriptConditions::EvaluatorInfo_t CAI_ScriptConditions::gm_Evaluators[] =
 
 };
 
-void CAI_ScriptConditions::OnRestore( void )
+void CAI_ScriptConditions::OnRestore_Impl( void )
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	//Old HL2 save game! Fix up to new system.
 	if ( m_hActor )
@@ -347,7 +345,7 @@ bool CAI_ScriptConditions::EvalActorInVehicle( const EvalArgs_t &args )
 
 //-----------------------------------------------------------------------------
 
-void CAI_ScriptConditions::Spawn()
+void CAI_ScriptConditions::Spawn_Impl()
 {
 	contract_assert( ( m_fMinState == NPC_STATE_IDLE || m_fMinState == NPC_STATE_COMBAT || m_fMinState == NPC_STATE_ALERT ) &&
 		( m_fMaxState == NPC_STATE_IDLE || m_fMaxState == NPC_STATE_COMBAT || m_fMaxState == NPC_STATE_ALERT ) );
@@ -361,9 +359,9 @@ void CAI_ScriptConditions::Spawn()
 
 //-----------------------------------------------------------------------------
 
-void CAI_ScriptConditions::Activate()
+void CAI_ScriptConditions::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	// When we spawn, m_fDisabled is initial state as given by worldcraft.
 	// following that, we keep it updated and it reflects current state.
@@ -374,10 +372,10 @@ void CAI_ScriptConditions::Activate()
 
 //-----------------------------------------------------------------------------
 
-void CAI_ScriptConditions::UpdateOnRemove( void )
+void CAI_ScriptConditions::UpdateOnRemove_Impl( void )
 {
 	gEntList.RemoveListenerEntity( this );
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 
 	m_ElementList.clear(); m_ElementList.shrink_to_fit();
 }

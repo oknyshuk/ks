@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "entitylist_base.h"
 #include "iservernetworkable.h"
 #include "edict.h"
@@ -234,7 +232,7 @@ inline CBaseEntity* CGlobalEntityList::GetBaseEntity( CBaseHandle hEnt ) const
 {
 	IServerUnknown *pUnk = static_cast<IServerUnknown*>(LookupEntity( hEnt ));
 	if ( pUnk )
-		return pUnk->GetBaseEntity();
+		return EntityCast<CBaseEntity>( pUnk->GetBaseEntity() );
 	else
 		return nullptr;
 }

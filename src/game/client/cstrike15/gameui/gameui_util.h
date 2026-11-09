@@ -6,8 +6,6 @@
 void SetGameUIActiveSplitScreenPlayerSlot( int nSlot );
 int GetGameUIActiveSplitScreenPlayerSlot();
 
-import std;
-import ks.tier1;
 
 void GameUI_MakeSafeName( const char *oldName, char *newName, int newNameBufSize );
 
@@ -20,7 +18,7 @@ class CGameUIConVarRef
 public:
 	explicit	CGameUIConVarRef( const char *pName );
 				CGameUIConVarRef( const char *pName, bool bIgnoreMissing );
-	explicit	CGameUIConVarRef( IConVar *pConVar );
+	explicit	CGameUIConVarRef( ConVar *pConVar );
 
 	void Init( const char *pName, bool bIgnoreMissing );
 	bool IsValid() const;
@@ -50,7 +48,7 @@ protected:
 private:
 	struct cv_t
 	{
-		IConVar *m_pConVar;
+		ConVar *m_pConVar;
 		ConVar *m_pConVarState;
 	};
 

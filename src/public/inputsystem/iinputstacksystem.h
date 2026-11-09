@@ -29,40 +29,51 @@ inline constexpr auto INPUT_CONTEXT_HANDLE_INVALID = ( (InputContextHandle_t)0 )
 /// Therefore, I'm going to stick with only dealing with cursor control, 
 /// which is necessary for Jen's new gameUI system to interoperate with VGui.
 ///-----------------------------------------------------------------------------
-class IInputStackSystem : public IAppSystem
+class IInputStackSystem
 {
 public:
+	//--------------------------------------------------------
+	// App system protocol. Not an IAppSystem: CAppSystemGroup drives it by kind (see AppSystemRef).
+	//--------------------------------------------------------
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t Init();
+	void Shutdown();
+	const AppSystemInfo_t *GetDependencies();
+	void Reconnect( CreateInterfaceFn factory, const char *pInterfaceName ) { ReconnectInterface( factory, pInterfaceName ); }
+
 	/// Allocates an input context, pushing it on top of the input stack, 
 	/// thereby giving it top priority
-	virtual InputContextHandle_t PushInputContext() = 0;
+	InputContextHandle_t PushInputContext();
 
 	/// Pops the top input context off the input stack, and destroys it.
-	virtual void PopInputContext( ) = 0;
+	void PopInputContext( );
 
 	/// Enables/disables an input context, allowing something lower on the
 	/// stack to have control of input. Disabling an input context which
 	/// owns mouse capture
-	virtual void EnableInputContext( InputContextHandle_t hContext, bool bEnable ) = 0;
+	void EnableInputContext( InputContextHandle_t hContext, bool bEnable );
 
 	/// Allows a context to make the cursor visible;
 	/// the topmost enabled context wins
-	virtual void SetCursorVisible( InputContextHandle_t hContext, bool bVisible ) = 0;
+	void SetCursorVisible( InputContextHandle_t hContext, bool bVisible );
 
 	/// Allows a context to set the cursor icon;
 	/// the topmost enabled context wins
-	virtual void SetCursorIcon( InputContextHandle_t hContext, InputCursorHandle_t hCursor ) = 0;
+	void SetCursorIcon( InputContextHandle_t hContext, InputCursorHandle_t hCursor );
 
 	/// Allows a context to enable mouse capture. Disabling an input context
 	/// deactivates mouse capture. Capture will occur if it happens on the
 	/// topmost enabled context
-	virtual void SetMouseCapture( InputContextHandle_t hContext, bool bEnable ) = 0;
+	void SetMouseCapture( InputContextHandle_t hContext, bool bEnable );
 
 	/// Allows a context to set the mouse position. It only has any effect if the
 	/// specified context is the topmost enabled context
-	virtual void SetCursorPosition( InputContextHandle_t hContext, int x, int y ) = 0;
+	void SetCursorPosition( InputContextHandle_t hContext, int x, int y );
 
 	/// Returns true if the specified context is the topmost enabled context
-	virtual bool IsTopmostEnabledContext( InputContextHandle_t hContext ) const = 0;
+	bool IsTopmostEnabledContext( InputContextHandle_t hContext ) const;
 };
 
 extern IInputStackSystem *g_pInputStackSystem;;

@@ -236,32 +236,6 @@ public:
 // Uses a dictionary to refer to the list of files.
 //-----------------------------------------------------------------------------
 
-class CFileSystemReloadFileList : public IFileList
-{
-public:
-	CFileSystemReloadFileList( CBaseFileSystem *pFileSystem )
-	{
-		m_pFileSystem = pFileSystem;
-	}
-	
-	virtual void Release()
-	{
-		delete this;
-	}
-	
-	// The engine is calling this for any files it wants to be pure.
-	// Return true if this file should be reloaded based on its current state and the whitelist that we have now.
-	virtual bool IsFileInList( const char *pFilename )
-	{
-		bool bRet = m_pFileSystem->ShouldGameReloadFile( pFilename );
-		return bRet;
-	}
-	
-private:
-	CBaseFileSystem *m_pFileSystem;
-};
-
-
 static CStoreIDEntry* FindPrevFileByStoreID( ks::idict< std::vector< CStoreIDEntry > > &filesByStoreID, const char *pFilename, const char *pPathIDStr, int foundStoreID )
 {
 	auto iEntry = filesByStoreID.find( pFilename );
@@ -294,15 +268,15 @@ public:
 	CIoStats();
 	~CIoStats();
 
-	virtual void OnFileSeek( int nTimeInMs );
-	virtual void OnFileRead( int nTimeInMs, int nBytesRead );
-	virtual void OnFileOpen( const char * pFileName );
-	virtual int GetNumberOfFileSeeks();
-	virtual int GetTimeInFileSeek();
-	virtual int GetNumberOfFileReads();
-	virtual int GetTimeInFileReads();
-	virtual int GetFileReadTotalSize();
-	virtual int GetNumberOfFileOpens();
+	void OnFileSeek( int nTimeInMs );
+	void OnFileRead( int nTimeInMs, int nBytesRead );
+	void OnFileOpen( const char * pFileName );
+	int GetNumberOfFileSeeks();
+	int GetTimeInFileSeek();
+	int GetNumberOfFileReads();
+	int GetTimeInFileReads();
+	int GetFileReadTotalSize();
+	int GetNumberOfFileOpens();
 	void Reset();
 
 private:
@@ -434,10 +408,26 @@ CBaseFileSystem::~CBaseFileSystem()
 
 
 //-----------------------------------------------------------------------------
-// Methods of IAppSystem
+// App system protocol (the tier 2 sequence: tier 1 and tier 2 libraries, then the cvars)
 //-----------------------------------------------------------------------------
+bool CBaseFileSystem::Connect( CreateInterfaceFn factory )
+{
+	ConnectTier1Libraries( &factory, 1 );
+	ConnectTier2Libraries( &factory, 1 );
+	return true;
+}
+
+void CBaseFileSystem::Disconnect()
+{
+	DisconnectTier2Libraries();
+	DisconnectTier1Libraries();
+}
+
 void *CBaseFileSystem::QueryInterface( const char *pInterfaceName )
 {
+	if (!V_strncmp(	pInterfaceName, FILESYSTEM_INTERFACE_VERSION, V_strlen(FILESYSTEM_INTERFACE_VERSION) + 1))
+		return (IFileSystem*)this;
+
 	// We also implement the IMatSystemSurface interface
 	if (!V_strncmp(	pInterfaceName, BASEFILESYSTEM_INTERFACE_VERSION, V_strlen(BASEFILESYSTEM_INTERFACE_VERSION) + 1))
 		return (IBaseFileSystem*)this;
@@ -450,10 +440,10 @@ InitReturnVal_t CBaseFileSystem::Init()
 {
 	m_FileTracker2.InitAsyncThread();
 
-	InitReturnVal_t nRetVal = BaseClass::Init();
-	if ( nRetVal != INIT_OK )
-		return nRetVal;
-
+	if ( g_pCVar )
+	{
+		ConVar_Register( 0 );
+	}
 
 	// This is a special tag to allow iterating just the BSP file, it doesn't show up in the list per se, but gets converted to "GAME" in the filter function
 	m_BSPPathID = PathIDSymbol( "BSP" );
@@ -538,7 +528,10 @@ void CBaseFileSystem::Shutdown()
 	Trace_DumpUnclosedFiles();
 
 
-	BaseClass::Shutdown();
+	if ( g_pCVar )
+	{
+		ConVar_Unregister( );
+	}
 }
 
 void CBaseFileSystem::BuildExcludeList()
@@ -896,7 +889,7 @@ bool CBaseFileSystem::AddPackFileFromPath( const char *pPath, const char *pakfil
 	if ( FS_stat( fullpath, &buf ) == -1 )
 		return false;
 
-	CPackFile *pf = new CZipPackFile( this );
+	CPackFile *pf = new CPackFile( this );
 	pf->m_hPackFileHandleFS = Trace_FOpen( fullpath, "rb", 0, nullptr );
 
 	if ( pf->m_hPackFileHandleFS )
@@ -996,7 +989,7 @@ int CPackFileHandle::Seek( int nOffset, int nWhence )
 // Offsets all reads by the base of the pack file as needed.
 // Return bytes read.
 //-----------------------------------------------------------------------------
-int CPackFile::ReadFromPack( int nIndex, void* buffer, int nDestBytes, int nBytes, int64 nOffset )
+int CPackFile::ReadFromPackDirect( int nIndex, void* buffer, int nDestBytes, int nBytes, int64 nOffset )
 {
 	m_mutex.lock();
 
@@ -1080,7 +1073,7 @@ CFileHandle *CPackFile::OpenFile( const char *pFileName, const char *pOptions )
 //-----------------------------------------------------------------------------
 //	Get a directory entry from a pack's preload section
 //-----------------------------------------------------------------------------
-ZIP_PreloadDirectoryEntry* CZipPackFile::GetPreloadEntry( int nEntryIndex )  
+ZIP_PreloadDirectoryEntry* CPackFile::GetPreloadEntry( int nEntryIndex )  
 {
 	if ( !m_pPreloadHeader )
 	{
@@ -1099,7 +1092,7 @@ ZIP_PreloadDirectoryEntry* CZipPackFile::GetPreloadEntry( int nEntryIndex )
 //-----------------------------------------------------------------------------
 //	Read a file from the pack
 //-----------------------------------------------------------------------------
-int CZipPackFile::ReadFromPack( int nEntryIndex, void* pBuffer, int nDestBytes, int nBytes, int64 nOffset )
+int CPackFile::ReadFromPack( int nEntryIndex, void* pBuffer, int nDestBytes, int nBytes, int64 nOffset )
 {
 	if ( nEntryIndex >= 0 )
 	{
@@ -1177,18 +1170,18 @@ int CZipPackFile::ReadFromPack( int nEntryIndex, void* pBuffer, int nDestBytes, 
 		return nBytes;
 	}
 
-	return CPackFile::ReadFromPack( nEntryIndex, pBuffer, nDestBytes, nBytes, nOffset );	
+	return ReadFromPackDirect( nEntryIndex, pBuffer, nDestBytes, nBytes, nOffset );	
 }
 
 //-----------------------------------------------------------------------------
 //	Gets size, position, and index for a file in the pack.
 //-----------------------------------------------------------------------------
-bool CZipPackFile::GetOffsetAndLength( const char *pFileName, int &nBaseIndex, int64 &nFileOffset, int &nLength )
+bool CPackFile::GetOffsetAndLength( const char *pFileName, int &nBaseIndex, int64 &nFileOffset, int &nLength )
 {
-	CZipPackFile::CPackFileEntry lookup;
+	CPackFile::CPackFileEntry lookup;
 	lookup.m_HashName = HashStringCaselessConventional( pFileName );
 
-	auto it = std::ranges::lower_bound( m_PackFiles, lookup.m_HashName, {}, &CZipPackFile::CPackFileEntry::m_HashName );
+	auto it = std::ranges::lower_bound( m_PackFiles, lookup.m_HashName, {}, &CPackFile::CPackFileEntry::m_HashName );
 	if ( it != m_PackFiles.end() && it->m_HashName == lookup.m_HashName )
 	{
 		nFileOffset = it->m_nPosition;
@@ -1200,7 +1193,7 @@ bool CZipPackFile::GetOffsetAndLength( const char *pFileName, int &nBaseIndex, i
 	return false;
 }
 
-bool CZipPackFile::IndexToFilename( int nIndex, char *pBuffer, int nBufferSize )
+bool CPackFile::IndexToFilename( int nIndex, char *pBuffer, int nBufferSize )
 {
 	if ( nIndex >= 0 )
 	{
@@ -1216,7 +1209,7 @@ bool CZipPackFile::IndexToFilename( int nIndex, char *pBuffer, int nBufferSize )
 //-----------------------------------------------------------------------------
 //	Find a file in the pack.
 //-----------------------------------------------------------------------------
-bool CZipPackFile::FindFile( const char *pFilename, int &nIndex, int64 &nOffset, int &nLength )
+bool CPackFile::FindFile( const char *pFilename, int &nIndex, int64 &nOffset, int &nLength )
 {
 	char szCleanName[MAX_FILEPATH];
 	V_strncpy( szCleanName, pFilename, sizeof( szCleanName ) );
@@ -1237,7 +1230,7 @@ bool CZipPackFile::FindFile( const char *pFilename, int &nIndex, int64 &nOffset,
 //-----------------------------------------------------------------------------
 //	Set up the preload section
 //-----------------------------------------------------------------------------
-void CZipPackFile::SetupPreloadData()
+void CPackFile::SetupPreloadData()
 {
 	if ( m_pPreloadHeader || !m_nPreloadSectionSize )
 	{
@@ -1277,7 +1270,7 @@ void CZipPackFile::SetupPreloadData()
 	m_pPreloadData = (byte *)m_pPreloadRemapTable + m_pPreloadHeader->DirectoryEntries * sizeof( unsigned short );
 }
 
-void CZipPackFile::DiscardPreloadData()
+void CPackFile::DiscardPreloadData()
 {
 	if ( !m_pPreloadHeader )
 	{
@@ -1296,7 +1289,7 @@ void CZipPackFile::DiscardPreloadData()
 //-----------------------------------------------------------------------------
 //	Parse the zip file to build the file directory and preload section
 //-----------------------------------------------------------------------------
-bool CZipPackFile::Prepare( int64 fileLen, int64 nFileOfs )
+bool CPackFile::Prepare( int64 fileLen, int64 nFileOfs )
 {
 	if ( !fileLen || fileLen < sizeof( ZIP_EndOfCentralDirRecord ) )
 	{
@@ -1383,7 +1376,7 @@ bool CZipPackFile::Prepare( int64 fileLen, int64 nFileOfs )
 	// Supports uncompressed zip files, with or without preload sections
 	bool bSuccess = true;
 	char tmpString[MAX_PATH];		
-	CZipPackFile::CPackFileEntry lookup;
+	CPackFile::CPackFileEntry lookup;
 
 	m_PackFiles.reserve( numFilesInZip );
 
@@ -1425,18 +1418,18 @@ bool CZipPackFile::Prepare( int64 fileLen, int64 nFileOfs )
 		zipDirBuff.skip( nextOffset );
 	}
 
-	std::ranges::sort( m_PackFiles, {}, &CZipPackFile::CPackFileEntry::m_HashName );
+	std::ranges::sort( m_PackFiles, {}, &CPackFile::CPackFileEntry::m_HashName );
 
 
 	return bSuccess;
 }
 
-CRC32_t CZipPackFile::GetKVPoolKey()
+CRC32_t CPackFile::GetKVPoolKey()
 {
 	return m_KVPoolKey;
 }
 
-bool CZipPackFile::GetStringFromKVPool( unsigned int key, char *pOutBuff, int buflen )
+bool CPackFile::GetStringFromKVPool( unsigned int key, char *pOutBuff, int buflen )
 {
 	return m_KVStringPool.string( (FileNameHandle_t)(std::uintptr_t)key, pOutBuff, buflen );
 }
@@ -1444,9 +1437,18 @@ bool CZipPackFile::GetStringFromKVPool( unsigned int key, char *pOutBuff, int bu
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-CZipPackFile::CZipPackFile( CBaseFileSystem* fs, void *pSection )
- : m_PackFiles(), m_KVStringPool()
+CPackFile::CPackFile( CBaseFileSystem* fs, void *pSection )
+ : m_PackFiles(), m_KVStringPool(), m_iRefs( 1 )
 {
+	m_FileLength = 0;
+	m_hPackFileHandleFS = nullptr;
+	m_nBaseOffset = 0;
+	m_bIsMapPath = false;
+	m_lPackFileTime = 0L;
+	m_refCount = 0;
+	m_nOpenFiles = 0;
+	m_PackFileID = 0;
+
 	m_fs = fs;	
 	m_pPreloadDirectory = nullptr;
 	m_pPreloadData = nullptr;
@@ -1459,10 +1461,23 @@ CZipPackFile::CZipPackFile( CBaseFileSystem* fs, void *pSection )
 	m_pSection = nullptr;
 }
 
-CZipPackFile::~CZipPackFile()
+CPackFile::~CPackFile()
 {
 	DiscardPreloadData();
 	m_KVStringPool.clear();
+
+	if ( m_nOpenFiles )
+	{
+		Error( "Closing pack file with %d open files!\n", m_nOpenFiles );
+	}
+
+	if ( m_hPackFileHandleFS )
+	{
+		m_fs->Trace_FClose( m_hPackFileHandleFS );
+		m_hPackFileHandleFS = nullptr;
+	}
+
+	ks::erase_first( m_fs->m_ZipFiles, this );
 }
 
 //-----------------------------------------------------------------------------
@@ -1546,7 +1561,7 @@ void CBaseFileSystem::AddPackFiles( const char *pPath, std::string_view pathID, 
 		if ( !pf )
 		{
 
-			pf = new CZipPackFile( this );
+			pf = new CPackFile( this );
 
 			pf->SetPath( sp->GetPath() );
 			pf->m_ZipName = fullpath;
@@ -1678,7 +1693,7 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 		// Seek to correct position
 		psHandle.Seek( packfile->fileofs, FILESYSTEM_SEEK_HEAD );
 
-		CPackFile *pf = new CZipPackFile( this );
+		CPackFile *pf = new CPackFile( this );
 
 		pf->m_bIsMapPath = true;
 		pf->m_hPackFileHandleFS = nullptr;
@@ -1755,7 +1770,7 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 		// Seek to correct position
 		FS_fseek( fp, packfile->fileofs, FILESYSTEM_SEEK_HEAD );
 
-		CPackFile *pf = new CZipPackFile( this );
+		CPackFile *pf = new CPackFile( this );
 
 		pf->m_bIsMapPath = true;
 		pf->m_hPackFileHandleFS = fp;
@@ -3739,10 +3754,8 @@ int CBaseFileSystem::Write( void const* pInput, int size, FileHandle_t file )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CBaseFileSystem::FPrintf( FileHandle_t file, const char *pFormat, ... )
+int CBaseFileSystem::FVPrintf( FileHandle_t file, const char *pFormat, std::va_list args )
 {
-	std::va_list args;
-	__builtin_va_start( args, pFormat );
 	CVProfScope _( "CBaseFileSystem::FPrintf", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 	CFileHandle *fh = ( CFileHandle *)file;
 	if ( !fh )
@@ -3763,7 +3776,6 @@ int CBaseFileSystem::FPrintf( FileHandle_t file, const char *pFormat, ... )
 	int len = std::vsnprintf( buffer, sizeof( buffer), pFormat, args );
 	len = fh->Write( buffer, len );
 	//int len = FS_vfprintf( fh->GetFileHandle() , pFormat, args );
-	__builtin_va_end( args );
 
 	
 	return len;
@@ -5633,17 +5645,6 @@ bool CBaseFileSystem::GetFileTypeForFullPath( char const *pFullPath, wchar_t *bu
 }
 
 
-bool CBaseFileSystem::GetOptimalIOConstraints( FileHandle_t hFile, unsigned *pOffsetAlign, unsigned *pSizeAlign, unsigned *pBufferAlign )
-{
-	if ( pOffsetAlign )
-		*pOffsetAlign = 1;
-	if ( pSizeAlign )
-		*pSizeAlign = 1;
-	if ( pBufferAlign )
-		*pBufferAlign = 1;
-	return false;
-}
-
 //-----------------------------------------------------------------------------
 // This is a DVDDEV misery that needs to convolve loose filenames that exceed the 42 character limit.
 // This is not for files inside zip files or in any other context.
@@ -5977,12 +5978,12 @@ public:
 	CThreadEvent m_hThreadEvent;
 
 	std::atomic<bool> m_bThreadShouldExit;
-	// CThread Overrides
-	virtual int Run( void );
+	int Run( void );
 };
 
 
-CIODelayAlarmThread::CIODelayAlarmThread( CBaseFileSystem *pFileSystem )
+CIODelayAlarmThread::CIODelayAlarmThread( CBaseFileSystem *pFileSystem ) :
+	CThread( [this] { return Run(); } )
 {
 	m_pFileSystem = pFileSystem;
 	m_bThreadShouldExit = false;
@@ -6110,3 +6111,9 @@ static ConCommand fs_fios_cancel_prefetches_command( "fs_fios_cancel_prefetches"
 static void fs_fios_cancel_prefetches( const CCommand &args )
 {
 }
+
+
+//-----------------------------------------------------------------------------
+// The IBaseFileSystem, IFileSystem, IIoStats and IThreadedFileMD5Processor members forward to their one implementation
+//-----------------------------------------------------------------------------
+#include "facade/ifilesystem.inl"

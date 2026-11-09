@@ -258,78 +258,109 @@ inline CPrimList::CPrimList( int nFirstIndex, int nIndexCount )
 	m_NumIndices = nIndexCount;
 }
 
+// The vertex/index buffer and mesh implementations; every buffer or mesh is created as exactly one
+// of them.  IVertexBuffer, IIndexBuffer and IMesh forward each call to the implementation named by
+// the kind.  Which of the kinds exist depends on the shader API linked into the executable.
+enum class MeshKind : unsigned char
+{
+	VertexBuffer,		// CVertexBufferDx8
+	IndexBuffer,		// CIndexBufferDx8
+	StaticMesh,			// CMeshDX8
+	DynamicMesh,		// CDynamicMeshDX8
+	TempMesh,			// CTempMeshDX8
+	EmptyMesh,			// CEmptyMesh: shaderapiempty
+	QueuedMesh,			// CMatQueuedMesh: records the calls for the render thread
+	QueuedIndexBuffer,	// CMatQueuedIndexBuffer
+};
+
 class IVertexBuffer
 {
 public:
+	MeshKind Kind() const { return m_Kind; }
+
 	// NOTE: The following two methods are only valid for static vertex buffers
 	// Returns the number of vertices and the format of the vertex buffer
-	virtual int VertexCount() const = 0;
-	virtual VertexFormat_t GetVertexFormat() const = 0;
+	int VertexCount() const;
+	VertexFormat_t GetVertexFormat() const;
 
 	// Is this vertex buffer dynamic?
-	virtual bool IsDynamic() const = 0;
+	bool IsDynamic() const;
 
 	// NOTE: For dynamic vertex buffers only!
 	// Casts the memory of the dynamic vertex buffer to the appropriate type
-	virtual void BeginCastBuffer( VertexFormat_t format ) = 0;
-	virtual void EndCastBuffer() = 0;
+	void BeginCastBuffer( VertexFormat_t format );
+	void EndCastBuffer();
 
 	// Returns the number of vertices that can still be written into the buffer
-	virtual int GetRoomRemaining() const = 0;
+	int GetRoomRemaining() const;
 
-	virtual bool Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc ) = 0;
-	virtual void Unlock( int nVertexCount, VertexDesc_t &desc ) = 0;
+	bool Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc );
+	void Unlock( int nVertexCount, VertexDesc_t &desc );
 
 	// Spews the mesh data
-	virtual void Spew( int nVertexCount, const VertexDesc_t &desc ) = 0;
+	void Spew( int nVertexCount, const VertexDesc_t &desc );
 
 	// Call this in debug mode to make sure our data is good.
-	virtual void ValidateData( int nVertexCount, const VertexDesc_t & desc ) = 0;
+	void ValidateData( int nVertexCount, const VertexDesc_t & desc );
+
+protected:
+	explicit IVertexBuffer( MeshKind kind ) : m_Kind( kind ) {}
+
+private:
+	MeshKind m_Kind;
 };
 
 class IIndexBuffer
 {
 public:
+	MeshKind Kind() const { return m_Kind; }
+
 	// NOTE: The following two methods are only valid for static index buffers
 	// Returns the number of indices and the format of the index buffer
-	virtual int IndexCount() const = 0;
-	virtual MaterialIndexFormat_t IndexFormat() const = 0;
+	int IndexCount() const;
+	MaterialIndexFormat_t IndexFormat() const;
 
 	// Is this index buffer dynamic?
-	virtual bool IsDynamic() const = 0;
+	bool IsDynamic() const;
 
 	// NOTE: For dynamic index buffers only!
 	// Casts the memory of the dynamic index buffer to the appropriate type
-	virtual void BeginCastBuffer( MaterialIndexFormat_t format ) = 0;
-	virtual void EndCastBuffer() = 0;
+	void BeginCastBuffer( MaterialIndexFormat_t format );
+	void EndCastBuffer();
 
 	// Returns the number of indices that can still be written into the buffer
-	virtual int GetRoomRemaining() const = 0;
+	int GetRoomRemaining() const;
 
 	// Locks, unlocks the index buffer
-	virtual bool Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t &desc ) = 0;
-	virtual void Unlock( int nWrittenIndexCount, IndexDesc_t &desc ) = 0;
+	bool Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t &desc );
+	void Unlock( int nWrittenIndexCount, IndexDesc_t &desc );
 
 	// FIXME: Remove this!! Here only for backward compat on IMesh
 	// Locks, unlocks the index buffer for modify
-	virtual void ModifyBegin( bool bReadOnly, int nFirstIndex, int nIndexCount, IndexDesc_t& desc ) = 0;
-	virtual void ModifyEnd( IndexDesc_t& desc ) = 0;
+	void ModifyBegin( bool bReadOnly, int nFirstIndex, int nIndexCount, IndexDesc_t& desc );
+	void ModifyEnd( IndexDesc_t& desc );
 
 	// Spews the mesh data
-	virtual void Spew( int nIndexCount, const IndexDesc_t &desc ) = 0;
+	void Spew( int nIndexCount, const IndexDesc_t &desc );
 
 	// Ensures the data in the index buffer is valid
-	virtual void ValidateData( int nIndexCount, const IndexDesc_t &desc ) = 0;
+	void ValidateData( int nIndexCount, const IndexDesc_t &desc );
 
 	// For backward compat to IMesh
-	virtual IMesh* GetMesh() = 0;
+	IMesh* GetMesh();
+
+protected:
+	explicit IIndexBuffer( MeshKind kind ) : m_Kind( kind ) {}
+
+private:
+	MeshKind m_Kind;
 };
 
 //-----------------------------------------------------------------------------
 class ICachedPerFrameMeshData
 {
 public:
-	virtual void Free() = 0;
+	void Free();
 };
 
 //-----------------------------------------------------------------------------
@@ -338,64 +369,69 @@ public:
 class IMesh : public IVertexBuffer, public IIndexBuffer
 {
 public:
+	MeshKind Kind() const { return IVertexBuffer::Kind(); }
+
 	// -----------------------------------
 
 	// Sets/gets the primitive type
-	virtual void SetPrimitiveType( MaterialPrimitiveType_t type ) = 0;
+	void SetPrimitiveType( MaterialPrimitiveType_t type );
 
 	// Draws the mesh
-	virtual void Draw( int nFirstIndex = -1, int nIndexCount = 0 ) = 0;
+	void Draw( int nFirstIndex = -1, int nIndexCount = 0 );
 
-	virtual void SetColorMesh( IMesh *pColorMesh, int nVertexOffset ) = 0;
+	void SetColorMesh( IMesh *pColorMesh, int nVertexOffset );
 
 	// Draw a list of (lists of) primitives. Batching your lists together that use
 	// the same lightmap, material, vertex and index buffers with multipass shaders
 	// can drastically reduce state-switching overhead.
 	// NOTE: this only works with STATIC meshes.
-	virtual void Draw( CPrimList *pLists, int nLists ) = 0;
+	void Draw( CPrimList *pLists, int nLists );
 
 	// Copy verts and/or indices to a mesh builder. This only works for temp meshes!
-	virtual void CopyToMeshBuilder( 
+	void CopyToMeshBuilder( 
 		int iStartVert,		// Which vertices to copy.
 		int nVerts, 
 		int iStartIndex,	// Which indices to copy.
 		int nIndices, 
 		int indexOffset,	// This is added to each index.
-		CMeshBuilder &builder ) = 0;
+		CMeshBuilder &builder );
 
 	// Spews the mesh data
-	virtual void Spew( int nVertexCount, int nIndexCount, const MeshDesc_t &desc ) = 0;
+	void Spew( int nVertexCount, int nIndexCount, const MeshDesc_t &desc );
 
 	// Call this in debug mode to make sure our data is good.
-	virtual void ValidateData( int nVertexCount, int nIndexCount, const MeshDesc_t &desc ) = 0;
+	void ValidateData( int nVertexCount, int nIndexCount, const MeshDesc_t &desc );
 
 	// New version
 	// Locks/unlocks the mesh, providing space for nVertexCount and nIndexCount.
 	// nIndexCount of -1 means don't lock the index buffer...
-	virtual void LockMesh( int nVertexCount, int nIndexCount, MeshDesc_t &desc, MeshBuffersAllocationSettings_t *pSettings = 0 ) = 0;
-	virtual void ModifyBegin( int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t& desc ) = 0;
-	virtual void ModifyEnd( MeshDesc_t& desc ) = 0;
-	virtual void UnlockMesh( int nVertexCount, int nIndexCount, MeshDesc_t &desc ) = 0;
+	void LockMesh( int nVertexCount, int nIndexCount, MeshDesc_t &desc, MeshBuffersAllocationSettings_t *pSettings = 0 );
+	void ModifyBegin( int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t& desc );
+	void ModifyEnd( MeshDesc_t& desc );
+	void UnlockMesh( int nVertexCount, int nIndexCount, MeshDesc_t &desc );
 
-	virtual void ModifyBeginEx( bool bReadOnly, int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t &desc ) = 0;
+	void ModifyBeginEx( bool bReadOnly, int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t &desc );
 
-	virtual void SetFlexMesh( IMesh *pMesh, int nVertexOffset ) = 0;
+	void SetFlexMesh( IMesh *pMesh, int nVertexOffset );
 
-	virtual void DisableFlexMesh() = 0;
+	void DisableFlexMesh();
 
-	virtual void MarkAsDrawn() = 0;
+	void MarkAsDrawn();
 
 	// NOTE: I chose to create this method strictly because it's 2 days to code lock
 	// and I could use the DrawInstances technique without a larger code change
 	// Draws the mesh w/ modulation.
-	virtual void DrawModulated( const Vector4D &diffuseModulation, int nFirstIndex = -1, int nIndexCount = 0 ) = 0;
+	void DrawModulated( const Vector4D &diffuseModulation, int nFirstIndex = -1, int nIndexCount = 0 );
 
-	virtual unsigned int ComputeMemoryUsed() = 0;
+	unsigned int ComputeMemoryUsed();
 
-	virtual void * AccessRawHardwareDataStream( uint8 nRawStreamIndex, uint32 numBytes, uint32 uiFlags, void *pvContext ) = 0;
+	void * AccessRawHardwareDataStream( uint8 nRawStreamIndex, uint32 numBytes, uint32 uiFlags, void *pvContext );
 
-	virtual ICachedPerFrameMeshData *GetCachedPerFrameMeshData() = 0;
-	virtual void ReconstructFromCachedPerFrameMeshData( ICachedPerFrameMeshData *pData ) = 0;
+	ICachedPerFrameMeshData *GetCachedPerFrameMeshData();
+	void ReconstructFromCachedPerFrameMeshData( ICachedPerFrameMeshData *pData );
+
+protected:
+	explicit IMesh( MeshKind kind ) : IVertexBuffer( kind ), IIndexBuffer( kind ) {}
 };
 
 

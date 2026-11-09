@@ -4,8 +4,6 @@
 // Purpose: A special kind of beam effect that traces from its start position to
 //			its end position and stops if it hits anything.
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -43,7 +41,7 @@ IMPLEMENT_REFLECT_DATAMAP( CEnvLaser )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvLaser::Spawn( void )
+void CEnvLaser::Spawn_Impl( void )
 {
 	if ( !GetModelName() )
 	{
@@ -89,7 +87,7 @@ void CEnvLaser::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvLaser::Precache( void )
+void CEnvLaser::Precache_Impl( void )
 {
 	SetModelIndex( PrecacheModel( STRING( GetModelName() ) ) );
 	if ( m_iszSpriteName != NULL_STRING )
@@ -100,7 +98,7 @@ void CEnvLaser::Precache( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CEnvLaser::KeyValue( const char *szKeyName, const char *szValue )
+bool CEnvLaser::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "width"))
 	{
@@ -120,7 +118,7 @@ bool CEnvLaser::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		BaseClass::KeyValue( szKeyName, szValue );
+		BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;

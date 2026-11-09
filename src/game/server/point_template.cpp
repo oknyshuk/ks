@@ -3,8 +3,6 @@
 
 // Purpose: Point entity used to create templates out of other entities or groups of entities
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -248,13 +245,13 @@ void PrecachePointTemplates()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPointTemplate::Spawn( void )
+void CPointTemplate::Spawn_Impl( void )
 {
 	Precache();
 	ScriptInstallPreSpawnHook();
 }
 
-void CPointTemplate::Precache()
+void CPointTemplate::Precache_Impl()
 {
 	// We can't call precache right when we instance the template, we need to defer it until after all map entities have 
 	//  been loaded, so add this template to a list which is cleared after map entity parsing is completed.

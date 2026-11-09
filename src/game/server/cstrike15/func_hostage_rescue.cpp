@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -34,7 +32,7 @@ LINK_ENTITY_TO_CLASS( func_hostage_rescue, CHostageRescueZone );
 
 
 
-void CHostageRescueZone::Spawn()
+void CHostageRescueZone::Spawn_Impl()
 {
 	m_hInstructorHint = nullptr;
 
@@ -111,7 +109,7 @@ void CHostageRescueZone::HostageRescueTouch( CBaseEntity *pOther )
 LINK_ENTITY_TO_CLASS( info_hostage_rescue_zone_hint, CInfoInstructorHintHostageRescueZone );
 
 
-void CInfoInstructorHintHostageRescueZone::Spawn( void )
+void CInfoInstructorHintHostageRescueZone::Spawn_Impl( void )
 {
 	VisibilityMonitor_AddEntity( this, 5000.0f, nullptr, nullptr );
 }

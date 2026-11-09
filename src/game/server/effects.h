@@ -1,7 +1,6 @@
 #pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
-import ks.math;
 
 #include "reflect_annotations.h"
 #include "baseentity.h"
@@ -30,7 +29,7 @@ class [[= ks::reflect::NetTable{ .name = "DT_QuadraticBeam" } ]]
 	DECLARE_CLASS( CEnvQuadraticBeam, CPointEntity );
 
 public:
-	void Spawn();
+	void Spawn_Impl();
 	void SetSpline( const Vector &control, const Vector &target )
 	{
 		m_targetPosition = target;

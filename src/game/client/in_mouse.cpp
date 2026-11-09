@@ -3,8 +3,6 @@
 
 // Purpose: Mouse input routines
 
-import std;
-import ks.tier1;
 #include "hud.h"
 #include "rocketui/rocketui.h"
 #include "cdll_int.h"
@@ -31,41 +29,34 @@ extern const ConVar *sv_cheats;
 
 
 
-class ConVar_m_pitch : public ConVar_ServerBounded
+static float ConVar_m_pitch_GetFloat( const ConVar_ServerBounded &bounded )
 {
-public:
-	ConVar_m_pitch() : 
-		ConVar_ServerBounded( "m_pitch","0.022", FCVAR_ARCHIVE|FCVAR_SS, "Mouse pitch factor." )
-	{
-	}
-	
-	virtual float GetFloat() const
-	{
-		if ( !sv_cheats )
-			sv_cheats = cvar->FindVar( "sv_cheats" );
+	if ( !sv_cheats )
+		sv_cheats = cvar->FindVar( "sv_cheats" );
 
-		float flBaseValue;
-		// If sv_cheats is on then it can be anything.
-		int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
-		if ( nSlot != 0 )
-		{
-			static SplitScreenConVarRef s_m_pitch( "m_pitch" );
-			flBaseValue = s_m_pitch.GetFloat( nSlot );
-		}
-		else
-		{
-			flBaseValue = GetBaseFloatValue();
-		}
-		if ( !sv_cheats || sv_cheats->GetBool() )
-			return flBaseValue;
-
-		// If sv_cheats is off than it can only be 0.022 or -0.022 (if they've reversed the mouse in the options).		
-		if ( flBaseValue > 0 )
-			return 0.022f;
-		else
-			return -0.022f;
+	float flBaseValue;
+	// If sv_cheats is on then it can be anything.
+	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
+	if ( nSlot != 0 )
+	{
+		static SplitScreenConVarRef s_m_pitch( "m_pitch" );
+		flBaseValue = s_m_pitch.GetFloat( nSlot );
 	}
-} cvar_m_pitch;
+	else
+	{
+		flBaseValue = bounded.GetBaseFloatValue();
+	}
+	if ( !sv_cheats || sv_cheats->GetBool() )
+		return flBaseValue;
+
+	// If sv_cheats is off than it can only be 0.022 or -0.022 (if they've reversed the mouse in the options).		
+	if ( flBaseValue > 0 )
+		return 0.022f;
+	else
+		return -0.022f;
+}
+
+static ConVar_ServerBounded cvar_m_pitch( ConVar_m_pitch_GetFloat, "m_pitch","0.022", FCVAR_ARCHIVE|FCVAR_SS, "Mouse pitch factor." );
 ConVar_ServerBounded *m_pitch = &cvar_m_pitch;
 
 extern ConVar cam_idealyaw;
@@ -97,7 +88,7 @@ ConVar cl_mouselook( "cl_mouselook", "1", FCVAR_ARCHIVE | FCVAR_NOT_CONNECTED | 
 
 ConVar cl_mouseenable( "cl_mouseenable", "1", FCVAR_RELEASE );
 
-void cl_mouseenable_changed_callback( IConVar *var, const char *pOldValue, float flOldValue )
+void cl_mouseenable_changed_callback( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	if( cl_mouseenable.GetBool() == true )
 		input->ClearStates();

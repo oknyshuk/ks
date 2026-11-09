@@ -4,7 +4,6 @@
 
 // Purpose: The TF Game rules object
 
-import ks.tier1;
 #include "reflect_annotations.h"
 
 class CNavArea;
@@ -20,7 +19,6 @@ class CNavArea;
 #include "usermessages.h"
 #if defined( GAME_DLL )
 #include "maprules.h"
-import std;
 #endif
 
 //#define DEBUG_QUESTS_IN_CLIENT
@@ -244,8 +242,6 @@ static GGWeaponAliasName ggWeaponAliasNameList[] =
 	{ WEAPON_NONE, "" }
 };
 
-namespace ks::net { struct CEconItemPreviewDataBlock; } // forward declare item data
-namespace ks::net { struct CCSUsrMsg_PlayerDecalDigitalSignature; } // forward declare proto message
 
 #ifndef CLIENT_DLL
 	extern ConVar mp_autoteambalance;
@@ -260,8 +256,6 @@ namespace ks::net { struct CCSUsrMsg_PlayerDecalDigitalSignature; } // forward d
 #if !defined( CLIENT_DLL )
 
 // forward declare GC message
-namespace ks::net { struct CMsgGCCStrike15_v2_MatchmakingServerRoundStats; }
-namespace ks::net { struct CMsgGCCStrike15_v2_MatchmakingGC2ServerReserve; }
 
 int ScramblePlayersSort( CCSPlayer* const *p1, CCSPlayer* const *p2 );
 
@@ -333,7 +327,7 @@ class SpawnPoint : public CServerOnlyPointEntity
 	DECLARE_DATADESC();
 public:
 	SpawnPoint();
-	void Spawn( void );
+	void Spawn_Impl( void );
 	bool IsEnabled() { return m_bEnabled; }
 	[[= ks::reflect::Input{ .name = "SetEnabled", .type = FIELD_VOID } ]] void InputSetEnabled( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "SetDisabled", .type = FIELD_VOID } ]] void InputSetDisabled( inputdata_t &inputdata );
@@ -358,8 +352,8 @@ class SpawnPointCoopEnemy : public SpawnPoint
 	DECLARE_DATADESC();
 public:	
 	SpawnPointCoopEnemy();
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 	const char *GetWeaponsToGive( void ) { return STRING( m_szWeaponsToGive ); }
 	const char *GetPlayerModelToUse( void ) { return STRING( m_szPlayerModelToUse ); }
 	int			GetArmorToSpawnWith( void ) { return m_nArmorToSpawnWith; }

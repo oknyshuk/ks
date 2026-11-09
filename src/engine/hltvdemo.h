@@ -13,11 +13,11 @@ class CGameInfo;
 class CHLTVServer;
 class CNETMsg_PlayerAvatarData_t;
 
-class CHLTVDemoRecorder : private IDemoRecorder
+class CHLTVDemoRecorder : public IDemoRecorder
 {
 public:
 	CHLTVDemoRecorder( CHLTVServer *pHltvServer );
-	virtual ~CHLTVDemoRecorder();
+	~CHLTVDemoRecorder();
 
 	// Convert to demo recorder
 	IDemoRecorder* GetDemoRecorder() { return this; }
@@ -36,7 +36,7 @@ public: // For use by HLTVServer
 	void	StartAutoRecording();
 	void	StartRecording( const char *filename, bool bContinuously );
 
-private: // IDemoRecorder
+public: // IDemoRecorder
 	void	RecordCommand( const char *cmdstring );
 	void	RecordMessages( bf_read &data, int bits );
 	void	RecordPacket( void );
@@ -49,7 +49,7 @@ private: // IDemoRecorder
 	void	RecordUserInput( int cmdnumber ) {}
 	void	ResetDemoInterpolation( void ) {}
 
-private: // internal
+public: // internal
 	void	CloseFile();
 	void	Reset();
 
@@ -61,7 +61,7 @@ private: // internal
 	// If we are recording and we have finished the 'sign-on' step of demo recording
 	bool	HasRecordingActuallyStarted() { return m_bIsRecording && m_nStartTick >= 0; }
 
-private:
+public:
 	CDemoFile		m_DemoFile;
 	bool			m_bIsRecording;
 	int				m_nFrameCount;

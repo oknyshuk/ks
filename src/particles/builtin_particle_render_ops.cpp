@@ -193,7 +193,7 @@ class C_OP_RenderPoints : public CParticleRenderOperatorInstance
 		return PARTICLE_ATTRIBUTE_XYZ_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		uint64 nMask = 0;
 		if ( VisibilityInputs.m_nCPin >= 0 )
@@ -201,7 +201,7 @@ class C_OP_RenderPoints : public CParticleRenderOperatorInstance
 		return nMask;
 	}
 
-	virtual void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
+	void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
 
 	struct C_OP_RenderPointsContext_t
 	{
@@ -214,7 +214,7 @@ class C_OP_RenderPoints : public CParticleRenderOperatorInstance
 		return sizeof( C_OP_RenderPointsContext_t );
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		C_OP_RenderPointsContext_t *pCtx = reinterpret_cast<C_OP_RenderPointsContext_t *>( pContext );
 		pCtx->m_VisibilityData.m_bUseVisibility = false;
@@ -335,9 +335,9 @@ class C_OP_RenderSprites : public C_OP_RenderPoints
 		return sizeof( C_OP_RenderSpritesContext_t );
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const;
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const;
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		uint64 nMask = 0;
 		if ( m_nOrientationControlPoint >= 0 )
@@ -355,9 +355,9 @@ class C_OP_RenderSprites : public C_OP_RenderPoints
 			PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER_MASK | PARTICLE_ATTRIBUTE_LIFE_DURATION_MASK;
 	}
 
-	virtual int GetParticlesToRender( CParticleCollection *pParticles, void *pContext, int nFirstParticle, int nRemainingVertices, int nRemainingIndices, int *pVertsUsed, int *pIndicesUsed ) const;
-	virtual void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
-	virtual void RenderUnsorted( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const;
+	int GetParticlesToRender( CParticleCollection *pParticles, void *pContext, int nFirstParticle, int nRemainingVertices, int nRemainingIndices, int *pVertsUsed, int *pIndicesUsed ) const;
+	void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
+	void RenderUnsorted( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const;
 	void RenderSpriteCard( CMeshBuilder &meshBuilder, SpriteRenderInfo_t& info, int hParticle, ParticleRenderData_t const *pSortList ) const;
 	template<bool bPerParticleOutline, bool bDoNormals, class T> void RenderSpriteCardNew( CMeshBuilder &meshBuilder, SpriteRenderInfo_t& info, T const *pSortList ) const;
 	void RenderTwoSequenceSpriteCardNew(  CMeshBuilder &meshBuilder, SpriteRenderInfo_t& info, ParticleFullRenderData_Scalar_View const *pSortList ) const;
@@ -1671,7 +1671,7 @@ class C_OP_RenderSpritesTrail : public CParticleRenderOperatorInstance
 		int		m_nQueryHandle;
 	};
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		uint64 nMask = 0;
 		if ( VisibilityInputs.m_nCPin >= 0 )
@@ -1684,7 +1684,7 @@ class C_OP_RenderSpritesTrail : public CParticleRenderOperatorInstance
 		return sizeof( C_OP_RenderSpriteTrailContext_t );
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		C_OP_RenderSpriteTrailContext_t *pCtx = reinterpret_cast<C_OP_RenderSpriteTrailContext_t *>( pContext );
 		if ( ( VisibilityInputs.m_nCPin >= 0 ) || ( VisibilityInputs.m_flRadiusScaleFOVBase > 0 ) )
@@ -1710,9 +1710,9 @@ class C_OP_RenderSpritesTrail : public CParticleRenderOperatorInstance
 			PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER_MASK | PARTICLE_ATTRIBUTE_TRAIL_LENGTH_MASK;
 	}
 
-	virtual int GetParticlesToRender( CParticleCollection *pParticles, void *pContext, int nFirstParticle, int nRemainingVertices, int nRemainingIndices, int *pVertsUsed, int *pIndicesUsed ) const ;
-	virtual void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
-	virtual void RenderUnsorted( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const;
+	int GetParticlesToRender( CParticleCollection *pParticles, void *pContext, int nFirstParticle, int nRemainingVertices, int nRemainingIndices, int *pVertsUsed, int *pIndicesUsed ) const ;
+	void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
+	void RenderUnsorted( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const;
 
 	bool RenderSpriteTrail( CMeshBuilder &meshBuilder, 
 							int nCurrentVertex, int nCurrentIndex,
@@ -2375,7 +2375,7 @@ class C_OP_RenderRope : public CParticleOperatorInstance
 			PARTICLE_ATTRIBUTE_ALPHA2_MASK;
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		RenderRopeContext_t *pCtx = reinterpret_cast<RenderRopeContext_t *>( pContext );
 		pCtx->m_flRenderedRopeLength = false;
@@ -2400,7 +2400,7 @@ class C_OP_RenderRope : public CParticleOperatorInstance
 		return sizeof( RenderRopeContext_t ) + m_nSubdivCount * sizeof(float);
 	}
 
-	virtual void InitParams( CParticleSystemDefinition *pDef )
+	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		if ( m_nSubdivCount <= 0 )
 		{
@@ -2417,22 +2417,22 @@ class C_OP_RenderRope : public CParticleOperatorInstance
 			m_bUsesCPScaling = false;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		if ( m_bUsesCPScaling )
 			return ( 1ULL << m_nScaleCP1 ) | ( 1ULL << m_nScaleCP2 );
 		return 0;
 	}
 
-	virtual bool IsOrderImportant() const
+	bool IsOrderImportant() const
 	{
 		return true;
 	}
 
-	virtual int GetParticlesToRender( CParticleCollection *pParticles, void *pContext, int nFirstParticle, int nRemainingVertices, int nRemainingIndices, int *pVertsUsed, int *pIndicesUsed ) const;
-	virtual void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
+	int GetParticlesToRender( CParticleCollection *pParticles, void *pContext, int nFirstParticle, int nRemainingVertices, int nRemainingIndices, int *pVertsUsed, int *pIndicesUsed ) const;
+	void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
 	void RenderSpriteCard( CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, IMaterial *pMaterial ) const;
-	virtual void RenderUnsorted( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const;
+	void RenderUnsorted( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const;
 
 	template< class T >
 	void RenderSpriteCard_Internal( T *pVertices, CCachedParticleBatches *pCachedBatches, IMesh *pMesh, CMeshBuilder &meshBuilder, 
@@ -3099,7 +3099,7 @@ class C_OP_RenderBlobs : public CParticleRenderOperatorInstance
 		int		m_nQueryHandle;
 	};
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		uint64 nMask = 0;
 		if ( VisibilityInputs.m_nCPin >= 0 )
@@ -3112,7 +3112,7 @@ class C_OP_RenderBlobs : public CParticleRenderOperatorInstance
 		return sizeof( C_OP_RenderBlobsContext_t );
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		C_OP_RenderBlobsContext_t *pCtx = reinterpret_cast<C_OP_RenderBlobsContext_t *>( pContext );
 		if ( ( VisibilityInputs.m_nCPin >= 0 ) || ( VisibilityInputs.m_flRadiusScaleFOVBase > 0 ) )
@@ -3131,9 +3131,9 @@ class C_OP_RenderBlobs : public CParticleRenderOperatorInstance
 		return PARTICLE_ATTRIBUTE_XYZ_MASK;
 	}
 
-	virtual void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
+	void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
 	
-	virtual bool IsBatchable() const
+	bool IsBatchable() const
 	{
 		return false;
 	}
@@ -3229,7 +3229,7 @@ class C_OP_RenderScreenVelocityRotate : public CParticleRenderOperatorInstance
 		return sizeof( C_OP_RenderScreenVelocityRotateContext_t );
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		uint64 nMask = 0;
 		if ( VisibilityInputs.m_nCPin >= 0 )
@@ -3237,7 +3237,7 @@ class C_OP_RenderScreenVelocityRotate : public CParticleRenderOperatorInstance
 		return nMask;
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		C_OP_RenderScreenVelocityRotateContext_t *pCtx = reinterpret_cast<C_OP_RenderScreenVelocityRotateContext_t *>( pContext );
 		if ( ( VisibilityInputs.m_nCPin >= 0 ) || ( VisibilityInputs.m_flRadiusScaleFOVBase > 0 ) )
@@ -3255,7 +3255,7 @@ class C_OP_RenderScreenVelocityRotate : public CParticleRenderOperatorInstance
 		return PARTICLE_ATTRIBUTE_XYZ_MASK | PARTICLE_ATTRIBUTE_PREV_XYZ_MASK | PARTICLE_ATTRIBUTE_ROTATION_MASK ;
 	}
 
-	virtual void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
+	void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
 };
 
 DEFINE_PARTICLE_OPERATOR( C_OP_RenderScreenVelocityRotate, "render_screen_velocity_rotate", OPERATOR_SINGLETON );
@@ -3344,14 +3344,14 @@ class C_OP_RenderModels : public CParticleRenderOperatorInstance
 		return 0;
 	}
 
-	virtual bool IsBatchable() const
+	bool IsBatchable() const
 	{
 		return false;
 	}
 
-	virtual void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
+	void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
 
-	virtual void Precache( void );
+	void Precache( void );
 	char m_ActivityName[256];
 	char m_pszModelNames[ MAX_MODEL_CHOICES ][256];
 	void *m_pModels[ MAX_MODEL_CHOICES ];
@@ -3546,7 +3546,7 @@ class C_OP_RenderProjected : public CParticleRenderOperatorInstance
 		return 0;
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		void **pCtx = reinterpret_cast< void ** >( pContext );
 
@@ -3558,7 +3558,7 @@ class C_OP_RenderProjected : public CParticleRenderOperatorInstance
 		return sizeof( void * );
 	}
 
-	virtual void PostSimulate( CParticleCollection *pParticles, void *pContext ) const
+	void PostSimulate( CParticleCollection *pParticles, void *pContext ) const
 	{
 		void **pCtx = reinterpret_cast< void ** >( pContext );
 
@@ -3594,7 +3594,7 @@ class C_OP_RenderProjected : public CParticleRenderOperatorInstance
 		}
 	}
 
-	virtual void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
+	void Render( IMatRenderContext *pRenderContext, CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const;
 };
 
 
@@ -3696,3 +3696,7 @@ void AddBuiltInParticleRenderers( void )
 #endif // blobs
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_RENDERER, C_OP_RenderProjected );
 }
+
+
+#define KS_PARTICLE_OP_GROUP Renderers
+#include "particle_operator_dispatch.inl"

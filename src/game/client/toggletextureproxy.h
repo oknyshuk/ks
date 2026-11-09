@@ -6,8 +6,6 @@
 
 class C_BaseEntity;
 
-class IMaterial;
-class IMaterialVar;
 
 
 class CBaseToggleTextureProxy : public IMaterialProxy

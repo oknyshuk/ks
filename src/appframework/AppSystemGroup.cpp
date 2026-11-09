@@ -10,7 +10,21 @@ import ks.tier1;
 #include "appframework/ilaunchermgr.h"
 
 #include "appframework/IAppSystemGroup.h"
+#include "materialsystem/imaterialsystem.h"
 #include "filesystem.h"
+#include "datacache/idatacache.h"
+#include "datacache/imdlcache.h"
+#include "datacache/iprecachesystem.h"
+#include "datacache/iresourceaccesscontrol.h"
+#include "istudiorender.h"
+#include "inputsystem/iinputsystem.h"
+#include "inputsystem/iinputstacksystem.h"
+#include "localize/ilocalize.h"
+#include "SoundEmitterSystem/isoundemittersystembase.h"
+#include "scenefilecache/ISceneFileCache.h"
+#include "vscript/ivscript.h"
+#include "vphysics_interface.h"
+#include "matchmaking/imatchframework.h"
 #include "filesystem_init.h"
 
 
@@ -26,6 +40,8 @@ extern ILoggingListener *g_pDefaultLoggingListener;
 CAppSystemGroup::CAppSystemGroup( CAppSystemGroup *pAppSystemParent )
 {
 	m_pParentAppSystem = pAppSystemParent;
+	m_nCurrentStage = NONE;
+	m_bLoadThroughFileSystem = false;
 }
 
 
@@ -34,6 +50,8 @@ CAppSystemGroup::CAppSystemGroup( CAppSystemGroup *pAppSystemParent )
 //-----------------------------------------------------------------------------
 CSysModule *CAppSystemGroup::LoadModuleDLL( const char *pDLLName )
 {
+	if ( m_bLoadThroughFileSystem )
+		return static_cast<CFSAppSystemGroup *>( this )->LoadModuleDLLViaFileSystem( pDLLName );
 	return Sys_LoadModule( pDLLName );
 }
 
@@ -178,10 +196,15 @@ void CAppSystemGroup::UnloadAllModules()
 }
 
 
+static void *AppSystemPointer( const AppSystemRef &system )
+{
+	return std::visit( []( auto *p ) -> void * { return p; }, system );
+}
+
 //-----------------------------------------------------------------------------
 // Methods to add/remove various global singleton systems 
 //-----------------------------------------------------------------------------
-IAppSystem *CAppSystemGroup::AddSystem( AppModule_t module, const char *pInterfaceName )
+void *CAppSystemGroup::AddSystem( AppModule_t module, const char *pInterfaceName )
 {
 	if (module == APP_MODULE_INVALID)
 		return nullptr;
@@ -190,7 +213,7 @@ IAppSystem *CAppSystemGroup::AddSystem( AppModule_t module, const char *pInterfa
 	if ( it != m_SystemDict.end() )
 	{
 		Warning("AppFramework : Attempted to add two systems with the same interface name %s!\n", pInterfaceName );
-		return m_Systems[ it->second ];
+		return AppSystemPointer( m_Systems[ it->second ] );
 	}
 
 	contract_assert( (module >= 0) && (module < std::ssize( m_Modules )) );
@@ -204,13 +227,49 @@ IAppSystem *CAppSystemGroup::AddSystem( AppModule_t module, const char *pInterfa
 		return nullptr;
 	}
 
-	IAppSystem *pAppSystem = static_cast<IAppSystem*>(pSystem);
-	
-	int sysIndex = std::ssize( m_Systems ); m_Systems.push_back( pAppSystem );
+	// The interface name tells which kind of system the factory returned.
+	AppSystemRef system;
+	if ( !V_strcmp( pInterfaceName, CVAR_INTERFACE_VERSION ) )
+		system = static_cast<ICvar*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, SDLMGR_INTERFACE_VERSION ) )
+		system = static_cast<ILauncherMgr*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, MATERIAL_SYSTEM_INTERFACE_VERSION ) )
+		system = static_cast<IMaterialSystem*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, FILESYSTEM_INTERFACE_VERSION ) )
+		system = static_cast<IFileSystem*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, DATACACHE_INTERFACE_VERSION ) )
+		system = static_cast<IDataCache*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, MDLCACHE_INTERFACE_VERSION ) )
+		system = static_cast<IMDLCache*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, STUDIO_DATA_CACHE_INTERFACE_VERSION ) )
+		system = static_cast<IStudioDataCache*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, PRECACHE_SYSTEM_INTERFACE_VERSION ) )
+		system = static_cast<IPrecacheSystem*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, RESOURCE_ACCESS_CONTROL_INTERFACE_VERSION ) )
+		system = static_cast<IResourceAccessControl*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, INPUTSYSTEM_INTERFACE_VERSION ) )
+		system = static_cast<IInputSystem*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, INPUTSTACKSYSTEM_INTERFACE_VERSION ) )
+		system = static_cast<IInputStackSystem*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, LOCALIZE_INTERFACE_VERSION ) )
+		system = static_cast<ILocalize*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, SOUNDEMITTERSYSTEM_INTERFACE_VERSION ) )
+		system = static_cast<ISoundEmitterSystemBase*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, SCENE_FILE_CACHE_INTERFACE_VERSION ) )
+		system = static_cast<ISceneFileCache*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, STUDIO_RENDER_INTERFACE_VERSION ) )
+		system = static_cast<IStudioRender*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, VSCRIPT_INTERFACE_VERSION ) )
+		system = static_cast<IScriptManager*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, VPHYSICS_INTERFACE_VERSION ) )
+		system = static_cast<IPhysics*>(pSystem);
+	else if ( !V_strcmp( pInterfaceName, IMATCHFRAMEWORK_VERSION_STRING ) )
+		system = static_cast<IMatchFramework*>(pSystem);
+	else
+		system = static_cast<IAppSystem*>(pSystem);
 
-	// Inserting into the dict will help us do named lookup later
-	m_SystemDict.emplace( pInterfaceName, sysIndex );
-	return pAppSystem;
+	AppendSystem( system, pInterfaceName );
+	return pSystem;
 }
 
 static const char *g_StageLookup[] = 
@@ -253,16 +312,41 @@ void CAppSystemGroup::ReportStartupFailure( int nErrorStage, int nSysIndex )
 	Warning( "System (%s) failed during stage %s\n", pszSystemName, pszStageDesc );
 }
 
-void CAppSystemGroup::AddSystem( IAppSystem *pAppSystem, const char *pInterfaceName )
+void CAppSystemGroup::AppendSystem( AppSystemRef system, const char *pInterfaceName )
 {
-	if ( !pAppSystem )
-		return;
-
-	int sysIndex = std::ssize( m_Systems ); m_Systems.push_back( pAppSystem );
+	int sysIndex = std::ssize( m_Systems ); m_Systems.push_back( system );
 
 	// Inserting into the dict will help us do named lookup later
 	// Keep the first system of a name, as the module overload does.
 	m_SystemDict.emplace( pInterfaceName, sysIndex );
+}
+
+void CAppSystemGroup::AddSystem( IAppSystem *pAppSystem, const char *pInterfaceName )
+{
+	if ( !pAppSystem )
+		return;
+	AppendSystem( pAppSystem, pInterfaceName );
+}
+
+void CAppSystemGroup::AddSystem( ILauncherMgr *pLauncherMgr, const char *pInterfaceName )
+{
+	if ( !pLauncherMgr )
+		return;
+	AppendSystem( pLauncherMgr, pInterfaceName );
+}
+
+void CAppSystemGroup::AddSystem( IFileSystem *pFileSystem, const char *pInterfaceName )
+{
+	if ( !pFileSystem )
+		return;
+	AppendSystem( pFileSystem, pInterfaceName );
+}
+
+void CAppSystemGroup::AddSystem( IMatchFramework *pMatchFramework, const char *pInterfaceName )
+{
+	if ( !pMatchFramework )
+		return;
+	AppendSystem( pMatchFramework, pInterfaceName );
 }
 
 void CAppSystemGroup::RemoveAllSystems()
@@ -284,7 +368,7 @@ bool CAppSystemGroup::AddSystems( AppSystemInfo_t *pSystemList )
 	while ( pSystemList->m_pModuleName[0] )
 	{
 		AppModule_t module = LoadModule( pSystemList->m_pModuleName );
-		IAppSystem *pSystem = AddSystem( module, pSystemList->m_pInterfaceName );
+		void *pSystem = AddSystem( module, pSystemList->m_pInterfaceName );
 		if ( !pSystem )
 		{
 			Warning( "Unable to load interface %s from %s, requested from EXE.\n", pSystemList->m_pInterfaceName, pSystemList->m_pModuleName );
@@ -303,7 +387,7 @@ bool CAppSystemGroup::AddSystems( AppSystemInfo_t *pSystemList )
 void *CAppSystemGroup::FindSystem( const char *pSystemName )
 {
 	if ( int *pSysIndex = ks::find_ptr( m_SystemDict, pSystemName ) )
-		return m_Systems[*pSysIndex];
+		return AppSystemPointer( m_Systems[*pSysIndex] );
 
 	// If it's not an interface we know about, it could be an older
 	// version of an interface, or maybe something implemented by
@@ -313,7 +397,7 @@ void *CAppSystemGroup::FindSystem( const char *pSystemName )
 	// It controls who wins if multiple ones implement the same interface
  	for ( int i = 0; i < std::ssize( m_Systems ); ++i )
 	{
-		void *pInterface = m_Systems[i]->QueryInterface( pSystemName );
+		void *pInterface = std::visit( [pSystemName]( auto *p ) { return p->QueryInterface( pSystemName ); }, m_Systems[i] );
 		if (pInterface)
 			return pInterface;
 	}
@@ -364,8 +448,7 @@ void CAppSystemGroup::ReconnectSystems( const char *pInterfaceName )
 	// Let the libraries regrab the specified interface
 	for (int i = 0; i < std::ssize( m_Systems ); ++i )
 	{
-		IAppSystem *pSystem = m_Systems[i];
-		pSystem->Reconnect( GetFactory(), pInterfaceName );
+		std::visit( [this, pInterfaceName]( auto *p ) { p->Reconnect( GetFactory(), pInterfaceName ); }, m_Systems[i] );
 	}
 }
 
@@ -504,7 +587,7 @@ void CAppSystemGroup::SortDependentLibraries( LibraryDependencies_t &depend )
 	}
 
 	// Reorder appsystem list + dictionary indexing
-	const std::vector<IAppSystem*> previous = m_Systems;
+	const std::vector<AppSystemRef> previous = m_Systems;
 	for ( int i = 0; i < nCount; ++i )
 	{
 		m_Systems[i] = previous[ pIndices[i] ];
@@ -552,11 +635,11 @@ bool CAppSystemGroup::LoadDependentSystems()
 	// First, load dependencies.
 	for ( int i = 0; i < std::ssize( m_Systems ); ++i )
 	{
-		IAppSystem *pSystem = m_Systems[i];
+		const AppSystemRef &system = m_Systems[i];
 		const char *pInterfaceName = FindSystemName( i );
 		int nDepIndex = dependencies.AddString( pInterfaceName );
 
-		const AppSystemInfo_t *pDependencies = pSystem->GetDependencies();
+		const AppSystemInfo_t *pDependencies = std::visit( []( auto *p ) { return p->GetDependencies(); }, system );
 		if ( !pDependencies )
 			continue;
 
@@ -569,8 +652,8 @@ bool CAppSystemGroup::LoadDependentSystems()
 				continue;
 
 			AppModule_t module = LoadModule( pDependencies->m_pModuleName );
-			IAppSystem *pSystem = AddSystem( module, pDependencies->m_pInterfaceName );
-			if ( !pSystem )
+			void *pDependency = AddSystem( module, pDependencies->m_pInterfaceName );
+			if ( !pDependency )
 			{
 				Warning( "Unable to load interface %s from %s (Dependency of %s)\n", pDependencies->m_pInterfaceName, pDependencies->m_pModuleName, pInterfaceName );
 				return false;
@@ -592,8 +675,7 @@ bool CAppSystemGroup::ConnectSystems()
 	// Let the libraries grab any other interfaces they may need
 	for (int i = 0; i < std::ssize( m_Systems ); ++i )
 	{
-		IAppSystem *pSystem = m_Systems[i];
-		if ( !pSystem->Connect( GetFactory() ) )
+		if ( !std::visit( [this]( auto *p ) { return p->Connect( GetFactory() ); }, m_Systems[i] ) )
 		{
 			ReportStartupFailure( CONNECTION, i );
 			return false;
@@ -608,7 +690,7 @@ void CAppSystemGroup::DisconnectSystems()
 	// Disconnect in reverse order of connection
 	for (int i = std::ssize( m_Systems ); --i >= 0; )
 	{
-		m_Systems[i]->Disconnect();
+		std::visit( []( auto *p ) { p->Disconnect(); }, m_Systems[i] );
 	}
 }
 
@@ -620,12 +702,12 @@ InitReturnVal_t CAppSystemGroup::InitSystems()
 {
 	for (int nSystemsInitialized = 0; nSystemsInitialized < std::ssize( m_Systems ); ++nSystemsInitialized )
 	{
-		InitReturnVal_t nRetVal = m_Systems[nSystemsInitialized]->Init();
+		InitReturnVal_t nRetVal = std::visit( []( auto *p ) { return p->Init(); }, m_Systems[nSystemsInitialized] );
 		if ( nRetVal != INIT_OK )
 		{
 			for( int nSystemsRewind = nSystemsInitialized; nSystemsRewind-->0; )
 			{
-				m_Systems[nSystemsRewind]->Shutdown();
+				std::visit( []( auto *p ) { p->Shutdown(); }, m_Systems[nSystemsRewind] );
 			}
 		
 			ReportStartupFailure( INITIALIZATION, nSystemsInitialized );
@@ -640,7 +722,7 @@ void CAppSystemGroup::ShutdownSystems()
 	// Shutdown in reverse order of initialization
 	for (int i = std::ssize( m_Systems ); --i >= 0; )
 	{
-		m_Systems[i]->Shutdown();
+		std::visit( []( auto *p ) { p->Shutdown(); }, m_Systems[i] );
 	}
 }
 
@@ -702,138 +784,15 @@ CreateInterfaceFn CAppSystemGroup::GetFactory()
 
 	
 //-----------------------------------------------------------------------------
-// Main application loop
+// Run/OnStartup/OnShutdown are templates in the header; this is their non-template part
 //-----------------------------------------------------------------------------
-int CAppSystemGroup::Run()
-{	
-	// The factory now uses this app system group
-	s_pCurrentAppSystem	= this;
-	
-	// Load, connect, init
-	int nRetVal = OnStartup();
-
-	// NOTE: In case of OnStartup Failure
-	// On PS/3, not unloading the PRXes in order will cause crashes on quit, which is a TRC failure
-	// We probably should, but don't have to do this on all platforms, since it's not required to clean-up crash-free.
-
- 	if ( m_nCurrentStage == RUNNING )
-	{
-		// Main loop implemented by the application
-		// FIXME: HACK workaround to avoid vgui porting
-		nRetVal = Main();
-	}
-
-	// Shutdown, disconnect, unload
-	OnShutdown();
-
-	// The factory now uses the parent's app system group
-	s_pCurrentAppSystem	= GetParent();
-
-	return nRetVal;
+void CAppSystemGroup::SetCurrentGroup( CAppSystemGroup *pGroup )
+{
+	s_pCurrentAppSystem = pGroup;
 }
 
-
-//-----------------------------------------------------------------------------
-// Virtual methods for override
-//-----------------------------------------------------------------------------
-int CAppSystemGroup::Startup()
+void CAppSystemGroup::UnloadSystemsAndModules()
 {
-	return OnStartup();
-}
-
-void CAppSystemGroup::Shutdown()
-{
-	return OnShutdown();
-}
-
-
-//-----------------------------------------------------------------------------
-// Use this version in cases where you can't control the main loop and
-// expect to be ticked
-//-----------------------------------------------------------------------------
-int CAppSystemGroup::OnStartup()
-{
-	// The factory now uses this app system group
-	s_pCurrentAppSystem	= this;
-
-	// Call an installed application creation function
-	m_nCurrentStage = CREATION;
-	if ( !Create() )
-		return -1;
-
-	// Load dependent libraries
-	m_nCurrentStage = DEPENDENCIES;
-	if ( !LoadDependentSystems() )
-		return -1;
-
-	// Let all systems know about each other
-	m_nCurrentStage = CONNECTION;
-	if ( !ConnectSystems() )
-		return -1;
-
-	// Allow the application to do some work before init
-	m_nCurrentStage = PREINITIALIZATION;
-	if ( !PreInit() )
-		return -1;
-
-	// Call Init on all App Systems
-	m_nCurrentStage = INITIALIZATION;
-	int nRetVal = InitSystems();
-	if ( nRetVal != INIT_OK )
-		return -1;
-
-	m_nCurrentStage = POSTINITIALIZATION;
-	if ( !PostInit() )
-		return -1;
-
-	m_nCurrentStage = RUNNING;
-	return nRetVal;
-}
-
-void CAppSystemGroup::OnShutdown()
-{
-	// The factory now uses this app system group
-	s_pCurrentAppSystem	= this;
-
-	switch( m_nCurrentStage )
-	{
-	case RUNNING:
-	case POSTINITIALIZATION:
-		break;
-
-	case PREINITIALIZATION:
-	case INITIALIZATION:
-		goto disconnect;
-	
-	case CREATION:
-	case DEPENDENCIES:
-	case CONNECTION:
-		goto destroy;
-
-	default:
-		break;
-	}
-
-	// Allow the application to do some work before shutdown
-	m_nCurrentStage = PRESHUTDOWN;
-	PreShutdown();
-
-	// Cal Shutdown on all App Systems
-	m_nCurrentStage = SHUTDOWN;
-	ShutdownSystems();
-
-	// Allow the application to do some work after shutdown
-	m_nCurrentStage = POSTSHUTDOWN;
-	PostShutdown();
-
-disconnect:
-	// Systems should disconnect from each other
-	m_nCurrentStage = DISCONNECTION;
-	DisconnectSystems();
-
-destroy:
-	// Unload all DLLs loaded in the AppCreate block
-	m_nCurrentStage = DESTRUCTION;
 	RemoveAllSystems();
 
 	// Have to do this because the logging listeners & response policies may live in modules which are being unloaded
@@ -843,13 +802,9 @@ destroy:
 	LoggingSystem_RegisterLoggingListener( g_pDefaultLoggingListener );
 
 	UnloadAllModules();
-
-	// Call an installed application destroy function
-	Destroy();
 }
 
 
-	
 //-----------------------------------------------------------------------------
 //
 // This class represents a group of app systems that are loaded through the file system
@@ -864,6 +819,7 @@ CFSAppSystemGroup::CFSAppSystemGroup( IFileSystem *pFileSystem, CAppSystemGroup 
 {
 	m_pFileSystem = pFileSystem;
 	m_pGameInfoPath[0] = 0;
+	m_bLoadThroughFileSystem = true;
 }
 
 
@@ -880,7 +836,7 @@ void CFSAppSystemGroup::Setup( IFileSystem *pFileSystem, CAppSystemGroup *pParen
 //-----------------------------------------------------------------------------
 // Loads the module
 //-----------------------------------------------------------------------------
-CSysModule *CFSAppSystemGroup::LoadModuleDLL( const char *pDLLName )
+CSysModule *CFSAppSystemGroup::LoadModuleDLLViaFileSystem( const char *pDLLName )
 {
 	return m_pFileSystem->LoadModule( pDLLName );
 }

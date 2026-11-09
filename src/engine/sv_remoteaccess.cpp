@@ -39,6 +39,7 @@ import std;
 #include "zip/XZip.h"
 #endif
 #include "cl_main.h"
+#include "facade/igameserverdata.inl"
 
 extern IServerGameDLL	*serverGameDLL;
 
@@ -752,7 +753,7 @@ bool CServerRemoteAccess::LookupValue(const char *variable, ks::text_writer &val
 const char *CServerRemoteAccess::LookupStringValue(const char *variable)
 {
 	static char s_ReturnBuf[32];
-	IConVar *pVar = g_pCVar->FindVar( variable );
+	ConVar *pVar = g_pCVar->FindVar( variable );
 	if ( pVar )
 	{
 		ConVarRef var( pVar );
@@ -840,7 +841,7 @@ void CServerRemoteAccess::GetPlayerList(ks::text_writer &value)
 		if ( !client || !client->IsActive() )
 			continue;
 
-		CPlayerState *pl = serverGameClients->GetPlayerState( client->edict );
+		CPlayerState *pl = static_cast<CPlayerState *>( serverGameClients->GetPlayerState( client->edict ) );
 		if ( !pl )
 			continue;
 

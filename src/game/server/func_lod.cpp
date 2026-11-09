@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -63,10 +60,11 @@ public:
 // CBaseEntity overrides.
 public:
 
-	virtual void	Spawn();
-	bool			CreateVPhysics();
-	virtual void	Activate();
-	virtual bool	KeyValue( const char *szKeyName, const char *szValue );
+	void	Spawn_Impl();
+	bool			CreateVPhysics_Impl();
+	void	Activate_Impl();
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
 };
 
 
@@ -95,29 +93,29 @@ CFunc_LOD::~CFunc_LOD()
 }
 
 
-void CFunc_LOD::Spawn()
+void CFunc_LOD::Spawn_Impl()
 {
 	// Bind to our bmodel.
 	SetModel( STRING( GetModelName() ) );
 	SetSolid( SOLID_BSP );
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	CreateVPhysics();
 }
 
-bool CFunc_LOD::CreateVPhysics()
+bool CFunc_LOD::CreateVPhysics_Impl()
 {
 	VPhysicsInitStatic();
 	return true;
 }
 
-void CFunc_LOD::Activate()
+void CFunc_LOD::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 }
 
 
-bool CFunc_LOD::KeyValue( const char *szKeyName, const char *szValue )
+bool CFunc_LOD::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	// NOTE: Backward compat
 	if ( FStrEq(szKeyName, "DisappearDist") )
@@ -134,7 +132,7 @@ bool CFunc_LOD::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue(szKeyName, szValue);
+		return BaseClass::KeyValue_Impl(szKeyName, szValue);
 	}
 
 	return true;

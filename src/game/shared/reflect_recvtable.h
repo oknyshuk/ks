@@ -17,10 +17,10 @@
 #include "recvproxy.h"
 #include "client_class.h"
 
-import std;
 
-namespace ks::reflect::recv
+namespace ksr::recv
 {
+using namespace ::ks::reflect;
 
 // The receive half of a string-named sub-table prop. A SubTable<>'s Table argument is `auto`,
 // so the send side names &DT_X::g_SendTable and this side &DT_X::g_RecvTable; each emitter takes
@@ -577,7 +577,7 @@ RecvTable &table()
 	return t;
 }
 
-} // namespace ks::reflect::recv
+} // namespace ksr::recv
 
 
 // Replaces IMPLEMENT_CLIENTCLASS_DT plus its prop list once the gate has proven the generated table
@@ -590,7 +590,7 @@ RecvTable &table()
 	namespace dataTable { RecvTable g_RecvTable; }                                               \
 	static const int g_##clientClassName##_ReflectRecvInit = []                                  \
 	{                                                                                            \
-		auto &p = ks::reflect::recv::table_props<clientClassName>();                             \
+		auto &p = ksr::recv::table_props<clientClassName>();                             \
 		dataTable::g_RecvTable.Construct( p.data(), (int)p.size(), #dataTable );                  \
 		return 1;                                                                                \
 	}();                                                                                         \
@@ -615,7 +615,7 @@ RecvTable &table()
 	namespace dataTable { RecvTable g_RecvTable; }                                               \
 	static const int g_##clientClassName##_ReflectRecvInit = []                                  \
 	{                                                                                            \
-		auto &p = ks::reflect::recv::table_props<clientClassName>();                             \
+		auto &p = ksr::recv::table_props<clientClassName>();                             \
 		dataTable::g_RecvTable.Construct( p.data(), (int)p.size(), #dataTable );                  \
 		return 1;                                                                                \
 	}();                                                                                         \
@@ -638,7 +638,7 @@ RecvTable &table()
 	namespace tableName { RecvTable g_RecvTable; }                                                       \
 	static const int g_##className##_##tableName##_ReflectInit = []                               \
 	{                                                                                            \
-		auto &p = ks::reflect::recv::table_props_in<className, #tableName>();                        \
+		auto &p = ksr::recv::table_props_in<className, #tableName>();                        \
 		tableName::g_RecvTable.Construct( p.data(), (int)p.size(), #tableName );                    \
 		return 1;                                                                                \
 	}();                                                                                         \
@@ -649,7 +649,7 @@ RecvTable &table()
 	namespace tableName { RecvTable g_RecvTable; }                                               \
 	static const int g_##className##_ReflectRecvInit = []                                        \
 	{                                                                                            \
-		auto &p = ks::reflect::recv::table_props<className>();                                    \
+		auto &p = ksr::recv::table_props<className>();                                    \
 		tableName::g_RecvTable.Construct( p.data(), (int)p.size(), #tableName );                  \
 		return 1;                                                                                \
 	}();                                                                                         \

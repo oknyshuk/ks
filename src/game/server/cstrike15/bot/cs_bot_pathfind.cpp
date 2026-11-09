@@ -3,8 +3,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "predictable_entity.h"
 #include "igameevents.h"
@@ -1918,7 +1916,7 @@ bool CCSBot::ComputePath( const Vector &goal, RouteType route )
 	{
 		// we can't reach our last known area - find nearest area to us
 		PrintIfWatched( "Last known area is above my head - resetting to nearest area.\n" );
-		m_lastKnownArea = (CCSNavArea*)TheNavMesh->GetNearestNavArea( GetAbsOrigin(), false, 500.0f, true );
+		m_lastKnownArea = (CNavArea*)TheNavMesh->GetNearestNavArea( GetAbsOrigin(), false, 500.0f, true );
 		if (m_lastKnownArea == nullptr)
 		{
 			return false;

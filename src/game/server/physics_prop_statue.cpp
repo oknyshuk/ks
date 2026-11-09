@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -63,23 +60,23 @@ CStatueProp::CStatueProp( void )
 	m_pInitOBBs = nullptr;
 }
 
-void CStatueProp::Spawn( void )
+void CStatueProp::Spawn_Impl( void )
 {
 	// Make it breakable
 	SetBreakableModel( MAKE_STRING( "ConcreteChunks" ) );
 	SetBreakableCount( 6 );
 	SetHealth( 5 );
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	m_flFrozen = 1.0f;
 }
 
-void CStatueProp::Precache( void )
+void CStatueProp::Precache_Impl( void )
 {
 }
 
-bool CStatueProp::CreateVPhysics( void )
+bool CStatueProp::CreateVPhysics_Impl( void )
 {
 	if ( m_pInitOBBs )
 	{
@@ -97,9 +94,9 @@ bool CStatueProp::CreateVPhysics( void )
 	}
 }
 
-void CStatueProp::VPhysicsUpdate( IPhysicsObject *pPhysics )
+void CStatueProp::VPhysicsUpdate_Impl( IPhysicsObject *pPhysics )
 {
-	BaseClass::VPhysicsUpdate( pPhysics );
+	BaseClass::VPhysicsUpdate_Impl( pPhysics );
 
 	if ( s_vcollide_wireframe->GetBool() )
 	{
@@ -137,7 +134,7 @@ void CStatueProp::VPhysicsUpdate( IPhysicsObject *pPhysics )
 	}
 }
 
-void CStatueProp::ComputeWorldSpaceSurroundingBox( Vector *pMins, Vector *pMaxs )
+void CStatueProp::ComputeWorldSpaceSurroundingBox_Impl( Vector *pMins, Vector *pMaxs )
 {
 	CBaseAnimating *pBaseAnimating = m_hInitBaseAnimating;
 
@@ -150,7 +147,7 @@ void CStatueProp::ComputeWorldSpaceSurroundingBox( Vector *pMins, Vector *pMaxs 
 	CollisionProp()->WorldSpaceSurroundingBounds( pMins, pMaxs );
 }
 
-bool CStatueProp::TestCollision( const Ray_t &ray, unsigned int fContentsMask, trace_t& tr )
+bool CStatueProp::TestCollision_Impl( const Ray_t &ray, unsigned int fContentsMask, trace_t& tr )
 {
 	IPhysicsObject *pPhysObject = VPhysicsGetObject();
 
@@ -168,12 +165,12 @@ bool CStatueProp::TestCollision( const Ray_t &ray, unsigned int fContentsMask, t
 	return false;
 }
 
-int	CStatueProp::OnTakeDamage( const CTakeDamageInfo &info )
+int	CStatueProp::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
-	return BaseClass::OnTakeDamage( info );
+	return BaseClass::OnTakeDamage_Impl( info );
 }
 
-void CStatueProp::Event_Killed( const CTakeDamageInfo &info )
+void CStatueProp::Event_Killed_Impl( const CTakeDamageInfo &info )
 {
 	IPhysicsObject *pPhysics = VPhysicsGetObject();
 

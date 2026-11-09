@@ -5,9 +5,7 @@
 #include "postprocess_shared.h"
 #include "iclientrenderable.h"
 
-class CViewSetup;
 
-struct RenderableInstance_t;
 
 bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, bool bPostUI = false );
 bool DoImageSpaceMotionBlur( const CViewSetup &view );

@@ -122,14 +122,20 @@ inline constexpr auto PIXEL_SHADER_HANDLE_INVALID = ( (PixelShaderHandle_t)0 );
 
 
 //-----------------------------------------------------------------------------
-// A shader buffer returns a block of memory which must be released when done with it
+// A shader buffer is a view of a block of memory holding a (compiled) shader.
+// NOTE: This is meant to be instanced on the stack; so don't call Release!
 //-----------------------------------------------------------------------------
 class IShaderBuffer
 {
 public:
-	virtual std::size_t GetSize() const = 0;
-	virtual const void* GetBits() const = 0;
-	virtual void Release() = 0;
+	IShaderBuffer( std::span< const std::byte > bytes ) : m_bytes( bytes ) {}
+
+	std::size_t GetSize() const { return m_bytes.size(); }
+	const void* GetBits() const { return m_bytes.data(); }
+	void Release() { contract_assert( 0 ); }
+
+private:
+	std::span< const std::byte > m_bytes;
 };
 
 
@@ -158,44 +164,51 @@ public:
 // Methods related to discovering and selecting devices
 //-----------------------------------------------------------------------------
 inline constexpr const char *SHADER_DEVICE_MGR_INTERFACE_VERSION = "ShaderDeviceMgr001";
-class IShaderDeviceMgr : public IAppSystem
+class IShaderDeviceMgr
 {
 public:
+	// Connection and lifetime
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t Init();
+	void Shutdown();
+
 	// Gets the number of adapters...
-	virtual int	 GetAdapterCount() const = 0;
+	int	 GetAdapterCount() const;
 
 	// Returns info about each adapter
-	virtual void GetAdapterInfo( int nAdapter, MaterialAdapterInfo_t& info ) const = 0;
+	void GetAdapterInfo( int nAdapter, MaterialAdapterInfo_t& info ) const;
 
 	// Gets recommended congifuration for a particular adapter at a particular dx level
-	virtual bool GetRecommendedConfigurationInfo( int nAdapter, int nDXLevel, KeyValues *pConfiguration ) = 0;
+	bool GetRecommendedConfigurationInfo( int nAdapter, int nDXLevel, KeyValues *pConfiguration );
 
 	// Returns the number of modes
-	virtual int	 GetModeCount( int nAdapter ) const = 0;
+	int	 GetModeCount( int nAdapter ) const;
 
 	// Returns mode information..
-	virtual void GetModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter, int nMode ) const = 0;
+	void GetModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter, int nMode ) const;
 
 	// Returns the current mode info for the requested adapter
-	virtual void GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter ) const = 0;
+	void GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter ) const;
 
 	// Initialization, shutdown
-	virtual bool SetAdapter( int nAdapter, int nFlags ) = 0;
+	bool SetAdapter( int nAdapter, int nFlags );
 
 	// Sets the mode
 	// Use the returned factory to get at an IShaderDevice and an IShaderRender
 	// and any other interfaces we decide to create.
 	// A returned factory of NULL indicates the mode was not set properly.
-	virtual CreateInterfaceFn SetMode( void *hWnd, int nAdapter, const ShaderDeviceInfo_t& mode ) = 0;
+	CreateInterfaceFn SetMode( void *hWnd, int nAdapter, const ShaderDeviceInfo_t& mode );
 
 	// Installs a callback to get called 
-	virtual void AddModeChangeCallback( ShaderModeChangeCallbackFunc_t func ) = 0;
-	virtual void RemoveModeChangeCallback( ShaderModeChangeCallbackFunc_t func ) = 0;
+	void AddModeChangeCallback( ShaderModeChangeCallbackFunc_t func );
+	void RemoveModeChangeCallback( ShaderModeChangeCallbackFunc_t func );
 
-	virtual bool GetRecommendedVideoConfig( int nAdapter, KeyValues *pConfiguration ) = 0;
+	bool GetRecommendedVideoConfig( int nAdapter, KeyValues *pConfiguration );
 
-	virtual void AddDeviceDependentObject( IShaderDeviceDependentObject *pObject ) = 0;
-	virtual void RemoveDeviceDependentObject( IShaderDeviceDependentObject *pObject ) = 0;
+	void AddDeviceDependentObject( IShaderDeviceDependentObject *pObject );
+	void RemoveDeviceDependentObject( IShaderDeviceDependentObject *pObject );
 };
 
 
@@ -207,56 +220,56 @@ class IShaderDevice
 {
 public:
 	// Releases/reloads resources when other apps want some memory
-	virtual void ReleaseResources( bool bReleaseManagedResources = true ) = 0;
-	virtual void ReacquireResources() = 0;
+	void ReleaseResources( bool bReleaseManagedResources = true );
+	void ReacquireResources();
 
 	// returns the backbuffer format and dimensions
-	virtual ImageFormat GetBackBufferFormat() const = 0;
-	virtual void GetBackBufferDimensions( int& width, int& height ) const = 0;
+	ImageFormat GetBackBufferFormat() const;
+	void GetBackBufferDimensions( int& width, int& height ) const;
 
-	virtual const AspectRatioInfo_t &GetAspectRatioInfo( void ) const = 0;
+	const AspectRatioInfo_t &GetAspectRatioInfo( void ) const;
 
 	// Returns the current adapter in use
-	virtual int GetCurrentAdapter() const = 0;
+	int GetCurrentAdapter() const;
 
 	// Are we using graphics?
-	virtual bool IsUsingGraphics() const = 0;
+	bool IsUsingGraphics() const;
 
 	// Use this to spew information about the 3D layer 
-	virtual void SpewDriverInfo() const = 0;
+	void SpewDriverInfo() const;
 
 	// What's the bit depth of the stencil buffer?
-	virtual int StencilBufferBits() const = 0;
+	int StencilBufferBits() const;
 
 	// Are we using a mode that uses MSAA
-	virtual bool IsAAEnabled() const = 0;
+	bool IsAAEnabled() const;
 
 	// Does a page flip
-	virtual void Present() = 0;
+	void Present();
 
 	// Returns the window size
-	virtual void GetWindowSize( int &nWidth, int &nHeight ) const = 0;
+	void GetWindowSize( int &nWidth, int &nHeight ) const;
 
 	// Gamma ramp control
-	virtual void SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMin, float fGammaTVRangeMax, float fGammaTVExponent, bool bTVEnabled ) = 0;
+	void SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMin, float fGammaTVRangeMax, float fGammaTVExponent, bool bTVEnabled );
 
 	// Creates/ destroys a child window
-	virtual bool AddView( void* hWnd ) = 0;
-	virtual void RemoveView( void* hWnd ) = 0;
+	bool AddView( void* hWnd );
+	void RemoveView( void* hWnd );
 
 	// Activates a view
-	virtual void SetView( void* hWnd ) = 0;
+	void SetView( void* hWnd );
 
 	// Shader compilation
-	virtual IShaderBuffer* CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion ) = 0;
+	IShaderBuffer* CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion );
 
 	// Shader creation, destruction
-	virtual VertexShaderHandle_t CreateVertexShader( IShaderBuffer* pShaderBuffer ) = 0;
-	virtual void DestroyVertexShader( VertexShaderHandle_t hShader ) = 0;
-	virtual GeometryShaderHandle_t CreateGeometryShader( IShaderBuffer* pShaderBuffer ) = 0;
-	virtual void DestroyGeometryShader( GeometryShaderHandle_t hShader ) = 0;
-	virtual PixelShaderHandle_t CreatePixelShader( IShaderBuffer* pShaderBuffer ) = 0;
-	virtual void DestroyPixelShader( PixelShaderHandle_t hShader ) = 0;
+	VertexShaderHandle_t CreateVertexShader( IShaderBuffer* pShaderBuffer );
+	void DestroyVertexShader( VertexShaderHandle_t hShader );
+	GeometryShaderHandle_t CreateGeometryShader( IShaderBuffer* pShaderBuffer );
+	void DestroyGeometryShader( GeometryShaderHandle_t hShader );
+	PixelShaderHandle_t CreatePixelShader( IShaderBuffer* pShaderBuffer );
+	void DestroyPixelShader( PixelShaderHandle_t hShader );
 
 	// Utility methods to make shader creation simpler
 	// NOTE: The span versions take a compiled shader
@@ -269,57 +282,27 @@ public:
 
 	// NOTE: Deprecated!! Use CreateVertexBuffer/CreateIndexBuffer instead
 	// Creates/destroys Mesh
-	virtual IMesh* CreateStaticMesh( VertexFormat_t vertexFormat, const char *pTextureBudgetGroup, IMaterial * pMaterial = nullptr, VertexStreamSpec_t *pStreamSpec = nullptr ) = 0;
-	virtual void DestroyStaticMesh( IMesh* mesh ) = 0;
+	IMesh* CreateStaticMesh( VertexFormat_t vertexFormat, const char *pTextureBudgetGroup, IMaterial * pMaterial = nullptr, VertexStreamSpec_t *pStreamSpec = nullptr );
+	void DestroyStaticMesh( IMesh* mesh );
 
 	// Creates/destroys static vertex + index buffers
-	virtual IVertexBuffer *CreateVertexBuffer( ShaderBufferType_t type, VertexFormat_t fmt, int nVertexCount, const char *pBudgetGroup ) = 0;
-	virtual void DestroyVertexBuffer( IVertexBuffer *pVertexBuffer ) = 0;
+	IVertexBuffer *CreateVertexBuffer( ShaderBufferType_t type, VertexFormat_t fmt, int nVertexCount, const char *pBudgetGroup );
+	void DestroyVertexBuffer( IVertexBuffer *pVertexBuffer );
 
-	virtual IIndexBuffer *CreateIndexBuffer( ShaderBufferType_t bufferType, MaterialIndexFormat_t fmt, int nIndexCount, const char *pBudgetGroup ) = 0;
-	virtual void DestroyIndexBuffer( IIndexBuffer *pIndexBuffer ) = 0;
+	IIndexBuffer *CreateIndexBuffer( ShaderBufferType_t bufferType, MaterialIndexFormat_t fmt, int nIndexCount, const char *pBudgetGroup );
+	void DestroyIndexBuffer( IIndexBuffer *pIndexBuffer );
 
 	// Do we need to specify the stream here in the case of locking multiple dynamic VBs on different streams?
-	virtual IVertexBuffer *GetDynamicVertexBuffer( int nStreamID, VertexFormat_t vertexFormat, bool bBuffered = true ) = 0;
-	virtual IIndexBuffer *GetDynamicIndexBuffer() = 0;
+	IVertexBuffer *GetDynamicVertexBuffer( int nStreamID, VertexFormat_t vertexFormat, bool bBuffered = true );
+	IIndexBuffer *GetDynamicIndexBuffer();
 
 	// A special path used to tick the front buffer while loading on the 360
-	virtual void EnableNonInteractiveMode( MaterialNonInteractiveMode_t mode, ShaderNonInteractiveInfo_t *pInfo = nullptr ) = 0;
-	virtual void RefreshFrontBufferNonInteractive( ) = 0;
-	virtual void HandleThreadEvent( uint32 threadEvent ) = 0;
+	void EnableNonInteractiveMode( MaterialNonInteractiveMode_t mode, ShaderNonInteractiveInfo_t *pInfo = nullptr );
+	void RefreshFrontBufferNonInteractive( );
+	void HandleThreadEvent( uint32 threadEvent );
 
 	
-	virtual 
-		void            OnDebugEvent( const char * pEvent = "" ){}
-};
-
-
-//-----------------------------------------------------------------------------
-// Helper wrapper for IShaderBuffer for reading precompiled shader files
-// NOTE: This is meant to be instanced on the stack; so don't call Release!
-//-----------------------------------------------------------------------------
-class ShaderByteBuffer : public IShaderBuffer
-{
-public:
-	ShaderByteBuffer( std::span< const std::byte > bytes ) : m_bytes( bytes ) {}
-
-	virtual std::size_t GetSize() const
-	{
-		return m_bytes.size();
-	}
-
-	virtual const void* GetBits() const
-	{
-		return m_bytes.data();
-	}
-
-	virtual void Release()
-	{
-		contract_assert( 0 );
-	}
-
-private:
-	std::span< const std::byte > m_bytes;
+	void OnDebugEvent( const char * pEvent = "" );
 };
 
 
@@ -328,7 +311,7 @@ private:
 //-----------------------------------------------------------------------------
 inline VertexShaderHandle_t IShaderDevice::CreateVertexShader( std::span< const std::byte > compiled )
 {
-	ShaderByteBuffer shaderBuffer( compiled );
+	IShaderBuffer shaderBuffer( compiled );
 	return CreateVertexShader( &shaderBuffer );
 }
 
@@ -346,7 +329,7 @@ inline VertexShaderHandle_t IShaderDevice::CreateVertexShader( const char *pProg
 
 inline GeometryShaderHandle_t IShaderDevice::CreateGeometryShader( std::span< const std::byte > compiled )
 {
-	ShaderByteBuffer shaderBuffer( compiled );
+	IShaderBuffer shaderBuffer( compiled );
 	return CreateGeometryShader( &shaderBuffer );
 }
 
@@ -364,7 +347,7 @@ inline GeometryShaderHandle_t IShaderDevice::CreateGeometryShader( const char *p
 
 inline PixelShaderHandle_t IShaderDevice::CreatePixelShader( std::span< const std::byte > compiled )
 {
-	ShaderByteBuffer shaderBuffer( compiled );
+	IShaderBuffer shaderBuffer( compiled );
 	return CreatePixelShader( &shaderBuffer );
 }
 

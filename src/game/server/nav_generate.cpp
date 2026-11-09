@@ -5,8 +5,6 @@
 // Auto-generate a Navigation Mesh by sampling the current map
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -24,7 +22,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -4607,7 +4604,7 @@ bool IsWalkableTraceHullClear( const Vector &from, const Vector &to, const Vecto
 
 	UTIL_TraceHull( from, to, mins, maxs, MASK_PLAYERSOLID, &traceFilter, &result );
 
-	if ( result.DidHitNonWorldEntity() && IsEntityWalkable( result.Ent<CBaseEntity>(), flags ) )
+	if ( TraceDidHitNonWorldEntity( result ) && IsEntityWalkable( result.Ent<CBaseEntity>(), flags ) )
 	{
 		return true;
 	}

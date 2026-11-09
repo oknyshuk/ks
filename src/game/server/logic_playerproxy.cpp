@@ -3,8 +3,6 @@
 
 // Purpose: Player for HL2.
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -38,9 +36,9 @@ LINK_ENTITY_TO_CLASS( logic_playerproxy, CLogicPlayerProxy);
 
 IMPLEMENT_REFLECT_DATAMAP( CLogicPlayerProxy )
 
-void CLogicPlayerProxy::Activate( void )
+void CLogicPlayerProxy::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( m_hPlayer == nullptr )
 	{
@@ -48,7 +46,7 @@ void CLogicPlayerProxy::Activate( void )
 	}
 }
 
-bool CLogicPlayerProxy::PassesDamageFilter( const CTakeDamageInfo &info )
+bool CLogicPlayerProxy::PassesDamageFilter_Impl( const CTakeDamageInfo &info )
 {
 	if (m_hDamageFilter)
 	{

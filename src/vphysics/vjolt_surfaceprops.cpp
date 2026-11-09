@@ -292,5 +292,4 @@ const char *JoltPhysicsSurfaceProps::GetReservedMaterialName( int nMaterialIndex
 }
 
 //-------------------------------------------------------------------------------------------------
-
-JoltPhysicsMaterialIndexSaveOps JoltPhysicsMaterialIndexSaveOps::s_Instance;
+#include "facade/iphysicssurfaceprops.inl"

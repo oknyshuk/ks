@@ -7,20 +7,20 @@ class IMatchVoice
 {
 public:
 	// Whether remote player talking can be visualized / audible
-	virtual bool CanPlaybackTalker( XUID xuidTalker ) = 0;
+	bool CanPlaybackTalker( XUID xuidTalker );
 
 	// Whether we are explicitly muting a remote player
-	virtual bool IsTalkerMuted( XUID xuidTalker ) = 0;
+	bool IsTalkerMuted( XUID xuidTalker );
 
 	// Whether we are muting any player on the player's machine
-	virtual bool IsMachineMuted( XUID xuidPlayer ) = 0;
+	bool IsMachineMuted( XUID xuidPlayer );
 
 	// Whether voice recording mode is currently active
-	virtual bool IsVoiceRecording() = 0;
+	bool IsVoiceRecording();
 
 	// Enable or disable voice recording
-	virtual void SetVoiceRecording( bool bRecordingEnabled ) = 0;
+	void SetVoiceRecording( bool bRecordingEnabled );
 
 	// Enable or disable voice mute for a given talker
-	virtual void MuteTalker( XUID xuidTalker, bool bMute ) = 0;
+	void MuteTalker( XUID xuidTalker, bool bMute );
 };

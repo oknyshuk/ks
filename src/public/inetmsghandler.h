@@ -7,10 +7,5 @@
 class	INetChannel;
 typedef struct netpacket_s netpacket_t;
 
-class IConnectionlessPacketHandler
-{
-public:
-	virtual	~IConnectionlessPacketHandler( void ) {};
-
-	virtual bool ProcessConnectionlessPacket( netpacket_t *packet ) = 0;	// process a connectionless packet
-};
+// Processes a connectionless packet (the engine passes the server / client state / LAN manager that owns the socket)
+using ConnectionlessPacketHandler_t = std::function_ref< bool ( netpacket_t *packet ) >;

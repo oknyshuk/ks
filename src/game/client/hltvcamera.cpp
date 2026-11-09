@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "const.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"
@@ -42,7 +40,7 @@ import std;
 	#include "c_team.h"
 #endif
 
-static void Spec_Autodirector_Cameraman_Callback( IConVar *pConVar, const char *pOldString, float flOldValue )
+static void Spec_Autodirector_Cameraman_Callback( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	if ( HLTVCamera() && HLTVCamera()->AutoDirectorState() != C_HLTVCamera::AUTODIRECTOR_OFF )
 	{

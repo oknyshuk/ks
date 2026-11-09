@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "shareddefs.h"
 #include "util.h"
 #include "predictable_entity.h"
@@ -30,12 +28,12 @@ public:
 	CPointCamera();
 	~CPointCamera();
 
-	void Spawn( void );
+	void Spawn_Impl( void );
 
 	// Tell the client that this camera needs to be rendered
 	void SetActive( bool bActive );
 	bool IsActive( void ) { return m_bActive; }
-	int  UpdateTransmitState(void);
+	int  UpdateTransmitState_Impl(void);
 
 	void ChangeFOVThink( void );
 	float GetFOV() { return m_FOV; }

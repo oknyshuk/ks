@@ -11,20 +11,8 @@ import std;
 //-----------------------------------------------------------------------------
 // Purpose: Implements Audio IO on the engine's COMMON filesystem
 //-----------------------------------------------------------------------------
-class COM_IOReadBinary : public IFileReadBinary
-{
-public:
-	FileHandle_t open( const char *pFileName );
-	int read( void *pOutput, int size, FileHandle_t file );
-	void seek( FileHandle_t file, int pos );
-	unsigned int tell( FileHandle_t file );
-	unsigned int size( FileHandle_t file );
-	void close( FileHandle_t file );
-};
-
-
 // prepend sound/ to the filename -- all sounds are loaded from the sound/ directory
-FileHandle_t COM_IOReadBinary::open( const char *pFileName )
+FileHandle_t IFileReadBinary::open( const char *pFileName )
 {
 	char namebuffer[512];
 	FileHandle_t hFile;
@@ -43,7 +31,7 @@ FileHandle_t COM_IOReadBinary::open( const char *pFileName )
 	return hFile;
 }
 
-int COM_IOReadBinary::read( void *pOutput, int size, FileHandle_t file )
+int IFileReadBinary::read( void *pOutput, int size, FileHandle_t file )
 {
 	if ( !file )
 		return 0;
@@ -51,7 +39,7 @@ int COM_IOReadBinary::read( void *pOutput, int size, FileHandle_t file )
 	return g_pFileSystem->Read( pOutput, size, file );
 }
 
-void COM_IOReadBinary::seek( FileHandle_t file, int pos )
+void IFileReadBinary::seek( FileHandle_t file, int pos )
 {
 	if ( !file )
 		return;
@@ -59,7 +47,7 @@ void COM_IOReadBinary::seek( FileHandle_t file, int pos )
 	g_pFileSystem->Seek( file, pos, FILESYSTEM_SEEK_HEAD );
 }
 
-unsigned int COM_IOReadBinary::tell( FileHandle_t file )
+unsigned int IFileReadBinary::tell( FileHandle_t file )
 {
 	if ( !file )
 		return 0;
@@ -67,7 +55,7 @@ unsigned int COM_IOReadBinary::tell( FileHandle_t file )
 	return g_pFileSystem->Tell( file );
 }
 
-unsigned int COM_IOReadBinary::size( FileHandle_t file )
+unsigned int IFileReadBinary::size( FileHandle_t file )
 {
 	if (!file)
 		return 0;
@@ -75,7 +63,7 @@ unsigned int COM_IOReadBinary::size( FileHandle_t file )
 	return g_pFileSystem->Size( file );
 }
 
-void COM_IOReadBinary::close( FileHandle_t file )
+void IFileReadBinary::close( FileHandle_t file )
 {
 	if (!file)
 		return;
@@ -83,5 +71,5 @@ void COM_IOReadBinary::close( FileHandle_t file )
 	g_pFileSystem->Close( file );
 }
 
-static COM_IOReadBinary io;
+static IFileReadBinary io;
 IFileReadBinary *g_pSndIO = &io;

@@ -16,8 +16,9 @@ public :
 	CMapInfo();
 	virtual ~CMapInfo();
 
-	bool KeyValue( const char *szKeyName, const char *szValue );
-	void Spawn();
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	void Spawn_Impl();
 
 	[[= ks::reflect::Input{ .name = "FireWinCondition", .type = FIELD_INTEGER } ]] void InputFireWinCondition( inputdata_t &inputdata );
 

@@ -16,7 +16,7 @@ class CMaterialSystem;
 // Manager of material system Paintmaps
 //-----------------------------------------------------------------------------
 
-class CMatPaintmaps : public IPaintmapTextureManager
+class CMatPaintmaps
 {
 public:
 	CMatPaintmaps();
@@ -41,9 +41,9 @@ public:
 
 	// Derived from IPaintmapTextureManager
 	//------------------------------------------------
-	virtual void BeginUpdatePaintmaps();
-	virtual void UpdatePaintmap( int paintmap, BYTE* pPaintData, int numRects, Rect_t* pRects );
-	virtual void EndUpdatePaintmaps();
+	void BeginUpdatePaintmaps();
+	void UpdatePaintmap( int paintmap, BYTE* pPaintData, int numRects, Rect_t* pRects );
+	void EndUpdatePaintmaps();
 
 	//------------------------------------------------
 	IPaintmapDataManager *m_pDataManager;

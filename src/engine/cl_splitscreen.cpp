@@ -26,28 +26,28 @@ class CSplitScreen : public ISplitScreen
 public:
 	CSplitScreen();
 
-	virtual bool			Init();
-	virtual void			Shutdown();
+	bool			Init();
+	void			Shutdown();
 
-	virtual bool			AddSplitScreenUser( int nSlot, int nPlayerIndex );
-	virtual bool			AddBaseUser( int nSlot, int nPlayerIndex );
-	virtual bool			RemoveSplitScreenUser( int nSlot, int nPlayerIndex );
-	virtual int				GetActiveSplitScreenPlayerSlot();
-	virtual int				SetActiveSplitScreenPlayerSlot( int slot );
+	bool			AddSplitScreenUser( int nSlot, int nPlayerIndex );
+	bool			AddBaseUser( int nSlot, int nPlayerIndex );
+	bool			RemoveSplitScreenUser( int nSlot, int nPlayerIndex );
+	int				GetActiveSplitScreenPlayerSlot();
+	int				SetActiveSplitScreenPlayerSlot( int slot );
 
-	virtual bool			IsValidSplitScreenSlot( int nSlot );
-	virtual int				FirstValidSplitScreenSlot(); // -1 == invalid
-	virtual int				NextValidSplitScreenSlot( int nPreviousSlot ); // -1 == invalid
+	bool			IsValidSplitScreenSlot( int nSlot );
+	int				FirstValidSplitScreenSlot(); // -1 == invalid
+	int				NextValidSplitScreenSlot( int nPreviousSlot ); // -1 == invalid
 
-	virtual int				GetNumSplitScreenPlayers();
-	virtual int				GetSplitScreenPlayerEntity( int nSlot );
-	virtual INetChannel		*GetSplitScreenPlayerNetChan( int nSlot );
+	int				GetNumSplitScreenPlayers();
+	int				GetSplitScreenPlayerEntity( int nSlot );
+	INetChannel		*GetSplitScreenPlayerNetChan( int nSlot );
 
-	virtual bool			IsDisconnecting( int nSlot );
-	virtual void			SetDisconnecting( int nSlot, bool bState );
+	bool			IsDisconnecting( int nSlot );
+	void			SetDisconnecting( int nSlot, bool bState );
 
-	virtual bool			SetLocalPlayerIsResolvable( char const *pchContext, int nLine, bool bResolvable );
-	virtual bool			IsLocalPlayerResolvable();
+	bool			SetLocalPlayerIsResolvable( char const *pchContext, int nLine, bool bResolvable );
+	bool			IsLocalPlayerResolvable();
 
 	CClientState			&GetLocalPlayer( int nSlot = -1 );
 
@@ -62,7 +62,7 @@ public:
 		unsigned short	pad : 14;
 	};
 
-private:
+public:
 
 	int FindSplitPlayerSlot( int nPlayerEntityIndex );
 
@@ -86,6 +86,9 @@ private:
 
 	bool		m_bInitialized;
 };
+
+#include "facade/isplitscreen.inl"
+
 
 static thread_local CSplitScreen::SplitSlot_t *	s_SplitSlot;
 

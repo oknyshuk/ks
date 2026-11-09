@@ -10,7 +10,6 @@
 #include "sv_client.h"
 #include "baseserver.h"
 #include <ihltvdirector.h>
-#include <ireplaydirector.h>
 import std;
 import ks.tier1;
 
@@ -38,7 +37,7 @@ class CGameServer : public CBaseServer
 
 public:
 	CGameServer();
-	virtual ~CGameServer();
+	~CGameServer();
 
 
 public: // IServer implementation
@@ -72,7 +71,7 @@ public:
 
 	bool	AnyClientsInHltvReplayMode();
 
-protected :
+public:
 
 	// Reload the whitelist files for pure server mode.
 	void		ReloadWhitelist( const char *pMapName );
@@ -150,7 +149,7 @@ public:
 
 	void		ExecGameTypeCfg( const char *mapname );
 
-private:
+public:
 	void		SetHibernating( bool bHibernating );
 
 	CPrecacheItem	model_precache[ MAX_MODELS ];
@@ -182,7 +181,6 @@ extern IServerGameClients *serverGameClients;
 extern int g_iServerGameClientsVersion;	// This matches the number at the end of the interface name (so for "ServerGameClients004", this would be 4).
 
 extern IHLTVDirector *serverGameDirector;
-extern IReplayDirector *serverReplayDirector;
 
 extern IServerGameTags *serverGameTags;
 

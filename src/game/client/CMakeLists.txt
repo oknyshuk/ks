@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 oknyshuk
 
-add_library(client SHARED
-    ../../common/netmessages_codec.cpp
+add_library(client OBJECT
     hl2/C_Func_Monitor.cpp
     ../shared/achievementmgr.cpp
     ../shared/achievements_hlx.cpp
@@ -27,11 +26,12 @@ add_library(client SHARED
     beamdraw.cpp
     ../shared/beam_shared.cpp
     ../../common/blackbox_helper.cpp
-    ../../public/bone_accessor.cpp
     ../shared/bone_merge_cache.cpp
     c_ai_basehumanoid.cpp
     c_ai_basenpc.cpp
     c_baseanimating.cpp
+    ../../public/jigglebones.cpp
+    ../../public/posedebugger.cpp
     c_baseanimatingoverlay.cpp
     c_basecombatcharacter.cpp
     c_basecombatweapon.cpp
@@ -75,7 +75,6 @@ add_library(client SHARED
     c_func_smokevolume.cpp
     c_func_tracktrain.cpp
     c_gameinstructor.cpp
-    c_gib.cpp
     c_hairball.cpp
     c_info_overlay_accessor.cpp
     c_keyvalue_saver.cpp
@@ -114,7 +113,6 @@ add_library(client SHARED
     c_triggers.cpp
     c_user_message_register.cpp
     c_vehicle_choreo_generic.cpp
-    c_vehicle_jeep.cpp
     hl2/c_waterbullet.cpp
     C_WaterLODControl.cpp
     c_world.cpp
@@ -123,7 +121,6 @@ add_library(client SHARED
     cdll_client_int.cpp
     cdll_bounded_cvars.cpp
     cdll_util.cpp
-    cl_mat_stub.cpp
     classmap.cpp
     clientalphaproperty.cpp
     client_factorylist.cpp
@@ -153,11 +150,9 @@ add_library(client SHARED
     ../shared/env_wind_shared.cpp
     ../shared/eventlist.cpp
     flashlighteffect.cpp
-    foundryhelpers_client.cpp
     ../shared/func_ladder.cpp
     functionproxy.cpp
     fx_blood.cpp
-    fx_cube.cpp
     fx_explosion.cpp
     fx_fleck.cpp
     fx_impact.cpp
@@ -192,7 +187,6 @@ add_library(client SHARED
     in_joystick.cpp
     in_main.cpp
     initializer.cpp
-    interpolatedvar.cpp
     IsNPCProxy.cpp
     lampbeamproxy.cpp
     lamphaloproxy.cpp
@@ -208,13 +202,11 @@ add_library(client SHARED
     object_motion_blur_effect.cpp
     ../shared/obstacle_pushaway.cpp
     particle_collision.cpp
-    particle_litsmokeemitter.cpp
     ../shared/particle_parse.cpp
     ../shared/particle_property.cpp
     particle_proxies.cpp
     particle_simple3d.cpp
     particlemgr.cpp
-    particles_attractor.cpp
     particles_ez.cpp
     particles_localspace.cpp
     particles_new.cpp
@@ -227,7 +219,6 @@ add_library(client SHARED
     ../shared/physics_main_shared.cpp
     ../shared/physics_shared.cpp
     physpropclientside.cpp
-    playerandobjectenumerator.cpp
     ../shared/point_bonusmaps_accessor.cpp
     ../shared/point_posecontroller.cpp
     ../shared/precache_register.cpp
@@ -254,16 +245,13 @@ add_library(client SHARED
     ../shared/sequence_Transitioner.cpp
     simple_keys.cpp
     ../shared/simtimer.cpp
-    ../shared/singleplay_gamerules.cpp
     ../shared/SoundEmitterSystem.cpp
     ../shared/soundenvelope.cpp
-    ../../public/SoundParametersInternal.cpp
     spatialentitymgr.cpp
     splinepatch.cpp
     ../shared/Sprite.cpp
     spritemodel.cpp
     ../shared/SpriteTrail.cpp
-    ../shared/studio_shared.cpp
     ../shared/takedamageinfo.cpp
     ../shared/teamplay_gamerules.cpp
     ../shared/teamplayroundbased_gamerules.cpp
@@ -299,23 +287,7 @@ add_library(client SHARED
     WorldDimsProxy.cpp
     ../shared/mp_shareddefs.cpp
     c_vote_controller.cpp
-    ../../public/closedcaptions.cpp
-    ../../public/posedebugger.cpp
-    ../../public/client_class.cpp
-    ../../public/crtmemdebug.cpp
-    ../../public/dt_recv.cpp
-    ../../public/dt_utlvector_recv.cpp
-    ../../public/interpolatortypes.cpp
-    ../../public/rope_physics.cpp
-    ../../public/ScratchPadUtils.cpp
-    ../../public/sentence.cpp
     ../shared/sheetsimulator.cpp
-    ../../public/simple_physics.cpp
-    ../../public/stringregistry.cpp
-    ../../public/studio.cpp
-    ../../public/vallocator.cpp
-    ../../public/jigglebones.cpp
-    ../../public/phonemeconverter.cpp
     in_mouse.cpp
     mumble.cpp
     rendertexture.cpp
@@ -378,7 +350,6 @@ add_library(client SHARED
     c_tracer.cpp
     fx.cpp
     fx_discreetline.cpp
-    fx_envelope.cpp
     fx_line.cpp
     fx_sparks.cpp
     particlesphererenderer.cpp
@@ -386,20 +357,8 @@ add_library(client SHARED
     game_controls/baseviewport.cpp
     NextBot/C_NextBot.cpp
     ../shared/SharedFunctorUtils.cpp
-    ../../public/tools/bonelist.cpp
-    entity_client_tools.cpp
-    toolframework_client.cpp
-    c_team_objectiveresource.cpp
-    hud_voicestatus.cpp
     ../shared/predicted_viewmodel.cpp
     ../shared/cstrike15/player_pickup.cpp
-    ../../tier1/fileio.cpp
-    ../../public/filesystem_init.cpp
-    ../../utils/common/filesystem_tools.cpp
-    ../../utils/common/cmdlib.cpp
-    ../../utils/common/scriplib.cpp
-    ../../public/lumpfiles.cpp
-    ../../public/zip_utils.cpp
     ../shared/cstrike15/achievements_cs.cpp
     ../shared/cstrike15/basecsgrenade_projectile.cpp
     cstrike15/buy_presets/buy_preset.cpp
@@ -432,11 +391,6 @@ add_library(client SHARED
     cstrike15/cs_client_gamestats.cpp
     cstrike15/cs_view_scene.cpp
     ../shared/cs_custom_material_swap.cpp
-    cstrike15/cs_custom_clothing_visualsdata_processor.cpp
-    cstrike15/cs_custom_epidermis_visualsdata_processor.cpp
-    cstrike15/cs_custom_weapon_visualsdata_processor.cpp
-    cstrike15/cs_custom_embroider_visualsdata_processor.cpp
-    cstrike15/cs_custom_texture_saver.cpp
     model_combiner.cpp
     ../shared/cstrike15/cs_weapon_parse.cpp
     cstrike15/fx_cs_blood.cpp
@@ -447,15 +401,12 @@ add_library(client SHARED
     cstrike15/fx_cs_weaponfx.cpp
     cstrike15/fx_cs_christmaslights.cpp
     ../shared/cstrike15/bot/shared_util.cpp
-    ../shared/cstrike15/gametypes.cpp
     cstrike15/gameui/gameui_interface.cpp
     cstrike15/gameui/gameui_util.cpp
     cstrike15/gameui/modinfo.cpp
     cstrike15/gameui/rungameengine.cpp
     cstrike15/gameui/uigamedata.cpp
     cstrike15/gameui/uigamedata_storage.cpp
-    ../../common/language.cpp
-    ../../common/GameUI/ObjectList.cpp
     cstrike15/gameui/bonusmapsdatabase.cpp
     cstrike15/cs_hud_chat.cpp
     cstrike15/cs_hud_weaponselection.cpp
@@ -491,7 +442,6 @@ add_library(client SHARED
     ../shared/cstrike15/infernoshared.cpp
     cstrike15/VGUI/counterstrikeviewport.cpp
     hltvreplaysystem.cpp
-    ../../common/imageutils.cpp
     cstrike15/RocketUI/rkconsole.cpp
     cstrike15/RocketUI/rkhud_buymenu.cpp
     cstrike15/RocketUI/rkhud_chat.cpp
@@ -511,12 +461,33 @@ add_library(client SHARED
     cstrike15/RocketUI/rkpanel_options.cpp
     cstrike15/RocketUI/rkpanel_play.cpp
     cstrike15/RocketUI/rkpanel_popup.cpp
-    ${CMAKE_SOURCE_DIR}/platform/linux/linux_support.cpp
 )
-target_link_libraries(client PRIVATE ks_common ks_jpeg rmlui engine memoverride public_common bonesetup particles raytrace mathlib_extended resourcefile choreoobjects bitmap dmxloader tier1 tier2 tier3 interfaces mathlib vtf videocfg bzip2 RmlCore)
+target_link_libraries(client PRIVATE ks_common ks_jpeg rmlui public_common bonesetup particles raytrace mathlib_extended resourcefile choreoobjects bitmap dmxloader game_public tier1 tier2 tier3 interfaces mathlib vtf videocfg bzip2 RmlCore)
 target_include_directories(client PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/." "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15" "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15/gameui" "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15/VGUI" "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15/RocketUI" "${CMAKE_CURRENT_SOURCE_DIR}/game_controls" "${CMAKE_CURRENT_SOURCE_DIR}/../shared" "${CMAKE_CURRENT_SOURCE_DIR}/../shared/cstrike15" "${CMAKE_CURRENT_SOURCE_DIR}/../shared/cstrike15/control" "${CMAKE_CURRENT_SOURCE_DIR}/../../public/rocketui")
 target_compile_definitions(client PRIVATE NO_STRING_T=1 CLIENT_DLL=1 VECTOR=1 ENABLE_STUDIO_SOFTBODY=1 CSTRIKE_CLIENT_DLL=1 CSTRIKE_DLL=1 GAMEUI_EMBEDDED=1 GAMEUI_EXPORTS=1)
-set_target_properties(client PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-target_link_options(client PRIVATE LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/client.map)
-set_property(TARGET client APPEND PROPERTY LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/client.map")
 
+# Client-only code of common/, public/ and utils/ that defines what their headers declare. It is built
+# as ordinary code (not as part of the ks_client namespace) so that those headers stay shared.
+add_library(client_public STATIC
+    ../../common/imageutils.cpp
+    ../../common/GameUI/ObjectList.cpp
+    ../../public/client_class.cpp
+    ../../utils/common/cmdlib.cpp
+    ../../utils/common/filesystem_tools.cpp
+    ../../utils/common/scriplib.cpp
+    ../../tier1/fileio.cpp
+    interpolatedvar.cpp
+    render_bounds.cpp
+)
+foreach(_prop INCLUDE_DIRECTORIES COMPILE_DEFINITIONS LINK_LIBRARIES)
+    get_target_property(_value client ${_prop})
+    set(_client_${_prop} ${_value})
+endforeach()
+target_include_directories(client_public PRIVATE ${_client_INCLUDE_DIRECTORIES})
+target_compile_definitions(client_public PRIVATE ${_client_COMPILE_DEFINITIONS})
+target_link_libraries(client_public PRIVATE ${_client_LINK_LIBRARIES})
+target_link_libraries(client PRIVATE client_public)
+
+include(${CMAKE_SOURCE_DIR}/game/ks_side.cmake)
+ks_game_side(client client "${CMAKE_CURRENT_SOURCE_DIR}/ks_prelude.h"
+    PRE_INCLUDE "rocketui/rmlui.h")

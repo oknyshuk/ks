@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2008 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"

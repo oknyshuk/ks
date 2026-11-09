@@ -156,48 +156,48 @@ class IShaderSystemInternal : public IShaderInit, public IShaderSystem
 {
 public:
 	// Initialization, shutdown
-	virtual void		Init() = 0;
-	virtual void		Shutdown() = 0;
-	virtual void		ModInit() = 0;
-	virtual void		ModShutdown() = 0;
+	void		Init();
+	void		Shutdown();
+	void		ModInit();
+	void		ModShutdown();
 
 	// Methods related to reading in shader DLLs
-	virtual bool		LoadShaderDLL( const char *pFullPath ) = 0;
-	virtual void		UnloadShaderDLL( const char *pFullPath ) = 0;
+	bool		LoadShaderDLL( const char *pFullPath );
+	void		UnloadShaderDLL( const char *pFullPath );
 
 	// Find me a shader!
-	virtual IShader*	FindShader( char const* pShaderName ) = 0;
+	IShader*	FindShader( char const* pShaderName );
 
 	// returns strings associated with the shader state flags...
-	virtual char const* ShaderStateString( int i ) const = 0;
-	virtual int ShaderStateCount( ) const = 0;
+	char const* ShaderStateString( int i ) const;
+	int ShaderStateCount( ) const;
 
 	// Rendering related methods
 
 	// Create debugging materials
-	virtual void CreateDebugMaterials() = 0;
+	void CreateDebugMaterials();
 
 	// Cleans up the debugging materials
-	virtual void CleanUpDebugMaterials() = 0;
+	void CleanUpDebugMaterials();
 
 	// Call the SHADER_PARAM_INIT block of the shaders
-	virtual void InitShaderParameters( IShader *pShader, IMaterialVar **params, const char *pMaterialName ) = 0;
+	void InitShaderParameters( IShader *pShader, IMaterialVar **params, const char *pMaterialName );
 
 	// Call the SHADER_INIT block of the shaders
-	virtual void InitShaderInstance( IShader *pShader, IMaterialVar **params, const char *pMaterialName, const char *pTextureGroupName ) = 0;
+	void InitShaderInstance( IShader *pShader, IMaterialVar **params, const char *pMaterialName, const char *pTextureGroupName );
 
 	// go through each param and make sure it is the right type, load textures, 
 	// compute state snapshots and vertex types, etc.
-	virtual bool InitRenderState( IShader *pShader, int numParams, IMaterialVar **params, ShaderRenderState_t* pRenderState, char const* pMaterialName ) = 0;
+	bool InitRenderState( IShader *pShader, int numParams, IMaterialVar **params, ShaderRenderState_t* pRenderState, char const* pMaterialName );
 
 	// When you're done with the shader, be sure to call this to clean up
-	virtual void CleanupRenderState( ShaderRenderState_t* pRenderState ) = 0;
+	void CleanupRenderState( ShaderRenderState_t* pRenderState );
 
 	// Draws the shader
-	virtual void DrawElements( IShader *pShader, IMaterialVar **params, ShaderRenderState_t* pShaderState, VertexCompressionType_t vertexCompression,
-							   uint32 nMaterialVarTimeStamp, uint32 nModulationFlags, bool bRenderingPreTessPatchMesh ) = 0;
+	void DrawElements( IShader *pShader, IMaterialVar **params, ShaderRenderState_t* pShaderState, VertexCompressionType_t vertexCompression,
+							   uint32 nMaterialVarTimeStamp, uint32 nModulationFlags, bool bRenderingPreTessPatchMesh );
 
 	// Used to iterate over all shaders for editing purposes
-	virtual int	 ShaderCount() const = 0;
-	virtual int  GetShaders( int nFirstShader, int nCount, IShader **ppShaderList ) const = 0;
+	int	 ShaderCount() const;
+	int  GetShaders( int nFirstShader, int nCount, IShader **ppShaderList ) const;
 };

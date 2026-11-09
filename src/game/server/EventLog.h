@@ -16,9 +16,9 @@ public:
 	CEventLog();
 	virtual ~CEventLog();
 
-public: // IGameEventListener Interface
+public: // game event handling
 	
-	virtual void FireGameEvent( IGameEvent * event );
+	void FireGameEvent( IGameEvent * event );
 	
 public: // CBaseGameSystem overrides
 

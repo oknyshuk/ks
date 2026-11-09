@@ -4,8 +4,6 @@
 // Purpose: An entity that allows level designer control over the fog parameters.
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"

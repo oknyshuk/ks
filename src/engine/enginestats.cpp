@@ -4,22 +4,6 @@
 #include "enginestats.h"
 #include "clientstats.h"
 
-//-----------------------------------------------------------------------------
-// itty bitty interface for stat time
-//-----------------------------------------------------------------------------
-
-class CStatTime : public IClientStatsTime
-{
-public:
-	float GetTime()
-	{
-		return Plat_FloatTime();
-	}
-};
-
-CStatTime	g_StatTime;
-
-
 CEngineStats::CEngineStats() : m_InFrame( false )
 {
 	m_bInRun = false;

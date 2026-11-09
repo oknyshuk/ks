@@ -7,7 +7,6 @@
 #include "basetoggle.h"
 #include "entityoutput.h"
 
-class IPhysicsFluidController;
 
 
 class [[= ks::reflect::NetTable{ .name = "DT_FuncMoveLinear" } ]]
@@ -22,19 +21,19 @@ public:
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_vecVelocity );
 	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_fFlags );
 
-	void		Spawn( void );
-	void		Precache( void );
-	bool		CreateVPhysics( void );
-	bool		ShouldSavePhysics( void );
+	void		Spawn_Impl( void );
+	void		Precache_Impl( void );
+	bool		CreateVPhysics_Impl( void );
+	bool		ShouldSavePhysics_Impl( void );
 
 	void		MoveTo(Vector vPosition, float flSpeed);
-	void		Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	void		MoveDone( void );
+	void		Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void		MoveDone_Impl( void );
 	void		StopMoveSound( void );
-	void		Blocked( CBaseEntity *pOther );
+	void		Blocked_Impl( CBaseEntity *pOther );
 	void		SetPosition( float flPosition );
 
-	int			DrawDebugTextOverlays(void);
+	int			DrawDebugTextOverlays_Impl(void);
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "Open", .type = FIELD_VOID } ]] void InputOpen( inputdata_t &inputdata );

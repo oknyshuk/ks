@@ -117,11 +117,11 @@ public:
 	CNPC_VehicleDriver( void );
 	~CNPC_VehicleDriver( void );
 
-	virtual void	Spawn( void );
-	virtual void	Precache( void );
-	virtual void	Activate( void );
-	virtual void	OnRestore();
-	virtual void	UpdateOnRemove( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
+	void	Activate_Impl( void );
+	void	OnRestore_Impl();
+	void	UpdateOnRemove_Impl( void );
 	
 	// AI
 	void			UpdateEfficiency( bool bInPVS )	{ SetEfficiency( ( GetSleepState() != AISS_AWAKE ) ? AIE_DORMANT : AIE_NORMAL ); SetMoveEfficiency( AIME_NORMAL ); }
@@ -145,9 +145,9 @@ public:
 	void			ClearWaypoints( void );
 	void			CheckForTeleport( void );
 
-	int				BloodColor( void ) { return DONT_BLEED; }
+	int				BloodColor_Impl( void ) { return DONT_BLEED; }
 
-	Class_T			Classify( void ) { return CLASS_NONE; }
+	Class_T			Classify_Impl( void ) { return CLASS_NONE; }
 
 	Disposition_t	IRelationType( CBaseEntity *pTarget );
 

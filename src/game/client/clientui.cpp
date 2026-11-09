@@ -4,12 +4,10 @@
 
 // Console GPU alignment stub (not used on PC)
 #include "rocketui/rmlui.h"
-import ks.tier1;
 #ifndef GPU_RESOLVE_ALIGNMENT
 #define GPU_RESOLVE_ALIGNMENT 1
 #endif
 
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -28,7 +26,7 @@ import std;
 bool IsWidescreen( void );
 
 
-void ss_pipsplit_changed( IConVar *pConVar, const char *pOldString, float flOldValue )
+void ss_pipsplit_changed( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	UI_OnSplitScreenStateChanged();
 }
@@ -40,7 +38,7 @@ static ConVar ss_force_primary_fullscreen( "ss_force_primary_fullscreen", "0", 0
 bool UI_UsePipSplit();
 
 
-void ss_verticalsplit_changed( IConVar *pConVar, const char *pOldString, float flOldValue )
+void ss_verticalsplit_changed( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	ConVarRef var( pConVar );
 	if ( var.GetBool() != !!(int)flOldValue )
@@ -64,7 +62,7 @@ void ss_verticalsplit_changed( IConVar *pConVar, const char *pOldString, float f
 }
 static ConVar ss_verticalsplit( "ss_verticalsplit", "0", 0, "Two player split screen uses vertical split (do not set this directly, use ss_splitmode instead).", ss_verticalsplit_changed );
 
-void ss_splitmode_changed( IConVar *pConVar, const char *pOldString, float flOldValue )
+void ss_splitmode_changed( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	ConVarRef var( pConVar );
 
@@ -490,7 +488,7 @@ C_BasePlayer *GetSplitScreenViewPlayer( int nSlot )
 	return g_SplitScreenPlayers[nSlot] ? C_BasePlayer::GetLocalPlayer( nSlot ) : g_RemoteSplitScreenPlayers[nSlot];
 }
 
-void cl_enable_remote_splitscreen_callback_f( IConVar *var, const char *pOldValue, float flOldValue )
+void cl_enable_remote_splitscreen_callback_f( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	UI_OnSplitScreenStateChanged();
 }

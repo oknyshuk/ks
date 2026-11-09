@@ -2,28 +2,16 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
 #include "shared_classnames.h"
 
-class IPhysicsObject;
-class IPhysicsConstraint;
-class IPhysicsConstraintGroup;
-class IPhysicsCollision;
-class IPhysicsEnvironment;
-class IPhysicsSurfaceProps;
-
-struct vcollide_t;
-struct studiohdr_t;
-class CStudioHdr;
-class CBoneAccessor;
 class CBaseAnimating;
 class CBaseEntity;
+
 
 #include "bone_accessor.h"
 #include "vcollide_parse.h"
 #include "ehandle.h"
 #include "igamesystem.h"
-import std;
 
 // UNDONE: Remove and make dynamic?
 inline constexpr auto RAGDOLL_MAX_ELEMENTS = 24;

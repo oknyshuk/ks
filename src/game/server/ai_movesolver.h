@@ -7,10 +7,8 @@
 // also incorporate body facing (yaw), speed, and translational/rotational
 // acceleration.
 
-import ks.tier1;
 #include "ai_obstacle_type.h"
 #include "entitylist.h"
-import std;
 
 class CBaseEntity;
 

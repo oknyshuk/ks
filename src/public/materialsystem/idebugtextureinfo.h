@@ -14,11 +14,11 @@ public:
 	
 	// Use this to turn on the mode where it builds the debug texture list.
 	// At the end of the next frame, GetDebugTextureList() will return a valid list of the textures.
-	virtual void EnableDebugTextureList( bool bEnable ) = 0;
+	void EnableDebugTextureList( bool bEnable );
 	
 	// If this is on, then it will return all textures that exist, not just the ones that were bound in the last frame.
 	// It is required to enable debug texture list to get this.
-	virtual void EnableGetAllTextures( bool bEnable ) = 0;
+	void EnableGetAllTextures( bool bEnable );
 
 	// Use this to get the results of the texture list.
 	// Do NOT release the KeyValues after using them.
@@ -30,8 +30,8 @@ public:
 	//    Height - Height of the texture
 	// It is required to enable debug texture list to get this.
 	// You MUST release the texture list after having copied it or whatever so that it can be updated again on a separate thread.
-	virtual KeyValues* LockDebugTextureList( void ) = 0;
-	virtual void UnlockDebugTextureList( void ) = 0;
+	KeyValues* LockDebugTextureList( void );
+	void UnlockDebugTextureList( void );
 
 	// Texture memory usage
 	enum TextureMemoryType
@@ -45,14 +45,14 @@ public:
 	};
 
 	// This returns how much memory was used.
-	virtual int GetTextureMemoryUsed( TextureMemoryType eTextureMemory ) = 0;
+	int GetTextureMemoryUsed( TextureMemoryType eTextureMemory );
 
 	// Use this to determine if texture debug info was computed within last numFramesAllowed frames.
-	virtual bool IsDebugTextureListFresh( int numFramesAllowed = 1 ) = 0;
+	bool IsDebugTextureListFresh( int numFramesAllowed = 1 );
 
 	// Enable debug texture rendering when texture binds should not count towards textures
 	// used during a frame. Returns the old state of debug texture rendering flag to use
 	// it for restoring the mode.
-	virtual bool SetDebugTextureRendering( bool bEnable ) = 0;
+	bool SetDebugTextureRendering( bool bEnable );
 
 };

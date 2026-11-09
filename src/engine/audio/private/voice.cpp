@@ -42,7 +42,6 @@ extern IVEngineClient *engineClient;
 
 void Voice_EndChannel( int iChannel );
 void VoiceTweak_EndVoiceTweakMode();
-void EngineTool_OverrideSampleRate( int& rate );
 
 // Special entity index used for tweak mode.
 constexpr auto TWEAKMODE_ENTITYINDEX = -500;
@@ -106,7 +105,6 @@ ConVar voice_showincoming( "voice_showincoming", "0" );	// show incoming voice d
 int Voice_SamplesPerSec()
 {
 	int rate = ( g_bIsSpeex ? VOICE_OUTPUT_SAMPLE_RATE_SPEEX : VOICE_OUTPUT_SAMPLE_RATE ); //g_VoiceSampleFormat.nSamplesPerSec;
-	EngineTool_OverrideSampleRate( rate );
 	return rate;
 }
 
@@ -120,7 +118,7 @@ int Voice_AvgBytesPerSec()
 //-----------------------------------------------------------------------------
 // Convar callback
 //-----------------------------------------------------------------------------
-void VoiceEnableCallback( IConVar *var, const char *pOldValue, float flOldValue )
+void VoiceEnableCallback( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	if ( ((ConVar *)var)->GetBool() )
 	{
@@ -862,16 +860,11 @@ void Voice_EndAllChannels()
 	}
 }
 
-bool EngineTool_SuppressDeInit();
-
 void Voice_Deinit()
 {
 	// This call tends to be expensive and when voice is not enabled it will continually
 	// call in here, so avoid the work if possible.
 	if( !g_bVoiceAtLeastPartiallyInitted )
-		return;
-
-	if ( EngineTool_SuppressDeInit() )
 		return;
 
 //	g_pszCurrentVoiceCodec[0] = 0;
@@ -1565,7 +1558,6 @@ void Voice_AddIncomingData(
 	const int nDesiredSampleRate = g_bIsSpeex ? VOICE_OUTPUT_SAMPLE_RATE_SPEEX : VOICE_OUTPUT_SAMPLE_RATE;
 
 	int samplesPerSec = g_VoiceSampleFormat.nSamplesPerSec;
-	EngineTool_OverrideSampleRate( samplesPerSec );
 
 	int nDecompressedSamplesTotal = nDecompressedSamplesForDroppedPacket + nDecompressedSamplesForThisPacket;
 	int nDecompressedBytesTotal = nDecompressedSamplesTotal * BYTES_PER_SAMPLE;

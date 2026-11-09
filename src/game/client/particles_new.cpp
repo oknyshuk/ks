@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2006 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -18,7 +16,6 @@ import std;
 #include "iclientmode.h"
 #include "engine/ivdebugoverlay.h"
 #include "particle_property.h"
-#include "toolframework/itoolframework.h"
 #include "toolframework_client.h"
 #include "model_types.h"
 #include "datacache/iresourceaccesscontrol.h"
@@ -215,18 +212,6 @@ void CNewParticleEffect::Construct()
 
 CNewParticleEffect::~CNewParticleEffect(void)
 {
-	if ( m_bRecord && m_nToolParticleEffectId != TOOLPARTICLESYSTEMID_INVALID && clienttools->IsInRecordingMode() )
-	{
-		static ParticleSystemDestroyedState_t state;
-		state.m_nParticleSystemId = GetToolParticleEffectId();
-		state.m_flTime = gpGlobals->curtime;
-
-		KeyValues *msg = new KeyValues( "ParticleSystem_Destroy" );
-		msg->SetPtr( "state", &state );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		m_nToolParticleEffectId = TOOLPARTICLESYSTEMID_INVALID; 
-	}
 
 	m_bAllocated = false;
 	if ( m_hOwner )
@@ -303,23 +288,8 @@ int CNewParticleEffect::GetRenderFlags( void )
 }
 
 
-//-----------------------------------------------------------------------------
-// Overrides for recording
-//-----------------------------------------------------------------------------
 void CNewParticleEffect::StopEmission( bool bInfiniteOnly, bool bRemoveAllParticles, bool bWakeOnStop, bool bPlayEndCap )
 {
-	if ( m_bRecord && m_nToolParticleEffectId != TOOLPARTICLESYSTEMID_INVALID && clienttools->IsInRecordingMode() )
-	{
-		KeyValues *msg = new KeyValues( "ParticleSystem_StopEmission" );
-
-		static ParticleSystemStopEmissionState_t state;
-		state.m_nParticleSystemId = GetToolParticleEffectId();
-		state.m_flTime = gpGlobals->curtime;
-		state.m_bInfiniteOnly = bInfiniteOnly;
-
-		msg->SetPtr( "state", &state );
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-	}
 
 	CParticleCollection::StopEmission( bInfiniteOnly, bRemoveAllParticles, bWakeOnStop, bPlayEndCap );
 }
@@ -334,18 +304,6 @@ void CNewParticleEffect::SetDormant( bool bDormant )
 
 void CNewParticleEffect::SetControlPointEntity( int nWhichPoint, CBaseEntity *pEntity )
 {
-	if ( m_bRecord && m_nToolParticleEffectId != TOOLPARTICLESYSTEMID_INVALID && clienttools->IsInRecordingMode() )
-	{
-		static ParticleSystemSetControlPointObjectState_t state;
-		state.m_nParticleSystemId = GetToolParticleEffectId();
-		state.m_flTime = gpGlobals->curtime;
-		state.m_nControlPoint = nWhichPoint;
-		state.m_nObject = pEntity ? pEntity->entindex() : -1;
-
-		KeyValues *msg = new KeyValues( "ParticleSystem_SetControlPointObject" );
-		msg->SetPtr( "state", &state );
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-	}
 
 	if ( pEntity )
 	{
@@ -359,18 +317,6 @@ void CNewParticleEffect::SetControlPointEntity( int nWhichPoint, CBaseEntity *pE
 
 void CNewParticleEffect::SetControlPoint( int nWhichPoint, const Vector &v )
 {
-	if ( m_bRecord && m_nToolParticleEffectId != TOOLPARTICLESYSTEMID_INVALID && clienttools->IsInRecordingMode() )
-	{
-		static ParticleSystemSetControlPointPositionState_t state;
-		state.m_nParticleSystemId = GetToolParticleEffectId();
-		state.m_flTime = gpGlobals->curtime;
-		state.m_nControlPoint = nWhichPoint;
-		state.m_vecPosition = v;
-
-		KeyValues *msg = new KeyValues( "ParticleSystem_SetControlPointPosition" );
-		msg->SetPtr( "state", &state );
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-	}
 
 	CParticleCollection::SetControlPoint( nWhichPoint, v );
 }
@@ -390,42 +336,10 @@ void CNewParticleEffect::SetToolRecording( bool bRecord )
 
 void CNewParticleEffect::RecordCreation()
 {
-	if ( IsValid() && clienttools->IsInRecordingMode() )
-	{
-		m_bRecord = true;
-
-		int nId = AllocateToolParticleEffectId();	
-
-		static ParticleSystemCreatedState_t state;
-		state.m_nParticleSystemId = nId;
-		state.m_flTime = gpGlobals->curtime;
-		state.m_pName = m_pDef->GetName();
-		state.m_nOwner = m_hOwner ? m_hOwner->entindex() : -1;
-
-		KeyValues *msg = new KeyValues( "ParticleSystem_Create" );
-		msg->SetPtr( "state", &state );
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-	}
 }
 
 void CNewParticleEffect::RecordControlPointOrientation( int nWhichPoint )
 {
-	if ( m_bRecord && m_nToolParticleEffectId != TOOLPARTICLESYSTEMID_INVALID && clienttools->IsInRecordingMode() )
-	{
-		// FIXME: Make a more direct way of getting 
-		QAngle angles;
-		VectorAngles( ControlPoint( nWhichPoint ).m_ForwardVector, ControlPoint( nWhichPoint ).m_UpVector, angles );
-
-		static ParticleSystemSetControlPointOrientationState_t state;
-		state.m_nParticleSystemId = GetToolParticleEffectId();
-		state.m_flTime = gpGlobals->curtime;
-		state.m_nControlPoint = nWhichPoint;
-		AngleQuaternion( angles, state.m_qOrientation );
-
-		KeyValues *msg = new KeyValues( "ParticleSystem_SetControlPointOrientation" );
-		msg->SetPtr( "state", &state );
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-	}
 }
 
 void CNewParticleEffect::SetControlPointOrientation( int nWhichPoint, 

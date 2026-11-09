@@ -26,12 +26,13 @@ extern ConVar replay_debug;
 //////////////////////////////////////////////////////////////////////
 
 CHLTVClient::CHLTVClient(int slot, CBaseServer *pServer)
+	: CBaseClient( client_kind_t::hltv )
 {
 	Clear();
 
 	m_nClientSlot = slot;
 	m_Server = pServer;
-	m_pHLTV = dynamic_cast<CHLTVServer*>(pServer);
+	m_pHLTV = static_cast<CHLTVServer*>(pServer);
 	contract_assert( g_pHltvServer[ m_pHLTV->GetInstanceIndex() ] == pServer );
 	m_nEntityIndex = slot < 0 ? slot : m_pHLTV->GetHLTVSlot() + 1;
 	m_nLastSendTick = 0;
@@ -70,12 +71,12 @@ bool CHLTVClient::SendSignonData( void )
 		m_NetChannel->SendNetMsg( classmsg );
 	}
 
-	 return CBaseClient::SendSignonData();
+	 return CBaseClient::SendSignonDataBase();
 }
 
 bool CHLTVClient::ProcessSignonStateMsg(int state, int spawncount)
 {
-	if ( !CBaseClient::ProcessSignonStateMsg( state, spawncount ) )
+	if ( !CBaseClient::ProcessSignonStateMsgBase( state, spawncount ) )
 		return false;
 
 	if ( state == SIGNONSTATE_FULL )
@@ -94,7 +95,7 @@ bool CHLTVClient::ProcessSignonStateMsg(int state, int spawncount)
 
 bool CHLTVClient::CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg )
 {
-	if ( !CBaseClient::CLCMsg_ClientInfo( msg ) )
+	if ( !CBaseClient::CLCMsg_ClientInfoBase( msg ) )
 		return false;
 
 	return true;
@@ -179,7 +180,7 @@ CClientFrame *CHLTVClient::GetDeltaFrame( int nTick )
 bool CHLTVClient::ExecuteStringCommand( const char *pCommandString )
 {
 	// first let the baseclass handle it
-	if ( CBaseClient::ExecuteStringCommand( pCommandString ) )
+	if ( CBaseClient::ExecuteStringCommandBase( pCommandString ) )
 		return true;
 
 	if ( !pCommandString || !pCommandString[0] )
@@ -307,7 +308,7 @@ bool CHLTVClient::ShouldSendMessages( void )
 	if ( !IsActive() )
 	{
 		// during signon behave like normal client
-		return CBaseClient::ShouldSendMessages();
+		return CBaseClient::ShouldSendMessagesBase();
 	}
 
 	// HLTV clients use snapshot rate used by HLTV server, not given by HLTV client
@@ -353,7 +354,7 @@ void CHLTVClient::SpawnPlayer( void )
 
 	m_flLastChatTime = net_time;
 
-	CBaseClient::SpawnPlayer();
+	CBaseClient::SpawnPlayerBase();
 }
 
 
@@ -373,7 +374,7 @@ void CHLTVClient::SetRate(int nRate, bool bForce )
 		}
 	}
 
-	CBaseClient::SetRate( nRate, bForce );
+	CBaseClient::SetRateBase( nRate, bForce );
 }
 
 void CHLTVClient::SetUpdateRate( float fUpdateRate, bool bForce)
@@ -384,7 +385,7 @@ void CHLTVClient::SetUpdateRate( float fUpdateRate, bool bForce)
 
 bool CHLTVClient::NETMsg_SetConVar(const ks::net::CNETMsg_SetConVar& msg)
 {
-	if ( !CBaseClient::NETMsg_SetConVar( msg ) )
+	if ( !CBaseClient::NETMsg_SetConVarBase( msg ) )
 		return false;
 
 	// if this is the first time we get user settings, check password etc
@@ -466,7 +467,7 @@ void CHLTVClient::UpdateUserSettings()
 	// set voice loopback
 	m_bNoChat = m_ConVars->GetInt( "tv_nochat", 0 ) != 0;
 	
-	CBaseClient::UpdateUserSettings();
+	CBaseClient::UpdateUserSettingsBase();
 }
 
 bool CHLTVClient::SendSnapshot( CClientFrame * pFrame )

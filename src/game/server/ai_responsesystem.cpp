@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -43,10 +41,6 @@ import ks.tier1;
 
 using namespace ResponseRules;
 
-extern ConVar rr_debugresponses; // ( "rr_debugresponses", "0", FCVAR_NONE, "Show verbose matching output (1 for simple, 2 for rule scoring, 3 for noisy). If set to 4, it will only show response success/failure for npc_selected NPCs." );
-extern ConVar rr_debugrule; // ( "rr_debugrule", "", FCVAR_NONE, "If set to the name of the rule, that rule's score will be shown whenever a concept is passed into the response rules system.");
-extern ConVar rr_dumpresponses; // ( "rr_dumpresponses", "0", FCVAR_NONE, "Dump all response_rules.txt and rules (requires restart)" );
-extern ConVar rr_debugresponseconcept; // ( "rr_debugresponseconcept", "", FCVAR_NONE, "If set, rr_debugresponses will print only responses testing for the specified concept" );
 
 
 static characterset_t	g_BreakSetIncludingColons;
@@ -139,11 +133,6 @@ skipwhite:
 	return data;
 }
 
-namespace ResponseRules
-{
-	extern const char *ResponseCopyString( const char *in );
-}
-
 // Host functions required by the ResponseRules::IEngineEmulator interface
 class CResponseRulesToEngineInterface : public ResponseRules::IEngineEmulator
 {
@@ -161,8 +150,8 @@ class CResponseRulesToEngineInterface : public ResponseRules::IEngineEmulator
 		return filesystem;
 	}
 
-	/// Return a pointer to an instance of an IUniformRandomStream
-	virtual IUniformRandomStream *GetRandomStream() 
+	/// Return a pointer to an instance of CUniformRandomStream
+	virtual CUniformRandomStream *GetRandomStream() 
 	{
 		return random;
 	}
@@ -188,13 +177,13 @@ class CResponseRulesToEngineInterface : public ResponseRules::IEngineEmulator
 };
 
 CResponseRulesToEngineInterface g_ResponseRulesEngineWrapper;
-IEngineEmulator *IEngineEmulator::s_pSingleton = &g_ResponseRulesEngineWrapper;
+static const bool s_bEngineEmulatorInstalled = ( IEngineEmulator::s_pSingleton = &g_ResponseRulesEngineWrapper, true );
 
 
-IMPLEMENT_REFLECT_DATAMAP_SIMPLE( ParserResponse )
+IMPLEMENT_REFLECT_DATAMAP_FILL( ParserResponse )
 
 
-IMPLEMENT_REFLECT_DATAMAP_SIMPLE( ResponseGroup )
+IMPLEMENT_REFLECT_DATAMAP_FILL( ResponseGroup )
 
 
 /// Add some game-specific code to the basic response system
@@ -300,58 +289,6 @@ void CGameResponseSystem::Precache()
 
 
 //-----------------------------------------------------------------------------
-// Purpose: A special purpose response system associated with a custom entity
-//-----------------------------------------------------------------------------
-class CInstancedResponseSystem : public CGameResponseSystem
-{
-	typedef CGameResponseSystem BaseClass;
-
-public:
-	CInstancedResponseSystem( const char *scriptfile ) :
-	  m_pszScriptFile( 0 )
-	  {
-		  contract_assert( scriptfile );
-
-		  int len = V_strlen( scriptfile ) + 1;
-		  m_pszScriptFile = new char[ len ];
-		  contract_assert( m_pszScriptFile );
-		  V_strncpy( m_pszScriptFile, scriptfile, len );
-	  }
-
-	  ~CInstancedResponseSystem()
-	  {
-		  delete[] m_pszScriptFile;
-	  }
-	  virtual const char *GetScriptFile( void ) 
-	  {
-		  contract_assert( m_pszScriptFile );
-		  return m_pszScriptFile;
-	  }
-
-	  // CAutoGameSystem
-	  virtual bool Init()
-	  {
-		  const char *basescript = GetScriptFile();
-		  LoadRuleSet( basescript );
-		  return true;
-	  }
-
-	  virtual void LevelInitPostEntity()
-	  {
-		  ResetResponseGroups();
-	  }
-
-	  virtual void Release()
-	  {
-		  Clear();
-		  delete this;
-	  }
-private:
-
-	char *m_pszScriptFile;
-};
-
-//-----------------------------------------------------------------------------
 // Purpose: The default response system for expressive AIs
 //-----------------------------------------------------------------------------
 class CDefaultResponseSystem : public CGameResponseSystem, public CAutoGameSystem
@@ -381,53 +318,9 @@ public:
 		contract_assert( 0 );
 	}
 
-	void AddInstancedResponseSystem( const char *scriptfile, CInstancedResponseSystem *sys )
-	{
-		m_InstancedSystems.emplace( scriptfile, sys );
-	}
-
-	CInstancedResponseSystem *FindResponseSystem( const char *scriptfile )
-	{
-		auto it = m_InstancedSystems.find( scriptfile );
-		if ( it == m_InstancedSystems.end() )
-			return nullptr;
-		return it->second;
-	}
-
-	IResponseSystem *PrecacheCustomResponseSystem( const char *scriptfile )
-	{
-		COM_TimestampedLog( "PrecacheCustomResponseSystem %s - Start", scriptfile );
-		CInstancedResponseSystem *sys = ( CInstancedResponseSystem * )FindResponseSystem( scriptfile );
-		if ( !sys )
-		{
-			sys = new CInstancedResponseSystem( scriptfile );
-			if ( !sys )
-			{
-				Error( "Failed to load response system data from %s", scriptfile );
-			}
-
-			if ( !sys->Init() )
-			{
-				Error( "CInstancedResponseSystem:  Failed to init response system from %s!", scriptfile );
-			}
-
-			AddInstancedResponseSystem( scriptfile, sys );
-		}
-
-		sys->Precache();
-
-		COM_TimestampedLog( "PrecacheCustomResponseSystem %s - Finish", scriptfile );
-
-		return ( IResponseSystem * )sys;
-	}
-
-	IResponseSystem *BuildCustomResponseSystemGivenCriteria( const char *pszBaseFile, const char *pszCustomName, AI_CriteriaSet &criteriaSet, float flCriteriaScore );
-	void DestroyCustomResponseSystems();
-
 	virtual void LevelInitPreEntity()
 	{
 		// This will precache the default system
-		// All user installed systems are init'd by PrecacheCustomResponseSystem which will call sys->Precache() on the ones being used
 
 		// FIXME:  This is SLOW the first time you run the engine (can take 3 - 10 seconds!!!)
 		if ( ShouldPrecache() )
@@ -443,96 +336,13 @@ public:
 		Clear();
 		Init();
 
-		for ( auto it = m_InstancedSystems.begin(); it != m_InstancedSystems.end(); )
-		{
-			CInstancedResponseSystem *sys = it->second;
-			if ( !IsCustomManagable() )
-			{
-				sys->Clear();
-				sys->Init();
-				++it;
-			}
-			else
-			{
-				// Custom reponse rules will manage/reload themselves - remove them.
-				it = m_InstancedSystems.erase( it );
-			}
-		}
-
 		// precache sounds in case we added new ones
 		Precache();
 
 	}
 
-private:
-
-	void ClearInstanced()
-	{
-		for ( auto &[name, sys] : m_InstancedSystems )
-		{
-			sys->Release();
-		}
-		m_InstancedSystems.clear();
-	}
-
-	ks::idict< CInstancedResponseSystem * > m_InstancedSystems;
 	friend void CC_RR_DumpHashInfo( const CCommand &args );
 };
-
-IResponseSystem *CDefaultResponseSystem::BuildCustomResponseSystemGivenCriteria( const char *pszBaseFile, const char *pszCustomName, AI_CriteriaSet &criteriaSet, float flCriteriaScore )
-{
-	// Create a instanced response system. 
-	CInstancedResponseSystem *pCustomSystem = new CInstancedResponseSystem( pszCustomName );
-	if ( !pCustomSystem )
-	{
-		Error( "BuildCustomResponseSystemGivenCriterea: Failed to create custom response system %s!", pszCustomName );
-	}
-
-	pCustomSystem->Clear();
-
-	// Copy the relevant rules and data.
-	/*
-	int nRuleCount = m_Rules.Count();
-	for ( int iRule = 0; iRule < nRuleCount; ++iRule )
-	*/
-	for ( ResponseRulePartition::tIndex iIdx = m_RulePartitions.First() ;
-		m_RulePartitions.IsValid(iIdx) ;
-		iIdx = m_RulePartitions.Next( iIdx ) )
-	{
-		Rule *pRule = &m_RulePartitions[iIdx];
-		if ( pRule )
-		{
-			float flScore = 0.0f;
-
-			int nCriteriaCount = std::ssize( pRule->m_Criteria );
-			for ( int iCriteria = 0; iCriteria < nCriteriaCount; ++iCriteria )
-			{
-				CriteriaEntry_t *pRuleCriteria = pRule->m_Criteria[iCriteria];
-
-				flScore += LookForCriteria( criteriaSet, pRuleCriteria );
-				if ( flScore >= flCriteriaScore )
-				{
-					CopyRuleFrom( pRule, iIdx, pCustomSystem );
-					break;
-				}
-			}
-		}
-	}
-
-	// Set as a custom response system.
-	m_bCustomManagable = true;
-	AddInstancedResponseSystem( pszCustomName, pCustomSystem );
-
-	//	pCustomSystem->DumpDictionary( pszCustomName );
-
-	return pCustomSystem;
-}
-
-void CDefaultResponseSystem::DestroyCustomResponseSystems()
-{
-	ClearInstanced();
-}
-
 
 static CDefaultResponseSystem defaultresponsesytem;
 IResponseSystem *g_pResponseSystem = &defaultresponsesytem;
@@ -586,41 +396,8 @@ bool CDefaultResponseSystem::Init()
 //-----------------------------------------------------------------------------
 void CDefaultResponseSystem::Shutdown()
 {
-	// Wipe instanced versions
-	ClearInstanced();
-
 	// Clear outselves
 	Clear();
 	// IServerSystem chain
 	BaseClass::Shutdown();
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Instance a custom response system
-// Input  : *scriptfile - 
-// Output : IResponseSystem
-//-----------------------------------------------------------------------------
-IResponseSystem *PrecacheCustomResponseSystem( const char *scriptfile )
-{
-	return defaultresponsesytem.PrecacheCustomResponseSystem( scriptfile );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Instance a custom response system
-// Input  : *scriptfile -
-//			set - 
-// Output : IResponseSystem
-//-----------------------------------------------------------------------------
-IResponseSystem *BuildCustomResponseSystemGivenCriteria( const char *pszBaseFile, const char *pszCustomName, AI_CriteriaSet &criteriaSet, float flCriteriaScore )
-{
-	return defaultresponsesytem.BuildCustomResponseSystemGivenCriteria( pszBaseFile, pszCustomName, criteriaSet, flCriteriaScore );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-void DestroyCustomResponseSystems()
-{
-	defaultresponsesytem.DestroyCustomResponseSystems();
 }

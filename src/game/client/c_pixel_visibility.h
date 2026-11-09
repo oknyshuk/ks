@@ -3,8 +3,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 
-import std;
-import ks.math;
 
 const float PIXELVIS_DEFAULT_PROXY_SIZE = 2.0f;
 const float PIXELVIS_DEFAULT_FADE_TIME = 0.0625f;

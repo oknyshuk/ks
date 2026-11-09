@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -25,7 +22,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -43,7 +39,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -377,28 +372,6 @@ bool CTraceFilterSimple::ShouldHitEntity( IHandleEntity *pHandleEntity, int cont
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Trace filter that only hits NPCs and the player
-//-----------------------------------------------------------------------------
-bool CTraceFilterOnlyNPCsAndPlayer::ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
-{
-	if ( CTraceFilterSimple::ShouldHitEntity( pHandleEntity, contentsMask ) )
-	{
-		CBaseEntity *pEntity = EntityFromEntityHandle( pHandleEntity );
-		if ( !pEntity )
-			return false;
-
-#ifdef CSTRIKE_DLL
-#ifndef CLIENT_DLL
-		if ( pEntity->Classify() == CLASS_PLAYER_ALLY )
-			return true; // CS hostages are CLASS_PLAYER_ALLY but not IsNPC()
-#endif // !CLIENT_DLL
-#endif // CSTRIKE_DLL
-		return (pEntity->IsNPC() || pEntity->IsPlayer());
-	}
-	return false;
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: Trace filter that doesn't hit NPCs or players
 //-----------------------------------------------------------------------------
 bool CTraceFilterNoNPCsOrPlayer::ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
@@ -486,20 +459,7 @@ void CTraceFilterSimpleList::AddEntitiesToIgnore( int nCount, IHandleEntity **pp
 	std::memcpy( &m_PassEntities[nIndex], ppEntities, nCount * sizeof( IHandleEntity* ) );
 }
 
-//-----------------------------------------------------------------------------
-// Trace filter that hits only the pass entity
-//-----------------------------------------------------------------------------
-CTraceFilterOnlyHitThis::CTraceFilterOnlyHitThis( const IHandleEntity *hitentity )
-{
-	m_pHitEnt = hitentity;
-}
-
-bool CTraceFilterOnlyHitThis::ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
-{
-	return m_pHitEnt == pHandleEntity;
-}
-
-
+#ifndef CLIENT_DLL
 //-----------------------------------------------------------------------------
 // Purpose: Custom trace filter used for NPC LOS traces
 //-----------------------------------------------------------------------------
@@ -520,110 +480,7 @@ bool CTraceFilterLOS::ShouldHitEntity( IHandleEntity *pHandleEntity, int content
 
 	return CTraceFilterSimple::ShouldHitEntity( pHandleEntity, contentsMask );
 }
-
-//-----------------------------------------------------------------------------
-// Trace filter that can take a classname to ignore
-//-----------------------------------------------------------------------------
-CTraceFilterSkipClassname::CTraceFilterSkipClassname( const IHandleEntity *passentity, const char *pchClassname, int collisionGroup ) :
-CTraceFilterSimple( passentity, collisionGroup ), m_pchClassname( pchClassname )
-{
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-bool CTraceFilterSkipClassname::ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
-{
-	CBaseEntity *pEntity = EntityFromEntityHandle( pHandleEntity );
-	if ( !pEntity || FClassnameIs( pEntity, m_pchClassname ) )
-		return false;
-
-	return CTraceFilterSimple::ShouldHitEntity( pHandleEntity, contentsMask );
-}
-
-//-----------------------------------------------------------------------------
-// Trace filter that skips two classnames
-//-----------------------------------------------------------------------------
-CTraceFilterSkipTwoClassnames::CTraceFilterSkipTwoClassnames( const IHandleEntity *passentity, const char *pchClassname, const char *pchClassname2, int collisionGroup ) :
-BaseClass( passentity, pchClassname, collisionGroup ), m_pchClassname2(pchClassname2)
-{
-}
-
-bool CTraceFilterSkipTwoClassnames::ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
-{
-	CBaseEntity *pEntity = EntityFromEntityHandle( pHandleEntity );
-	if ( !pEntity || FClassnameIs( pEntity, m_pchClassname2 ) )
-		return false;
-
-	return BaseClass::ShouldHitEntity( pHandleEntity, contentsMask );
-}
-
-//-----------------------------------------------------------------------------
-// Trace filter that can take a list of entities to ignore
-//-----------------------------------------------------------------------------
-CTraceFilterSimpleClassnameList::CTraceFilterSimpleClassnameList( const IHandleEntity *passentity, int collisionGroup ) :
-CTraceFilterSimple( passentity, collisionGroup )
-{
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-bool CTraceFilterSimpleClassnameList::ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
-{
-	CBaseEntity *pEntity = EntityFromEntityHandle( pHandleEntity );
-	if ( !pEntity )
-		return false;
-
-	CBaseEntity *pOwner = pEntity->GetOwnerEntity();
-	if ( pOwner )
-	{
-		const char *pOwnerClass = pOwner->GetClassname();
-		for ( int i = 0; i < std::ssize( m_PassClassnames ); i++ )
-		{
-			if ( !V_strcmp( m_PassClassnames[i], pOwnerClass ) )
-				return false;
-		}
-	}
-	const char *pEntityClass = pEntity->GetClassname();
-	for ( int i = 0; i < std::ssize( m_PassClassnames ); ++i )
-	{
-		if ( !V_strcmp( pEntityClass, m_PassClassnames[ i ] ) )
-			return false;
-	}
-
-	return CTraceFilterSimple::ShouldHitEntity( pHandleEntity, contentsMask );
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Add an entity to my list of entities to ignore in the trace
-//-----------------------------------------------------------------------------
-void CTraceFilterSimpleClassnameList::AddClassnameToIgnore( const char *pchClassname )
-{
-	m_PassClassnames.push_back( pchClassname );
-}
-
-CTraceFilterChain::CTraceFilterChain( ITraceFilter *pTraceFilter1, ITraceFilter *pTraceFilter2 )
-{
-	m_pTraceFilter1 = pTraceFilter1;
-	m_pTraceFilter2 = pTraceFilter2;
-}
-
-bool CTraceFilterChain::ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
-{
-	bool bResult1 = true;
-	bool bResult2 = true;
-
-	if ( m_pTraceFilter1 )
-		bResult1 = m_pTraceFilter1->ShouldHitEntity( pHandleEntity, contentsMask );
-
-	if ( m_pTraceFilter2 )
-		bResult2 = m_pTraceFilter2->ShouldHitEntity( pHandleEntity, contentsMask );
-
-	return ( bResult1 && bResult2 );
-}
+#endif // !CLIENT_DLL
 
 //-----------------------------------------------------------------------------
 // Sweeps against a particular model, using collision rules 
@@ -1056,6 +913,7 @@ float UTIL_WaterLevel( const Vector &position, float minz, float maxz )
 	return midUp.z;
 }
 
+#ifndef CLIENT_DLL
 //-----------------------------------------------------------------------------
 // Like UTIL_WaterLevel, but *way* less expensive.
 // I didn't replace UTIL_WaterLevel everywhere to avoid breaking anything.
@@ -1093,6 +951,7 @@ float UTIL_FindWaterSurface( const Vector &position, float minz, float maxz )
 
 	return tr.endpos.z;
 }
+#endif // !CLIENT_DLL
 
 
 void UTIL_StringToFloatArray( float *pVector, int count, const char *pString )
@@ -2037,57 +1896,13 @@ IterationRetval_t CFlaggedEntitiesEnum::EnumElement( IHandleEntity *pHandleEntit
 {
 #if defined( CLIENT_DLL )
 	IClientEntity *pClientEntity = cl_entitylist->GetClientEntityFromHandle( pHandleEntity->GetRefEHandle() );
-	C_BaseEntity *pEntity = pClientEntity ? pClientEntity->GetBaseEntity() : nullptr;
+	C_BaseEntity *pEntity = pClientEntity ? EntityCast<C_BaseEntity>( pClientEntity->GetBaseEntity() ) : nullptr;
 #else
 	CBaseEntity *pEntity = gEntList.GetBaseEntity( pHandleEntity->GetRefEHandle() );
 #endif
 	if ( pEntity )
 	{
 		if ( m_flagMask && !(pEntity->GetFlags() & m_flagMask) )	// Does it meet the criteria?
-			return ITERATION_CONTINUE;
-
-		if ( !AddToList( pEntity ) )
-			return ITERATION_STOP;
-	}
-
-	return ITERATION_CONTINUE;
-}
-
-
-//-----------------------------------------------------------------------------
-// class CHurtableEntitiesEnum
-//-----------------------------------------------------------------------------
-
-CHurtableEntitiesEnum::CHurtableEntitiesEnum( CBaseEntity **pList, int listMax )
-{
-	m_pList = pList;
-	m_listMax = listMax;
-	m_count = 0;
-}
-
-bool CHurtableEntitiesEnum::AddToList( CBaseEntity *pEntity )
-{
-	if ( m_count >= m_listMax )
-	{
-		contract_assert( false && "reached enumerated list limit.  Increase limit, decrease radius, or make it so entity flags will work for you" );
-		return false;
-	}
-	m_pList[m_count] = pEntity;
-	m_count++;
-	return true;
-}
-
-IterationRetval_t CHurtableEntitiesEnum::EnumElement( IHandleEntity *pHandleEntity )
-{
-#if defined( CLIENT_DLL )
-	IClientEntity *pClientEntity = cl_entitylist->GetClientEntityFromHandle( pHandleEntity->GetRefEHandle() );
-	C_BaseEntity *pEntity = pClientEntity ? pClientEntity->GetBaseEntity() : nullptr;
-#else
-	CBaseEntity *pEntity = gEntList.GetBaseEntity( pHandleEntity->GetRefEHandle() );
-#endif
-	if ( pEntity )
-	{
-		if ( ( pEntity->m_takedamage == DAMAGE_NO || pEntity->GetHealth() <= 0 ) && pEntity->GetMoveType() != MOVETYPE_VPHYSICS )	// Does it meet the criteria?
 			return ITERATION_CONTINUE;
 
 		if ( !AddToList( pEntity ) )

@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "vphysics_interface.h"
 #include "simple_keys.h"

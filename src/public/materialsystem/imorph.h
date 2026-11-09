@@ -49,13 +49,13 @@ class IMorph
 {
 public:
 	// Locks the morph, destroys any existing contents
-	virtual void Lock( float flFloatToFixedScale = 1.0f ) = 0;
+	void Lock( float flFloatToFixedScale = 1.0f );
 
 	// Adds a morph
-	virtual void AddMorph( const MorphVertexInfo_t &info ) = 0;
+	void AddMorph( const MorphVertexInfo_t &info );
 
 	// Unlocks the morph
-	virtual void Unlock(  ) = 0;
+	void Unlock(  );
 };
 
 

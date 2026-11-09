@@ -5,8 +5,6 @@
 // Purpose: Data types used inside constraints for the purpose of playing sounds
 //			during movement.
 
-import std;
-import ks.math;
 #include "soundenvelope.h"
 
 /** \brief Class to store a sampled history of velocity for an object -- used for certain sound calculations

@@ -27,13 +27,13 @@ class IMatchNetworkMsgController
 {
 public:
 	// To determine host Quality-of-Service
-	virtual MM_QOS_t GetQOS() = 0;
+	MM_QOS_t GetQOS();
 
-	virtual KeyValues * GetActiveServerGameDetails( KeyValues *pRequest ) = 0;
+	KeyValues * GetActiveServerGameDetails( KeyValues *pRequest );
 
-	virtual KeyValues * UnpackGameDetailsFromQOS( MM_GameDetails_QOS_t const *pvQosReply ) = 0;
+	KeyValues * UnpackGameDetailsFromQOS( MM_GameDetails_QOS_t const *pvQosReply );
 
-	virtual void PackageGameDetailsForQOS( KeyValues *pSettings, ks::byte_writer &buf ) = 0;
+	void PackageGameDetailsForQOS( KeyValues *pSettings, ks::byte_writer &buf );
 
-	virtual KeyValues * PackageGameDetailsForReservation( KeyValues *pSettings ) = 0;
+	KeyValues * PackageGameDetailsForReservation( KeyValues *pSettings );
 };

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2009 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -48,7 +46,7 @@ constexpr auto SF_ROPE_RESIZE = 1; // Automatically resize the rope
 // -------------------------------------------------------------------------------- //
 
 LINK_ENTITY_TO_CLASS( move_rope, CRopeKeyframe );
-LINK_ENTITY_TO_CLASS( keyframe_rope, CRopeKeyframe );
+LINK_ENTITY_TO_CLASS_ALIAS( keyframe_rope, CRopeKeyframe );
 
 IMPLEMENT_REFLECT_SERVERCLASS( CRopeKeyframe, DT_RopeKeyframe )
 
@@ -128,7 +126,7 @@ void CRopeKeyframe::SetEndPoint( CBaseEntity *pEndPoint, int attachment )
 	SetAttachmentPoint( m_hEndPoint.GetForModify(), m_iEndAttachment.GetForModify(), pEndPoint, attachment );
 }
 
-void CRopeKeyframe::SetParent( CBaseEntity *pNewParent, int iAttachment )
+void CRopeKeyframe::SetParent_Impl( CBaseEntity *pNewParent, int iAttachment )
 {
 	CBaseEntity *pCurParent = GetMoveParent();
 	if ( pCurParent )
@@ -144,7 +142,7 @@ void CRopeKeyframe::SetParent( CBaseEntity *pNewParent, int iAttachment )
 		pNewParent->SetTransmitState( FL_EDICT_ALWAYS );
 	}
 
-	BaseClass::SetParent( pNewParent, iAttachment );
+	BaseClass::SetParent_Impl( pNewParent, iAttachment );
 }
 
 void CRopeKeyframe::EnablePlayerWeaponAttach( bool bAttach )
@@ -326,9 +324,9 @@ void CRopeKeyframe::Init()
 }
 
 
-void CRopeKeyframe::Activate()
+void CRopeKeyframe::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	
 	if( !m_bCreatedFromMapFile )
 		return;
@@ -428,11 +426,11 @@ void CRopeKeyframe::DieAtNextRest( void )
 }
 
 
-void CRopeKeyframe::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
+void CRopeKeyframe::SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways )
 {
 	if ( !(*pInfo->m_pTransmitEdict)[ entindex() ] )
 	{	
-		BaseClass::SetTransmit( pInfo, bAlways );
+		BaseClass::SetTransmit_Impl( pInfo, bAlways );
 	
 		// Make sure our target ents are sent too.
 		CBaseEntity *pEnt = m_hStartPoint;
@@ -616,7 +614,7 @@ void CRopeKeyframe::NotifyPositionChanged( CBaseEntity *pEntity )
 //-----------------------------------------------------------------------------
 // Purpose: Take damage will break the rope
 //-----------------------------------------------------------------------------
-int CRopeKeyframe::OnTakeDamage( const CTakeDamageInfo &info )
+int CRopeKeyframe::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	// Only allow this if it's been marked
 	if( !(m_RopeFlags & ROPE_BREAKABLE) )
@@ -627,17 +625,17 @@ int CRopeKeyframe::OnTakeDamage( const CTakeDamageInfo &info )
 }
 
 
-void CRopeKeyframe::Precache()
+void CRopeKeyframe::Precache_Impl()
 {
 	m_iRopeMaterialModelIndex = PrecacheModel( STRING( m_strRopeMaterialModel ) );
 	PrecacheMaterial( "cable/rope_shadowdepth" );
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
-void CRopeKeyframe::Spawn( void ) 
+void CRopeKeyframe::Spawn_Impl( void ) 
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	Precache();
 }
 
@@ -672,7 +670,7 @@ void CRopeKeyframe::EnableWind( bool bEnable )
 	}
 }
 
-bool CRopeKeyframe::KeyValue( const char *szKeyName, const char *szValue )
+bool CRopeKeyframe::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if( stricmp( szKeyName, "Breakable" ) == 0 )
 	{
@@ -749,7 +747,7 @@ bool CRopeKeyframe::KeyValue( const char *szKeyName, const char *szValue )
 		}
 	}
 	
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 
@@ -767,7 +765,7 @@ void CRopeKeyframe::SetMaterial( const char *pName )
 	m_strRopeMaterialModel = AllocPooledString( pName );
 }
 
-int CRopeKeyframe::UpdateTransmitState()
+int CRopeKeyframe::UpdateTransmitState_Impl()
 {
 	// Certain entities like sprites and ropes are strewn throughout the level and they rarely change.
 	// For these entities, it's more efficient to transmit them once and then always leave them on

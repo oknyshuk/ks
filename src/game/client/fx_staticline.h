@@ -2,12 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
 #include "clientsideeffects.h"
 
-import std;
 
-class IMaterial;
 
 #define FXSTATICLINE_FLIP_HORIZONTAL	0x00000001	//Swaps the TC's so the texture is flipped horizontally
 #define FXSTATICLINE_FLIP_VERTICAL		0x00000002	//Swaps the TC's so the texture is flipped vertically

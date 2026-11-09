@@ -5,8 +5,6 @@
 
 // Purpose: Stub for item inventory system (econ system removed)
 
-import std;
-import ks.core;
 
 // Type definitions
 typedef uint64 globalindex_t;

@@ -3,7 +3,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "simple_physics.h"
-#include "networkvar.h"
+#include "declare_class.h"
 
 class CRopeSpring
 {

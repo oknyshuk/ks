@@ -53,9 +53,8 @@ struct AsyncTextureLoad_t
 // The material system implementation
 //-----------------------------------------------------------------------------
 
-class CMaterialSystem : public CTier2AppSystem< IMaterialSystemInternal >, public IShaderUtil
+class CMaterialSystem
 {
-	typedef CTier2AppSystem< IMaterialSystemInternal > BaseClass;
 public:
 
 	CMaterialSystem();
@@ -66,16 +65,16 @@ public:
 	//---------------------------------------------------------
 
 	//
-	// IAppSystem
+	// App system
 	//
-	virtual bool							Connect( CreateInterfaceFn factory );
-	virtual void							Disconnect();
-	virtual void *							QueryInterface( const char *pInterfaceName );
-	virtual InitReturnVal_t					Init();
-	virtual void							Shutdown();
-	virtual const AppSystemInfo_t *			GetDependencies( ) { return nullptr; }
-	virtual AppSystemTier_t					GetTier() { return APP_SYSTEM_TIER2; }
-	virtual void Reconnect( CreateInterfaceFn factory, const char *pInterfaceName )	{ BaseClass::Reconnect( factory, pInterfaceName ); }
+	bool							Connect( CreateInterfaceFn factory );
+	void							Disconnect();
+	void *							QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t					Init();
+	void							Shutdown();
+	const AppSystemInfo_t *			GetDependencies( ) { return nullptr; }
+	AppSystemTier_t					GetTier() { return APP_SYSTEM_TIER2; }
+	void Reconnect( CreateInterfaceFn factory, const char *pInterfaceName )	{ ReconnectInterface( factory, pInterfaceName ); }
 
 	CreateInterfaceFn						Init( const char* pShaderDLL,
 													IMaterialProxyFactory* pMaterialProxyFactory,
@@ -93,10 +92,6 @@ public:
 	void									ModShutdown();
 
 private:
-	// Used to dynamically load and unload the shader api
-	CreateInterfaceFn						CreateShaderAPI( const char* pShaderDLL );
-	void									DestroyShaderAPI();
-	
 	// Method to get at interfaces supported by the SHADDERAPI
 	void *									QueryShaderAPI( const char *pInterfaceName );
 
@@ -110,12 +105,12 @@ private:
 	void									ThreadAcquire( void );	// Tell QMS to acquire GL
 
 public:
-	virtual void							SetThreadMode( MaterialThreadMode_t nextThreadMode, int nServiceThread );
-	virtual MaterialThreadMode_t			GetThreadMode(); // current thread mode
-	virtual bool							IsRenderThreadSafe( );
-	virtual bool							AllowThreading( bool bAllow, int nServiceThread );
-	virtual void							ExecuteQueued();
-	virtual void                            OnDebugEvent( const char * pEvent = "" );
+	void							SetThreadMode( MaterialThreadMode_t nextThreadMode, int nServiceThread );
+	MaterialThreadMode_t			GetThreadMode(); // current thread mode
+	bool							IsRenderThreadSafe( );
+	bool							AllowThreading( bool bAllow, int nServiceThread );
+	void							ExecuteQueued();
+	void                            OnDebugEvent( const char * pEvent = "" );
 
 	//---------------------------------------------------------
 	// Component accessors
@@ -127,8 +122,6 @@ public:
 	CMatPaintmaps *							GetPaintmaps( void ) { return &m_Paintmaps; }
 
 	IMatRenderContext *						GetRenderContext();
-	IMatRenderContext *						CreateRenderContext( MaterialContextType_t type );
-	IMatRenderContext *						SetRenderContext( IMatRenderContext * );
 
 	const IMatRenderContextInternal *		GetRenderContextInternal() const	{ IMatRenderContextInternal *pRenderContext = m_pRenderContext; return ( pRenderContext ) ? pRenderContext : &m_HardwareRenderContext; }
 	IMatRenderContextInternal *				GetRenderContextInternal()			{ IMatRenderContextInternal *pRenderContext = m_pRenderContext; return ( pRenderContext ) ? pRenderContext : &m_HardwareRenderContext; }
@@ -136,7 +129,7 @@ public:
 	const CMaterialDict *					GetMaterialDict() const		{ return &m_MaterialDict; }
 	CMaterialDict *							GetMaterialDict()			{ return &m_MaterialDict; }
 
-	virtual void							ReloadFilesInList( IFileList *pFilesToReload );
+	void							ReloadFilesInList( IFileList *pFilesToReload );
 
 public:
 	//---------------------------------------------------------
@@ -144,16 +137,16 @@ public:
 	//---------------------------------------------------------
 
 	// IMaterialSystem
-	virtual IMaterialSystemHardwareConfig *	GetHardwareConfig( const char *pVersion, int *returnCode );
+	IMaterialSystemHardwareConfig *	GetHardwareConfig( const char *pVersion, int *returnCode );
 
 	// Get the current config for this video card (as last set by control panel or the default if not)
-	virtual bool							UpdateConfig( bool forceUpdate );
-	virtual bool							OverrideConfig( const MaterialSystem_Config_t &config, bool bForceUpdate );
+	bool							UpdateConfig( bool forceUpdate );
+	bool							OverrideConfig( const MaterialSystem_Config_t &config, bool bForceUpdate );
 	const MaterialSystem_Config_t &			GetCurrentConfigForVideoCard() const;
 
 	// Gets *recommended* configuration information associated with the display card and dxsupport.
-	virtual bool							GetRecommendedVideoConfig( KeyValues *pKeyValues );
-	virtual bool							GetRecommendedConfigurationInfo( int nDXLevel, KeyValues * pKeyValues );
+	bool							GetRecommendedVideoConfig( KeyValues *pKeyValues );
+	bool							GetRecommendedConfigurationInfo( int nDXLevel, KeyValues * pKeyValues );
 
 	// IShaderUtil
 	MaterialSystem_Config_t &				GetConfig();
@@ -230,7 +223,7 @@ public:
 	// -----------------------------------------------------------
 	void									BeginFrame( float frameTime );
 	void									EndFrame();
-	virtual bool							IsInFrame( ) const;
+	bool							IsInFrame( ) const;
 	void									Flush( bool flushHardware = false );
 	void									SwapBuffers();
 	uint32									GetCurrentFrameCount();
@@ -262,20 +255,20 @@ public:
 	void									RestoreShaderObjects( CreateInterfaceFn shaderFactory, int nChangeFlags = 0 );
 
 	// Installs a function to be called when we need to delete objects at the end of the render frame
-	virtual void							AddEndFrameCleanupFunc( EndFrameCleanupFunc_t func );
-	virtual void							RemoveEndFrameCleanupFunc( EndFrameCleanupFunc_t func );
+	void							AddEndFrameCleanupFunc( EndFrameCleanupFunc_t func );
+	void							RemoveEndFrameCleanupFunc( EndFrameCleanupFunc_t func );
 
 	// Gets called when the level is shuts down, will call the registered callback
-	virtual void							OnLevelShutdown();
+	void							OnLevelShutdown();
 	// Installs a function to be called when the level is shuts down
-	virtual bool							AddOnLevelShutdownFunc( OnLevelShutdownFunc_t func, void * pUserData );
-	virtual bool							RemoveOnLevelShutdownFunc( OnLevelShutdownFunc_t func, void * pUserData );
+	bool							AddOnLevelShutdownFunc( OnLevelShutdownFunc_t func, void * pUserData );
+	bool							RemoveOnLevelShutdownFunc( OnLevelShutdownFunc_t func, void * pUserData );
 
 	// Installs a function to be called when we need to perform operation before next rendering context is started
-	virtual void							AddEndFramePriorToNextContextFunc( EndFramePriorToNextContextFunc_t func );
-	virtual void							RemoveEndFramePriorToNextContextFunc( EndFramePriorToNextContextFunc_t func );
+	void							AddEndFramePriorToNextContextFunc( EndFramePriorToNextContextFunc_t func );
+	void							RemoveEndFramePriorToNextContextFunc( EndFramePriorToNextContextFunc_t func );
 
-	virtual void							OnLevelLoadingComplete();
+	void							OnLevelLoadingComplete();
 
 	// Release temporary HW memory...
 	void									ResetTempHWMemory( bool bExitingLevel = false );
@@ -299,13 +292,12 @@ public:
 	IMaterialProxyFactory*					GetMaterialProxyFactory();
 	void									SetMaterialProxyFactory( IMaterialProxyFactory* pFactory );
 
-	IClientMaterialSystem*					GetClientMaterialSystemInterface();
 
 	// -----------------------------------------------------------
 	// Refresh the spinner on load screens
 	// -----------------------------------------------------------
 	void									RefreshFrontBufferNonInteractive();
-	virtual uint32 GetFrameTimestamps( ApplicationPerformanceCountersInfo_t &apci, ApplicationInstantCountersInfo_t & aici );
+	uint32 GetFrameTimestamps( ApplicationPerformanceCountersInfo_t &apci, ApplicationInstantCountersInfo_t & aici );
 
 	bool									CanDownloadTextures() const;
 
@@ -323,13 +315,6 @@ public:
 	bool                        CanUseEditorMaterials( void ) const;
 
 	int                         GetConfigurationFlags( void ) const;
-
-
-	// -----------------------------------------------------------
-	// Stub mode mode
-	// -----------------------------------------------------------
-	void									SetInStubMode( bool bInStubMode );
-	bool									IsInStubMode();
 
 
 	//---------------------------------------------------------
@@ -404,7 +389,7 @@ public:
 	// Create new materials
 	IMaterial *								CreateMaterial( const char *pMaterialName, KeyValues *pVMTKeyValues );
 	IMaterial *								FindMaterial( const char *materialName, const char *pTextureGroupName, bool complain = true, const char *pComplainPrefix = nullptr );
-	virtual IMaterial *						FindProceduralMaterial( const char *pMaterialName, const char *pTextureGroupName, KeyValues *pVMTKeyValues = nullptr );
+	IMaterial *						FindProceduralMaterial( const char *pMaterialName, const char *pTextureGroupName, KeyValues *pVMTKeyValues = nullptr );
 	const char *							GetForcedTextureLoadPathID() { return m_pForcedTextureLoadPathID; }
 
 	bool									LoadKeyValuesFromVMTFile( KeyValues &vmtKeyValues, const char *pMaterialName, bool bUsesUNCFilename  );
@@ -443,8 +428,8 @@ public:
 																		ImageFormat			fmt, 
 																		int					nFlags );
 
-   	virtual ICustomMaterialManager			*GetCustomMaterialManager();
-	virtual ICompositeTextureGenerator		*GetCompositeTextureGenerator();
+   	ICustomMaterialManager			*GetCustomMaterialManager();
+	ICompositeTextureGenerator		*GetCompositeTextureGenerator();
 
 
 	//
@@ -599,9 +584,9 @@ public:
 	void DrawClearBufferQuad( unsigned char a1, unsigned char a2, unsigned char a3, unsigned char a4, bool a5, bool a6, bool a7 )	{ (&m_HardwareRenderContext)->DrawClearBufferQuad( a1, a2, a3, a4, a5, a6, a7 ); };
 	int MaxHWMorphBatchCount()	const { return (g_pMorphMgr)->MaxHWMorphBatchCount(); };
 	void GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* a1 )	{ (g_pColorCorrectionSystem)->GetCurrentColorCorrection( a1 ); };
-	virtual ShaderAPITextureHandle_t		GetShaderAPITextureBindHandle( ITexture *pTexture, int nFrameVar, int nTextureChannel = 0 );
+	ShaderAPITextureHandle_t			GetShaderAPITextureBindHandle( ITexture *pTexture, int nFrameVar, int nTextureChannel = 0 );
 
-	virtual void SpinPresent( uint nFrames );
+	void SpinPresent( uint nFrames );
 
 	MaterialLock_t							Lock();
 	void									Unlock( MaterialLock_t );
@@ -609,10 +594,10 @@ public:
 	uint									GetRenderThreadId() const { return m_nRenderThreadID; }
 	void									UnbindMaterial( IMaterial *pMaterial );
 
-	virtual void							CompactMemory();
+	void							CompactMemory();
 
 	// Get stats on GPU memory usage
-	virtual void							GetGPUMemoryStats( GPUMemoryStats &stats );
+	void							GetGPUMemoryStats( GPUMemoryStats &stats );
 
 	bool									IsLevelLoadingComplete() const;
 
@@ -636,6 +621,7 @@ private:
 	CConCommandMemberAccessor< CMaterialSystem > m_DebugPrintAspectRatioInfo_register{ this, "mat_showaspectratioinfo", &CMaterialSystem::DebugPrintAspectRatioInfo, "Spew info about the hardware aspect ratio", FCVAR_DEVELOPMENTONLY };
 
 
+	friend class IShaderUtil;
 	friend void* InstantiateMaterialSystemV76Interface();
 	friend CMaterialSystem *CMatLightmaps::GetMaterialSystem() const;
 	friend CMaterialSystem *CMatPaintmaps::GetMaterialSystem() const;
@@ -669,7 +655,6 @@ private:
 	//---------------------------------
 
 	char *									m_pShaderDLL;
-	CSysModule *							m_ShaderHInst; // Used to dynamically load the shader DLL
 	CreateInterfaceFn						m_ShaderAPIFactory;
 
 	int										m_nAdapter;
@@ -680,7 +665,6 @@ private:
 	//---------------------------------
 
 	IMaterialProxyFactory *					m_pMaterialProxyFactory;
-	IClientMaterialSystem *					m_pClientMaterialSystemInterface;
 	
 	//---------------------------------
 	// Callback methods for releasing + restoring video memory
@@ -771,7 +755,6 @@ private:
 	int	  								    m_nAllocatingRenderTargets;
 	bool                                    m_bDisableRenderTargetAllocationForever;
 
-	bool									m_bInStubMode;
 	bool									m_bGeneratedConfig;
 	bool									m_bInFrame;
 	bool									m_bForcedSingleThreaded;

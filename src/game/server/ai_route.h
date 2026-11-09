@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
 #include "ai_basenpc.h"
-import std;
 #include "ai_network.h"
 #include "ai_node.h"
 #include "ai_waypoint.h"

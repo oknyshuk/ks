@@ -10,7 +10,7 @@ class CRuleEntity : public CBaseEntity
 	public:
 	DECLARE_CLASS( CRuleEntity, CBaseEntity );
 
-	void	Spawn( void );
+	void	Spawn_Impl( void );
 
 	DECLARE_DATADESC();
 
@@ -33,7 +33,7 @@ class CRulePointEntity : public CRuleEntity
 	DECLARE_CLASS( CRulePointEntity, CRuleEntity );
 
 	int		m_Score;
-	void		Spawn( void );
+	void		Spawn_Impl( void );
 };
 
 class CGameCoopMissionManager : public CRulePointEntity
@@ -43,8 +43,9 @@ class CGameCoopMissionManager : public CRulePointEntity
 	DECLARE_ENT_SCRIPTDESC();
 	DECLARE_DATADESC();
 
-	void	Spawn( void );
-	bool	KeyValue( const char *szKeyName, const char *szValue );
+	void	Spawn_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
 
 	int		GetWaveNumber( void );
 	void	SetWaveCompleted( void );
@@ -81,11 +82,12 @@ class CGamePlayerEquip : public CRulePointEntity
 	[[= ks::reflect::Input{ .name = "TriggerForAllPlayers", .type = FIELD_VOID } ]] void		InputTriggerForAllPlayers( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "TriggerForActivatedPlayer", .type = FIELD_STRING } ]] void		InputTriggerForActivatedPlayer( inputdata_t &inputdata );
 
-	bool		KeyValue( const char *szKeyName, const char *szValue );
+	using BaseClass::KeyValue_Impl;
+	bool		KeyValue_Impl( const char *szKeyName, const char *szValue );
 	void		TriggerForAllPlayers( void );
 	void		TriggerForActivatedPlayer( CBasePlayer *pPlayer, const char *szWeapon );
-	void		Touch( CBaseEntity *pOther );
-	void		Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void		Touch_Impl( CBaseEntity *pOther );
+	void		Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	inline bool	UseOnly( void ) { return ( m_spawnflags & SF_PLAYEREQUIP_USEONLY ) ? true : false; }
 	inline bool	StripFirst( void ) { return ( m_spawnflags & SF_PLAYEREQUIP_STRIPFIRST ) ? true : false; }

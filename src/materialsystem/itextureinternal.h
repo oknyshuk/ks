@@ -22,45 +22,53 @@ enum RenderTargetType_t
 	RENDER_TARGET_ONLY_DEPTH = 4,
 };
 
+// The texture implementations; every texture is created as exactly one of them (ctexture.cpp).
+// ITexture and ITextureInternal forward each call to the implementation named by the kind.
+enum class TextureKind : unsigned char
+{
+	Standard,
+	MultiRenderTarget,
+	Reference,
+};
+
 class ITextureInternal : public ITexture
 {
 public:
+	TextureKind Kind() const { return m_Kind; }
 
-	virtual void Bind( Sampler_t sampler, TextureBindFlags_t nBindFlags ) = 0;
-	virtual void Bind( Sampler_t sampler1, TextureBindFlags_t nBindFlags, int nFrame, Sampler_t sampler2 = SHADER_SAMPLER_INVALID ) = 0;
 
-	virtual void GetReflectivity( Vector& reflectivity ) = 0;
+	void Bind( Sampler_t sampler, TextureBindFlags_t nBindFlags );
+	void Bind( Sampler_t sampler1, TextureBindFlags_t nBindFlags, int nFrame, Sampler_t sampler2 = SHADER_SAMPLER_INVALID );
+
+	void GetReflectivity( Vector& reflectivity );
 
 	// Set this as the render target, return false for failure
-	virtual bool SetRenderTarget( int nRenderTargetID ) = 0;
+	bool SetRenderTarget( int nRenderTargetID );
 
 	// Releases the texture's hw memory
-	virtual void Release() = 0;
+	void Release();
 
 	// Called before Download() on restore. Gives render targets a change to change whether or
 	// not they force themselves to have a separate depth buffer due to AA.
-	virtual void OnRestore() = 0;
+	void OnRestore();
 
 	// Resets the texture's filtering and clamping mode
-	virtual void SetFilteringAndClampingMode() = 0;
+	void SetFilteringAndClampingMode();
 
 	// Used by tools.... loads up the non-fallback information about the texture 
-	virtual void Precache() = 0;
+	void Precache();
 
 	// Stretch blit the framebuffer into this texture.
-	virtual void CopyFrameBufferToMe( int nRenderTargetID = 0, Rect_t *pSrcRect = nullptr, Rect_t *pDstRect = nullptr ) = 0;
-	virtual void CopyMeToFrameBuffer( int nRenderTargetID = 0, Rect_t *pSrcRect = nullptr, Rect_t *pDstRect = nullptr ) = 0;
+	void CopyFrameBufferToMe( int nRenderTargetID = 0, Rect_t *pSrcRect = nullptr, Rect_t *pDstRect = nullptr );
+	void CopyMeToFrameBuffer( int nRenderTargetID = 0, Rect_t *pSrcRect = nullptr, Rect_t *pDstRect = nullptr );
 
-	virtual ITexture *GetEmbeddedTexture( int nIndex ) = 0;
+	ITexture *GetEmbeddedTexture( int nIndex );
 
 	// Get the shaderapi texture handle associated w/ a particular frame
-	virtual ShaderAPITextureHandle_t GetTextureHandle( int nFrame, int nTextureChannel =0 ) = 0;
+	ShaderAPITextureHandle_t GetTextureHandle( int nFrame, int nTextureChannel =0 );
 
-	virtual ~ITextureInternal()
-	{
-	}
 
-	virtual ImageFormat GetImageFormat() const = 0;
+	ImageFormat GetImageFormat() const;
 
 	// Creates a new texture
 	static ITextureInternal *CreateFileTexture( const char *pFileName, const char *pTextureGroupName );
@@ -103,31 +111,41 @@ public:
 	static void Destroy( ITextureInternal *pTexture );
 
 	// Set this as the render target, return false for failure
-	virtual bool SetRenderTarget( int nRenderTargetID, ITexture* pDepthTexture ) = 0;
+	bool SetRenderTarget( int nRenderTargetID, ITexture* pDepthTexture );
 
 	// Bind this to a vertex texture sampler
-	virtual void BindVertexTexture( VertexTextureSampler_t sampler, int frameNum = 0 ) = 0;
+	void BindVertexTexture( VertexTextureSampler_t sampler, int frameNum = 0 );
 
-	virtual void MarkAsPreloaded( bool bSet ) = 0;
-	virtual bool IsPreloaded() const = 0;
+	void MarkAsPreloaded( bool bSet );
+	bool IsPreloaded() const;
 
-	virtual void MarkAsExcluded( bool bSet, int nDimensionsLimit, bool bMarkAsTrumpedExclude = false ) = 0;
-	virtual bool UpdateExcludedState() = 0;
+	void MarkAsExcluded( bool bSet, int nDimensionsLimit, bool bMarkAsTrumpedExclude = false );
+	bool UpdateExcludedState();
 
-	virtual bool IsTempRenderTarget( void ) const = 0;
+	bool IsTempRenderTarget( void ) const;
 
 	// Reload any files the texture is responsible for.
-	virtual void ReloadFilesInList( IFileList *pFilesToReload ) = 0;
+	void ReloadFilesInList( IFileList *pFilesToReload );
 
-	virtual bool IsMultiRenderTarget( void ) = 0;
+	bool IsMultiRenderTarget( void );
 
 
-	virtual bool MarkAsTempExcluded( bool bSet, int nExcludedDimensionLimit ) = 0;
+	bool MarkAsTempExcluded( bool bSet, int nExcludedDimensionLimit );
 
-	virtual bool IsForceExcluded() const = 0;
-	virtual bool ClearForceExclusion() = 0;
+	bool IsForceExcluded() const;
+	bool ClearForceExclusion();
 
-	virtual bool IsAsyncDone() const = 0;
+	bool IsAsyncDone() const;
+
+protected:
+	explicit ITextureInternal( TextureKind kind ) : m_Kind( kind ) {}
+
+	// A destructor calls the functions of its own class, not of a more derived one; a base class
+	// destructor uses this to dispatch the way virtual calls did.
+	void BecomeKind( TextureKind kind ) { m_Kind = kind; }
+
+private:
+	TextureKind m_Kind;
 };
 
 inline bool IsTextureInternalEnvCubemap( const ITextureInternal *pTexture )

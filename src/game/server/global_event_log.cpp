@@ -3,8 +3,6 @@
 
 // Purpose: work in progress
 
-import std;
-import ks.tier1;
 #include "shareddefs.h"
 #include "util.h"
 #include "global_event_log.h"

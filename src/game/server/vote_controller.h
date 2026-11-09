@@ -119,8 +119,8 @@ public:
 		CAST_FAIL_SYSTEM_ERROR
 	};
 
-	virtual void	Spawn( void );
-	virtual int		UpdateTransmitState( void );
+	void	Spawn_Impl( void );
+	int		UpdateTransmitState_Impl( void );
 
 	bool			SetupVote( int iEntIndex );	// This creates a list of issues for the UI
 	bool			CreateVote( int iEntIndex, const char *pszTypeString, const char *pszDetailString );	// This is what the UI passes in

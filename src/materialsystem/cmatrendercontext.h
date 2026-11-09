@@ -37,10 +37,15 @@ inline constexpr auto MAX_RENDER_TARGETS = 4;
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-class CMatRenderContextBase : public CRefCounted1<IMatRenderContextInternal>
+class CMatRenderContextBase : public IMatRenderContextInternal
 {
+	friend class IMatRenderContext;
+	friend class IMatRenderContextInternal;
 public:
-	virtual void							InitializeFrom( CMatRenderContextBase *pInitialState );
+	int										AddRef()				{ return CRefMT::Increment( &m_iRefs ); }
+	int										Release();
+
+	void							InitializeFrom( CMatRenderContextBase *pInitialState );
 
 	InitReturnVal_t							Init();
 	void									Shutdown();
@@ -55,13 +60,13 @@ public:
 	ITexture *								GetRenderTargetEx( int nRenderTargetID );
 
 	IMaterialInternal*						GetCurrentMaterialInternal() const								{ return m_pCurrentMaterial;	}	
-	virtual void							SetCurrentMaterialInternal(IMaterialInternal* pCurrentMaterial)	{
+	void							SetCurrentMaterialInternal(IMaterialInternal* pCurrentMaterial)	{
 																												m_pCurrentMaterial = pCurrentMaterial;
 																												contract_assert( (m_pCurrentMaterial == nullptr) || ((IMaterialInternal *)m_pCurrentMaterial)->IsRealTimeVersion() );
 																											}
 	IMaterial *								GetCurrentMaterial()											{ return GetCurrentMaterialInternal(); }
-	virtual void *							GetCurrentProxy()												{ return m_pCurrentProxyData; }
-	virtual void							SetCurrentProxy( void *pProxyData )								{ m_pCurrentProxyData = pProxyData; }
+	void *							GetCurrentProxy()												{ return m_pCurrentProxyData; }
+	void							SetCurrentProxy( void *pProxyData )								{ m_pCurrentProxyData = pProxyData; }
 
 	void									Bind( IMaterial *material, void *proxyData = nullptr );
 	void									BindLightmapPage( int lightmapPageID );
@@ -115,32 +120,32 @@ public:
 	ShaderAPITextureHandle_t				GetLightmapTexture( int nLightmapPage );
 	ShaderAPITextureHandle_t				GetPaintmapTexture( int nLightmapPage );
 
-	virtual void							UpdateHeightClipUserClipPlane( void ) {}
-	virtual void							ApplyCustomClipPlanes( void ) {}
+	void							UpdateHeightClipUserClipPlane( void ) {}
+	void							ApplyCustomClipPlanes( void ) {}
 
 	float									ComputePixelDiameterOfSphere( const Vector& origin, float flRadius );
 	float									ComputePixelWidthOfSphere( const Vector& origin, float flRadius ); // FIXME: REMOVE THIS FUNCTION!
 
-	virtual void							GetWorldSpaceCameraPosition( Vector *pCameraPos );
-	virtual void							GetWorldSpaceCameraVectors( Vector *pVecForward, Vector *pVecRight, Vector *pVecUp );
+	void							GetWorldSpaceCameraPosition( Vector *pCameraPos );
+	void							GetWorldSpaceCameraVectors( Vector *pVecForward, Vector *pVecRight, Vector *pVecUp );
 
 	Vector									GetToneMappingScaleLinear();
 
 	// Inherited from IMaterialSystemInternal
 	int										GetLightmapPage( void );
 
-	virtual void *							LockRenderData( int nSizeInBytes );
-	virtual void							UnlockRenderData( void *pData );
-	virtual void							AddRefRenderData();
-	virtual void							ReleaseRenderData();
-	virtual bool							IsRenderData( const void *pData ) const;
+	void *							LockRenderData( int nSizeInBytes );
+	void							UnlockRenderData( void *pData );
+	void							AddRefRenderData();
+	void							ReleaseRenderData();
+	bool							IsRenderData( const void *pData ) const;
 	void									MarkRenderDataUnused( bool bFrameEnd );
 	int										RenderDataSizeUsed() const;
 	
 	// debugging
-	virtual void							PrintfVA( char *fmt, std::va_list vargs );
-	virtual void							Printf( char *fmt, ... );
-	virtual	float							Knob( char *knobname, float *setvalue = nullptr );
+	void							PrintfVA( char *fmt, std::va_list vargs );
+	void							Printf( char *fmt, ... );
+	float							Knob( char *knobname, float *setvalue = nullptr );
 	
 protected:
 	enum MatrixStackFlags_t
@@ -187,12 +192,15 @@ protected:
 	};
 
 protected:
-	CMatRenderContextBase( );
-	virtual void CommitRenderTargetAndViewport( void ) {}
+	explicit CMatRenderContextBase( MatRenderContextKind kind );
+	void CommitRenderTargetAndViewport( void ) {}
 	void RecomputeViewState();
 	void RecomputeViewProjState();
 	void CurrentMatrixChanged();
-	virtual void OnRenderDataUnreferenced() {}
+	void OnRenderDataUnreferenced() {}
+
+private:
+	int									m_iRefs;
 
 protected:
 	IMaterialInternal *					m_pCurrentMaterial;
@@ -260,6 +268,8 @@ protected:
 
 class CMatRenderContext : public CMatRenderContextBase
 {
+	friend class IMatRenderContext;
+	friend class IMatRenderContextInternal;
 	typedef CMatRenderContextBase BaseClass;
 
 public:
@@ -285,7 +295,7 @@ public:
 	IMesh *									CreateStaticMesh( VertexFormat_t vertexFormat, const char *pTextureBudgetGroup, IMaterial * pMaterial = nullptr, VertexStreamSpec_t *pStreamSpec = nullptr );
 	void DestroyStaticMesh( IMesh * a1 )	{ (g_pShaderDevice)->DestroyStaticMesh( a1 ); };
 	IMesh *									GetDynamicMesh( bool buffered, IMesh* pVertexOverride = 0, IMesh* pIndexOverride = 0, IMaterial *pAutoBind = 0 );
-	virtual IMesh*							GetDynamicMeshEx( VertexFormat_t vertexFormat, bool bBuffered = true, IMesh* pVertexOverride = 0, IMesh* pIndexOverride = 0, IMaterial *pAutoBind = 0 );
+	IMesh*							GetDynamicMeshEx( VertexFormat_t vertexFormat, bool bBuffered = true, IMesh* pVertexOverride = 0, IMesh* pIndexOverride = 0, IMaterial *pAutoBind = 0 );
 	IMesh * GetFlexMesh()	{ return (g_pShaderAPI)->GetFlexMesh(); };
 
 // ------------ New Vertex/Index Buffer interface ----------------------------
@@ -385,7 +395,7 @@ public:
 	// Gets/sets viewport
 	void									Viewport( int x, int y, int width, int height );
 	void									GetViewport( int& x, int& y, int& width, int& height ) const;
-	virtual void							DepthRange( float zNear, float zFar );
+	void							DepthRange( float zNear, float zFar );
 
 	// Selection mode methods
 	int SelectionMode( bool a1 )	{ return (g_pShaderAPI)->SelectionMode( a1 ); };
@@ -429,10 +439,10 @@ public:
 	void									BindStandardTexture( Sampler_t sampler, TextureBindFlags_t nBindFlags, StandardTextureId_t id );
 	ShaderAPITextureHandle_t				GetStandardTexture( StandardTextureId_t id );
 
-	virtual void							BindStandardVertexTexture( VertexTextureSampler_t sampler, StandardTextureId_t id );
-	virtual void							GetStandardTextureDimensions( int *pWidth, int *pHeight, StandardTextureId_t id );
+	void							BindStandardVertexTexture( VertexTextureSampler_t sampler, StandardTextureId_t id );
+	void							GetStandardTextureDimensions( int *pWidth, int *pHeight, StandardTextureId_t id );
 
-	virtual float							GetSubDHeight();
+	float							GetSubDHeight();
 
 	// By default, the material system applies the VIEW and PROJECTION matrices	to the user clip
 	// planes (which are specified in world space) to generate projection-space user clip planes
@@ -454,16 +464,16 @@ public:
 
 	bool									InFlashlightMode() const;
 	bool									IsRenderingPaint() const;
-	virtual void							SetFlashlightMode( bool bEnable );
-	virtual void							SetRenderingPaint( bool bEnable );
+	void							SetFlashlightMode( bool bEnable );
+	void							SetRenderingPaint( bool bEnable );
 	bool									GetFlashlightMode( ) const;
 
-	virtual bool							IsCascadedShadowMapping() const;
-	virtual void							SetCascadedShadowMapping( bool bEnable );
-	virtual void							SetCascadedShadowMappingState( const CascadedShadowMappingState_t &state, ITexture *pDepthTextureAtlas );
+	bool							IsCascadedShadowMapping() const;
+	void							SetCascadedShadowMapping( bool bEnable );
+	void							SetCascadedShadowMappingState( const CascadedShadowMappingState_t &state, ITexture *pDepthTextureAtlas );
 	
-	virtual bool							IsCullingEnabledForSinglePassFlashlight() const;
-	virtual void							EnableCullingForSinglePassFlashlight( bool bEnable );	
+	bool							IsCullingEnabledForSinglePassFlashlight() const;
+	void							EnableCullingForSinglePassFlashlight( bool bEnable );	
 
 	void									SetFlashlightState( const FlashlightState_t &state, const VMatrix &worldToTexture );
 	void									SetFlashlightStateEx( const FlashlightState_t &state, const VMatrix &worldToTexture, ITexture *pFlashlightDepthTexture );
@@ -560,15 +570,15 @@ public:
 	void BeginFrame()	{ (g_pShaderAPI)->BeginFrame(); };
 	void EndFrame()	{ (g_pShaderAPI)->EndFrame(); };
 
-	virtual void							BeginMorphAccumulation();
-	virtual void							EndMorphAccumulation();
-	virtual void							AccumulateMorph( IMorph* pMorph, int nMorphCount, const MorphWeight_t* pWeights );
-	virtual bool							GetMorphAccumulatorTexCoord( Vector2D *pTexCoord, IMorph *pMorph, int nVertex );
+	void							BeginMorphAccumulation();
+	void							EndMorphAccumulation();
+	void							AccumulateMorph( IMorph* pMorph, int nMorphCount, const MorphWeight_t* pWeights );
+	bool							GetMorphAccumulatorTexCoord( Vector2D *pTexCoord, IMorph *pMorph, int nVertex );
 
 	// Subdivision surface interface
-	virtual int								GetSubDBufferWidth();
-	virtual float							*LockSubDBuffer( int nNumRows );
-	virtual void							UnlockSubDBuffer();
+	int								GetSubDBufferWidth();
+	float							*LockSubDBuffer( int nNumRows );
+	void							UnlockSubDBuffer();
 
 	void PushDeformation( const DeformationBase_t * a1 )	{ (g_pShaderAPI)->PushDeformation( a1 ); };
 	void PopDeformation()	{ (g_pShaderAPI)->PopDeformation(); };
@@ -585,24 +595,24 @@ public:
 	void ResetLookupWeights()	{ (g_pColorCorrectionSystem)->ResetLookupWeights(); };
 	void SetResetable( ColorCorrectionHandle_t a1, bool a2 )	{ (g_pColorCorrectionSystem)->SetResetable( a1, a2 ); };
 
-	virtual void							SetFullScreenDepthTextureValidityFlag( bool bIsValid );
+	void							SetFullScreenDepthTextureValidityFlag( bool bIsValid );
 
 
 
 	void AntiAliasingHint( int a1 )	{ (g_pShaderAPI)->AntiAliasingHint( a1 ); };
 
 	// A special path used to tick the front buffer while loading on the 360
-	virtual void							SetNonInteractiveLogoTexture( ITexture *pTexture, float flNormalizedX, float flNormalizedY, float flNormalizedW, float flNormalizedH );
-	virtual void							SetNonInteractivePacifierTexture( ITexture *pTexture, float flNormalizedX, float flNormalizedY, float flNormalizedSize );
-	virtual void							SetNonInteractiveTempFullscreenBuffer( ITexture *pTexture, MaterialNonInteractiveMode_t mode );
-	virtual void							EnableNonInteractiveMode( MaterialNonInteractiveMode_t mode );
-	virtual void			                RefreshFrontBufferNonInteractive();
+	void							SetNonInteractiveLogoTexture( ITexture *pTexture, float flNormalizedX, float flNormalizedY, float flNormalizedW, float flNormalizedH );
+	void							SetNonInteractivePacifierTexture( ITexture *pTexture, float flNormalizedX, float flNormalizedY, float flNormalizedSize );
+	void							SetNonInteractiveTempFullscreenBuffer( ITexture *pTexture, MaterialNonInteractiveMode_t mode );
+	void							EnableNonInteractiveMode( MaterialNonInteractiveMode_t mode );
+	void			                RefreshFrontBufferNonInteractive();
 
 	void FlipCulling( bool a1 )	{ (g_pShaderAPI)->FlipCulling( a1 ); };
 
 //	DELEGATE_TO_OBJECT_1V(					EnableSinglePassFlashlightMode, bool, g_pShaderAPI );
-	virtual void							EnableSinglePassFlashlightMode( bool bEnable );	
-	virtual bool							SinglePassFlashlightModeEnabled() const;
+	void							EnableSinglePassFlashlightMode( bool bEnable );	
+	bool							SinglePassFlashlightModeEnabled() const;
 
 	void DrawInstances( int a1, const MeshInstanceData_t * a2 )	{ (g_pShaderAPI)->DrawInstances( a1, a2 ); };
 
@@ -611,17 +621,17 @@ public:
 	//--------------------------------------------------------
 	// debug logging - no-op in queued context
 	//--------------------------------------------------------
-	virtual void							Printf( char *fmt, ... );
-	virtual void							PrintfVA( char *fmt, std::va_list vargs );;
-	virtual float							Knob( char *knobname, float *setvalue=nullptr );	
+	void							Printf( char *fmt, ... );
+	void							PrintfVA( char *fmt, std::va_list vargs );;
+	float							Knob( char *knobname, float *setvalue=nullptr );	
 
 
 
 	//---------------------------------------------------------
 	// RocketUI rendering
 	//--------------------------------------------------------
-	virtual void RenderRocketHUD(void *cmdList) { if (g_pRocketUI) g_pRocketUI->RenderHUDFrame(cmdList); }
-	virtual void RenderRocketMenu(void *cmdList) { if (g_pRocketUI) g_pRocketUI->RenderMenuFrame(cmdList); }
+	void RenderRocketHUD(void *cmdList) { if (g_pRocketUI) g_pRocketUI->RenderHUDFrame(cmdList); }
+	void RenderRocketMenu(void *cmdList) { if (g_pRocketUI) g_pRocketUI->RenderMenuFrame(cmdList); }
 
 	ColorCorrectionHandle_t FindLookup( const char * a1 )	{ return (g_pColorCorrectionSystem)->FindLookup( a1 ); };
 
@@ -653,7 +663,7 @@ protected:
 	void BindBumpedFullbrightLightmap( Sampler_t stage, TextureBindFlags_t nBindFlags );
 	void BindPaintTexture( Sampler_t stage, TextureBindFlags_t nBindFlags );
 
-	virtual void OnRenderDataUnreferenced();
+	void OnRenderDataUnreferenced();
 
 	const CMatLightmaps *GetLightmaps() const;
 	CMatLightmaps *GetLightmaps();

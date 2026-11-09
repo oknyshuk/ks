@@ -10,15 +10,16 @@ class CMatchEventsSubscription : public IMatchEventsSubscription
 {
 	// Methods of IMatchEventsSubscription
 public:
-	virtual void Subscribe( IMatchEventsSink *pSink );
-	virtual void Unsubscribe( IMatchEventsSink *pSink );
+	void Subscribe( const void *pOwner, MatchEventHandler_t handler );
+	void Unsubscribe( const void *pOwner );
 
-	virtual void BroadcastEvent( KeyValues *pEvent );
+	void BroadcastEvent( KeyValues *pEvent );
 
-	virtual void RegisterEventData( KeyValues *pEventData );
-	virtual KeyValues * GetEventData( char const *szEventDataKey );
+	void RegisterEventData( KeyValues *pEventData );
+	KeyValues * GetEventData( char const *szEventDataKey );
 
 public:
+	int FindSink( const void *pOwner ) const;
 	bool IsBroacasting() const { return m_bBroadcasting; }
 	void Shutdown();
 
@@ -27,7 +28,14 @@ public:
 	~CMatchEventsSubscription();
 
 protected:
-	std::vector< IMatchEventsSink * > m_arrSinks;
+	// The handler is shared so that a subscriber unsubscribing from inside its own handler
+	// does not destroy the handler that is running.
+	struct Sink_t
+	{
+		const void *m_pOwner;
+		std::shared_ptr< MatchEventHandler_t > m_pHandler;
+	};
+	std::vector< Sink_t > m_arrSinks;
 	std::vector< int > m_arrRefCount;
 	std::vector< int > m_arrIteratorsOutstanding;
 

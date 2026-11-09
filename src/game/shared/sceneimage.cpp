@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
+import std;
+import ks.core;
+import ks.math;
 import ks.tier1;
 #include "sceneimage.h"
 #include "choreoscene.h"
@@ -13,7 +16,6 @@ import ks.tier1;
 #include "scriplib.h"
 #include "cmdlib.h"
 
-import std;
 class CSceneImage : public ISceneImage
 {
 public:

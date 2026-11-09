@@ -1,5 +1,3 @@
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "shareddefs.h"
 #include "ehandle.h"

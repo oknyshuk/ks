@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 #include "recvproxy.h"
@@ -11,7 +10,6 @@ import ks.tier1;
 #include "rope_physics.h"
 #include "materialsystem/imaterial.h"
 #include "rope_shared.h"
-import std;
 
 void RecvProxy_RecomputeSprings( const CRecvProxyData *pData, void *pStruct, void *pOut );
 

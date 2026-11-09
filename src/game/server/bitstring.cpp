@@ -10,8 +10,6 @@
 //						 are used instead to require the calling party to allocate
 //						 and destroy their own memory
 
-import std;
-import ks.core;
 
 
 #include "bitstring.h"

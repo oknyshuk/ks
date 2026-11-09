@@ -29,7 +29,7 @@ public:
 	virtual bool HasPrimaryAmmo( void );				// Returns true if weapon has ammo
 	virtual bool CanBeSelected( void );
 
-	virtual void Spawn( void );
+	KS_VIRTUAL void Spawn_Impl( void );
 
 	virtual void PrimaryAttack( void );					// do "+ATTACK"
 	virtual void SecondaryAttack( void );				// do "+ATTACK2"

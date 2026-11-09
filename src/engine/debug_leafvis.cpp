@@ -212,7 +212,7 @@ void CSGPlaneList( leafvis_t *pVis, std::vector< cplane_t > &planeList, DrawGrou
 	}
 }
 
-void LeafvisChanged( IConVar *pLeafvisVar, const char *pOld, float flOldValue )
+void LeafvisChanged( ConVar *pLeafvisVar, const char *pOld, float flOldValue )
 {
 	if ( g_LeafVis )
 	{
@@ -560,7 +560,7 @@ void RecomputeClipbrushes( bool bEnabled )
 }
 
 // NOTE: UNDONE: This doesn't work on brush models - only the world.
-void ClipChanged( IConVar *pConVar, const char *pOld, float flOldValue )
+void ClipChanged( ConVar *pConVar, const char *pOld, float flOldValue )
 {
 	ConVarRef clipVar( pConVar );
 	RecomputeClipbrushes( clipVar.GetBool() );

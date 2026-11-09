@@ -7,7 +7,7 @@ import ks.core;
 
 import std;
 
-				[[gnu::always_inline]] inline auto GetLastError() { return ks::platform::last_errno(); }
+	[[gnu::always_inline]] inline auto GetLastError() { return ks::platform::last_errno(); }
 	typedef void *LPVOID;
 		
 
@@ -178,9 +178,11 @@ ThreadHandle_t ThreadGetCurrentHandle()
 	return (ThreadHandle_t)ks::platform::thread_current();
 }
 
-// On PS3, this will return true for zombie threads
 bool ThreadIsThreadIdRunning( ThreadId_t uThreadId )
 {
+	if ( uThreadId == 0 )
+		return false;
+
 	return ks::platform::thread_id_running( (unsigned long long)uThreadId );
 }
 
@@ -775,7 +777,8 @@ void CThreadSpinRWLock::SpinLockForRead()
 thread_local CThread * g_pCurThread;
 
 
-CThread::CThread() :	
+CThread::CThread( std::move_only_function< int() > fnRun ) :	
+m_fnRun( std::move( fnRun ) ),
 m_threadId( 0 ),
 m_threadZombieId( 0 ) ,
 m_result( 0 ),
@@ -834,6 +837,8 @@ void CThread::SetName(const char *pszName)
 // Functions for the other threads
 //-----------------------------------------------------
 
+static bool WaitForCreateComplete( CThreadEvent *pEvent );
+
 // Start thread running  - error if already running
 bool CThread::Start( unsigned nBytesStack, ThreadPriorityEnum_t nPriority )
 {
@@ -850,7 +855,7 @@ bool CThread::Start( unsigned nBytesStack, ThreadPriorityEnum_t nPriority )
 	ThreadInit_t init = { this, &createComplete, &bInitSuccess };
 
 	m_threadInit = ThreadInit_t( init );
-	m_threadId = ks::platform::thread_create( (void *(*)(void *))GetThreadProc(), &m_threadInit, std::max( nBytesStack, 1024u*1024 ) );
+	m_threadId = ks::platform::thread_create( (void *(*)(void *))ThreadProc, &m_threadInit, std::max( nBytesStack, 1024u*1024 ) );
 	if ( m_threadId == nullptr )
 	{
 		contract_assert( false && "Failed to create thread (error 0x%x)" );
@@ -941,7 +946,6 @@ void CThread::Stop(int exitCode)
 		m_result = exitCode;
 		if ( !( m_flags & SUPPORT_STOP_PROTOCOL ) )
 		{
-			OnExit();
 			g_pCurThread = nullptr;
 
 			m_threadId = 0;
@@ -977,9 +981,10 @@ bool CThread::SetPriority(int priority)
 // Suspend a thread
 unsigned CThread::Suspend()
 {
-	contract_assert( ( ThreadGetCurrentId() == (ThreadId_t)m_threadId ) && "Cannot call CThread::Suspend from outside thread" );
+	const bool bFromThisThread = ( GetCurrentCThread() == this );
+	contract_assert( bFromThisThread && "Cannot call CThread::Suspend from outside thread" );
 
-	if ( ThreadGetCurrentId() != (ThreadId_t)m_threadId )
+	if ( !bFromThisThread )
 	{
 		DebuggerBreakIfDebugging();
 	}
@@ -1050,23 +1055,9 @@ void CThread::Sleep( unsigned duration )
 
 //---------------------------------------------------------
 
-// Optional pre-run call, with ability to fail-create. Note Init()
-// is forced synchronous with Start()
-bool CThread::Init()
+// Force serialized thread creation...
+static bool WaitForCreateComplete( CThreadEvent *pEvent )
 {
-	return true;
-}
-
-//---------------------------------------------------------
-
-
-// Called when the thread exits
-void CThread::OnExit() { }
-
-// Allow for custom start waiting
-bool CThread::WaitForCreateComplete( CThreadEvent *pEvent )
-{
-	// Force serialized thread creation...
 	if (!pEvent->Wait(60000))
 	{
 		contract_assert( false && "Probably deadlock or failure waiting for thread to initialize." );
@@ -1077,19 +1068,13 @@ bool CThread::WaitForCreateComplete( CThreadEvent *pEvent )
 
 bool CThread::IsThreadRunning()
 {
-	return ThreadIsThreadIdRunning( (ThreadId_t)m_threadId );
-}
-
-//---------------------------------------------------------
-CThread::ThreadProc_t CThread::GetThreadProc()
-{
-	return ThreadProc;
+	return ThreadIsThreadIdRunning( GetThreadID() );
 }
 
 void CThread::ThreadProcRunWithMinidumpHandler( void *pv )
 {
 	ThreadInit_t *pInit = reinterpret_cast<ThreadInit_t*>(pv);
-	pInit->pThread->m_result = pInit->pThread->Run();
+	pInit->pThread->m_result = pInit->pThread->m_fnRun();
 }
 
 void* CThread::ThreadProc(LPVOID pv)
@@ -1105,32 +1090,15 @@ void* CThread::ThreadProc(LPVOID pv)
 
 	pInit->pThread->m_result = -1;
 
-	bool bInitSuccess = true;
 	if ( pInit->pfInitSuccess )
-		*(pInit->pfInitSuccess) = false;
-
-	try
-	{
-		bInitSuccess = pInit->pThread->Init();
-	}
-
-	catch (...)
-	{
-		pInit->pInitCompleteEvent->Set();
-		throw;
-	}
-
-	if ( pInit->pfInitSuccess )
-		*(pInit->pfInitSuccess) = bInitSuccess;
+		*(pInit->pfInitSuccess) = true;
 	pInit->pInitCompleteEvent->Set();
-	if (!bInitSuccess)
-		return 0;
 
 	if ( !Plat_IsInDebugSession() && (pInit->pThread->m_flags & SUPPORT_STOP_PROTOCOL) )
 	{
 		try
 		{
-			pInit->pThread->m_result = pInit->pThread->Run();
+			pInit->pThread->m_result = pInit->pThread->m_fnRun();
 		}
 
 		catch (...)
@@ -1139,10 +1107,9 @@ void* CThread::ThreadProc(LPVOID pv)
 	}
 	else
 	{
-		pInit->pThread->m_result = pInit->pThread->Run();
+		pInit->pThread->m_result = pInit->pThread->m_fnRun();
 	}
 
-	pInit->pThread->OnExit();
 	g_pCurThread = nullptr;
 	FreeThreadID();
 
@@ -1159,8 +1126,9 @@ void* CThread::ThreadProc(LPVOID pv)
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-CWorkerThread::CWorkerThread()
-:	m_EventSend(true),                 // must be manual-reset for PeekCall()
+CWorkerThread::CWorkerThread( std::move_only_function< int() > fnRun )
+:	CThread( std::move( fnRun ) ),
+	m_EventSend(true),                 // must be manual-reset for PeekCall()
 	m_EventComplete(true),             // must be manual-reset to handle multiple wait with thread properly
 	m_Param(0),
 	m_ReturnVal(0)

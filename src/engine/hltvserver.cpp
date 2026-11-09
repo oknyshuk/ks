@@ -32,6 +32,7 @@ import ks.tier1;
 #include "serializedentity.h"
 #include "changeframelist.h"
 #include "ihltv.h"
+#include "facade/ihltvserver.inl"
 
 extern ConVar tv_snapshotrate, tv_snapshotrate1;
 
@@ -54,7 +55,7 @@ bool IsHltvActive()
 		return false;
 }
 
-static void tv_title_changed_f( IConVar *var, const char *pOldString, float flOldValue )
+static void tv_title_changed_f( ConVar *var, const char *pOldString, float flOldValue )
 {
 	for ( CActiveHltvServerIterator hltv; hltv; hltv.Next() )
 	{
@@ -409,6 +410,7 @@ void CHLTVServer::InitClientRecvTables()
 
 CHLTVFrame::CHLTVFrame()
 {
+	m_bHltvFrame = true;
 	
 }
 
@@ -509,7 +511,9 @@ void CHLTVFrame::FreeBuffers( void )
 }
 
 CHLTVServer::CHLTVServer( uint nInstanceIndex, float flSnapshotRate )
-	: m_DemoRecorder( this )
+	: CBaseServer( server_kind_t::hltv )
+	, IDemoPlayer( player_kind_t::hltv )
+	, m_DemoRecorder( this )
 	, m_ClientState( this )
 	, m_nInstanceIndex( nInstanceIndex )
 	, m_flSnapshotRate( flSnapshotRate )
@@ -544,8 +548,6 @@ CHLTVServer::CHLTVServer( uint nInstanceIndex, float flSnapshotRate )
 	m_nExternalTotalViewers = 0;
 	m_nExternalLinkedViewers = 0;
 
-	m_nDebugID = EVENT_DEBUG_ID_INIT;
-
 	m_pOldestDeltaFrame = nullptr;
 	m_pNewestDeltaFrame = nullptr;
 
@@ -555,8 +557,6 @@ CHLTVServer::CHLTVServer( uint nInstanceIndex, float flSnapshotRate )
 
 CHLTVServer::~CHLTVServer()
 {
-	m_nDebugID = EVENT_DEBUG_ID_SHUTDOWN;
-
 	if ( m_nRecvTables > 0 )
 	{
 		RecvTable_Term();
@@ -599,7 +599,7 @@ void CHLTVServer::StartMaster(CGameClient *client)
 	// let game.dll know that we are the HLTV client
 	contract_assert( serverGameClients );
 
-	CPlayerState *player = serverGameClients->GetPlayerState( m_MasterClient->edict );
+	CPlayerState *player = static_cast<CPlayerState *>( serverGameClients->GetPlayerState( m_MasterClient->edict ) );
 	player->hltv = true;
 
 	m_Server = (CGameServer*)m_MasterClient->GetServer();
@@ -645,7 +645,7 @@ void CHLTVServer::StartMaster(CGameClient *client)
 
 		if ( descriptor )
 		{
-			g_GameEventManager.AddListener( this, descriptor, CGameEventManager::CLIENTSTUB );
+			g_GameEventManager.AddListener( this, GameEventCallback_t( std::cw<&CHLTVServer::FireGameEvent>, this ), descriptor, CGameEventManager::CLIENTSTUB );
 		}
 		else
 		{
@@ -1146,11 +1146,6 @@ void CHLTVServer::FireGameEvent(IGameEvent *event)
 	{
 		DevMsg("CHLTVServer::FireGameEvent: failed to serialize event '%s'.\n", event->GetName() );
 	}
-}
-
-int CHLTVServer::GetEventDebugID( void )
-{
-	return m_nDebugID;
 }
 
 //Whenever we're done recording a demo, go through all the remaining frames and write them too.
@@ -2442,7 +2437,7 @@ bool CHLTVServer::NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarDa
 	// Enqueue this message for all fully connected clients immediately
 	for ( int iClient = 0; iClient < GetClientCount(); ++iClient )
 	{
-		CBaseClient *pClient = dynamic_cast< CBaseClient * >( GetClient( iClient ) );
+		CBaseClient *pClient = static_cast< CBaseClient * >( GetClient( iClient ) );
 		if ( !pClient->IsActive() )
 			continue;
 
@@ -2495,9 +2490,7 @@ bool CHLTVServer::SendNetMsg( INetMessage &msg, bool bForceReliable, bool bVoice
 	//
 	if ( msg.GetType() == ks::net::net_PlayerAvatarData )
 	{
-		ks::net::CNETMsg_PlayerAvatarData const *pPlayerAvatarData = dynamic_cast< ks::net::CNETMsg_PlayerAvatarData * >( &msg );
-		if ( !pPlayerAvatarData )
-			return false;
+		ks::net::CNETMsg_PlayerAvatarData const *pPlayerAvatarData = static_cast< CNETMsg_PlayerAvatarData_t * >( &msg );
 
 		return NETMsg_PlayerAvatarData( *pPlayerAvatarData );
 	}
@@ -2592,7 +2585,7 @@ void CHLTVServer::RunFrame()
 	if ( m_ClientState.m_nSignonState > SIGNONSTATE_NONE )
 	{
 		// process data from net socket
-		NET_ProcessSocket( m_ClientState.m_Socket, &m_ClientState );
+		NET_ProcessSocket( m_ClientState.m_Socket, [this]( netpacket_t *packet ) { return m_ClientState.ProcessConnectionlessPacket( packet ); } );
 
 		m_ClientState.RunFrame();
 		
@@ -2705,7 +2698,7 @@ const char *CHLTVServer::GetName( void ) const
 
 void CHLTVServer::FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo)
 {
-	CBaseServer::FillServerInfo( serverinfo );
+	CBaseServer::FillServerInfoBase( serverinfo );
 
 	serverinfo.player_slot = m_nPlayerSlot; // all spectators think they're the HLTV client
 	serverinfo.max_clients = m_nGameServerMaxClients;
@@ -2713,7 +2706,7 @@ void CHLTVServer::FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo)
 
 void CHLTVServer::Clear( void )
 {
-	CBaseServer::Clear();
+	CBaseServer::ClearBase();
 
 	m_Director = nullptr;
 	m_MasterClient = nullptr;
@@ -2733,7 +2726,7 @@ void CHLTVServer::Clear( void )
 
 void CHLTVServer::Init(bool bIsDedicated)
 {
-	CBaseServer::Init( bIsDedicated );
+	CBaseServer::InitBase( bIsDedicated );
 
 	m_Socket = NS_HLTV + m_nInstanceIndex; 
 	static_assert( NS_HLTV1 == NS_HLTV + 1 );
@@ -2786,7 +2779,7 @@ void CHLTVServer::Changelevel( bool bInactivateClients )
 
 void CHLTVServer::GetNetStats( float &avgIn, float &avgOut )
 {
-	CBaseServer::GetNetStats( avgIn, avgOut	);
+	CBaseServer::GetNetStatsBase( avgIn, avgOut	);
 
 	if ( m_ClientState.IsActive() )
 	{
@@ -2822,7 +2815,7 @@ void CHLTVServer::Shutdown( void )
 
 	g_GameEventManager.RemoveListener( this );
 
-	CBaseServer::Shutdown();
+	CBaseServer::ShutdownBase();
 }
 
 CDemoFile *CHLTVServer::GetDemoFile()
@@ -3032,7 +3025,7 @@ int	CHLTVServer::GetChallengeType ( const ns_address &adr )
 		if ( IsHltvRelayProxyWhitelisted( adr ) )
 			return PROTOCOL_HASHEDCDKEY; // HLTV makes an exception for the requesting relay proxy address
 
-		return CBaseServer::GetChallengeType( adr );
+		return CBaseServer::GetChallengeTypeBase( adr );
 	}
 
 	return PROTOCOL_HASHEDCDKEY; // HLTV doesn't need authentication
@@ -3165,7 +3158,7 @@ IClient *CHLTVServer::ConnectClient ( const ns_address &adr, int protocol, int c
 									const SplitPlayerConnects_t &splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
 									const byte *pbEncryptionKey, int nEncryptionKeyIndex )
 {
-	IClient	*client = (CHLTVClient*)CBaseServer::ConnectClient( 
+	IClient	*client = (CHLTVClient*)CBaseServer::ConnectClientBase( 
 		adr, protocol, challenge,authProtocol, name, password, hashedCDkey, cdKeyLen, splitScreenClients, isClientLowViolence, clientPlatform,
 		pbEncryptionKey, nEncryptionKeyIndex );
 

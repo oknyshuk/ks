@@ -4,8 +4,6 @@
 // Purpose: returns the module handle of the game dll
 //			this is in its own file to protect it from tier0 PROTECTED_THINGS
 
-import std;
-import ks.core;
 
 void *GetGameModuleHandle()
 {

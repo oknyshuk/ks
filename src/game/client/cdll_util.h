@@ -4,25 +4,16 @@
 
 #include <soundflags.h>
 #include <shareddefs.h>
-import std;
-import ks.math;
 
 #include "shake.h"
 #include "bitmap/imageformat.h"
 #include "ispatialpartition.h"
 #include "materialsystem/MaterialSystemUtil.h"
 
-class IMaterial;
-class ITexture;
-class IClientEntity;
 class CHudTexture;
-class CGameTrace;
 class C_BaseEntity;
 class C_BasePlayer;
 
-struct Ray_t;
-struct client_textmessage_t;
-typedef CGameTrace trace_t;
 
 
 
@@ -82,7 +73,6 @@ void	NormalizeAngles( QAngle& angles );
 void	InterpolateAngles( const QAngle& start, const QAngle& end, QAngle& output, float frac );
 void	InterpolateVector( float frac, const Vector& src, const Vector& dest, Vector& output );
 
-const char *nexttoken(char *token, const char *str, char sep);
 
 void UTIL_PrecacheOther( const char *szClassname );
 
@@ -163,6 +153,4 @@ wchar_t *UTIL_GetLocalizedKeyString( const char *command, const char *fmt, const
 
 void UTIL_GetClientStatusText( char *buffer, int bufsize );
 
-class CGameTrace;
-typedef CGameTrace trace_t;
 void		UTIL_ClearTrace			( trace_t &trace );

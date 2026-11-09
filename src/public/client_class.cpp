@@ -3,6 +3,8 @@
 
 import std;
 import ks.core;
+import ks.math;
+import ks.tier1;
 #include "client_class.h"
 
 ClientClass *g_pClientClassHead=0;

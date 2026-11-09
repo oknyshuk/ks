@@ -12,8 +12,8 @@ public:
 	CPointHidingSpot();
 	DECLARE_DATADESC();
 
-	virtual void Activate() override;
-	virtual void UpdateOnRemove() override;
+	void Activate_Impl();
+	void UpdateOnRemove_Impl();
 	void PostActivateSetupThink();
 	void DetachFromHidingSpot();
 protected:

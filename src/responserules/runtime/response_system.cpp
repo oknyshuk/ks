@@ -47,6 +47,9 @@ namespace ResponseRules
 	}
 }
 
+// Installed by the game that hosts the response system.
+IEngineEmulator *IEngineEmulator::s_pSingleton = nullptr;
+
 IEngineEmulator *IEngineEmulator::Get()
 {
 	contract_assert( IEngineEmulator::s_pSingleton && "Response rules fail: no IEngineEmulator" );

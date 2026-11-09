@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -301,7 +299,7 @@ bool CBaseServerVehicle::NPC_GetPassengerSeatPosition( CBaseCombatCharacter *pPa
 		return false;
 
 	// Figure out which entrypoint hitbox the player is in
-	CBaseAnimating *pAnimating = dynamic_cast< CBaseAnimating * >( m_pVehicle );
+	CBaseAnimating *pAnimating = entity_cast<CBaseAnimating>( m_pVehicle );
 	if ( pAnimating == nullptr )
 		return false;
 
@@ -481,7 +479,7 @@ void CBaseServerVehicle::GetPassengerSeatPoint( int nRole, Vector *pPoint, QAngl
 {
 	contract_assert( nRole == VEHICLE_ROLE_DRIVER ); 
 
-	CBaseAnimating *pAnimating = dynamic_cast<CBaseAnimating *>(m_pVehicle);
+	CBaseAnimating *pAnimating = entity_cast<CBaseAnimating>(m_pVehicle);
 	if ( pAnimating )
 	{
 		char pAttachmentName[32];
@@ -561,7 +559,7 @@ bool CBaseServerVehicle::GetPassengerExitPoint( int nRole, Vector *pExitPoint, Q
 	contract_assert( nRole == VEHICLE_ROLE_DRIVER ); 
 
 	// First, see if we've got an attachment point
-	CBaseAnimating *pAnimating = dynamic_cast<CBaseAnimating *>(m_pVehicle);
+	CBaseAnimating *pAnimating = entity_cast<CBaseAnimating>(m_pVehicle);
 	if ( pAnimating )
 	{
 		Vector vehicleExitOrigin;
@@ -758,7 +756,7 @@ void CBaseServerVehicle::ParseNPCRoles( KeyValues *pkvPassengerList )
 		return;
 
 	// Get our animating class
-	CBaseAnimating *pAnimating = dynamic_cast<CBaseAnimating *>(m_pVehicle);
+	CBaseAnimating *pAnimating = entity_cast<CBaseAnimating>(m_pVehicle);
 	contract_assert( pAnimating != nullptr );
 	if ( pAnimating == nullptr )
 		return;
@@ -1011,7 +1009,7 @@ void CBaseServerVehicle::HandlePassengerEntry( CBaseCombatCharacter *pPassenger,
 		int iEntryAnim = GetEntryAnimForPoint( pPlayer->EyePosition() );
 
 		// Get this interface for animation queries
-		CBaseAnimating *pAnimating = dynamic_cast<CBaseAnimating *>(m_pVehicle);
+		CBaseAnimating *pAnimating = entity_cast<CBaseAnimating>(m_pVehicle);
 		if ( !pAnimating )
 			return;
 
@@ -1097,7 +1095,7 @@ bool CBaseServerVehicle::HandlePassengerExit( CBaseCombatCharacter *pPassenger )
 
 		if ( iSequence > ACTIVITY_NOT_AVAILABLE )
 		{
-			CBaseAnimating *pAnimating = dynamic_cast<CBaseAnimating *>(m_pVehicle);
+			CBaseAnimating *pAnimating = entity_cast<CBaseAnimating>(m_pVehicle);
 			if ( pAnimating )
 			{
 				pAnimating->SetCycle( 0 );
@@ -1160,7 +1158,7 @@ int CBaseServerVehicle::GetEntryAnimForPoint( const Vector &vecEyePoint )
 		return 0;
 
 	// Figure out which entrypoint hitbox the player is in
-	CBaseAnimating *pAnimating = dynamic_cast<CBaseAnimating *>(m_pVehicle);
+	CBaseAnimating *pAnimating = entity_cast<CBaseAnimating>(m_pVehicle);
 	if ( !pAnimating )
 		return 0;
 
@@ -1229,7 +1227,7 @@ int CBaseServerVehicle::GetExitAnimToUse( Vector &vecEyeExitEndpoint, bool &bAll
 		return ACTIVITY_NOT_AVAILABLE;
 
 	// Figure out which entrypoint hitbox the player is in
-	CBaseAnimating *pAnimating = dynamic_cast<CBaseAnimating *>(m_pVehicle);
+	CBaseAnimating *pAnimating = entity_cast<CBaseAnimating>(m_pVehicle);
 	if ( !pAnimating )
 		return ACTIVITY_NOT_AVAILABLE;
 
@@ -2462,7 +2460,7 @@ int CBaseServerVehicle::FindSeatIndexByName( int nRoleIndex, string_t strSeatNam
 		return -1;
 
 	// Used for attachment polling
-	CBaseAnimating *pAnimating = dynamic_cast<CBaseAnimating *>(GetVehicleEnt());
+	CBaseAnimating *pAnimating = entity_cast<CBaseAnimating>(GetVehicleEnt());
 	if ( pAnimating == nullptr )
 		return -1;
 

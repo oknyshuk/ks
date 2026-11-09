@@ -68,19 +68,19 @@ inline constexpr auto NUM_PRELOAD_TEXTURES = 20;
 
 class CCompositeTexture;
 
-class CCompositeTextureResult : public ITextureRegenerator
+class CCompositeTextureResult
 {
 public:
 	CCompositeTextureResult( CCompositeTexture *pOwner ) : m_pOwner( pOwner ), m_pTexture( nullptr ) {}
 
-	virtual void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pRect );
-	virtual void Release();
+	void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pRect );
+	void Release();
 
 	CCompositeTexture *m_pOwner;
 	ITexture *m_pTexture;
 };
 
-class CCompositeTexture : public ICompositeTexture, public CRefCounted<>
+class CCompositeTexture : public ICompositeTexture, public CRefCounted<CCompositeTexture>
 {
 public:
 	CCompositeTexture( std::span< const std::byte > compareBlob, KeyValues *pCompositingMaterialKeyValues, CompositeTextureSize_t size, CompositeTextureFormat_t format, int nMaterialParamNameId, bool bSRGB, bool bIgnorePicMip );
@@ -145,7 +145,8 @@ public:
 	bool Compare( const SCompositeTextureInfo &textureInfo );
 
 protected:
-	virtual ~CCompositeTexture();
+	friend class CRefCounted<CCompositeTexture>;
+	~CCompositeTexture();
 	void GenerateComposite();
 	void ReleasePreloadedTextures();
 
@@ -159,6 +160,7 @@ protected:
 
 	IVTFTexture *m_pResultVTF;
 	CCompositeTextureResult m_ResultTexture;
+	ITextureRegenerator m_ResultRegenerator{ m_ResultTexture };
 
 	int m_nActualSize;
 

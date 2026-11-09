@@ -5,13 +5,13 @@
 import std;
 import ks.tier1;
 #include "matchmaking/imatchtitle.h"
-#include "matchmaking/imatchevents.h"
 
 extern InitReturnVal_t MM_Title_Init();
 extern void MM_Title_Shutdown();
 
 extern IMatchTitle *g_pIMatchTitle;
-extern IMatchEventsSink *g_pIMatchTitleEventsSink;
+// Hands an event to the title (match events are cracked internally before the external subscribers)
+extern void MM_Title_OnEvent( KeyValues *pEvent );
 
 extern IMatchTitleGameSettingsMgr *g_pIMatchTitleGameSettingsMgr;
 

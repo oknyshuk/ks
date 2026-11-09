@@ -3,10 +3,8 @@
 // Copyright (c) 1996-2009 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.core;
 #include "reflect_annotations.h"
 
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"

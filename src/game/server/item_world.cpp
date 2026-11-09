@@ -3,8 +3,6 @@
 
 // Purpose: Handling for the base world item. Most of this was moved from items.cpp.
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -18,7 +16,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -46,8 +43,9 @@ class CWorldItem : public CBaseAnimating
 public:
 	DECLARE_CLASS( CWorldItem, CBaseAnimating );
 
-	bool	KeyValue( const char *szKeyName, const char *szValue ); 
-	void	Spawn( void );
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue ); 
+	void	Spawn_Impl( void );
 
 	int		m_iType;
 };
@@ -56,19 +54,19 @@ LINK_ENTITY_TO_CLASS(world_items, CWorldItem);
 
 
 
-bool CWorldItem::KeyValue( const char *szKeyName, const char *szValue )
+bool CWorldItem::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "type"))
 	{
 		m_iType = std::atoi(szValue);
 	}
 	else
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 
 	return true;
 }
 
-void CWorldItem::Spawn( void )
+void CWorldItem::Spawn_Impl( void )
 {
 	CBaseEntity *pEntity = nullptr;
 
@@ -147,7 +145,7 @@ bool CItem::CreateItemVPhysicsObject( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CItem::Spawn( void )
+void CItem::Spawn_Impl( void )
 {
 	SetNetworkQuantizeOriginAngAngles( true );
 
@@ -211,7 +209,7 @@ void CItem::Spawn( void )
 	SetAbsAngles( angles );
 }
 
-void CItem::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CItem::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	CBasePlayer *pPlayer = ToBasePlayer( pActivator );
 
@@ -239,9 +237,9 @@ void CItem::ActivateWhenAtRest( float flTime /* = 0.5f */ )
 //-----------------------------------------------------------------------------
 // Become touchable when we are at rest
 //-----------------------------------------------------------------------------
-void CItem::OnEntityEvent( EntityEvent_t event, void *pEventData )
+void CItem::OnEntityEvent_Impl( EntityEvent_t event, void *pEventData )
 {
-	BaseClass::OnEntityEvent( event, pEventData );
+	BaseClass::OnEntityEvent_Impl( event, pEventData );
 
 	if( event == ENTITY_EVENT_WATER_TOUCH && m_bActivateWhenAtRest )
 	{
@@ -403,7 +401,7 @@ void CItem::ItemTouchInternal( CBaseEntity *pOther, bool bForceTouch )
 	}
 }
 
-CBaseEntity* CItem::Respawn( void )
+CBaseEntity* CItem::Respawn_Impl( void )
 {
 	SetTouch( nullptr );
 	AddEffects( EF_NODRAW );
@@ -446,9 +444,9 @@ void CItem::Materialize( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CItem::Precache()
+void CItem::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	// this sound no longer exists
 	// PrecacheScriptSound( "Item.Materialize" );

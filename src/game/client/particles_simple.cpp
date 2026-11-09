@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -16,7 +14,6 @@ import std;
 #include "particles_simple.h"
 #include "env_wind_shared.h"
 #include "toolframework_client.h"
-#include "toolframework/itoolframework.h"
 
 // Used for debugging to make sure all particle effects get freed when we exit.
 std::vector<CParticleEffect*> g_ParticleEffects;
@@ -61,14 +58,6 @@ CParticleEffect::~CParticleEffect( void )
 	// Investigate dangling pointer
 	m_Flags = 0;
 
-	if ( ( m_nToolParticleEffectId != TOOLPARTICLESYSTEMID_INVALID ) && clienttools->IsInRecordingMode() )
-	{
-		KeyValues *msg = new KeyValues( "OldParticleSystem_Destroy" );
-		msg->SetInt( "id", m_nToolParticleEffectId );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		m_nToolParticleEffectId = TOOLPARTICLESYSTEMID_INVALID; 
-	}
 }
 
 

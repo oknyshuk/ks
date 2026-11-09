@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -52,7 +49,7 @@ public:
 
 	DECLARE_CLASS( CInfoOverlayAccessor, CPointEntity );
 
-	int  	UpdateTransmitState();
+	int  	UpdateTransmitState_Impl();
 
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
@@ -71,7 +68,7 @@ LINK_ENTITY_TO_CLASS( info_overlay_accessor, CInfoOverlayAccessor );
 IMPLEMENT_REFLECT_DATAMAP( CInfoOverlayAccessor )
 
 
-int CInfoOverlayAccessor::UpdateTransmitState()
+int CInfoOverlayAccessor::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }

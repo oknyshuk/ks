@@ -5,8 +5,6 @@
 // Reading and writing nav files
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January-September 2003
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -24,7 +22,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -235,7 +232,7 @@ unsigned char CNavArea::GetSavedHidingSpotCount( void ) const
 /**
  * Save a navigation area to the opened binary stream
  */
-void CNavArea::Save( ks::byte_writer &fileBuffer, unsigned int version ) const
+void CNavArea::SaveBase( ks::byte_writer &fileBuffer, unsigned int version ) const
 {
 	// save ID
 	fileBuffer.write< unsigned int >( m_id );
@@ -407,7 +404,7 @@ void CNavArea::Save( ks::byte_writer &fileBuffer, unsigned int version ) const
 /**
  * Load a navigation area from the file
  */
-NavErrorType CNavArea::Load( ks::byte_reader &fileBuffer, unsigned int version, unsigned int subVersion )
+NavErrorType CNavArea::LoadBase( ks::byte_reader &fileBuffer, unsigned int version, unsigned int subVersion )
 {
 	// load ID
 	m_id = fileBuffer.read< unsigned int >();
@@ -683,7 +680,7 @@ NavErrorType CNavArea::Load( ks::byte_reader &fileBuffer, unsigned int version, 
  * Convert loaded IDs to pointers
  * Make sure all IDs are converted, even if corrupt data is encountered.
  */
-NavErrorType CNavArea::PostLoad( void )
+NavErrorType CNavArea::PostLoadBase( void )
 {
 	NavErrorType error = NAV_OK;
 
@@ -977,7 +974,7 @@ static void WarnIfMeshNeedsAnalysis( int version )
 
 		for ( CNavArea *pNavArea : TheNavAreas )
 		{
-			CCSNavArea *area = dynamic_cast< CCSNavArea * >( pNavArea );
+			CNavArea *area = pNavArea;
 			if ( area )
 			{
 				if ( area->GetApproachInfoCount() )
@@ -1043,7 +1040,7 @@ bool CNavMesh::Save( void ) const
 	// 7 = Areas store ladder ID's so ladders can have one-way connections
 	// 8 = Added earliest occupy times (2 floats) to each area
 	// 9 = Promoted CNavArea's attribute flags to a short
-	// 10 - Added sub-version number to allow derived classes to have custom area data
+	// 10 - Added sub-version number to allow game-specific area data
 	// 11 - Added light intensity to each area
 	// 12 - Storing presence of unnamed areas in the PlaceDirectory
 	// 13 - Widened NavArea attribute bits from unsigned short to int
@@ -1052,8 +1049,8 @@ bool CNavMesh::Save( void ) const
 	// 16 - Added visibility data to the base mesh
 	fileBuffer.write< unsigned int >( NavCurrentVersion );
 
-	// The sub-version number is maintained and owned by classes derived from CNavMesh and CNavArea
-	// and allows them to track their custom data just as we do at this top level
+	// The sub-version number tracks the format of the game-specific (Counter-Strike) mesh and area data,
+	// just as the version above tracks the base format
 	fileBuffer.write< unsigned int >( GetSubVersionNumber() );
 	
 	// store the size of source bsp file in the nav file
@@ -1113,7 +1110,7 @@ bool CNavMesh::Save( void ) const
 	}
 	
 	//
-	// Store derived class mesh info
+	// Store game-specific mesh info
 	//
 	SaveCustomData( fileBuffer );
 
@@ -1478,7 +1475,7 @@ NavErrorType CNavMesh::Load( void )
 	MarkStairAreas();
 
 	//
-	// Load derived class mesh info
+	// Load game-specific mesh info
 	//
 	LoadCustomData( fileBuffer, subVersion );
 
@@ -1514,7 +1511,7 @@ struct OneWayLink_t
 /**
  * Invoked after all areas have been loaded - for pointer binding, etc
  */
-NavErrorType CNavMesh::PostLoad( unsigned int version )
+NavErrorType CNavMesh::PostLoadBase( unsigned int version )
 {
 	// allow areas to connect to each other, etc
 	for ( CNavArea *area : TheNavAreas )

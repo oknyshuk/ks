@@ -15,25 +15,25 @@ import std;
 //-----------------------------------------------------------------------------
 // The standard implementation of CShaderDLL
 //-----------------------------------------------------------------------------
-class CShaderDLL : public IShaderDLLInternal, public IShaderDLL
+class CShaderDLL
 {
 public:
 	CShaderDLL();
 
 	// methods of IShaderDLL
-	virtual bool Connect( CreateInterfaceFn factory );
-	virtual void Disconnect();
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
 
 	// methods of IShaderDLLInternal
-	virtual int ShaderCount() const;
-	virtual IShader *GetShader( int nShader );
+	int ShaderCount() const;
+	IShader *GetShader( int nShader );
 	int ShaderComboSemanticsCount() const;
 	const ShaderComboSemantics_t *GetComboSemantics( int n );
-	virtual bool Connect( CreateInterfaceFn factory, bool bIsMaterialSystem );
-	virtual void Disconnect( bool bIsMaterialSystem );
-	virtual void InsertShader( IShader *pShader );
+	bool Connect( CreateInterfaceFn factory, bool bIsMaterialSystem );
+	void Disconnect( bool bIsMaterialSystem );
+	void InsertShader( IShader *pShader );
 
-	virtual void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics );
+	void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics );
 
 private:
 	std::vector< IShader * >	m_ShaderList;
@@ -61,7 +61,12 @@ static CShaderDLL *s_pShaderDLL;
 //-----------------------------------------------------------------------------
 // Global accessor
 //-----------------------------------------------------------------------------
-IShaderDLL *GetShaderDLL()
+// IShaderDLL and IShaderDLLInternal are stateless facades; their members, defined below, forward to the
+// one CShaderDLL.
+static IShaderDLL s_ShaderDLLFacade;
+static IShaderDLLInternal s_ShaderDLLInternalFacade;
+
+static CShaderDLL &ShaderDLLImpl()
 {
 	// Pattern necessary because shaders register themselves in global constructors
 	if ( !s_pShaderDLL )
@@ -69,19 +74,21 @@ IShaderDLL *GetShaderDLL()
 		s_pShaderDLL = new CShaderDLL;
 	}
 
-	return s_pShaderDLL;
+	return *s_pShaderDLL;
+}
+
+IShaderDLL *GetShaderDLL()
+{
+	return &s_ShaderDLLFacade;
 }
 
 IShaderDLLInternal *GetShaderDLLInternal()
 {
-	// Pattern necessary because shaders register themselves in global constructors
-	if ( !s_pShaderDLL )
-	{
-		s_pShaderDLL = new CShaderDLL;
-	}
-
-	return static_cast<IShaderDLLInternal*>( s_pShaderDLL );
+	return &s_ShaderDLLInternalFacade;
 }
+
+#include "facade/ishaderdll.inl"
+#include "facade/ishaderdllinternal.inl"
 
 //-----------------------------------------------------------------------------
 // Singleton interface

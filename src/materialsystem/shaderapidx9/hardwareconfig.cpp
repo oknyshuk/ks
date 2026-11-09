@@ -24,7 +24,12 @@ static ConVar developer( "developer", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_
 static CHardwareConfig s_HardwareConfig;
 CHardwareConfig *g_pHardwareConfigDx8 = &s_HardwareConfig;
 
-static InterfaceReg s_Reg_CHardwareConfig_IMaterialSystemHardwareConfig( []() -> void * { return static_cast<IMaterialSystemHardwareConfig *>( &s_HardwareConfig ); }, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION );;
+// The hardware config interfaces are stateless facades that forward to the one implementation.
+static IHardwareConfigInternal s_HardwareConfigFacade;
+static CHardwareConfig &HardwareConfigImpl() { return s_HardwareConfig; }
+#include "../shaderapi_facade/hardwareconfig.inl"
+
+static InterfaceReg s_Reg_CHardwareConfig_IMaterialSystemHardwareConfig( []() -> void * { return static_cast<IMaterialSystemHardwareConfig *>( &s_HardwareConfigFacade ); }, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION );;
 
 
 CHardwareConfig::CHardwareConfig()

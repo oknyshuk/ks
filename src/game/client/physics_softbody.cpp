@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import std;
-import ks.core;
 #include "precache_register.h"
 #include "physics_softbody.h"
 

@@ -27,13 +27,14 @@ public:
 	CEnvSoundscape();
 	~CEnvSoundscape();
 
-	bool KeyValue( const char *szKeyName, const char *szValue );
-	void Spawn( void );
-	void Precache( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
 	void UpdateForPlayer( ss_update_t &update );
 	void WriteAudioParamsTo( audioparams_t &audio );
 	bool InRangeOfPlayer( CBasePlayer *pPlayer );
-	void DrawDebugGeometryOverlays( void );
+	void DrawDebugGeometryOverlays_Impl( void );
 
 	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
@@ -75,11 +76,11 @@ public:
 	DECLARE_DATADESC();
 
 	CEnvSoundscapeProxy();
-	virtual void Activate();
+	void Activate_Impl();
 
 	// Here just to stop it falling back to CEnvSoundscape's, and
 	// printing bogus errors about missing soundscapes.
-	virtual void Precache() { return; }
+	void Precache_Impl() { return; }
 
 private:
 	[[= ks::reflect::Key{ .name = "MainSoundscapeName" } ]] string_t m_MainSoundscapeName;
@@ -96,7 +97,7 @@ public:
 	CEnvSoundscapeTriggerable();
 	
 	// Overrides the base class's think and prevents it from running at all.
-	virtual void Think();
+	void Think_Impl();
 
 
 private:

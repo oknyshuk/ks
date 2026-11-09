@@ -2,32 +2,137 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.vstdlib;
 #include "toolframework/itoolentity.h"
-import std;
 
 //-----------------------------------------------------------------------------
-// Forward declarations
+// No tool DLLs ship with the game, so tool recording is never enabled.
 //-----------------------------------------------------------------------------
-struct AudioState_t;
+inline constexpr bool ToolsEnabled() { return false; }
+inline void ToolFramework_PostToolMessage( HTOOLHANDLE, KeyValues * ) {}
+inline constexpr bool ToolFramework_IsThirdPersonCamera() { return false; }
 
-
-//-----------------------------------------------------------------------------
-// Posts a message to all tools
-//-----------------------------------------------------------------------------
-void ToolFramework_PostToolMessage( HTOOLHANDLE hEntity, KeyValues *msg );
 
 
 //-----------------------------------------------------------------------------
-// Should we render with a 3rd person camera?
+// Standard messages
 //-----------------------------------------------------------------------------
-bool ToolFramework_IsThirdPersonCamera( );
+struct EffectRecordingState_t
+{
+	bool m_bVisible : 1;
+	bool m_bThirdPerson : 1;
+	Color m_Color;
+	float m_Scale;
+	const char *m_pMaterialName;
+	int m_nAttachment;
+	Vector m_vecAttachment; // only used if m_nAttachment is -1
+};
 
+struct BaseEntityRecordingState_t
+{
+	BaseEntityRecordingState_t() :	
+		m_flTime( 0.0f ),
+		m_pModelName( 0 ),
+		m_nOwner( -1 ),
+		m_fEffects( 0 ),
+		m_bVisible( false ),
+		m_bRecordFinalVisibleSample( false ),
+		m_numEffects( 0 ),
+		m_pEffects( nullptr ),
+		m_nFollowEntity( -1 )
+	{
+		m_vecRenderOrigin.Init();
+		m_vecRenderAngles.Init();
+	}
 
-//-----------------------------------------------------------------------------
-// Are tools enabled? 
-//-----------------------------------------------------------------------------
-bool ToolsEnabled();
+	float m_flTime;
+	const char *m_pModelName;
+	int m_nOwner;
+	int m_fEffects;
+	bool m_bVisible : 1;
+	bool m_bRecordFinalVisibleSample : 1;
+	Vector m_vecRenderOrigin;
+	QAngle m_vecRenderAngles;
+	int m_nFollowEntity;
+
+	int m_numEffects;
+	EffectRecordingState_t *m_pEffects;
+};
+
+struct SpriteRecordingState_t
+{
+	float m_flRenderScale;
+	float m_flFrame;
+	int m_nRenderMode;
+	bool m_nRenderFX;
+	Color m_Color;
+	float m_flProxyRadius;
+};
+
+struct BaseAnimatingHighLevelRecordingState_t
+{
+	BaseAnimatingHighLevelRecordingState_t()
+	:	m_bClearIkTargets( false ),
+		m_bIsRagdoll( false ),
+		m_bShouldCreateIkContext( false ),
+		m_nNumPoseParams( 0 ),
+		m_flCycle( 0.0f ),
+		m_flPlaybackRate( 1.0f ),
+		m_flCycleRate( 0.0f ),
+		m_nFrameCount( 0 ),
+		m_bInterpEffectActive( false )
+	{
+	}
+
+	bool m_bClearIkTargets;
+	bool m_bIsRagdoll;
+	bool m_bShouldCreateIkContext;
+	int m_nNumPoseParams;
+
+	float m_flCycle;
+	float m_flPlaybackRate;
+	float m_flCycleRate;
+	int m_nFrameCount;
+
+	float m_flPoseParameter[MAXSTUDIOPOSEPARAM];
+
+	bool m_bInterpEffectActive;
+};
+
+struct BaseAnimatingRecordingState_t
+{
+	BaseAnimatingHighLevelRecordingState_t m_highLevelState;
+
+	int m_nSkin;
+	int m_nBody;
+	int m_nSequence;
+	CBoneList *m_pBoneList;
+};
+
+struct BaseFlexRecordingState_t
+{
+	int m_nFlexCount;
+	float *m_pDestWeight;
+	Vector m_vecViewTarget;
+};
+
+struct CameraRecordingState_t
+{
+	bool m_bThirdPerson;
+	float m_flFOV;
+	Vector m_vecEyePosition;
+	QAngle m_vecEyeAngles;
+	bool m_bPlayerEyeIsPortalled; //for portal. Need to reverse some portal recursion draw logic when the player eye and body straddle a portal
+};
+
+struct MonitorRecordingState_t
+{
+	bool	m_bActive;
+	float	m_flFOV;
+	bool	m_bFogEnabled;
+	float	m_flFogStart;
+	float	m_flFogEnd;
+	Color	m_FogColor;
+};
 
 
 //-----------------------------------------------------------------------------
@@ -57,86 +162,4 @@ enum TERecordingType_t
 	TE_EXPLOSION,
 
 	TE_RECORDING_TYPE_COUNT,
-};
-
-
-//-----------------------------------------------------------------------------
-// View manipulation
-//-----------------------------------------------------------------------------
-void ToolFramework_AdjustEngineViewport( int& x, int& y, int& width, int& height );
-bool ToolFramework_SetupEngineView( Vector &origin, QAngle &angles, float &fov );
-bool ToolFramework_SetupAudioState( AudioState_t &audioState );
-
-//-----------------------------------------------------------------------------
-// Helper class to indicate ownership of effects
-//-----------------------------------------------------------------------------
-class CRecordEffectOwner
-{
-public:
-	CRecordEffectOwner( C_BaseEntity *pEntity, bool bIsViewModel = false );
-	~CRecordEffectOwner();
-
-private:
-	bool m_bToolsEnabled;
-};
-
-
-
-//only ever create global/static instances of this to auto-register your entity keyvalues data handler
-class CIFM_EntityKeyValuesHandler_AutoRegister
-{
-public:
-	explicit CIFM_EntityKeyValuesHandler_AutoRegister( const char *szHandlerID );
-
-	virtual void HandleData_PreUpdate( void ) {}; //called once before any received data is distributed to its handlers
-	virtual void HandleData( KeyValues *pKeyValues ) = 0;
-	virtual void HandleData_PostUpdate( void ) {}; //called once after all received data is distributed to its handlers
-	
-	static void AllHandlers_PreUpdate( void );
-	static void FindAndCallHandler( const char *szHandlerID, KeyValues *pKeyValues );
-	static void AllHandlers_PostUpdate( void );
-
-	virtual void HandleData_RemoveAll( void ) {};
-	static void AllHandlers_RemoveAll( void );
-
-	static HKeySymbol GetGameKeyValuesKeySymbol( void );
-	static const char *GetGameKeyValuesKeyString( void );
-	static HKeySymbol GetHandlerIDKeySymbol( void );
-	static const char *GetHandlerIDKeyString( void );
-	static KeyValues *FindOrCreateNonConformantKeyValues( KeyValues *pParentKV );
-
-private:
-
-
-	const char *m_szHandlerID;
-	CIFM_EntityKeyValuesHandler_AutoRegister *m_pNext;
-	static CIFM_EntityKeyValuesHandler_AutoRegister *s_pRegisteredHandlers;
-};
-
-
-//assuming you've stored "entIndex" into your recorded values, this will create/destroy a unique instance per unique index
-class CIFM_EntityKeyValuesHandler_RecreateEntities : CIFM_EntityKeyValuesHandler_AutoRegister
-{
-public:
-	explicit CIFM_EntityKeyValuesHandler_RecreateEntities( const char *szHandlerID );
-
-	virtual void HandleData_PreUpdate( void );
-	virtual void HandleData( KeyValues *pKeyValues );
-	virtual void HandleData_PostUpdate( void );
-	virtual void HandleData_RemoveAll( void );
-
-	virtual void *CreateInstance( void ) = 0; //make a new instance of your entity
-	virtual void DestroyInstance( void *pEntity ) = 0;
-
-	virtual void HandleInstance( void *pEntity, KeyValues *pKeyValues ) = 0; //update your entity.
-
-private:
-	struct RecordedEntity_t
-	{
-		void *pEntity;
-		int iEntIndex;
-		bool bTouched;
-	};
-
-	std::vector< RecordedEntity_t > m_PlaybackEntities;
 };

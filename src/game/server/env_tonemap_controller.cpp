@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2004 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -54,8 +52,8 @@ public:
 
 	CEnvTonemapController();
 
-	void	Spawn( void );
-	int		UpdateTransmitState( void );
+	void	Spawn_Impl( void );
+	int		UpdateTransmitState_Impl( void );
 
 	bool	IsMaster( void ) const					{ return HasSpawnFlags( SF_TONEMAP_MASTER ); }
 
@@ -112,7 +110,7 @@ CEnvTonemapController::CEnvTonemapController()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvTonemapController::Spawn( void )
+void CEnvTonemapController::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	SetMoveType( MOVETYPE_NONE );
@@ -121,7 +119,7 @@ void CEnvTonemapController::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CEnvTonemapController::UpdateTransmitState()
+int CEnvTonemapController::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
@@ -242,11 +240,11 @@ IMPLEMENT_REFLECT_DATAMAP( CTonemapTrigger )
 
 
 //--------------------------------------------------------------------------------------------------------
-void CTonemapTrigger::Spawn( void )
+void CTonemapTrigger::Spawn_Impl( void )
 {
 	AddSpawnFlags( SF_TRIGGER_ALLOW_CLIENTS );
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	InitTrigger();
 
 	m_hTonemapController = gEntList.FindEntityByName( nullptr, m_tonemapControllerName );
@@ -254,12 +252,12 @@ void CTonemapTrigger::Spawn( void )
 
 
 //--------------------------------------------------------------------------------------------------------
-void CTonemapTrigger::StartTouch( CBaseEntity *other )
+void CTonemapTrigger::StartTouch_Impl( CBaseEntity *other )
 {
 	if ( !PassesTriggerFilters( other ) )
 		return;
 
-	BaseClass::StartTouch( other );
+	BaseClass::StartTouch_Impl( other );
 
 	CBasePlayer *player = ToBasePlayer( other );
 	if ( !player )
@@ -270,12 +268,12 @@ void CTonemapTrigger::StartTouch( CBaseEntity *other )
 
 
 //--------------------------------------------------------------------------------------------------------
-void CTonemapTrigger::EndTouch( CBaseEntity *other )
+void CTonemapTrigger::EndTouch_Impl( CBaseEntity *other )
 {
 	if ( !PassesTriggerFilters( other ) )
 		return;
 
-	BaseClass::EndTouch( other );
+	BaseClass::EndTouch_Impl( other );
 
 	CBasePlayer *player = ToBasePlayer( other );
 	if ( !player )

@@ -5,8 +5,6 @@
 
 // @TODO (toml 03-04-03): there is far too much duplicate code in here
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -891,7 +889,7 @@ void CAI_Hint::InputDisableHint( inputdata_t &inputdata )
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
-void CAI_Hint::Spawn( void )
+void CAI_Hint::Spawn_Impl( void )
 {
 	// Cache off the forward vector
 	GetVectors( &m_vecForward, nullptr, nullptr );
@@ -906,16 +904,16 @@ void CAI_Hint::Spawn( void )
 	SetSolid( SOLID_NONE );
 }
 
-void CAI_Hint::Activate()
+void CAI_Hint::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	CAI_HintManager::AddHint( this );
 }
 
-void CAI_Hint::UpdateOnRemove( void )
+void CAI_Hint::UpdateOnRemove_Impl( void )
 {
 	CAI_HintManager::RemoveHint( this );
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 //------------------------------------------------------------------------------
@@ -997,7 +995,7 @@ float CAI_Hint::Yaw(void)
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
-bool CAI_Hint::IsViewable(void)
+bool CAI_Hint::IsViewable_Impl(void)
 {
 	if (m_NodeData.iDisabled)
 	{
@@ -1411,9 +1409,9 @@ bool CAI_Hint::HintMatchesCriteria( CAI_BaseNPC *pNPC, const CHintCriteria &hint
 // Input  :
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CAI_Hint::DrawDebugTextOverlays(void) 
+int CAI_Hint::DrawDebugTextOverlays_Impl(void) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -1493,9 +1491,9 @@ void CAI_Hint::FixupTargetNode()
 		m_nTargetNodeID = NO_NODE;
 }
 
-void CAI_Hint::OnRestore()
+void CAI_Hint::OnRestore_Impl()
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	m_NodeData.nNodeID = g_pAINetworkManager->GetEditOps()->GetNodeIdFromWCId( m_NodeData.nWCNodeID );
 	FixupTargetNode();

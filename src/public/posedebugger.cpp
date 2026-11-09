@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2007 Valve Corporation
 
-import std;
-import ks.tier1;
 
 #include "bone_setup.h"
 
@@ -13,6 +11,7 @@ import ks.tier1;
 #include "posedebugger.h"
 
 #include "iclientnetworkable.h"
+
 
 
 extern IVEngineClient *engine;

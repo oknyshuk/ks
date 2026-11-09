@@ -22,6 +22,16 @@ int CCustomMaterial::m_nMaterialCount = 0;
 // Material applied to the item to give it a custom look
 //
 
+// ICustomMaterial: non-virtual facade over CCustomMaterial
+int ICustomMaterial::AddRef() { return static_cast< CCustomMaterial * >( this )->AddRef(); }
+int ICustomMaterial::Release() { return static_cast< CCustomMaterial * >( this )->Release(); }
+IMaterial *ICustomMaterial::GetMaterial() { return static_cast< CCustomMaterial * >( this )->GetMaterial(); }
+void ICustomMaterial::AddTexture( ICompositeTexture *pTexture ) { static_cast< CCustomMaterial * >( this )->AddTexture( pTexture ); }
+ICompositeTexture *ICustomMaterial::GetTexture( int nIndex ) { return static_cast< CCustomMaterial * >( this )->GetTexture( nIndex ); }
+bool ICustomMaterial::IsValid() const { return static_cast< const CCustomMaterial * >( this )->IsValid(); }
+bool ICustomMaterial::CheckRegenerate( int nSize ) { return static_cast< CCustomMaterial * >( this )->CheckRegenerate( nSize ); }
+const char *ICustomMaterial::GetBaseMaterialName( void ) { return static_cast< CCustomMaterial * >( this )->GetBaseMaterialName(); }
+
 CCustomMaterial::CCustomMaterial( KeyValues *pKeyValues )
 	: m_bValid( false )
 	, m_nModelMaterialIndex( -1 )
@@ -38,7 +48,7 @@ CCustomMaterial::~CCustomMaterial()
 
 void CCustomMaterial::AddTexture( ICompositeTexture * pTextureInterface )
 {
-	CCompositeTexture *pTexture = dynamic_cast< CCompositeTexture * >( pTextureInterface );
+	CCompositeTexture *pTexture = static_cast< CCompositeTexture * >( pTextureInterface );
 	if ( pTexture )
 	{
 		m_pTextures.push_back( pTexture );

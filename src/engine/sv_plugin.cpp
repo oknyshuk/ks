@@ -35,7 +35,7 @@ import ks.tier1;
 
 extern IMatchFramework *g_pMatchFramework;
 extern CreateInterfaceFn g_AppSystemFactory;
-extern CSysModule *g_GameDLL;
+extern CreateInterfaceFn g_ServerFactory;
 
 CServerPlugin s_ServerPlugin;
 CServerPlugin *g_pServerPluginHandler = &s_ServerPlugin;
@@ -127,7 +127,7 @@ bool CPlugin::Load( const char *fileName )
 				}
 			}
 
-			CreateInterfaceFn gameServerFactory = Sys_GetFactory( g_GameDLL );
+			CreateInterfaceFn gameServerFactory = g_ServerFactory;
 
 			if ( !m_pPlugin->Load( g_AppSystemFactory,  gameServerFactory ) )
 			{
@@ -258,7 +258,7 @@ void CServerPlugin::LoadPlugins()
 
 	Sys_FindClose();
 
-	CreateInterfaceFn gameServerFactory = Sys_GetFactory( g_GameDLL );
+	CreateInterfaceFn gameServerFactory = g_ServerFactory;
 	m_PluginHelperCheck = (IPluginHelpersCheck *)gameServerFactory( INTERFACEVERSION_PLUGINHELPERSCHECK, nullptr );
 }
 

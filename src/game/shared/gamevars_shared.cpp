@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
 #elif defined(GAME_DLL)
-import ks.tier1;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -24,13 +20,12 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "ndebugoverlay.h"
 #endif
 #include "gamevars_shared.h"
 
 #ifdef GAME_DLL
-void MPForceCameraCallback( IConVar *var, const char *pOldString, float flOldValue )
+void MPForceCameraCallback( ConVar *var, const char *pOldString, float flOldValue )
 {
 	if ( mp_forcecamera.GetInt() < OBS_ALLOW_ALL || mp_forcecamera.GetInt() >= OBS_ALLOW_NUM_MODES )
 	{

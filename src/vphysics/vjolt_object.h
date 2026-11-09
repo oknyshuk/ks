@@ -15,12 +15,12 @@
 #include <Jolt/Physics/StateRecorder.h>
 import ks.math;
 #include "vphysics_interface.h"
+#include "vjolt_internal_listeners.h"
 import std;
 #include "bspflags.h"
 
 class IPredictedPhysicsObject;
 
-class IJoltObjectListener;
 class JoltPhysicsShadowController;
 class JoltPhysicsFluidController;
 class JoltPhysicsEnvironment;
@@ -37,118 +37,118 @@ class JoltPhysicsObject final : public IPhysicsObjectInterface
 public:
 	JoltPhysicsObject( JPH::Body *pBody, JoltPhysicsEnvironment *pEnvironment, bool bStatic, int nMaterialIndex, const objectparams_t *pParams );
 	JoltPhysicsObject( JPH::Body *pBody, JoltPhysicsEnvironment *pEnvironment, void *pGameData, JPH::StateRecorder &recorder );
-	~JoltPhysicsObject() override;
+	~JoltPhysicsObject();
 
-	bool			IsStatic() const override;
-	bool			IsAsleep() const override;
-	bool			IsTrigger() const override;
-	bool			IsFluid() const override;
-	bool			IsHinged() const override;
-	bool			IsCollisionEnabled() const override;
-	bool			IsGravityEnabled() const override;
-	bool			IsDragEnabled() const override;
-	bool			IsMotionEnabled() const override;
-	bool			IsMoveable() const override; // legacy: IsMotionEnabled() && !IsStatic()
-	bool			IsAttachedToConstraint( bool bExternalOnly ) const override;
+	bool			IsStatic() const;
+	bool			IsAsleep() const;
+	bool			IsTrigger() const;
+	bool			IsFluid() const;
+	bool			IsHinged() const;
+	bool			IsCollisionEnabled() const;
+	bool			IsGravityEnabled() const;
+	bool			IsDragEnabled() const;
+	bool			IsMotionEnabled() const;
+	bool			IsMoveable() const; // legacy: IsMotionEnabled() && !IsStatic()
+	bool			IsAttachedToConstraint( bool bExternalOnly ) const;
 
-	void			EnableCollisions( bool enable ) override;
-	void			EnableGravity( bool enable ) override;
-	void			EnableDrag( bool enable ) override;
-	void			EnableMotion( bool enable ) override;
+	void			EnableCollisions( bool enable );
+	void			EnableGravity( bool enable );
+	void			EnableDrag( bool enable );
+	void			EnableMotion( bool enable );
 
-	void			SetGameData( void *pGameData ) override;
-	void *			GetGameData() const override;
-	void			SetGameFlags( unsigned short userFlags ) override;
-	unsigned short	GetGameFlags() const override;
-	void			SetGameIndex( unsigned short gameIndex ) override;
-	unsigned short	GetGameIndex() const override;
+	void			SetGameData( void *pGameData );
+	void *			GetGameData() const;
+	void			SetGameFlags( unsigned short userFlags );
+	unsigned short	GetGameFlags() const;
+	void			SetGameIndex( unsigned short gameIndex );
+	unsigned short	GetGameIndex() const;
 
-	void			SetCallbackFlags( unsigned short callbackflags ) override;
-	unsigned short	GetCallbackFlags() const override;
+	void			SetCallbackFlags( unsigned short callbackflags );
+	unsigned short	GetCallbackFlags() const;
 
-	void			Wake() override;
-	void			Sleep() override;
-	void			RecheckCollisionFilter() override;
+	void			Wake();
+	void			Sleep();
+	void			RecheckCollisionFilter();
 	void			RecheckContactPoints( bool bSearchForNewContacts ) ;
 	void			RecheckContactPoints()  { RecheckContactPoints( false ); }
 
-	void			SetMass( float mass ) override;
-	float			GetMass() const override;
-	float			GetInvMass() const override;
-	Vector			GetInertia() const override;
-	Vector			GetInvInertia() const override;
-	void			SetInertia( const Vector &inertia ) override;
+	void			SetMass( float mass );
+	float			GetMass() const;
+	float			GetInvMass() const;
+	Vector			GetInertia() const;
+	Vector			GetInvInertia() const;
+	void			SetInertia( const Vector &inertia );
 
-	void			SetDamping( const float *speed, const float *rot ) override;
-	void			GetDamping( float *speed, float *rot ) const override;
+	void			SetDamping( const float *speed, const float *rot );
+	void			GetDamping( float *speed, float *rot ) const;
 
-	void			SetDragCoefficient( float *pDrag, float *pAngularDrag ) override;
-	void			SetBuoyancyRatio( float ratio ) override;
+	void			SetDragCoefficient( float *pDrag, float *pAngularDrag );
+	void			SetBuoyancyRatio( float ratio );
 
-	int				GetMaterialIndex() const override;
-	void			SetMaterialIndex( int materialIndex ) override;
+	int				GetMaterialIndex() const;
+	void			SetMaterialIndex( int materialIndex );
 
-	unsigned int	GetContents() const override;
-	void			SetContents( unsigned int contents ) override;
+	unsigned int	GetContents() const;
+	void			SetContents( unsigned int contents );
 
-	float			GetSphereRadius() const override;
+	float			GetSphereRadius() const;
 	void			SetSphereRadius( float radius ) ;
-	float			GetEnergy() const override;
-	Vector			GetMassCenterLocalSpace() const override;
+	float			GetEnergy() const;
+	Vector			GetMassCenterLocalSpace() const;
 
-	void			SetPosition( const Vector &worldPosition, const QAngle &angles, bool isTeleport ) override;
-	void			SetPositionMatrix( const matrix3x4_t &matrix, bool isTeleport ) override;
+	void			SetPosition( const Vector &worldPosition, const QAngle &angles, bool isTeleport );
+	void			SetPositionMatrix( const matrix3x4_t &matrix, bool isTeleport );
 
-	void			GetPosition( Vector *worldPosition, QAngle *angles ) const override;
-	void			GetPositionMatrix( matrix3x4_t *positionMatrix ) const override;
-	void			SetVelocity( const Vector *velocity, const AngularImpulse *angularVelocity ) override;
+	void			GetPosition( Vector *worldPosition, QAngle *angles ) const;
+	void			GetPositionMatrix( matrix3x4_t *positionMatrix ) const;
+	void			SetVelocity( const Vector *velocity, const AngularImpulse *angularVelocity );
 
-	void			SetVelocityInstantaneous( const Vector *velocity, const AngularImpulse *angularVelocity ) override;
+	void			SetVelocityInstantaneous( const Vector *velocity, const AngularImpulse *angularVelocity );
 
-	void			GetVelocity( Vector *velocity, AngularImpulse *angularVelocity ) const override;
+	void			GetVelocity( Vector *velocity, AngularImpulse *angularVelocity ) const;
 
-	void			AddVelocity( const Vector *velocity, const AngularImpulse *angularVelocity ) override;
-	void			GetVelocityAtPoint( const Vector &worldPosition, Vector *pVelocity ) const override;
-	void			GetImplicitVelocity( Vector *velocity, AngularImpulse *angularVelocity ) const override;
-	void			LocalToWorld( Vector *worldPosition, const Vector &localPosition ) const override;
-	void			WorldToLocal( Vector *localPosition, const Vector &worldPosition ) const override;
+	void			AddVelocity( const Vector *velocity, const AngularImpulse *angularVelocity );
+	void			GetVelocityAtPoint( const Vector &worldPosition, Vector *pVelocity ) const;
+	void			GetImplicitVelocity( Vector *velocity, AngularImpulse *angularVelocity ) const;
+	void			LocalToWorld( Vector *worldPosition, const Vector &localPosition ) const;
+	void			WorldToLocal( Vector *localPosition, const Vector &worldPosition ) const;
 
-	void			LocalToWorldVector( Vector *worldVector, const Vector &localVector ) const override;
-	void			WorldToLocalVector( Vector *localVector, const Vector &worldVector ) const override;
+	void			LocalToWorldVector( Vector *worldVector, const Vector &localVector ) const;
+	void			WorldToLocalVector( Vector *localVector, const Vector &worldVector ) const;
 
-	void			ApplyForceCenter( const Vector &forceVector ) override;
-	void			ApplyForceOffset( const Vector &forceVector, const Vector &worldPosition ) override;
-	void			ApplyTorqueCenter( const AngularImpulse &torque ) override;
+	void			ApplyForceCenter( const Vector &forceVector );
+	void			ApplyForceOffset( const Vector &forceVector, const Vector &worldPosition );
+	void			ApplyTorqueCenter( const AngularImpulse &torque );
 
-	void			CalculateForceOffset( const Vector &forceVector, const Vector &worldPosition, Vector *centerForce, AngularImpulse *centerTorque ) const override;
-	void			CalculateVelocityOffset( const Vector &forceVector, const Vector &worldPosition, Vector *centerVelocity, AngularImpulse *centerAngularVelocity ) const override;
-	float			CalculateLinearDrag( const Vector &unitDirection ) const override;
-	float			CalculateAngularDrag( const Vector &objectSpaceRotationAxis ) const override;
+	void			CalculateForceOffset( const Vector &forceVector, const Vector &worldPosition, Vector *centerForce, AngularImpulse *centerTorque ) const;
+	void			CalculateVelocityOffset( const Vector &forceVector, const Vector &worldPosition, Vector *centerVelocity, AngularImpulse *centerAngularVelocity ) const;
+	float			CalculateLinearDrag( const Vector &unitDirection ) const;
+	float			CalculateAngularDrag( const Vector &objectSpaceRotationAxis ) const;
 
-	bool			GetContactPoint( Vector *contactPoint, IPhysicsObject **contactObject ) const override;
+	bool			GetContactPoint( Vector *contactPoint, IPhysicsObject **contactObject ) const;
 
-	void			SetShadow( float maxSpeed, float maxAngularSpeed, bool allowPhysicsMovement, bool allowPhysicsRotation ) override;
-	void			UpdateShadow( const Vector &targetPosition, const QAngle &targetAngles, bool tempDisableGravity, float timeOffset ) override;
+	void			SetShadow( float maxSpeed, float maxAngularSpeed, bool allowPhysicsMovement, bool allowPhysicsRotation );
+	void			UpdateShadow( const Vector &targetPosition, const QAngle &targetAngles, bool tempDisableGravity, float timeOffset );
 
-	int							GetShadowPosition( Vector *position, QAngle *angles ) const override;
-	IPhysicsShadowController *	GetShadowController() const override;
-	void						RemoveShadowController() override;
-	float						ComputeShadowControl( const hlshadowcontrol_params_t &params, float secondsToArrival, float dt ) override;
+	int							GetShadowPosition( Vector *position, QAngle *angles ) const;
+	IPhysicsShadowController *	GetShadowController() const;
+	void						RemoveShadowController();
+	float						ComputeShadowControl( const hlshadowcontrol_params_t &params, float secondsToArrival, float dt );
 
 
-	const CPhysCollide *	GetCollide() const override;
-	const char *			GetName() const override;
+	const CPhysCollide *	GetCollide() const;
+	const char *			GetName() const;
 
-	void			BecomeTrigger() override;
-	void			RemoveTrigger() override;
+	void			BecomeTrigger();
+	void			RemoveTrigger();
 
-	void			BecomeHinged( int localAxis ) override;
-	void			RemoveHinged() override;
+	void			BecomeHinged( int localAxis );
+	void			RemoveHinged();
 
-	IPhysicsFrictionSnapshot *CreateFrictionSnapshot() override;
-	void DestroyFrictionSnapshot( IPhysicsFrictionSnapshot *pSnapshot ) override;
+	IPhysicsFrictionSnapshot *CreateFrictionSnapshot();
+	void DestroyFrictionSnapshot( IPhysicsFrictionSnapshot *pSnapshot );
 
-	void			OutputDebugInfo() const override;
+	void			OutputDebugInfo() const;
 
 	void			SetUseAlternateGravity( bool bSet ) ;
 	void			SetCollisionHints( uint32 collisionHints ) ;
@@ -168,8 +168,8 @@ public:
 
 	void UpdateEnvironment( JoltPhysicsEnvironment *pEnvironment );
 
-	void AddListener( IJoltObjectListener *pListener );
-	void RemoveListener( IJoltObjectListener *pListener );
+	void AddListener( JoltObjectListener listener );
+	void RemoveListener( JoltObjectListener listener );
 
 	// Tells every listener the object moved discontinuously.
 	void NotifyTeleported();
@@ -274,7 +274,7 @@ private:
 	unsigned short m_GameMaterial = 0;
 
 
-	std::vector< IJoltObjectListener * > m_Listeners;
+	std::vector< JoltObjectListener > m_Listeners;
 
 	// Shadow variables
 	JoltPhysicsShadowController *m_pShadowController = nullptr;

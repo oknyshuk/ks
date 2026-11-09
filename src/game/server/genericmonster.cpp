@@ -4,8 +4,6 @@
 //=========================================================
 // Generic NPC - purely for scripted sequence work.
 //=========================================================
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -55,10 +53,10 @@ class CGenericNPC : public CAI_BaseNPC
 public:
 	DECLARE_CLASS( CGenericNPC, CAI_BaseNPC );
 
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 	float	MaxYawSpeed( void );
-	Class_T Classify ( void );
+	Class_T Classify_Impl ( void );
 	void	HandleAnimEvent( animevent_t *pEvent );
 	int		GetSoundInterests ( void );
 
@@ -71,7 +69,7 @@ LINK_ENTITY_TO_CLASS( monster_generic, CGenericNPC );
 // Classify - indicates this NPC's place in the 
 // relationship table.
 //=========================================================
-Class_T	CGenericNPC::Classify ( void )
+Class_T	CGenericNPC::Classify_Impl ( void )
 {
 	return	CLASS_NONE;
 }
@@ -155,7 +153,7 @@ int CGenericNPC::GetSoundInterests ( void )
 //=========================================================
 // Spawn
 //=========================================================
-void CGenericNPC::Spawn()
+void CGenericNPC::Spawn_Impl()
 {
 	Precache();
 
@@ -206,9 +204,9 @@ void CGenericNPC::Spawn()
 //-----------------------------------------------------------------------------
 // Purpose: precaches all resources this NPC needs
 //-----------------------------------------------------------------------------
-void CGenericNPC::Precache()
+void CGenericNPC::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	PrecacheModel( STRING( GetModelName() ) );
 
@@ -226,26 +224,26 @@ class CNPC_Furniture : public CAI_BaseActor
 	DECLARE_CLASS( CNPC_Furniture, CAI_BaseActor );
 	DECLARE_DATADESC();
 public:
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 	void	Die( void );
 	void	UpdateEfficiency( bool bInPVS )	{ SetEfficiency( ( GetSleepState() != AISS_AWAKE ) ? AIE_DORMANT : AIE_NORMAL ); SetMoveEfficiency( AIME_NORMAL ); }
-	Class_T	Classify ( void );
+	Class_T	Classify_Impl ( void );
 	float	MaxYawSpeed( void ){ return 0; }
-	virtual int	ObjectCaps( void );
-	bool	CreateVPhysics( void );
+	int	ObjectCaps_Impl( void );
+	bool	CreateVPhysics_Impl( void );
 	void	NPCThink( void );
-	void	UpdateOnRemove( void );
+	void	UpdateOnRemove_Impl( void );
 	int		SelectSchedule( void );
-	void	OnRestore( void );
-	int		OnTakeDamage( const CTakeDamageInfo &info )
+	void	OnRestore_Impl( void );
+	int		OnTakeDamage_Impl( const CTakeDamageInfo &info )
 	{
 		if ( m_iHealth <= info.GetDamage() )
 			m_iHealth = info.GetDamage() + TOO_MUCH_HEALTH_TO_DIE;
-		return BaseClass::OnTakeDamage(info);
+		return BaseClass::OnTakeDamage_Impl(info);
 	}
 
-	void DrawDebugGeometryOverlays(void);
+	void DrawDebugGeometryOverlays_Impl(void);
 
 	void SetPlayerAvoidState( void );
 	[[= ks::reflect::Input{ .name = "DisablePlayerCollision", .type = FIELD_VOID } ]] void InputDisablePlayerCollision( inputdata_t &inputdata );
@@ -259,7 +257,7 @@ private:
 };
 
 LINK_ENTITY_TO_CLASS( monster_furniture, CNPC_Furniture );
-LINK_ENTITY_TO_CLASS( npc_furniture, CNPC_Furniture );
+LINK_ENTITY_TO_CLASS_ALIAS( npc_furniture, CNPC_Furniture );
 
 //-----------------------------------------------------------------------------
 // Save/load
@@ -271,7 +269,7 @@ IMPLEMENT_REFLECT_DATAMAP( CNPC_Furniture )
 // Purpose: This used to have something to do with bees flying, but 
 //			now it only initializes moving furniture in scripted sequences
 //-----------------------------------------------------------------------------
-void CNPC_Furniture::Spawn( )
+void CNPC_Furniture::Spawn_Impl( )
 {
 	Precache();
 	
@@ -312,7 +310,7 @@ void CNPC_Furniture::Spawn( )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CNPC_Furniture::Precache( void )
+void CNPC_Furniture::Precache_Impl( void )
 {
 	PrecacheModel( STRING( GetModelName() ) );
 }
@@ -328,10 +326,10 @@ int CNPC_Furniture::GetSoundInterests( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int	CNPC_Furniture::ObjectCaps( void ) 
+int	CNPC_Furniture::ObjectCaps_Impl( void ) 
 { 
 	// HL2 furniture transitions
-	return (CAI_BaseNPC::ObjectCaps() & ~FCAP_ACROSS_TRANSITION); 
+	return (CAI_BaseNPC::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION); 
 }
 
 //-----------------------------------------------------------------------------
@@ -346,7 +344,7 @@ void CNPC_Furniture::Die( void )
 //-----------------------------------------------------------------------------
 // Purpose: ID's Furniture as neutral (noone will attack it)
 //-----------------------------------------------------------------------------
-Class_T CNPC_Furniture::Classify ( void )
+Class_T CNPC_Furniture::Classify_Impl ( void )
 {
 	return CLASS_NONE;
 }
@@ -354,7 +352,7 @@ Class_T CNPC_Furniture::Classify ( void )
 //------------------------------------------------------------------------------
 // Purpose:
 //------------------------------------------------------------------------------
-bool CNPC_Furniture::CreateVPhysics( void )
+bool CNPC_Furniture::CreateVPhysics_Impl( void )
 {
 	return false;
 
@@ -436,11 +434,11 @@ void CNPC_Furniture::NPCThink( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CNPC_Furniture::UpdateOnRemove( void )
+void CNPC_Furniture::UpdateOnRemove_Impl( void )
 {
 	m_BoneFollowerManager.DestroyBoneFollowers();
 
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 //-----------------------------------------------------------------------------
@@ -473,14 +471,14 @@ int CNPC_Furniture::SelectSchedule( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CNPC_Furniture::OnRestore( void )
+void CNPC_Furniture::OnRestore_Impl( void )
 {
 	// Recreate any bone followers we have
 	CreateVPhysics();
 
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 }
-void CNPC_Furniture::DrawDebugGeometryOverlays( void )
+void CNPC_Furniture::DrawDebugGeometryOverlays_Impl( void )
 {
 	//ugh
 	if ( m_debugOverlays & OVERLAY_NPC_ZAP_BIT )
@@ -488,7 +486,7 @@ void CNPC_Furniture::DrawDebugGeometryOverlays( void )
 		m_debugOverlays &= ~OVERLAY_NPC_ZAP_BIT;
 	}
 
-	BaseClass::DrawDebugGeometryOverlays();
+	BaseClass::DrawDebugGeometryOverlays_Impl();
 }
 
 
@@ -500,20 +498,20 @@ class CNPC_HearDanger : public CAI_BaseActor
 {
 	DECLARE_CLASS( CNPC_HearDanger, CAI_BaseActor );
 	public:
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 	void	Die( void );
 	void	UpdateEfficiency( bool bInPVS )	{ SetEfficiency( ( GetSleepState() != AISS_AWAKE ) ? AIE_DORMANT : AIE_NORMAL ); SetMoveEfficiency( AIME_NORMAL ); }
-	Class_T	Classify( void );
+	Class_T	Classify_Impl( void );
 	float	MaxYawSpeed( void ){ return 0; }
 
-	bool	CreateVPhysics( void );
+	bool	CreateVPhysics_Impl( void );
 
-	int		OnTakeDamage( const CTakeDamageInfo &info )
+	int		OnTakeDamage_Impl( const CTakeDamageInfo &info )
 	{
 		if ( m_iHealth <= info.GetDamage() )
 			m_iHealth = info.GetDamage() + TOO_MUCH_HEALTH_TO_DIE;
-		return BaseClass::OnTakeDamage( info );
+		return BaseClass::OnTakeDamage_Impl( info );
 	}
 
 
@@ -533,7 +531,7 @@ LINK_ENTITY_TO_CLASS( npc_heardanger, CNPC_HearDanger );
 // Purpose: This used to have something to do with bees flying, but 
 //			now it only initializes moving furniture in scripted sequences
 //-----------------------------------------------------------------------------
-void CNPC_HearDanger::Spawn()
+void CNPC_HearDanger::Spawn_Impl()
 {
 	Precache();
 
@@ -576,7 +574,7 @@ void CNPC_HearDanger::Spawn()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CNPC_HearDanger::Precache( void )
+void CNPC_HearDanger::Precache_Impl( void )
 {
 	PrecacheModel( STRING( GetModelName() ) );
 }
@@ -601,7 +599,7 @@ void CNPC_HearDanger::Die( void )
 //-----------------------------------------------------------------------------
 // Purpose: ID's Furniture as neutral (noone will attack it)
 //-----------------------------------------------------------------------------
-Class_T CNPC_HearDanger::Classify( void )
+Class_T CNPC_HearDanger::Classify_Impl( void )
 {
 	return CLASS_NONE;
 }
@@ -609,7 +607,7 @@ Class_T CNPC_HearDanger::Classify( void )
 //------------------------------------------------------------------------------
 // Purpose:
 //------------------------------------------------------------------------------
-bool CNPC_HearDanger::CreateVPhysics( void )
+bool CNPC_HearDanger::CreateVPhysics_Impl( void )
 {
 	return false;
 }

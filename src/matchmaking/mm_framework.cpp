@@ -314,8 +314,7 @@ void CMatchFramework::OnEvent( KeyValues *pEvent )
 	//
 	// Delegate to the title
 	//
-	if ( g_pIMatchTitleEventsSink )
-		g_pIMatchTitleEventsSink->OnEvent( pEvent );
+	MM_Title_OnEvent( pEvent );
 
 	//
 	// Delegate to the session
@@ -328,3 +327,6 @@ void CMatchFramework::SetCurrentMatchSession( IMatchSessionInternal *pNewMatchSe
 {
 	m_pMatchSession = pNewMatchSession;
 }
+
+//-----------------------------------------------------------------------------
+#include "facade/imatchframework.inl"

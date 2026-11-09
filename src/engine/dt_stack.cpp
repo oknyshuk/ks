@@ -5,6 +5,7 @@
 import std;
 
 CDatatableStack::CDatatableStack( CSendTablePrecalc *pPrecalc, unsigned char *pStructBase, int objectID )
+	: m_RecurseAndCallProxies( std::cw<&NoRecurse> )
 {
 	m_pPrecalc = pPrecalc;
 

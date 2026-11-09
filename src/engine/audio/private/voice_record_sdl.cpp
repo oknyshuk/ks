@@ -12,66 +12,27 @@
 import ks.core;
 
 // ------------------------------------------------------------------------------
-// VoiceRecord_OpenAL
+// IVoiceRecord
 // ------------------------------------------------------------------------------
 
-class VoiceRecord_OpenAL : public IVoiceRecord
-{
-protected:
-	
-	virtual				~VoiceRecord_OpenAL();
-	
-	
-	// IVoiceRecord.
-public:
-	
-	VoiceRecord_OpenAL();
-	virtual void		Release();
-	
-	virtual bool		RecordStart();
-	virtual void		RecordStop();
-	
-	// Initialize. The format of the data we expect from the provider is
-	// 8-bit signed mono at the specified sample rate.
-	virtual bool		Init(int sampleRate);
-	
-	virtual void		Idle();
-	
-	// Get the most recent N samples.
-	virtual int			GetRecordedData(short *pOut, int nSamplesWanted );
-	
-private:
-	bool				InitalizeInterfaces();	// Initialize the openal capture buffers and other interfaces
-	void				ReleaseInterfaces();	// Release openal buffers and other interfaces
-	void				ClearInterfaces();				// Clear members.
-	
-	
-private:
-	ALCdevice    *m_Device;
-	
-	int	m_nSampleRate;
-};
-
-
-
-VoiceRecord_OpenAL::VoiceRecord_OpenAL() :
+IVoiceRecord::IVoiceRecord() :
 m_nSampleRate( 0 ), m_Device( nullptr )
 {
 	ClearInterfaces();
 }
 
-VoiceRecord_OpenAL::~VoiceRecord_OpenAL()
+IVoiceRecord::~IVoiceRecord()
 {
 	ReleaseInterfaces();
 }
 
 
-void VoiceRecord_OpenAL::Release()
+void IVoiceRecord::Release()
 {
 	delete this;
 }
 
-bool VoiceRecord_OpenAL::RecordStart()
+bool IVoiceRecord::RecordStart()
 {
 
 	// Re-initialize the capture buffer if neccesary (should always be)
@@ -92,7 +53,7 @@ bool VoiceRecord_OpenAL::RecordStart()
 }
 
 
-void VoiceRecord_OpenAL::RecordStop()
+void IVoiceRecord::RecordStop()
 {
 	// Stop capturing.
 	if ( m_Device )
@@ -105,7 +66,7 @@ void VoiceRecord_OpenAL::RecordStop()
 	ReleaseInterfaces();
 }
 
-bool VoiceRecord_OpenAL::InitalizeInterfaces()
+bool IVoiceRecord::InitalizeInterfaces()
 {	
 	m_Device = alcCaptureOpenDevice( nullptr, m_nSampleRate, AL_FORMAT_MONO16, m_nSampleRate * 10 * 2);
 	const ALenum error = alcGetError(m_Device);
@@ -113,7 +74,7 @@ bool VoiceRecord_OpenAL::InitalizeInterfaces()
 	return m_Device != nullptr && result;
 }
 
-bool VoiceRecord_OpenAL::Init(int sampleRate)
+bool IVoiceRecord::Init(int sampleRate)
 {
 	m_nSampleRate = sampleRate;
 	
@@ -123,25 +84,25 @@ bool VoiceRecord_OpenAL::Init(int sampleRate)
 }
 
 
-void VoiceRecord_OpenAL::ReleaseInterfaces()
+void IVoiceRecord::ReleaseInterfaces()
 {
     alcCaptureCloseDevice(m_Device);	
 	ClearInterfaces();
 }
 
 
-void VoiceRecord_OpenAL::ClearInterfaces()
+void IVoiceRecord::ClearInterfaces()
 {
 	m_Device = nullptr;
 }
 
 
-void VoiceRecord_OpenAL::Idle()
+void IVoiceRecord::Idle()
 {
 }
 
 
-int VoiceRecord_OpenAL::GetRecordedData(short *pOut, int nSamples )
+int IVoiceRecord::GetRecordedData(short *pOut, int nSamples )
 {
 	int frameCount = 0;
 	alcGetIntegerv( m_Device,ALC_CAPTURE_SAMPLES,1,&frameCount );
@@ -162,7 +123,7 @@ int VoiceRecord_OpenAL::GetRecordedData(short *pOut, int nSamples )
 
 IVoiceRecord* CreateVoiceRecord_DSound(int sampleRate)
 {
-	VoiceRecord_OpenAL *pRecord = new VoiceRecord_OpenAL;
+	IVoiceRecord *pRecord = new IVoiceRecord;
 	if(pRecord && pRecord->Init(sampleRate))
 	{
 		return pRecord;

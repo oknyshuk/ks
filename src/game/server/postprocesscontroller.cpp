@@ -3,8 +3,6 @@
 
 // Purpose: An entity that allows level designer control over the fog parameters.
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -59,9 +57,9 @@ CPostProcessController::~CPostProcessController()
 {
 }
 
-void CPostProcessController::Spawn( void )
+void CPostProcessController::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	m_bMaster = IsMaster();
 }
@@ -69,15 +67,15 @@ void CPostProcessController::Spawn( void )
 //-----------------------------------------------------------------------------
 // Activate!
 //-----------------------------------------------------------------------------
-void CPostProcessController::Activate( ) 
+void CPostProcessController::Activate_Impl( ) 
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CPostProcessController::UpdateTransmitState()
+int CPostProcessController::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }

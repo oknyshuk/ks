@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -32,8 +29,9 @@ import ks.tier1;
 #include "basecombatweapon.h"
 #include "reflect_sendtable.h"
 
-namespace ks::reflect::net
+namespace ksr::net
 {
+using namespace ::ks::reflect;
 
 SendProp make_prop( const PropDesc &d, std::span<const PropDesc> all )
 {
@@ -119,4 +117,4 @@ SendProp make_prop( const PropDesc &d, std::span<const PropDesc> all )
 	}
 }
 
-} // namespace ks::reflect::net
+} // namespace ksr::net

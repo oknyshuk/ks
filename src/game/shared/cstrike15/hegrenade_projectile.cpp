@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -82,21 +80,21 @@ CHEGrenadeProjectile* CHEGrenadeProjectile::Create(
 	return pGrenade;
 }
 
-void CHEGrenadeProjectile::Spawn()
+void CHEGrenadeProjectile::Spawn_Impl()
 {
 	SetModel( GRENADE_MODEL );
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	SetBodygroupPreset( "thrown" );
 }
 
-void CHEGrenadeProjectile::Precache()
+void CHEGrenadeProjectile::Precache_Impl()
 {
 	PrecacheModel( GRENADE_MODEL );
 
 	PrecacheScriptSound( "HEGrenade.Bounce" );
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 void CHEGrenadeProjectile::BounceSound( void )

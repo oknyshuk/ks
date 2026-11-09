@@ -5,8 +5,6 @@
 //			Looks at its target's anglular velocity every frame and fires outputs
 //			as the angular velocity passes a given threshold value.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -24,7 +22,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -61,9 +58,9 @@ class CPointAngularVelocitySensor : public CPointEntity
 public:
 
 	CPointAngularVelocitySensor();
-	void Activate(void);
-	void Spawn(void);
-	void Think(void);
+	void Activate_Impl(void);
+	void Spawn_Impl(void);
+	void Think_Impl(void);
 
 private:
 
@@ -122,7 +119,7 @@ CPointAngularVelocitySensor::CPointAngularVelocitySensor()
 //-----------------------------------------------------------------------------
 // Purpose: Called when spawning after parsing keyvalues.
 //-----------------------------------------------------------------------------
-void CPointAngularVelocitySensor::Spawn(void)
+void CPointAngularVelocitySensor::Spawn_Impl(void)
 {
 	m_flThreshold = fabs(m_flThreshold);
 	m_nLastFireResult = AVELOCITY_SENSOR_NO_LAST_RESULT;
@@ -135,9 +132,9 @@ void CPointAngularVelocitySensor::Spawn(void)
 //-----------------------------------------------------------------------------
 // Purpose: Called after all entities in the map have spawned.
 //-----------------------------------------------------------------------------
-void CPointAngularVelocitySensor::Activate(void)
+void CPointAngularVelocitySensor::Activate_Impl(void)
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	m_hTargetEntity = gEntList.FindEntityByName( nullptr, m_target );
 
@@ -284,7 +281,7 @@ int CPointAngularVelocitySensor::CompareToThreshold(CBaseEntity *pEntity, float 
 // Called every frame to sense the angular velocity of the target entity.
 // Output is filtered by m_flFireInterval to ignore excessive oscillations.
 //-----------------------------------------------------------------------------
-void CPointAngularVelocitySensor::Think(void)
+void CPointAngularVelocitySensor::Think_Impl(void)
 {
 	if (m_hTargetEntity != nullptr)
 	{
@@ -391,9 +388,9 @@ class CPointVelocitySensor : public CPointEntity
 
 public:
 
-	void Spawn();
-	void Activate( void );
-	void Think( void );
+	void Spawn_Impl();
+	void Activate_Impl( void );
+	void Think_Impl( void );
 
 private:
 
@@ -420,7 +417,7 @@ IMPLEMENT_REFLECT_DATAMAP( CPointVelocitySensor )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CPointVelocitySensor::Spawn()
+void CPointVelocitySensor::Spawn_Impl()
 {
 	Vector vLine = m_vecAxis - GetAbsOrigin();
 	VectorNormalize( vLine );
@@ -431,9 +428,9 @@ void CPointVelocitySensor::Spawn()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPointVelocitySensor::Activate( void )
+void CPointVelocitySensor::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	m_hTargetEntity = gEntList.FindEntityByName( nullptr, m_target );
 	
@@ -471,7 +468,7 @@ void CPointVelocitySensor::InputDisable( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 // Purpose: Called every frame
 //-----------------------------------------------------------------------------
-void CPointVelocitySensor::Think( void )
+void CPointVelocitySensor::Think_Impl( void )
 {
 	if ( m_hTargetEntity != nullptr && m_bEnabled )
 	{

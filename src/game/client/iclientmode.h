@@ -5,11 +5,9 @@
 #include <inputsystem/ButtonCode.h>
 #include "noopanimcontroller.h"
 
-class CViewSetup;
 class C_BaseEntity;
 class C_BasePlayer;
 class CUserCmd;
-class AudioState_t;
 
 
 // Message mode types

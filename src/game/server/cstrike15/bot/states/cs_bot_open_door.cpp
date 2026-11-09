@@ -3,8 +3,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), April 2005
 
-import std;
-import ks.math;
 #include "shareddefs.h"
 #include "util.h"
 #include "predictable_entity.h"
@@ -37,17 +35,18 @@ void OpenDoorState::OnEnter( CCSBot *me )
 //-------------------------------------------------------------------------------------------------
 void OpenDoorState::SetDoor( CBaseEntity *door )
 {
-	CBaseDoor *funcDoor = dynamic_cast< CBaseDoor * >(door);
-	if ( funcDoor )
+	if ( door == nullptr )
+		return;
+
+	if ( FClassnameIs( door, "func_door*" ) || FClassnameIs( door, "func_water" ) )
 	{
-		m_funcDoor = funcDoor;
+		m_funcDoor = static_cast< CBaseDoor * >( door );
 		return;
 	}
 
-	CBasePropDoor *propDoor = dynamic_cast< CBasePropDoor * >(door);
-	if ( propDoor )
+	if ( FClassnameIs( door, "prop_door*" ) )
 	{
-		m_propDoor = propDoor;
+		m_propDoor = static_cast< CBasePropDoor * >( door );
 		return;
 	}
 }
@@ -73,7 +72,8 @@ void OpenDoorState::OnUpdate( CCSBot *me )
 		door = m_propDoor;
 		isDoorMoving = m_propDoor->IsDoorOpening() || m_propDoor->IsDoorClosing();
 
-		CPropDoorRotatingBreakable *pPropDoor = dynamic_cast< CPropDoorRotatingBreakable* >( door );
+		// "prop_door_rotating" is CPropDoorRotatingBreakable
+		CPropDoorRotatingBreakable *pPropDoor = FClassnameIs( door, "prop_door_rotating" ) ? static_cast< CPropDoorRotatingBreakable* >( door ) : nullptr;
 		if ( pPropDoor && pPropDoor->IsDoorLocked() && pPropDoor->IsBreakable() == false )
 		{
 			m_isDone = true;

@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.core;
 #include "igamemovement.h"
 #include "cmodel.h"
-import std;
 #include "networkvar.h"
 #include "engine/IEngineTrace.h"
 #include "gametrace.h"
@@ -31,7 +29,6 @@ enum
 	SPEED_CROPPED_WEAPON = 2,
 };
 
-struct surfacedata_t;
 
 class CBasePlayer;
 class CBaseEntity;

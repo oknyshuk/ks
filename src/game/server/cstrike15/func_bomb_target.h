@@ -4,10 +4,8 @@
 
 // Purpose: Bomb Target Area ent
 
-import ks.math;
 #include "reflect_annotations.h"
 
-import std;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "shareddefs.h"
@@ -36,7 +34,7 @@ public:
 
 	CBombTarget();
 
-	void Spawn();
+	void Spawn_Impl();
 	virtual void ReInitOnRoundStart( void );
 	void BombTargetTouch( CBaseEntity* pOther );
 	void BombTargetUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
@@ -67,8 +65,8 @@ class CInfoInstructorHintBombTargetA : public CPointEntity
 public:
 	DECLARE_CLASS( CInfoInstructorHintBombTargetA, CPointEntity );
 
-	void Spawn( void );
-	virtual int UpdateTransmitState( void )	// set transmit filter to transmit always
+	void Spawn_Impl( void );
+	int UpdateTransmitState_Impl( void )	// set transmit filter to transmit always
 	{
 		return SetTransmitState( FL_EDICT_ALWAYS );
 	}
@@ -83,8 +81,8 @@ class CInfoInstructorHintBombTargetB : public CPointEntity
 public:
 	DECLARE_CLASS( CInfoInstructorHintBombTargetB, CPointEntity );
 
-	void Spawn( void );
-	virtual int UpdateTransmitState( void )	// set transmit filter to transmit always
+	void Spawn_Impl( void );
+	int UpdateTransmitState_Impl( void )	// set transmit filter to transmit always
 	{
 		return SetTransmitState( FL_EDICT_ALWAYS );
 	}

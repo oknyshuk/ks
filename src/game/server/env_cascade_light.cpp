@@ -3,8 +3,6 @@
 
 // Purpose: global dynamic light with cascaded shadow mapping
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -100,14 +97,14 @@ CCascadeLight::~CCascadeLight()
 //------------------------------------------------------------------------------
 // Purpose : Send even though we don't have a model
 //------------------------------------------------------------------------------
-int CCascadeLight::UpdateTransmitState()
+int CCascadeLight::UpdateTransmitState_Impl()
 {
 	// ALWAYS transmit to all clients.
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
 
 
-bool CCascadeLight::KeyValue( const char *szKeyName, const char *szValue )
+bool CCascadeLight::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if ( FStrEq( szKeyName, "color" ) )
 	{
@@ -144,10 +141,10 @@ bool CCascadeLight::KeyValue( const char *szKeyName, const char *szValue )
 		return true;
 	}
 	
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
-bool CCascadeLight::GetKeyValue( const char *szKeyName, char *szValue, int iMaxLen )
+bool CCascadeLight::GetKeyValue_Impl( const char *szKeyName, char *szValue, int iMaxLen )
 {
 	if ( FStrEq( szKeyName, "color" ) )
 	{
@@ -155,13 +152,13 @@ bool CCascadeLight::GetKeyValue( const char *szKeyName, char *szValue, int iMaxL
 		V_snprintf( szValue, iMaxLen, "%d %d %d %d", m_LightColor.GetR(), m_LightColor.GetG(), m_LightColor.GetB(), m_LightColor.GetA() );
 		return true;
 	}
-	return BaseClass::GetKeyValue( szKeyName, szValue, iMaxLen );
+	return BaseClass::GetKeyValue_Impl( szKeyName, szValue, iMaxLen );
 }
 
 //------------------------------------------------------------------------------
 // Purpose :
 //------------------------------------------------------------------------------
-void CCascadeLight::Spawn( void )
+void CCascadeLight::Spawn_Impl( void )
 {
 	Precache();
 	SetSolid( SOLID_NONE );
@@ -182,7 +179,7 @@ void CCascadeLight::Spawn( void )
 
 	//SetClassname( "cascadelight" );
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 void CCascadeLight::Release( void )

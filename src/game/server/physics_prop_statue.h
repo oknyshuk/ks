@@ -32,18 +32,18 @@ class [[= ks::reflect::NetTable{ .name = "DT_StatueProp" } ]]
 public:
 	CStatueProp( void );
 
-	virtual void	Spawn( void );
-	virtual void	Precache();
+	void	Spawn_Impl( void );
+	void	Precache_Impl();
 
-	virtual bool	CreateVPhysics();
-	virtual void	VPhysicsUpdate( IPhysicsObject *pPhysics );
+	bool	CreateVPhysics_Impl();
+	void	VPhysicsUpdate_Impl( IPhysicsObject *pPhysics );
 
 	//virtual float	GetAutoAimRadius() { return 24.0f; }
 
-	virtual void	ComputeWorldSpaceSurroundingBox( Vector *pMins, Vector *pMaxs );
-	virtual bool	TestCollision( const Ray_t &ray, unsigned int fContentsMask, trace_t& tr );
-	virtual int		OnTakeDamage( const CTakeDamageInfo &info );
-	virtual void	Event_Killed( const CTakeDamageInfo &info );
+	void	ComputeWorldSpaceSurroundingBox_Impl( Vector *pMins, Vector *pMaxs );
+	bool	TestCollision_Impl( const Ray_t &ray, unsigned int fContentsMask, trace_t& tr );
+	int		OnTakeDamage_Impl( const CTakeDamageInfo &info );
+	void	Event_Killed_Impl( const CTakeDamageInfo &info );
 
 	virtual void	Freeze( float flFreezeAmount = -1.0f, CBaseEntity *pFreezer = nullptr, Ray_t *pFreezeRay = nullptr );
 

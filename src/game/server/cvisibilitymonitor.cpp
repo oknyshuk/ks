@@ -5,8 +5,6 @@
 //			This contains some specific early-outs and culling code, so it's not
 //			exactly general purpose yet. (sjb)
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"

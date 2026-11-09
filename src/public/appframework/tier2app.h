@@ -17,8 +17,8 @@ class CTier2FSApp : public CFSAppSystemGroup
 	typedef CFSAppSystemGroup BaseClass;
 
 public:
-	// Methods of IApplication
-	virtual bool PreInit()
+	// Application hooks
+	bool PreInit()
 	{
 		CreateInterfaceFn factory = GetFactory();
 		ConnectTier1Libraries( &factory, 1 );
@@ -27,14 +27,14 @@ public:
 		return true;			
 	}
 
-	virtual void PostShutdown()
+	void PostShutdown()
 	{
 		DisconnectTier2Libraries();
 		ConVar_Unregister();
 		DisconnectTier1Libraries();
 	}
 
-	virtual void Destroy()
+	void Destroy()
 	{
 	}
 };
@@ -48,8 +48,8 @@ class CTier2DmFSApp : public CTier2FSApp
 	typedef CTier2FSApp BaseClass;
 
 public:
-	// Methods of IApplication
-	virtual bool PreInit()
+	// Application hooks
+	bool PreInit()
 	{
 		if ( !BaseClass::PreInit() )
 			return false;
@@ -62,7 +62,7 @@ public:
 		return ( nRetVal == INIT_OK );
 	}
 
-	virtual void PostShutdown()
+	void PostShutdown()
 	{
 		ShutdownDataModel();
 		DisconnectDataModel();

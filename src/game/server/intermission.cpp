@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -46,11 +43,11 @@ class CInfoIntermission:public CPointEntity
 public:
 	DECLARE_CLASS( CInfoIntermission, CPointEntity );
 
-	void Spawn( void );
-	void Think( void );
+	void Spawn_Impl( void );
+	void Think_Impl( void );
 };
 
-void CInfoIntermission::Spawn( void )
+void CInfoIntermission::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	AddEffects( EF_NODRAW );
@@ -58,7 +55,7 @@ void CInfoIntermission::Spawn( void )
 	SetNextThink( gpGlobals->curtime + 2 );// let targets spawn !
 }
 
-void CInfoIntermission::Think ( void )
+void CInfoIntermission::Think_Impl ( void )
 {
 	CBaseEntity *pTarget;
 

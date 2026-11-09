@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "edict.h"
 #include "eiface.h"
 #include "iserverentity.h"
@@ -49,7 +47,7 @@ ParticleSmokeGrenade::~ParticleSmokeGrenade()
 
 // Smoke grenade particles should always transmitted to clients.  If not, a client who
 // enters the PVS late will see the smoke start billowing from then, allowing better vision.
-int ParticleSmokeGrenade::UpdateTransmitState( void )
+int ParticleSmokeGrenade::UpdateTransmitState_Impl( void )
 {
 	if ( IsEffectActive( EF_NODRAW ) )
 		return SetTransmitState( FL_EDICT_DONTSEND );
@@ -57,9 +55,9 @@ int ParticleSmokeGrenade::UpdateTransmitState( void )
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
 
-void ParticleSmokeGrenade::Spawn()
+void ParticleSmokeGrenade::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	SetNextThink( gpGlobals->curtime );
 	m_creatorPlayer = nullptr;
@@ -104,7 +102,7 @@ void ParticleSmokeGrenade::SetSmokeColor( Vector color )
 	m_MaxColor = color * MAX_SMOKE_TINT;
 }
 
-void ParticleSmokeGrenade::Think()
+void ParticleSmokeGrenade::Think_Impl()
 {
 	// Override, don't extend.  (Baseclass's Think just deletes.)
 

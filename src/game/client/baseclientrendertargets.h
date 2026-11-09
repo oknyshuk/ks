@@ -17,8 +17,6 @@
 #include "materialsystem/MaterialSystemUtil.h"
 
 // Externs
-class IMaterialSystem;
-class IMaterialSystemHardwareConfig;
 
 class CBaseClientRenderTargets : public IClientRenderTargets
 {

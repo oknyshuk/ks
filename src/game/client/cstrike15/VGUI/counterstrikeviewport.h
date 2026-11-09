@@ -23,6 +23,8 @@ private:
 
 public:
 
+	CounterStrikeViewport() { SetGameEventHandler( this ); }
+
 	IViewPortPanel* CreatePanelByName( const char *szPanelName );
 	void CreateDefaultPanels( void );
 
@@ -41,7 +43,7 @@ public:
 	// HPE_END
 	//=============================================================================
 
-	virtual void FireGameEvent( IGameEvent * event );
+	void FireGameEvent( IGameEvent * event );
 
 	virtual void UpdateAllPanels( void );
 

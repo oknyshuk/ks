@@ -31,7 +31,7 @@ public:
 
 	CItem_Healthshot() 	{}
 
-	virtual void	Precache( void );
+	KS_VIRTUAL void	Precache_Impl( void );
 
 	virtual bool	CanPrimaryAttack( void );
 

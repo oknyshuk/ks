@@ -5,8 +5,6 @@
 // Auto-generate a Navigation Mesh by sampling the current map
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -24,7 +22,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -107,7 +104,7 @@ public:
  * move into/out of our local neighborhood of areas.
  * @todo Optimize by search from eye outward and modifying pathfinder to treat all links as bi-directional
  */
-void CCSNavArea::ComputeApproachAreas( void )
+void CNavArea::ComputeApproachAreas( void )
 {
 	m_approachCount = 0;
 

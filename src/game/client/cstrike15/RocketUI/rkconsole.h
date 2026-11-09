@@ -8,17 +8,8 @@
 #include "GameEventListener.h"
 #include <rocketui/rocketui.h>
 #include <rocketui/rmlui.h>
-import ks.tier1;
-import std;
 
-namespace Rml {
-    class ElementDocument;
-    class Element;
-    class ElementFormControlInput;
-    class ElementFormControlTextArea;
-}
-
-class RocketConsole : public IConsoleDisplayFunc
+class RocketConsole
 {
 public:
     RocketConsole();
@@ -34,11 +25,12 @@ public:
 
     void Clear();
 
-    // IConsoleDisplayFunc implementation
-    virtual void ColorPrint(const Color& clr, const char* pMessage) override;
-    virtual void Print(const char* pMessage) override;
-    virtual void DPrint(const char* pMessage) override;
-    virtual void GetConsoleText(char* pchText, size_t bufSize) const override;
+    // Console output, installed with ICvar::InstallConsoleDisplayFunc
+    void Display(ConsoleDisplayOp_t op, const Color& clr, const char* pMessage);
+    void ColorPrint(const Color& clr, const char* pMessage);
+    void Print(const char* pMessage);
+    void DPrint(const char* pMessage);
+    void GetConsoleText(char* pchText, size_t bufSize) const;
 
     // Input handling - called from RocketUI input system
     bool HandleKeyInput(int key, bool down);

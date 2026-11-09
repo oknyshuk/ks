@@ -32,28 +32,28 @@ inline constexpr const char *SHADERSYSTEM_INTERFACE_VERSION = "ShaderSystem002";
 class IShaderSystem
 {
 public:
-	virtual ShaderAPITextureHandle_t GetShaderAPITextureBindHandle( ITexture *pTexture, int nFrameVar, int nTextureChannel = 0 ) =0;
+	ShaderAPITextureHandle_t GetShaderAPITextureBindHandle( ITexture *pTexture, int nFrameVar, int nTextureChannel = 0 );
 
 	// Binds a texture
-	virtual void BindTexture( Sampler_t sampler1, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrameVar = 0 ) = 0;
-	virtual void BindTexture( Sampler_t sampler1, Sampler_t sampler2, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrameVar = 0 ) = 0;
+	void BindTexture( Sampler_t sampler1, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrameVar = 0 );
+	void BindTexture( Sampler_t sampler1, Sampler_t sampler2, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrameVar = 0 );
 
 	// Takes a snapshot
-	virtual void TakeSnapshot( ) = 0;
+	void TakeSnapshot( );
 
 	// Draws a snapshot
-	virtual void DrawSnapshot( const unsigned char *pInstanceCommandBuffer, bool bMakeActualDrawCall = true ) = 0;
+	void DrawSnapshot( const unsigned char *pInstanceCommandBuffer, bool bMakeActualDrawCall = true );
 
 	// Are we using graphics?
-	virtual bool IsUsingGraphics() const = 0;
+	bool IsUsingGraphics() const;
 
 	// Are editor materials enabled?
-	virtual bool CanUseEditorMaterials() const = 0;
+	bool CanUseEditorMaterials() const;
 
 	// Bind vertex texture
-	virtual void BindVertexTexture( VertexTextureSampler_t vtSampler, ITexture *pTexture, int nFrameVar = 0 ) = 0;
+	void BindVertexTexture( VertexTextureSampler_t vtSampler, ITexture *pTexture, int nFrameVar = 0 );
 
-	virtual void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics ) = 0;
+	void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics );
 };
 
 
@@ -70,18 +70,18 @@ class IShaderDLLInternal
 {
 public:
 	// Here's where the app systems get to learn about each other 
-	virtual bool Connect( CreateInterfaceFn factory, bool bIsMaterialSystem ) = 0;
-	virtual void Disconnect( bool bIsMaterialSystem ) = 0;
+	bool Connect( CreateInterfaceFn factory, bool bIsMaterialSystem );
+	void Disconnect( bool bIsMaterialSystem );
 
 	// Returns the number of shaders defined in this DLL
-	virtual int ShaderCount() const = 0;
+	int ShaderCount() const;
 
 	// Returns information about each shader defined in this DLL
-	virtual IShader *GetShader( int nShader ) = 0;
+	IShader *GetShader( int nShader );
 
 	// Deals with all of the shader combo semantics from inc files.
-	virtual int ShaderComboSemanticsCount() const = 0;
-	virtual const ShaderComboSemantics_t *GetComboSemantics( int n ) = 0;
+	int ShaderComboSemanticsCount() const;
+	const ShaderComboSemantics_t *GetComboSemantics( int n );
 };
 
 

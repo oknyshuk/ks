@@ -9,6 +9,7 @@
 #include "timedevent.h"
 
 // Lerp between two floating point numbers.
+using ::FLerp;
 inline float FLerp(float minVal, float maxVal, float t)
 {
 	return minVal + (maxVal - minVal) * t;

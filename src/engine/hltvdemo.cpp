@@ -22,7 +22,7 @@ extern CNetworkStringTableContainer *networkStringTableContainerServer;
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CHLTVDemoRecorder::CHLTVDemoRecorder(CHLTVServer *pHltvServer) :hltv( pHltvServer )
+CHLTVDemoRecorder::CHLTVDemoRecorder(CHLTVServer *pHltvServer) :IDemoRecorder( recorder_kind_t::hltv ), hltv( pHltvServer )
 {
 	m_bIsRecording = false;
 }

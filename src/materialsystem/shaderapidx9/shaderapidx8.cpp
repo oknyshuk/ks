@@ -614,45 +614,44 @@ enum FogMethod_t
 //-----------------------------------------------------------------------------
 // The DX8 implementation of the shader API
 //-----------------------------------------------------------------------------
-class CShaderAPIDx8 : public CShaderDeviceDx8, public IShaderAPIDX8, public IDebugTextureInfo
+class CShaderAPIDx8 : public CShaderDeviceDx8
 {
 	typedef CShaderDeviceDx8 BaseClass;
+
+	// The facades forward to the (partly private) implementation
+	friend class IShaderDynamicAPI;
+	friend class IShaderAPI;
+	friend class IShaderDevice;
+	friend class IDebugTextureInfo;
+	friend class IShaderAPIDX8;
+	friend class CShaderAPIBase;
+	friend class CShaderDeviceDx8;
 
 public:
 	// constructor, destructor
 	CShaderAPIDx8( );
-	virtual ~CShaderAPIDx8();
+	~CShaderAPIDx8();
 
 	// Methods of IShaderAPI
 public:
-	virtual void SetViewports( int nCount, const ShaderViewport_t* pViewports, bool setImmediately = false );
-	virtual int  GetViewports( ShaderViewport_t* pViewports, int nMax ) const;
-	virtual void ClearBuffers( bool bClearColor, bool bClearDepth, bool bClearStencil, int renderTargetWidth, int renderTargetHeight );
-	virtual void ClearColor3ub( unsigned char r, unsigned char g, unsigned char b );
-	virtual void ClearColor4ub( unsigned char r, unsigned char g, unsigned char b, unsigned char a );
-	virtual void BindVertexShader( VertexShaderHandle_t hVertexShader );
-	virtual void BindGeometryShader( GeometryShaderHandle_t hGeometryShader );
-	virtual void BindPixelShader( PixelShaderHandle_t hPixelShader );
-	virtual void SetRasterState( const ShaderRasterState_t& state );
-	virtual void SetFlexWeights( int nFirstWeight, int nCount, const MorphWeight_t* pWeights );
-	virtual void OnPresent( void );
+	void SetViewports( int nCount, const ShaderViewport_t* pViewports, bool setImmediately = false );
+	int  GetViewports( ShaderViewport_t* pViewports, int nMax ) const;
+	void ClearBuffers( bool bClearColor, bool bClearDepth, bool bClearStencil, int renderTargetWidth, int renderTargetHeight );
+	void ClearColor3ub( unsigned char r, unsigned char g, unsigned char b );
+	void ClearColor4ub( unsigned char r, unsigned char g, unsigned char b, unsigned char a );
+	void BindVertexShader( VertexShaderHandle_t hVertexShader );
+	void BindGeometryShader( GeometryShaderHandle_t hGeometryShader );
+	void BindPixelShader( PixelShaderHandle_t hPixelShader );
+	void SetRasterState( const ShaderRasterState_t& state );
+	void SetFlexWeights( int nFirstWeight, int nCount, const MorphWeight_t* pWeights );
+	void OnPresent( void );
 
 	// Methods of IShaderDynamicAPI
 public:
-	virtual void GetBackBufferDimensions( int &nWidth, int &nHeight ) const
-	{
-		// Chain to the device
-		BaseClass::GetBackBufferDimensions( nWidth, nHeight );
-	}
-
-	virtual const AspectRatioInfo_t &GetAspectRatioInfo( void ) const
-	{
-		// Chain to the device
-		return BaseClass::GetAspectRatioInfo();
-	}
+	void GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* pInfo );
 
 	// Get the dimensions of the current render target
-	virtual void GetCurrentRenderTargetDimensions( int& nWidth, int& nHeight ) const
+	void GetCurrentRenderTargetDimensions( int& nWidth, int& nHeight ) const
 	{
 		ITexture *pTexture = ShaderAPI()->GetRenderTargetEx( 0 );
 		if ( pTexture == nullptr )
@@ -667,7 +666,7 @@ public:
 	}
 
 	// Get the current viewport
-	virtual void GetCurrentViewport( int& nX, int& nY, int& nWidth, int& nHeight ) const
+	void GetCurrentViewport( int& nX, int& nY, int& nWidth, int& nHeight ) const
 	{
 		ShaderViewport_t viewport;
 		ShaderAPI()->GetViewports( &viewport, 1 );
@@ -677,29 +676,29 @@ public:
 		nHeight = viewport.m_nHeight;
 	}
 
-	virtual void MarkUnusedVertexFields( unsigned int nFlags, int nTexCoordCount, bool *pUnusedTexCoords );
-	virtual void SetScreenSizeForVPOS( int pshReg = 32 );
-	virtual void SetVSNearAndFarZ( int vshReg );
-	virtual float GetFarZ();
+	void MarkUnusedVertexFields( unsigned int nFlags, int nTexCoordCount, bool *pUnusedTexCoords );
+	void SetScreenSizeForVPOS( int pshReg = 32 );
+	void SetVSNearAndFarZ( int vshReg );
+	float GetFarZ();
 
-	virtual void EnableSinglePassFlashlightMode( bool bEnable );
-	virtual bool SinglePassFlashlightModeEnabled( void );
+	void EnableSinglePassFlashlightMode( bool bEnable );
+	bool SinglePassFlashlightModeEnabled( void );
 
 public:
 	// Methods of CShaderAPIBase
-	virtual bool OnDeviceInit();
-	virtual void OnDeviceShutdown();
-	virtual void ReleaseShaderObjects( bool bReleaseManagedResources = true );
-	virtual void RestoreShaderObjects();
-	virtual void BeginPIXEvent( unsigned long color, const char *szName );
-	virtual void EndPIXEvent();
-	virtual void AdvancePIXFrame();
-	virtual void NotifyShaderConstantsChangedInRenderPass();
-	virtual void GenerateNonInstanceRenderState( MeshInstanceData_t *pInstance, CompiledLightingState_t** pCompiledState, InstanceInfo_t **pInstanceInfo );
+	bool OnDeviceInit();
+	void OnDeviceShutdown();
+	void ReleaseShaderObjects( bool bReleaseManagedResources = true );
+	void RestoreShaderObjects();
+	void BeginPIXEvent( unsigned long color, const char *szName );
+	void EndPIXEvent();
+	void AdvancePIXFrame();
+	void NotifyShaderConstantsChangedInRenderPass();
+	void GenerateNonInstanceRenderState( MeshInstanceData_t *pInstance, CompiledLightingState_t** pCompiledState, InstanceInfo_t **pInstanceInfo );
 
 public:
 	// Methods of IShaderAPIDX8
-	virtual void QueueResetRenderState();
+	void QueueResetRenderState();
 
 	//
 	// Abandon all hope ye who pass below this line which hasn't been ported.
@@ -715,10 +714,10 @@ public:
 	void SetDefaultState();
 
 	// Methods to ask about particular state snapshots
-	virtual bool IsTranslucent( StateSnapshot_t id ) const;
-	virtual bool IsAlphaTested( StateSnapshot_t id ) const;
-	virtual bool UsesVertexAndPixelShaders( StateSnapshot_t id ) const;
-	virtual int CompareSnapshots( StateSnapshot_t snapshot0, StateSnapshot_t snapshot1 );
+	bool IsTranslucent( StateSnapshot_t id ) const;
+	bool IsAlphaTested( StateSnapshot_t id ) const;
+	bool UsesVertexAndPixelShaders( StateSnapshot_t id ) const;
+	int CompareSnapshots( StateSnapshot_t snapshot0, StateSnapshot_t snapshot1 );
 
 	// Computes the vertex format for a particular set of snapshot ids
 	VertexFormat_t ComputeVertexFormat( int num, StateSnapshot_t* pIds ) const;
@@ -728,12 +727,12 @@ public:
 	void UseSnapshot( StateSnapshot_t snapshot );
 
 	// Set the number of bone weights
-	virtual void SetNumBoneWeights( int numBones );
-	virtual void EnableHWMorphing( bool bEnable );
+	void SetNumBoneWeights( int numBones );
+	void EnableHWMorphing( bool bEnable );
 
 	// Sets the vertex and pixel shaders
-	virtual void SetVertexShaderIndex( int vshIndex = -1 );
-	virtual void SetPixelShaderIndex( int pshIndex = 0 );
+	void SetVertexShaderIndex( int vshIndex = -1 );
+	void SetPixelShaderIndex( int pshIndex = 0 );
 
 	// Matrix state
 	void MatrixMode( MaterialMatrixMode_t matrixMode );
@@ -760,9 +759,9 @@ public:
 	IMaterialInternal* GetBoundMaterial();
 
 	// Level of anisotropic filtering
-	virtual void SetAnisotropicLevel( int nAnisotropyLevel );
+	void SetAnisotropicLevel( int nAnisotropyLevel );
 
-	virtual void	SyncToken( const char *pToken );
+	void	SyncToken( const char *pToken );
 
 	void CullMode( MaterialCullMode_t cullMode );
 	void FlipCullMode( void );
@@ -797,9 +796,9 @@ public:
 	IMesh *GetFlexMesh();
 
 	// Returns the number of vertices we can render using the dynamic mesh
-	virtual void GetMaxToRender( IMesh *pMesh, bool bMaxUntilFlush, int *pMaxVerts, int *pMaxIndices );
-	virtual int GetMaxVerticesToRender( IMaterial *pMaterial );
-	virtual int GetMaxIndicesToRender( );
+	void GetMaxToRender( IMesh *pMesh, bool bMaxUntilFlush, int *pMaxVerts, int *pMaxIndices );
+	int GetMaxVerticesToRender( IMaterial *pMaterial );
+	int GetMaxIndicesToRender( );
 
 	// Draws the mesh
 	void DrawMesh( CMeshBase* mesh, int nCount, const MeshInstanceData_t *pInstances, VertexCompressionType_t nCompressionType, CompiledLightingState_t* pCompiledState, InstanceInfo_t *pInfo );
@@ -812,8 +811,8 @@ public:
 	void RenderPass( const unsigned char *pInstanceCommandBuffer, int nPass, int nPassCount );
 
 	// We use smaller dynamic VBs during level transitions, to free up memory
-	virtual int  GetCurrentDynamicVBSize( void );
-	virtual void DestroyVertexBuffers( bool bExitingLevel = false );
+	int  GetCurrentDynamicVBSize( void );
+	void DestroyVertexBuffers( bool bExitingLevel = false );
 
 	void SetVertexDecl( VertexFormat_t vertexFormat, bool bHasColorMesh, bool bUsingFlex, bool bUsingMorph, bool bUsingPreTessPatch, VertexStreamSpec_t *pStreamSpec );
 
@@ -837,7 +836,7 @@ public:
 	// Returns the nearest supported format
 	ImageFormat GetNearestSupportedFormat( ImageFormat fmt, bool bFilteringRequired = true ) const;
 	ImageFormat GetNearestRenderTargetFormat( ImageFormat format ) const;
-	virtual bool DoRenderTargetsNeedSeparateDepthBuffer() const;
+	bool DoRenderTargetsNeedSeparateDepthBuffer() const;
 
 	// stuff that shouldn't be used from within a shader 
     void ModifyTexture( ShaderAPITextureHandle_t textureHandle );
@@ -861,9 +860,9 @@ public:
 	}
 
 	// Lets the shader know about the full-screen texture so it can 
-	virtual void SetFullScreenTextureHandle( ShaderAPITextureHandle_t h );
+	void SetFullScreenTextureHandle( ShaderAPITextureHandle_t h );
 
-	virtual void SetLinearToGammaConversionTextures( ShaderAPITextureHandle_t hSRGBWriteEnabledTexture, ShaderAPITextureHandle_t hIdentityTexture );
+	void SetLinearToGammaConversionTextures( ShaderAPITextureHandle_t hSRGBWriteEnabledTexture, ShaderAPITextureHandle_t hIdentityTexture );
 
 	// Set the render target to a texID.
 	// Set to SHADER_RENDERTARGET_BACKBUFFER if you want to use the regular framebuffer.
@@ -953,13 +952,13 @@ public:
 
 	// stuff that isn't to be used from within a shader
 	// what's the best way to hide this? subclassing?
-	virtual void ClearBuffersObeyStencil( bool bClearColor, bool bClearDepth );
-	virtual void ClearBuffersObeyStencilEx( bool bClearColor, bool bClearAlpha, bool bClearDepth );
-	virtual void PerformFullScreenStencilOperation( void );
+	void ClearBuffersObeyStencil( bool bClearColor, bool bClearDepth );
+	void ClearBuffersObeyStencilEx( bool bClearColor, bool bClearAlpha, bool bClearDepth );
+	void PerformFullScreenStencilOperation( void );
 	void ReadPixels( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = nullptr );
 	void ReadPixelsAsync( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = nullptr, CThreadEvent *pPixelsReadEvent = nullptr );
 	void ReadPixelsAsyncGetResult( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, CThreadEvent *pGetResultEvent = nullptr );
-	virtual void ReadPixels( Rect_t *pSrcRect, Rect_t *pDstRect, unsigned char *data, ImageFormat dstFormat, int nDstStride );
+	void ReadPixels( Rect_t *pSrcRect, Rect_t *pDstRect, unsigned char *data, ImageFormat dstFormat, int nDstStride );
 
 	// Gets the current buffered state... (debug only)
 	void GetBufferedState( BufferedState_t& state );
@@ -981,10 +980,10 @@ public:
 	}
 
 	// Backward compat
-	virtual int GetActualSamplerCount() const;
-	virtual int StencilBufferBits() const;
-	virtual bool IsAAEnabled() const;	// Is antialiasing being used?
-	virtual bool OnAdapterSet( );
+	int GetActualSamplerCount() const;
+	int StencilBufferBits() const;
+	bool IsAAEnabled() const;	// Is antialiasing being used?
+	bool OnAdapterSet( );
 	bool m_bAdapterSet;
 
 	void UpdateFastClipUserClipPlane( void );
@@ -1032,24 +1031,24 @@ public:
 	void WriteHitRecord();
 
 	// Binds a standard texture
-	virtual void BindStandardTexture( Sampler_t sampler, TextureBindFlags_t nBindFlags, StandardTextureId_t id );
-	virtual void BindStandardVertexTexture( VertexTextureSampler_t sampler, StandardTextureId_t id );
-	virtual void GetStandardTextureDimensions( int *pWidth, int *pHeight, StandardTextureId_t id );
+	void BindStandardTexture( Sampler_t sampler, TextureBindFlags_t nBindFlags, StandardTextureId_t id );
+	void BindStandardVertexTexture( VertexTextureSampler_t sampler, StandardTextureId_t id );
+	void GetStandardTextureDimensions( int *pWidth, int *pHeight, StandardTextureId_t id );
 
-	virtual float GetSubDHeight();
+	float GetSubDHeight();
 
-	virtual bool IsStereoActiveThisFrame() const;
+	bool IsStereoActiveThisFrame() const;
 	bool m_bIsStereoActiveThisFrame;
 	
 	// Gets the lightmap dimensions
-	virtual void GetLightmapDimensions( int *w, int *h );
+	void GetLightmapDimensions( int *w, int *h );
 
 	// Use this to get the mesh builder that allows us to modify vertex data
 	CMeshBuilder* GetVertexModifyBuilder();
 
-	virtual bool InFlashlightMode() const;
-	virtual bool IsRenderingPaint() const;
-	virtual bool InEditorMode() const;
+	bool InFlashlightMode() const;
+	bool IsRenderingPaint() const;
+	bool InEditorMode() const;
 
 	// Helper to get at the texture state stage
 	SamplerState_t& SamplerState( int nSampler ) { return m_DynamicState.m_SamplerState[nSampler]; }
@@ -1057,7 +1056,7 @@ public:
 	TextureBindFlags_t LastSetTextureBindFlags( int nSampler ) const { return SamplerState( nSampler ).m_nTextureBindFlags; }
 	void SetLastSetTextureBindFlags( int nSampler, TextureBindFlags_t nBindFlags ) { SamplerState( nSampler ).m_nTextureBindFlags = nBindFlags; }
 
-	virtual void SetLightingState( const MaterialLightingState_t& state );
+	void SetLightingState( const MaterialLightingState_t& state );
 	void SetLights( int nCount, const LightDesc_t *pDesc );
 	void SetLightingOrigin( Vector vLightingOrigin );
 	void DisableAllLocalLights();
@@ -1113,7 +1112,7 @@ public:
 	// Scissor Rect
 	void SetScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom, const bool bEnableScissor );
 	// Can we download textures?
-	virtual bool CanDownloadTextures() const;
+	bool CanDownloadTextures() const;
 
 	void ForceHardwareSync_WithManagedTexture();
 	void ForceHardwareSync( void );
@@ -1122,9 +1121,9 @@ public:
 	void EvictManagedResources();
 
 	// Get stats on GPU memory usage
-	virtual void GetGPUMemoryStats( GPUMemoryStats &stats );
+	void GetGPUMemoryStats( GPUMemoryStats &stats );
 
-	virtual void EvictManagedResourcesInternal();
+	void EvictManagedResourcesInternal();
 
 	// Gets at a particular transform
 	inline D3DXMATRIX& GetTransform( int i )
@@ -1141,7 +1140,7 @@ public:
 
 	void RecordString( const char *pStr );
 
-	virtual bool IsRenderingMesh() const { return m_nRenderInstanceCount != 0; }
+	bool IsRenderingMesh() const { return m_nRenderInstanceCount != 0; }
 
 	int GetCurrentFrameCounter( void ) const
 	{
@@ -1149,53 +1148,53 @@ public:
 	}
  
 	// Workaround hack for visualization of selection mode
-	virtual void SetupSelectionModeVisualizationState();
+	void SetupSelectionModeVisualizationState();
 
 	// Allocate and delete query objects.
-	virtual ShaderAPIOcclusionQuery_t CreateOcclusionQueryObject( void );
-	virtual void DestroyOcclusionQueryObject( ShaderAPIOcclusionQuery_t h );
+	ShaderAPIOcclusionQuery_t CreateOcclusionQueryObject( void );
+	void DestroyOcclusionQueryObject( ShaderAPIOcclusionQuery_t h );
 
 	// Bracket drawing with begin and end so that we can get counts next frame.
-	virtual void BeginOcclusionQueryDrawing( ShaderAPIOcclusionQuery_t h );
-	virtual void EndOcclusionQueryDrawing( ShaderAPIOcclusionQuery_t h );
+	void BeginOcclusionQueryDrawing( ShaderAPIOcclusionQuery_t h );
+	void EndOcclusionQueryDrawing( ShaderAPIOcclusionQuery_t h );
 
 	// Get the number of pixels rendered between begin and end on an earlier frame.
 	// Calling this in the same frame is a huge perf hit!
-	virtual int OcclusionQuery_GetNumPixelsRendered( ShaderAPIOcclusionQuery_t h, bool bFlush );
+	int OcclusionQuery_GetNumPixelsRendered( ShaderAPIOcclusionQuery_t h, bool bFlush );
 
 	void SetFlashlightState( const FlashlightState_t &state, const VMatrix &worldToTexture );
 	void SetFlashlightStateEx( const FlashlightState_t &state, const VMatrix &worldToTexture, ITexture *pFlashlightDepthTexture );
 	const FlashlightState_t &GetFlashlightState( VMatrix &worldToTexture ) const;
 	const FlashlightState_t &GetFlashlightStateEx( VMatrix &worldToTexture, ITexture **pFlashlightDepthTexture ) const;
-	virtual void GetFlashlightShaderInfo( bool *pShadowsEnabled, bool *pUberLight ) const;
-	virtual float GetFlashlightAmbientOcclusion( ) const;
+	void GetFlashlightShaderInfo( bool *pShadowsEnabled, bool *pUberLight ) const;
+	float GetFlashlightAmbientOcclusion( ) const;
 			
-	virtual bool IsCascadedShadowMapping() const;
-	virtual void SetCascadedShadowMappingState( const CascadedShadowMappingState_t &state, ITexture *pDepthTextureAtlas );
-	virtual const CascadedShadowMappingState_t &GetCascadedShadowMappingState( ITexture **pDepthTextureAtlas, bool bLightMapScale = false ) const;
+	bool IsCascadedShadowMapping() const;
+	void SetCascadedShadowMappingState( const CascadedShadowMappingState_t &state, ITexture *pDepthTextureAtlas );
+	const CascadedShadowMappingState_t &GetCascadedShadowMappingState( ITexture **pDepthTextureAtlas, bool bLightMapScale = false ) const;
 				
 	// Gets at the shadow state for a particular state snapshot
-	virtual bool IsDepthWriteEnabled( StateSnapshot_t id ) const;
+	bool IsDepthWriteEnabled( StateSnapshot_t id ) const;
 
 // IDebugTextureInfo implementation.
 
-	virtual bool IsDebugTextureListFresh( int numFramesAllowed = 1 );
-	virtual void EnableDebugTextureList( bool bEnable );
-	virtual bool SetDebugTextureRendering( bool bEnable );
-	virtual void EnableGetAllTextures( bool bEnable );
-	virtual KeyValues* LockDebugTextureList( void );
-	virtual void UnlockDebugTextureList( void );
-	virtual int GetTextureMemoryUsed( TextureMemoryType eTextureMemory );
+	bool IsDebugTextureListFresh( int numFramesAllowed = 1 );
+	void EnableDebugTextureList( bool bEnable );
+	bool SetDebugTextureRendering( bool bEnable );
+	void EnableGetAllTextures( bool bEnable );
+	KeyValues* LockDebugTextureList( void );
+	void UnlockDebugTextureList( void );
+	int GetTextureMemoryUsed( IDebugTextureInfo::TextureMemoryType eTextureMemory );
 
-	virtual void ClearVertexAndPixelShaderRefCounts();
-	virtual void PurgeUnusedVertexAndPixelShaders();
+	void ClearVertexAndPixelShaderRefCounts();
+	void PurgeUnusedVertexAndPixelShaders();
 
 	// Called when the dx support level has changed
-	virtual void DXSupportLevelChanged( int nDXLevel );
+	void DXSupportLevelChanged( int nDXLevel );
 
 	// User clip plane override
-	virtual void EnableUserClipTransformOverride( bool bEnable );
-	virtual void UserClipTransform( const VMatrix &worldToProjection );
+	void EnableUserClipTransformOverride( bool bEnable );
+	void UserClipTransform( const VMatrix &worldToProjection );
 
 	bool UsingSoftwareVertexProcessing() const;
 
@@ -1208,8 +1207,8 @@ public:
 
 	ITexture *GetRenderTargetEx( int nRenderTargetID ) const;
 
-	virtual void SetToneMappingScaleLinear( const Vector &scale );
-	virtual const Vector &GetToneMappingScaleLinear( void ) const;
+	void SetToneMappingScaleLinear( const Vector &scale );
+	const Vector &GetToneMappingScaleLinear( void ) const;
 
 	void SetFloatRenderingParameter(int parm_number, float value);					// Rendering Parameter Setters
 	void SetIntRenderingParameter(int parm_number, int value);						//
@@ -1222,9 +1221,9 @@ public:
 	Vector GetVectorRenderingParameter(int parm_number) const;						//
 
 	// For dealing with device lost in cases where Present isn't called all the time (Hammer)
-	virtual void HandleDeviceLost();
+	void HandleDeviceLost();
 
-	virtual void EnableLinearColorSpaceFrameBuffer( bool bEnable );
+	void EnableLinearColorSpaceFrameBuffer( bool bEnable );
 
 	void SetStencilState( const ShaderStencilState_t &state );												// Stencil methods
 	void SetStencilStateInternal( const ShaderStencilState_t &state );
@@ -1234,9 +1233,9 @@ public:
 
 
 
-	virtual void AntiAliasingHint( int nHint );
+	void AntiAliasingHint( int nHint );
 
-	virtual bool OwnGPUResources( bool bEnable );
+	bool OwnGPUResources( bool bEnable );
 
 // ------------ New Vertex/Index Buffer interface ----------------------------
 	void BindVertexBuffer( int streamID, IVertexBuffer *pVertexBuffer, int nOffsetInBytes, int nFirstVertex, int nVertexCount, VertexFormat_t fmt, int nRepetitions = 1 );
@@ -1248,17 +1247,17 @@ public:
 // ------------ End ----------------------------
 
 	// deformations
-	virtual void PushDeformation( const DeformationBase_t *pDeformation );
-	virtual void PopDeformation( );
-	virtual int GetNumActiveDeformations( ) const ;
+	void PushDeformation( const DeformationBase_t *pDeformation );
+	void PopDeformation( );
+	int GetNumActiveDeformations( ) const;
 
 
 	// for shaders to set vertex shader constants. returns a packed state which can be used to set the dynamic combo
-	virtual int GetPackedDeformationInformation( int nMaskOfUnderstoodDeformations,
+	int GetPackedDeformationInformation( int nMaskOfUnderstoodDeformations,
 												 float *pConstantValuesOut,
 												 int nBufferSize,
 												 int nMaximumDeformations,
-												 int *pNumDefsOut ) const ;
+												 int *pNumDefsOut ) const;
 
 	// Texture handles are the addresses of m_Textures entries
 	inline Texture_t &GetTexture( ShaderAPITextureHandle_t hTexture )
@@ -1277,19 +1276,19 @@ public:
 
 	// Gets the texture 
 	IDirect3DBaseTexture* GetD3DTexture( ShaderAPITextureHandle_t hTexture );
-	virtual void* GetD3DTexturePtr( ShaderAPITextureHandle_t hTexture );
-	virtual bool IsStandardTextureHandleValid( StandardTextureId_t textureId );
+	void* GetD3DTexturePtr( ShaderAPITextureHandle_t hTexture );
+	bool IsStandardTextureHandleValid( StandardTextureId_t textureId );
 
 
-	virtual bool ShouldWriteDepthToDestAlpha( void ) const;
+	bool ShouldWriteDepthToDestAlpha( void ) const;
 
-	virtual void AcquireThreadOwnership();
-	virtual void ReleaseThreadOwnership();
+	void AcquireThreadOwnership();
+	void ReleaseThreadOwnership();
 
-	virtual void UpdateGameTime( float flTime ) { m_flCurrGameTime = flTime; }
+	void UpdateGameTime( float flTime ) { m_flCurrGameTime = flTime; }
 
-	virtual bool IsStereoSupported() const;
-	virtual void UpdateStereoTexture( ShaderAPITextureHandle_t texHandle, bool *pStereoActiveThisFrame );
+	bool IsStereoSupported() const;
+	void UpdateStereoTexture( ShaderAPITextureHandle_t texHandle, bool *pStereoActiveThisFrame );
 private:
 	enum
 	{
@@ -1373,7 +1372,7 @@ private:
 	void ComputeFillRate();
 
 	// Takes a snapshot
-	virtual StateSnapshot_t TakeSnapshot( );
+	StateSnapshot_t TakeSnapshot( );
 
 	// Converts the clear color to be appropriate for HDR
 	D3DCOLOR GetActualClearColor( D3DCOLOR clearColor );
@@ -1569,7 +1568,7 @@ private:
 	void ExecuteInstanceCommandBuffer( const unsigned char *pCmdBuf, int nInstanceIndex, bool bForceStateSet );
 	void SetStandardTextureHandle( StandardTextureId_t nId, ShaderAPITextureHandle_t );
 	void RecomputeAggregateLightingState( void );
-	virtual void DrawInstances( int nInstanceCount, const MeshInstanceData_t *pInstance );
+	void DrawInstances( int nInstanceCount, const MeshInstanceData_t *pInstance );
 
 	// Methods related to queuing functions to be called per-(pMesh->Draw call) or per-pass
 	void ClearAllCommitFuncs( CommitFuncType_t func );
@@ -1658,10 +1657,10 @@ private:
 
 	void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics );
 
-	virtual float GetLightMapScaleFactor() const;
+	float GetLightMapScaleFactor() const;
 
-	virtual ShaderAPITextureHandle_t FindTexture( const char *pDebugName );
-	virtual void GetTextureDimensions( ShaderAPITextureHandle_t hTexture, int &nWidth, int &nHeight, int &nDepth );
+	ShaderAPITextureHandle_t FindTexture( const char *pDebugName );
+	void GetTextureDimensions( ShaderAPITextureHandle_t hTexture, int &nWidth, int &nHeight, int &nDepth );
 
 	D3DDeviceWrapper	m_DeviceWrapper;
 
@@ -1903,15 +1902,64 @@ private:
 // Class Factory
 //-----------------------------------------------------------------------------
 static CShaderAPIDx8 g_ShaderAPIDX8;
-IShaderAPIDX8 *g_pShaderAPIDX8 = &g_ShaderAPIDX8;
 CShaderDeviceDx8* g_pShaderDeviceDx8 = &g_ShaderAPIDX8;
 
+// The interfaces of the shader API are stateless facades; their members are defined below and
+// forward to the one implementation.
+static IShaderAPIDX8 s_ShaderAPIFacade;
+static IShaderDevice s_ShaderDeviceFacade;
+static IDebugTextureInfo s_DebugTextureInfoFacade;
+IShaderAPIDX8 *g_pShaderAPIDX8 = &s_ShaderAPIFacade;
+
+static CShaderAPIDx8 &ShaderAPIImpl() { return g_ShaderAPIDX8; }
+static CShaderAPIDx8 &ShaderDeviceImpl() { return g_ShaderAPIDX8; }
+static CShaderAPIDx8 &DebugTextureInfoImpl() { return g_ShaderAPIDX8; }
+
+#include "../shaderapi_facade/ishaderdynamicapi.inl"
+#include "../shaderapi_facade/ishaderapi.inl"
+#include "../shaderapi_facade/ishaderdevice.inl"
+#include "../shaderapi_facade/idebugtextureinfo.inl"
+#include "shaderapidx8_facade.inl"
+
 // FIXME: Remove IShaderAPI + IShaderDevice; they change after SetMode
-static InterfaceReg s_Reg_CShaderAPIDx8_IShaderAPI( []() -> void * { return static_cast<IShaderAPI *>( &g_ShaderAPIDX8 ); }, SHADERAPI_INTERFACE_VERSION );;
+static InterfaceReg s_Reg_CShaderAPIDx8_IShaderAPI( []() -> void * { return static_cast<IShaderAPI *>( &s_ShaderAPIFacade ); }, SHADERAPI_INTERFACE_VERSION );;
 
-static InterfaceReg s_Reg_CShaderAPIDx8_IShaderDevice( []() -> void * { return static_cast<IShaderDevice *>( &g_ShaderAPIDX8 ); }, SHADER_DEVICE_INTERFACE_VERSION );;
+static InterfaceReg s_Reg_CShaderAPIDx8_IShaderDevice( []() -> void * { return &s_ShaderDeviceFacade; }, SHADER_DEVICE_INTERFACE_VERSION );;
 
-static InterfaceReg s_Reg_CShaderAPIDx8_IDebugTextureInfo( []() -> void * { return static_cast<IDebugTextureInfo *>( &g_ShaderAPIDX8 ); }, DEBUG_TEXTURE_INFO_VERSION );;
+static InterfaceReg s_Reg_CShaderAPIDx8_IDebugTextureInfo( []() -> void * { return &s_DebugTextureInfoFacade; }, DEBUG_TEXTURE_INFO_VERSION );;
+
+//-----------------------------------------------------------------------------
+// Members of the device classes that CShaderAPIDx8 implements for them
+//-----------------------------------------------------------------------------
+int CShaderDeviceBase::StencilBufferBits() const
+{
+	return g_ShaderAPIDX8.StencilBufferBits();
+}
+
+bool CShaderDeviceBase::IsAAEnabled() const
+{
+	return g_ShaderAPIDX8.IsAAEnabled();
+}
+
+void CShaderDeviceBase::EvictManagedResourcesInternal()
+{
+	g_ShaderAPIDX8.EvictManagedResourcesInternal();
+}
+
+bool CShaderDeviceDx8::OnAdapterSet()
+{
+	return g_ShaderAPIDX8.OnAdapterSet();
+}
+
+void CShaderDeviceDx8::ResetRenderState( bool bFullReset )
+{
+	g_ShaderAPIDX8.ResetRenderState( bFullReset );
+}
+
+void CShaderAPIDx8::GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* pInfo )
+{
+	g_pShaderUtil->GetCurrentColorCorrection( pInfo );
+}
 
 //-----------------------------------------------------------------------------
 // CShaderAPIDx8 static members
@@ -2380,7 +2428,7 @@ bool CShaderAPIDx8::SetMode( void* VD3DHWND, int nAdapter, const ShaderDeviceInf
 	if ( !g_pShaderDeviceMgrDx8->ValidateMode( nAdapter, actualInfo ) )
 		return false;
 
-	g_pShaderAPIBase = this;
+	g_pShaderAPIBase = &s_ShaderAPIFacade;
 	g_pShaderDeviceBase = this;
 	g_pShaderShadow = ShaderShadow();
 	bool bOk = InitDevice( VD3DHWND, nAdapter, actualInfo );
@@ -3899,7 +3947,7 @@ void CShaderAPIDx8::DrawMesh2( CMeshBase* pMesh, int nCount, const MeshInstanceD
 	params = m_pMaterial->GetVars();
 	pShader->SetPPParams( params );
 	pShader->SetModulationFlags( modulationFlags );
-	pShader->ExecuteFastPath( &dynVSIdx, &dynPSIdx, params, this, nCompressionType, pContextDataPtr, m_bCSMsValidThisFrame );
+	pShader->ExecuteFastPath( &dynVSIdx, &dynPSIdx, params, g_pShaderAPIDX8, nCompressionType, pContextDataPtr, m_bCSMsValidThisFrame );
 
 	if ( dynVSIdx != -1 )
 	{
@@ -3991,7 +4039,7 @@ void CShaderAPIDx8::DrawShadowMesh( CMeshBase *pMesh, int nCount, const MeshInst
 	IShader *pShader = m_pMaterial->GetShader();
 	IMaterialVar** params = m_pMaterial->GetVars();
 	pShader->SetPPParams( params );
-	pShader->ExecuteFastPath( &dynVSIdx, &dynPSIdx, params, this, nCompressionType, nullptr, false );
+	pShader->ExecuteFastPath( &dynVSIdx, &dynPSIdx, params, g_pShaderAPIDX8, nCompressionType, nullptr, false );
 
 	if ( dynVSIdx != -1 )
 	{
@@ -4724,7 +4772,7 @@ double CShaderAPIDx8::CurrentTime() const
 //-----------------------------------------------------------------------------
 // Updates the depth bias
 //-----------------------------------------------------------------------------
-static void OnDepthBiasChanged( IConVar *var, const char *pOldValue, float flOldValue )
+static void OnDepthBiasChanged( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	g_ShaderAPIDX8.UpdateDepthBiasState();
 }
@@ -12032,17 +12080,17 @@ void CShaderAPIDx8::UnlockDebugTextureList( void )
 	m_DebugTextureListLock.unlock();
 }
 
-int CShaderAPIDx8::GetTextureMemoryUsed( TextureMemoryType eTextureMemory )
+int CShaderAPIDx8::GetTextureMemoryUsed( IDebugTextureInfo::TextureMemoryType eTextureMemory )
 {
 	switch ( eTextureMemory )
 	{
-	case MEMORY_BOUND_LAST_FRAME:
+	case IDebugTextureInfo::MEMORY_BOUND_LAST_FRAME:
 		return m_nTextureMemoryUsedLastFrame;
-	case MEMORY_TOTAL_LOADED:
+	case IDebugTextureInfo::MEMORY_TOTAL_LOADED:
 		return m_nTextureMemoryUsedTotal;
-	case MEMORY_ESTIMATE_PICMIP_1:
+	case IDebugTextureInfo::MEMORY_ESTIMATE_PICMIP_1:
 		return m_nTextureMemoryUsedPicMip1;
-	case MEMORY_ESTIMATE_PICMIP_2:
+	case IDebugTextureInfo::MEMORY_ESTIMATE_PICMIP_2:
 		return m_nTextureMemoryUsedPicMip2;
 	default:
 		return 0;

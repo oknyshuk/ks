@@ -24,7 +24,7 @@ class CTestScriptMgr
 {
 public:
 				CTestScriptMgr();
-	virtual		~CTestScriptMgr();
+	~CTestScriptMgr();
 	
 	bool		StartTestScript( const char *pFilename );
 	void		StopTestScript( void);
@@ -39,7 +39,7 @@ public:
 	void		SetWaitCheckPoint( const char *pCheckPointName, bool bOnce=false );
 
 
-private:
+public:
 	void		Term( void );
 
 	// Runs until it hits a command that makes the script wait, like 'Test_Wait' or 'Test_StepTo'.
@@ -62,7 +62,7 @@ private:
 	void		ErrorIfNotInitted();
 
 
-private:
+public:
 	FileHandle_t	m_hFile;
 	char			m_NextCheckPoint[32];	// If this is > 0 length it will wait to run script until you hit
 											// the next checkpoint with this name.

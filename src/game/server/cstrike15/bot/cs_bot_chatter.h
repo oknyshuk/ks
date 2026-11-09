@@ -34,21 +34,43 @@ bool GetRandomSpotAtPlace( Place place, Vector *pPos );
 class BotMeme
 {
 public:
+	/// the concrete meme types
+	enum class Kind
+	{
+		Help,
+		BombsiteStatus,
+		BombStatus,
+		Follow,
+		DefendHere,
+		WhereBomb,
+		RequestReport,
+		AllHostagesGone,
+		HostageBeingTaken,
+		HeardNoise,
+		WarnSniper,
+	};
+
 	void Transmit( CCSBot *sender ) const;									///< transmit meme to other bots
-	virtual ~BotMeme() = default; //lwss: add a meme destructor
-	virtual void Interpret( CCSBot *sender, CCSBot *receiver ) const = 0;	///< cause the given bot to act on this meme
+	void Interpret( CCSBot *sender, CCSBot *receiver ) const;				///< cause the given bot to act on this meme
+	static void Destroy( BotMeme *meme );									///< delete a meme through its concrete type
+
+protected:
+	explicit BotMeme( Kind kind ) : m_kind( kind ) { }
+	~BotMeme() = default;
+
+private:
+	Kind m_kind;
 };
 
 //----------------------------------------------------------------------------------------------------
 class BotHelpMeme : public BotMeme
 {
 public:
-	BotHelpMeme( Place place = UNDEFINED_PLACE )
+	BotHelpMeme( Place place = UNDEFINED_PLACE ) : BotMeme( Kind::Help )
 	{
 		m_place = place;
 	}
-    virtual ~BotHelpMeme() = default;
-	virtual void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
+	void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
 
 private:
 	Place m_place;			///< where the help is needed
@@ -60,13 +82,12 @@ class BotBombsiteStatusMeme : public BotMeme
 public:
 	enum StatusType { CLEAR, PLANTED };
 
-	BotBombsiteStatusMeme( int zoneIndex, StatusType status )
+	BotBombsiteStatusMeme( int zoneIndex, StatusType status ) : BotMeme( Kind::BombsiteStatus )
 	{
 		m_zoneIndex = zoneIndex;
 		m_status = status;
 	}
-    virtual ~BotBombsiteStatusMeme() = default;
-	virtual void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
+	void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
 
 private:
 	int m_zoneIndex;			///< the bombsite
@@ -77,13 +98,12 @@ private:
 class BotBombStatusMeme : public BotMeme
 {
 public:
-	BotBombStatusMeme( CSGameState::BombState state, const Vector &pos )
+	BotBombStatusMeme( CSGameState::BombState state, const Vector &pos ) : BotMeme( Kind::BombStatus )
 	{
 		m_state = state;
 		m_pos = pos;
 	}
-    virtual ~BotBombStatusMeme() = default;
-	virtual void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
+	void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
 
 private:
 	CSGameState::BombState m_state;
@@ -94,20 +114,19 @@ private:
 class BotFollowMeme : public BotMeme
 {
 public:
-    virtual ~BotFollowMeme() = default;
-    virtual void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
+	BotFollowMeme( void ) : BotMeme( Kind::Follow ) { }
+	void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
 };
 
 //----------------------------------------------------------------------------------------------------
 class BotDefendHereMeme : public BotMeme
 {
 public:
-	BotDefendHereMeme( const Vector &pos )
+	BotDefendHereMeme( const Vector &pos ) : BotMeme( Kind::DefendHere )
 	{
 		m_pos = pos;
 	}
-    virtual ~BotDefendHereMeme() = default;
-	virtual void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
+	void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
 
 private:
 	Vector m_pos;
@@ -117,48 +136,48 @@ private:
 class BotWhereBombMeme : public BotMeme
 {
 public:
-    virtual ~BotWhereBombMeme() = default;
-	virtual void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
+	BotWhereBombMeme( void ) : BotMeme( Kind::WhereBomb ) { }
+	void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
 };
 
 //----------------------------------------------------------------------------------------------------
 class BotRequestReportMeme : public BotMeme
 {
 public:
-    virtual ~BotRequestReportMeme() = default;
-    virtual void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
+	BotRequestReportMeme( void ) : BotMeme( Kind::RequestReport ) { }
+	void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
 };
 
 //----------------------------------------------------------------------------------------------------
 class BotAllHostagesGoneMeme : public BotMeme
 {
 public:
-    virtual ~BotAllHostagesGoneMeme() = default;
-    virtual void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
+	BotAllHostagesGoneMeme( void ) : BotMeme( Kind::AllHostagesGone ) { }
+	void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
 };
 
 //----------------------------------------------------------------------------------------------------
 class BotHostageBeingTakenMeme : public BotMeme
 {
 public:
-    virtual ~BotHostageBeingTakenMeme() = default;
-    virtual void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
+	BotHostageBeingTakenMeme( void ) : BotMeme( Kind::HostageBeingTaken ) { }
+	void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
 };
 
 //----------------------------------------------------------------------------------------------------
 class BotHeardNoiseMeme : public BotMeme
 {
 public:
-    virtual ~BotHeardNoiseMeme() = default;
-    virtual void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
+	BotHeardNoiseMeme( void ) : BotMeme( Kind::HeardNoise ) { }
+	void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
 };
 
 //----------------------------------------------------------------------------------------------------
 class BotWarnSniperMeme : public BotMeme
 {
 public:
-    virtual ~BotWarnSniperMeme() = default;
-    virtual void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
+	BotWarnSniperMeme( void ) : BotMeme( Kind::WarnSniper ) { }
+	void Interpret( CCSBot *sender, CCSBot *receiver ) const;		///< cause the given bot to act on this meme
 };
 
 //----------------------------------------------------------------------------------------------------
@@ -498,8 +517,15 @@ private:
 class BotChatterInterface
 {
 public:
-	BotChatterInterface( CCSBot *me );
-	virtual ~BotChatterInterface();
+	/// chatter implementations
+	enum class Kind
+	{
+		Standard,
+		Coop,			///< BotChatterCoop
+	};
+
+	explicit BotChatterInterface( CCSBot *me, Kind kind = Kind::Standard );
+	~BotChatterInterface();
 
 	void Reset( void );											///< reset to initial state
 	void Update( void );										///< process ongoing chatter
@@ -539,9 +565,10 @@ public:
 	void Affirmative( void );
 	void Negative( void );
 
-	virtual void EnemySpotted( void );									///< report enemy sightings
-	virtual void KilledMyEnemy( int victimID );
-	virtual void EnemiesRemaining( void );
+	// BotChatterCoop's versions of these four are used for Kind::Coop
+	void EnemySpotted( void );											///< report enemy sightings
+	void KilledMyEnemy( int victimID );
+	void EnemiesRemaining( void );
 
 	void SpottedSniper( void );
 	void FriendSpottedSniper( void );
@@ -551,7 +578,7 @@ public:
 	void ReportIn( void );										///< ask for current situation
 	void ReportingIn( void );									///< report current situation
 
-	virtual bool NeedBackup( void );
+	bool NeedBackup( void );
 	void PinnedDown( void );
 	void Scared( void );
 	void HeardNoise( const Vector &pos );
@@ -577,7 +604,7 @@ public:
 	void HostageDown( void );
 	void GuardingBombsite( Place where );
 
-	virtual void CelebrateWin( void );
+	void CelebrateWin( void );
 
 	void Encourage( const char *phraseName, float repeatInterval = 10.0f, float lifetime = 3.0f );	///< "encourage" the player to do the scenario
 
@@ -587,7 +614,16 @@ public:
 
 	bool SeesAtLeastOneEnemy( void ) const { return m_seeAtLeastOneEnemy; }
 
+protected:
+	// the default implementations (BotChatterCoop falls back to them)
+	void EnemySpottedDefault( void );
+	void KilledMyEnemyDefault( int victimID );
+	void EnemiesRemainingDefault( void );
+	void CelebrateWinDefault( void );
+
 private:
+	Kind m_kind;
+
 	BotStatement *m_statementList;										///< list of all active/pending messages for this bot
 
 	void ReportEnemies( void );											///< track nearby enemy count and generate enemy activity statements
@@ -668,8 +704,8 @@ class BotChatterCoop : public BotChatterInterface
 	typedef BotChatterInterface BaseClass;
 public:
 	BotChatterCoop( CCSBot *me );
-	virtual void KilledMyEnemy( int nVictimID ) override;
-	virtual void EnemiesRemaining( void ) override;
-	virtual void CelebrateWin( void ) override;
-	virtual void EnemySpotted( void ) override;
+	void KilledMyEnemy( int nVictimID );
+	void EnemiesRemaining( void );
+	void CelebrateWin( void );
+	void EnemySpotted( void );
 };

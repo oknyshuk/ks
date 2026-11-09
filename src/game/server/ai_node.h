@@ -4,10 +4,8 @@
 
 // Purpose: Base combat character with no AI
 
-import ks.tier1;
 #include "ai_hull.h"
 #include "bitstring.h"
-import std;
 #include "util.h"
 
 enum AI_ZoneIds_t

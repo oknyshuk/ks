@@ -5,8 +5,6 @@
 // Purpose: Add entities to this system, and the Locator will maintain an arrow
 //			on the HUD that points to the entities when they are offscreen.
 
-import std;
-import ks.math;
 
 class CHudTexture;
 

@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "shareddefs.h"
 
 #include "networksystem/inetworksystem.h"
@@ -42,59 +40,80 @@ private:
 
 extern CUserMessages *UserMessages();
 
+#ifdef CLIENT_DLL
+
 //-----------------------------------------------------------------------------
+// One bound handler of a user message type. The typed parts are supplied by
+// CUserMessageBinder as callables. A parsed message is passed around type-erased so
+// that every handler bound to the same message id shares one parse.
 class IUserMessageBinder
 {
 public:
-	virtual ~IUserMessageBinder() = 0;
-	virtual int GetType() const = 0;
+	IUserMessageBinder( int type, int32 nExpectedPassthroughInReplay, const char *typeName,
+		std::move_only_function< std::shared_ptr< void >( const void *msg, int size ) > parse,
+		std::move_only_function< bool( const void *msg ) > invoke,
+		std::move_only_function< std::size_t( const void *msg ) > byteSize,
+		std::move_only_function< std::string( const void *msg ) > describe )
+		: m_nType( type )
+		, m_nExpectedPassthroughInReplay( nExpectedPassthroughInReplay )
+		, m_pszTypeName( typeName )
+		, m_Parse( std::move( parse ) )
+		, m_Invoke( std::move( invoke ) )
+		, m_ByteSize( std::move( byteSize ) )
+		, m_Describe( std::move( describe ) )
+	{
+		UserMessages()->BindMessage( this );
+	}
 
-	// A parsed message is passed back type-erased so that every handler bound to the same
-	// message id shares one parse. Only the binder knows the concrete type, so it also
-	// owns destruction and description.
-	virtual void *Parse( int32 nPassthroughFlags, const void *msg, int size, bool &bSilentIgnore ) = 0;
-	virtual bool Invoke( const void *msg ) = 0;
-	virtual void Destroy( void *msg ) const = 0;
-	virtual const char *TypeName() const = 0;
-	virtual std::size_t ByteSize( const void *msg ) const = 0;
-	virtual std::string Describe( const void *msg ) const = 0;
+	~IUserMessageBinder()
+	{
+		UserMessages()->UnbindMessage( this );
+	}
+
+	IUserMessageBinder( const IUserMessageBinder & ) = delete;
+	IUserMessageBinder &operator=( const IUserMessageBinder & ) = delete;
+
+	int GetType() const { return m_nType; }
+
+	std::shared_ptr< void > Parse( int32 nPassthroughFlags, const void *msg, int size, bool &bSilentIgnore );
+	bool Invoke( const void *msg ) { return msg && m_Invoke( msg ); }
+	const char *TypeName() const { return m_pszTypeName; }
+	std::size_t ByteSize( const void *msg ) { return m_ByteSize( msg ); }
+	std::string Describe( const void *msg ) { return m_Describe( msg ); }
+
+private:
+	int m_nType;
+	int32 m_nExpectedPassthroughInReplay;
+	const char *m_pszTypeName;
+	std::move_only_function< std::shared_ptr< void >( const void *msg, int size ) > m_Parse;
+	std::move_only_function< bool( const void *msg ) > m_Invoke;
+	std::move_only_function< std::size_t( const void *msg ) > m_ByteSize;
+	std::move_only_function< std::string( const void *msg ) > m_Describe;
 };
 
 //-----------------------------------------------------------------------------
 class CUserMessageBinder
 {
 public:
-	CUserMessageBinder()
-		: m_pBind( nullptr )
-	{
-	}
-
-	~CUserMessageBinder()
-	{
-		delete m_pBind;
-	}
+	CUserMessageBinder() = default;
 
 	template< int msgType, typename PB_OBJECT_TYPE >
 	void Bind( std::move_only_function< bool ( const PB_OBJECT_TYPE & obj ) > handler )
 	{
-		delete m_pBind;
-		m_pBind = new BindParams< msgType, PB_OBJECT_TYPE, 0 >( std::move( handler ) );
+		m_pBind.reset();
+		m_pBind = Create< msgType, PB_OBJECT_TYPE, 0 >( std::move( handler ) );
 	}
 
 	template< int msgType, typename PB_OBJECT_TYPE >
 	void BindRealtimePassthrough( std::move_only_function< bool ( const PB_OBJECT_TYPE & obj ) > handler )
 	{
-		delete m_pBind;
-		m_pBind = new BindParams< msgType, PB_OBJECT_TYPE, 1 >( std::move( handler ) );
+		m_pBind.reset();
+		m_pBind = Create< msgType, PB_OBJECT_TYPE, 1 >( std::move( handler ) );
 	}
 
 	void Unbind()
 	{
-		if ( m_pBind )
-		{
-			delete m_pBind;
-			m_pBind = nullptr;
-		}
+		m_pBind.reset();
 	}
 	bool IsBound() const
 	{
@@ -103,80 +122,49 @@ public:
 
 private:
 	template< int msgType, typename PB_OBJECT_TYPE, int32 nExpectedPassthroughInReplay >
-	struct BindParams : public IUserMessageBinder
+	static std::unique_ptr< IUserMessageBinder > Create( std::move_only_function< bool ( PB_OBJECT_TYPE const &msg ) > handler )
 	{
-		BindParams( std::move_only_function< bool ( PB_OBJECT_TYPE const &msg ) > handler )
-			: m_handler( std::move( handler ) )
+		auto parse = []( const void *msg, int size ) -> std::shared_ptr< void >
 		{
-			UserMessages()->BindMessage( this );
-		}
-
-		virtual ~BindParams()
-		{
-			UserMessages()->UnbindMessage( this );
-		}
-
-		virtual int GetType() const
-		{
-			return msgType;
-		}
-
-		virtual void *Parse( int32 nPassthroughFlags, const void *msg, int size, bool &bSilentIgnore ) override
-		{
-			if ( size < 0 || size > NET_MAX_PAYLOAD )
-			{
-				return nullptr;
-			}
-
-			extern int CL_GetHltvReplayDelay();
-			if ( CL_GetHltvReplayDelay() )
-			{
-				if ( nPassthroughFlags != nExpectedPassthroughInReplay )
-				{
-					// this is a wrong timeline message. Ignore it.
-					bSilentIgnore = true;
-					return nullptr;
-				}
-			}
-
-			PB_OBJECT_TYPE *pMsg = new PB_OBJECT_TYPE();
-
+			auto pMsg = std::make_shared< PB_OBJECT_TYPE >();
 			if ( !ks::proto::read_bytes( *pMsg, msg, size ) )
 			{
-				delete pMsg;
 				return nullptr;
 			}
-
 			return pMsg;
-		}
+		};
 
-		virtual bool Invoke( const void *msg ) override
+		auto invoke = [handler = std::move( handler )]( const void *msg ) mutable -> bool
 		{
-			return msg && m_handler( *static_cast< const PB_OBJECT_TYPE * >( msg ) );
-		}
+			return handler( *static_cast< const PB_OBJECT_TYPE * >( msg ) );
+		};
 
-		virtual void Destroy( void *msg ) const override
-		{
-			delete static_cast< PB_OBJECT_TYPE * >( msg );
-		}
-
-		virtual const char *TypeName() const override
-		{
-			return ks::proto::type_name< PB_OBJECT_TYPE >();
-		}
-
-		virtual std::size_t ByteSize( const void *msg ) const override
+		auto byteSize = []( const void *msg ) -> std::size_t
 		{
 			return ks::proto::byte_size( *static_cast< const PB_OBJECT_TYPE * >( msg ) );
-		}
+		};
 
-		virtual std::string Describe( const void *msg ) const override
+		auto describe = []( const void *msg ) -> std::string
 		{
 			return ks::proto::to_text( *static_cast< const PB_OBJECT_TYPE * >( msg ) );
-		}
+		};
 
-		std::move_only_function< bool ( PB_OBJECT_TYPE const &obj ) > m_handler;
-	};
+		return std::make_unique< IUserMessageBinder >( msgType, nExpectedPassthroughInReplay,
+			ks::proto::type_name< PB_OBJECT_TYPE >(),
+			std::move( parse ), std::move( invoke ), std::move( byteSize ), std::move( describe ) );
+	}
 
-	IUserMessageBinder *m_pBind;
+	std::unique_ptr< IUserMessageBinder > m_pBind;
 };
+
+#else
+
+// The server never binds user messages; shared code only declares binders.
+class CUserMessageBinder
+{
+public:
+	void Unbind() {}
+	bool IsBound() const { return false; }
+};
+
+#endif

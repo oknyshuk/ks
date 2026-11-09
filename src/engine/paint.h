@@ -100,17 +100,17 @@ public:
 	void RemovePaint( const model_t *pModel );
 	void PaintAllSurfaces( BYTE color );
 
-	virtual void BeginPaintmapsDataAllocation( int iPaintmapCount );
+	void BeginPaintmapsDataAllocation( int iPaintmapCount );
 
-	virtual void AllocatePaintmapData( int iPaintmapID, int iCorrespondingLightMapWidth, int iCorrespondingLightMapHeight );
+	void AllocatePaintmapData( int iPaintmapID, int iCorrespondingLightMapWidth, int iCorrespondingLightMapHeight );
 
-	virtual void DestroyPaintmapsData( void );
+	void DestroyPaintmapsData( void );
 
-	virtual BYTE* GetPaintmapData( int paintmap );
+	BYTE* GetPaintmapData( int paintmap );
 	
-	virtual void GetPaintmapSize( int paintmap, int& width, int& height );
+	void GetPaintmapSize( int paintmap, int& width, int& height );
 
-	virtual void OnRestorePaintmaps();
+	void OnRestorePaintmaps();
 
 	void UpdatePaintmapTextures();
 

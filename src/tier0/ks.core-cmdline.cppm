@@ -14,31 +14,61 @@ export extern "C++" {
 class ICommandLine
 {
 public:
-	virtual void		CreateCmdLine( const char *commandline ) = 0;
-	virtual void		CreateCmdLine( int argc, char **argv ) = 0;
-	virtual const char	*GetCmdLine( void ) const = 0;
+	// Construction
+	ICommandLine( void );
+	~ICommandLine( void );
+
+	void		CreateCmdLine( const char *commandline );
+	void		CreateCmdLine( int argc, char **argv );
+	const char	*GetCmdLine( void ) const;
 
 	// Check whether a particular parameter exists
-	virtual	const char	*CheckParm( const char *psz, const char **ppszValue = 0 ) const = 0;
+	const char	*CheckParm( const char *psz, const char **ppszValue = 0 ) const;
 	// A bool return of whether param exists, useful for just checking if param that is just a flag is set
-	virtual bool		HasParm( const char *psz ) const = 0;
-	virtual void		RemoveParm( const char *parm ) = 0;
-	virtual void		AppendParm( const char *pszParm, const char *pszValues ) = 0;
+	bool		HasParm( const char *psz ) const;
+	void		RemoveParm( const char *parm );
+	void		AppendParm( const char *pszParm, const char *pszValues );
 
 	// Returns the argument after the one specified, or the default if not found
-	virtual const char	*ParmValue( const char *psz, const char *pDefaultVal = 0 ) const = 0;
-	virtual int			ParmValue( const char *psz, int nDefaultVal ) const = 0;
-	virtual float		ParmValue( const char *psz, float flDefaultVal ) const = 0;
+	const char	*ParmValue( const char *psz, const char *pDefaultVal = 0 ) const;
+	int			ParmValue( const char *psz, int nDefaultVal ) const;
+	float		ParmValue( const char *psz, float flDefaultVal ) const;
 
 	// Gets at particular parameters
-	virtual int			ParmCount() const = 0;
-	virtual int			FindParm( const char *psz ) const = 0;	// Returns 0 if not found.
-	virtual const char* GetParm( int nIndex ) const = 0;
-	
-	// copies the string passwed
-	virtual void SetParm( int nIndex, char const *pNewParm ) =0;
+	int			ParmCount() const;
+	int			FindParm( const char *psz ) const;	// Returns 0 if not found.
+	const char* GetParm( int nIndex ) const;
 
-	virtual const char **GetParms() const = 0;
+	// copies the string passwed
+	void SetParm( int nIndex, char const *pNewParm );
+
+	const char **GetParms() const { return (const char**)m_ppParms; }
+
+private:
+	enum
+	{
+		MAX_PARAMETER_LEN = 128,
+		MAX_PARAMETERS = 256,
+	};
+
+	// When the commandline contains @name, it reads the parameters from that file
+	void LoadParametersFromFile( const char *&pSrc, char *&pDst, intp maxDestLen, bool bInQuotes );
+
+	// Parse command line...
+	void ParseCommandLine();
+
+	// Frees the command line arguments
+	void CleanUpParms();
+
+	// Adds an argument..
+	void AddArgument( const char *pFirst, const char *pLast );
+
+	// Copy of actual command line
+	char *m_pszCmdLine;
+
+	// Pointers to each argument...
+	int m_nParmCount;
+	char *m_ppParms[MAX_PARAMETERS];
 };
 
 //-----------------------------------------------------------------------------

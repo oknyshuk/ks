@@ -74,36 +74,23 @@ enum PrecacheResourceType_t
 };
 
 //-----------------------------------------------------------------------------
-// Callback interface for handler who knows how to precache particular kinds of resources
+// Callback for the handler who knows how to precache particular kinds of resources
 //-----------------------------------------------------------------------------
-class IPrecacheHandler
-{
-public:
-	virtual void CacheResource( PrecacheResourceType_t nType, const char *pName, 
-		bool bPrecache, ResourceList_t hResourceList, int *pIndex = nullptr ) = 0;
-};
+using PrecacheHandler_t = std::function_ref< void( PrecacheResourceType_t nType, const char *pName,
+	bool bPrecache, ResourceList_t hResourceList, int *pIndex ) >;
 
 //-----------------------------------------------------------------------------
-// Interface to automated system for precaching resources
+// A registered resource precacher (created by the PRECACHE_ macros): the callback does the actual
+// precaching of one named group of resources through the handler.
 //-----------------------------------------------------------------------------
-class IResourcePrecacher
-{
-public:
-	virtual void Cache( IPrecacheHandler *pPrecacheHandler, bool bPrecache, ResourceList_t hResourceList, bool bIgnoreConditionals ) = 0;	
-	virtual PrecacheSystem_t GetSystem() = 0;
-	virtual const char *GetName() = 0;
-	virtual IResourcePrecacher *GetNext() = 0;
-	virtual void SetNext( IResourcePrecacher * pNext ) = 0;
-};
+using PrecacheFn_t = std::function_ref< void( PrecacheHandler_t pPrecacheHandler, bool bPrecache, ResourceList_t hResourceList, bool bIgnoreConditionals ) >;
 
-//-----------------------------------------------------------------------------
-// Actually does the precaching
-//-----------------------------------------------------------------------------
-class CBaseResourcePrecacher : public IResourcePrecacher
+class CBaseResourcePrecacher
 {
 	// Other public methods
 public:
-	CBaseResourcePrecacher( PrecacheSystem_t nSystem, const char *pName )
+	CBaseResourcePrecacher( PrecacheSystem_t nSystem, const char *pName, PrecacheFn_t fnCache )
+		: m_fnCache( fnCache )
 	{
 		m_nSystem = nSystem;
 		m_pName = pName;
@@ -113,18 +100,22 @@ public:
 
 	static void RegisterAll();
 
+	void Cache( PrecacheHandler_t pPrecacheHandler, bool bPrecache, ResourceList_t hResourceList, bool bIgnoreConditionals )
+	{
+		m_fnCache( pPrecacheHandler, bPrecache, hResourceList, bIgnoreConditionals );
+	}
 	PrecacheSystem_t GetSystem() { return m_nSystem; }
 	const char *GetName() { return m_pName; }
-	IResourcePrecacher *GetNext() { return m_pNext; }
-	void SetNext( IResourcePrecacher * pNext ) { m_pNext = pNext; }
+	CBaseResourcePrecacher *GetNext() { return m_pNext; }
+	void SetNext( CBaseResourcePrecacher * pNext ) { m_pNext = pNext; }
 
 	static CBaseResourcePrecacher *sm_pFirst[PRECACHE_SYSTEM_COUNT];
 
 	PrecacheSystem_t m_nSystem;
 	const char *m_pName;
-	IResourcePrecacher *m_pNext;	
+	CBaseResourcePrecacher *m_pNext;	
+	PrecacheFn_t m_fnCache;
 
-	friend class CPrecacheRegister;
 };
 
 
@@ -136,14 +127,9 @@ public:
 #define	PRECACHE_REGISTER_BEGIN_CONDITIONAL( _system, _className, _condition )	\
 	namespace _className ## Precache						\
 {														\
-class CResourcePrecacher : public CBaseResourcePrecacher\
-{														\
-public:													\
-	CResourcePrecacher() : CBaseResourcePrecacher( _system, #_className ) {}	\
-public:													\
-	virtual void Cache( IPrecacheHandler *pPrecacheHandler, bool bPrecache, ResourceList_t hResourceList, bool bIgnoreConditionals );	\
-};														\
-	void CResourcePrecacher::Cache( IPrecacheHandler *pPrecacheHandler, bool bPrecache, ResourceList_t hResourceList, bool bIgnoreConditionals )	\
+	static constexpr PrecacheSystem_t s_nSystem = _system;	\
+	static constexpr const char *s_pName = #_className;	\
+	static void Cache( PrecacheHandler_t pPrecacheHandler, bool bPrecache, ResourceList_t hResourceList, bool bIgnoreConditionals )	\
 {														\
 	if ( !bIgnoreConditionals && !( _condition ) )		\
 	return;
@@ -152,27 +138,27 @@ public:													\
 	PRECACHE_REGISTER_BEGIN_CONDITIONAL( _system, _className, true )
 
 // Resource precache definitions
-#define	PRECACHE( _type, _name )				pPrecacheHandler->CacheResource( _type, _name, bPrecache, hResourceList, nullptr ); 
+#define	PRECACHE( _type, _name )				pPrecacheHandler( _type, _name, bPrecache, hResourceList, nullptr ); 
 
 // NOTE: PRECACHE_INDEX_CONDITIONAL doesn't initialize the index to 0
 // on the assumption that some other conditional will
 
 //MCCLEANUP //NOTE: PRECACHE_INDEX and PRECACHE_INDEX_CONDITIONAL won't work in 64 bit because the old-school particle mgr is sending ptr data types into here. Hopefully the old-school particle mgr will die before this is an issue.
 
-#define	PRECACHE_INDEX( _type, _name, _index )	pPrecacheHandler->CacheResource( _type, _name, bPrecache, hResourceList, (int*)( &(_index) ) ); 
+#define	PRECACHE_INDEX( _type, _name, _index )	pPrecacheHandler( _type, _name, bPrecache, hResourceList, (int*)( &(_index) ) ); 
 #define	PRECACHE_CONDITIONAL( _type, _name, _condition )			\
 	if ( !bIgnoreConditionals && ( _condition ) )					\
-	pPrecacheHandler->CacheResource( _type, _name, bPrecache, hResourceList, nullptr ); 
+	pPrecacheHandler( _type, _name, bPrecache, hResourceList, nullptr ); 
 #define	PRECACHE_INDEX_CONDITIONAL( _type, _name, _index, _func )	\
 	if ( bIgnoreConditionals || ( _condition ) )				\
 {															\
-	pPrecacheHandler->CacheResource( _type, _name, bPrecache, hResourceList, (int*)( &(_index) ) );	\
+	pPrecacheHandler( _type, _name, bPrecache, hResourceList, (int*)( &(_index) ) );	\
 }
 
 //End
 #define	PRECACHE_REGISTER_END( )							\
 }														\
-	CResourcePrecacher	s_ResourcePrecacher;				\
+	CBaseResourcePrecacher	s_ResourcePrecacher( s_nSystem, s_pName, Cache );	\
 }
 
 // FIXME: Remove! Backward compat

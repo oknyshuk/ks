@@ -132,6 +132,7 @@ public:
 						CPropMapStack( CSendTablePrecalc *pPrecalc, const CStandardSendProxies *pSendProxies ) :
 							CDatatableStack( pPrecalc, (unsigned char*)1, -1 )
 						{
+							m_RecurseAndCallProxies = { std::cw<&CPropMapStack::RecurseAndCallProxies>, this };
 							m_pPropMapStackPrecalc = pPrecalc;
 							m_pSendProxies = pSendProxies;
 						}
@@ -175,7 +176,7 @@ public:
 		}
 	}
 
-	virtual void RecurseAndCallProxies( CSendNode *pNode, unsigned char *pStructBase )
+	void RecurseAndCallProxies( CSendNode *pNode, unsigned char *pStructBase )
 	{
 		// Remember where the game code pointed us for this datatable's data so 
 		m_pProxies[ pNode->GetRecursiveProxyIndex() ] = pStructBase;

@@ -8,15 +8,12 @@ class CChoreoEvent;
 class CChoreoScene;
 class IChoreoEventCallback; 
 class CAudioMixer;
-namespace ks { class byte_reader; class byte_writer; class text_writer; }
 class IChoreoStringPool;
 
 
-import std;
-import ks.tier1;
 #include "expressionsample.h"
-#include "networkvar.h"
 #include "localflexcontroller.h"
+#include "declare_class.h"
 
 typedef std::string ChoreoStr_t;
 

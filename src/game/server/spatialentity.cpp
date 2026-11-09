@@ -3,8 +3,6 @@
 
 // Purpose: Spatial entity.
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -71,7 +69,7 @@ CSpatialEntity::CSpatialEntity() : BaseClass()
 //------------------------------------------------------------------------------
 // Purpose : Send even though we don't have a model
 //------------------------------------------------------------------------------
-int CSpatialEntity::UpdateTransmitState()
+int CSpatialEntity::UpdateTransmitState_Impl()
 {
 	// ALWAYS transmit to all clients.
 	return SetTransmitState( FL_EDICT_ALWAYS );
@@ -80,7 +78,7 @@ int CSpatialEntity::UpdateTransmitState()
 //------------------------------------------------------------------------------
 // Purpose :
 //------------------------------------------------------------------------------
-void CSpatialEntity::Spawn( void )
+void CSpatialEntity::Spawn_Impl( void )
 {
 	AddEFlags( EFL_FORCE_CHECK_TRANSMIT | EFL_DIRTY_ABSTRANSFORM );
 	Precache();
@@ -101,7 +99,7 @@ void CSpatialEntity::Spawn( void )
 		m_flCurWeight.Set ( 1.0f );
 	}
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 //-----------------------------------------------------------------------------

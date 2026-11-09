@@ -5,8 +5,6 @@
 //			The slug quickly decelerates, leaving a trail of bubbles behind it.
 //			TODO: make clientside
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -24,7 +22,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -58,7 +55,7 @@ IMPLEMENT_REFLECT_SERVERCLASS( CWaterBullet, DT_WaterBullet )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CWaterBullet::Precache()
+void CWaterBullet::Precache_Impl()
 {
 	PrecacheModel( "models/weapons/w_bullet.mdl" );
 }
@@ -115,7 +112,7 @@ void CWaterBullet::BulletThink()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CWaterBullet::Touch( CBaseEntity *pOther )
+void CWaterBullet::Touch_Impl( CBaseEntity *pOther )
 {
 	Vector	vecDir = GetAbsVelocity();
 	float speed = VectorNormalize( vecDir );

@@ -9,7 +9,7 @@ import ks.tier1;
 #include "server.h"
 #include "server.h"
 
-static void SvSearchKeyChangeCallback( IConVar *pConVar, const char *pOldValue, float flOldValue )
+static void SvSearchKeyChangeCallback( ConVar *pConVar, const char *pOldValue, float flOldValue )
 {
 	sv.UpdateGameData();
 }

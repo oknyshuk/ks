@@ -5,11 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
-import ks.vstdlib;
 #include "const.h"
 #include "string_t.h"
 #include "predictableid.h"
@@ -25,7 +21,6 @@ import ks.vstdlib;
 #include "cdll_client_int.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -43,7 +38,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -145,7 +139,7 @@ CGameRulesProxy::~CGameRulesProxy()
 	}
 }
 
-int CGameRulesProxy::UpdateTransmitState()
+int CGameRulesProxy::UpdateTransmitState_Impl()
 {
 #ifndef CLIENT_DLL
 	// ALWAYS transmit to all clients.
@@ -352,7 +346,7 @@ void CGameRules::RefreshSkillData ( bool forceUpdate )
 //-----------------------------------------------------------------------------
 bool IsExplosionTraceBlocked( trace_t *ptr )
 {
-	if( ptr->DidHitWorld() )
+	if( TraceDidHitWorld( *ptr ) )
 		return true;
 
 	if( ptr->Ent<CBaseEntity>() == nullptr )
@@ -463,7 +457,7 @@ void CGameRules::RadiusDamage( const CTakeDamageInfo &info, const Vector &vecSrc
 						UTIL_TraceLine( tr.endpos, vecSpot, MASK_RADIUS_DAMAGE, info.GetInflictor(), COLLISION_GROUP_NONE, &tr );
 						//NDebugOverlay::Line( tr.startpos, tr.endpos, 255, 0, 0, false, 10 );
 
-						if( tr.fraction != 1.0 && tr.DidHitWorld() )
+						if( tr.fraction != 1.0 && TraceDidHitWorld( tr ) )
 						{
 							// Still can't reach the target.
 							continue;

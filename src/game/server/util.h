@@ -4,7 +4,6 @@
 
 // Purpose: Misc utility code.
 
-import ks.vstdlib;
 #include "ai_activity.h"
 #include "enginecallback.h"
 #include "tempentity.h"
@@ -16,7 +15,6 @@ import ks.vstdlib;
 #include "server_class.h"
 #include "shake.h"
 
-import std;
 
 #include "util_shared.h"
 #include "shareddefs.h"
@@ -34,8 +32,10 @@ struct levellist_t
 	Vector	vecLandmarkOrigin;
 };
 
-class IServerNetworkable;
 class IEntityFactory;
+
+#include "entity_kind.h"
+#include "entity_kinds_dump.h"
 
 
 
@@ -45,7 +45,13 @@ class IEntityFactory;
 template< class T >
 T *_CreateEntityTemplate( T *newEnt, const char *className )
 {
+	// T has to be a class of the closed set of entity kinds (entity_kind_list.h); the thunks of its kind are
+	// defined where the class is registered (LINK_ENTITY_TO_CLASS / KS_ENTITY_UNSAVED_CLASS).
+	static_assert( entity_kinds::is_instantiable<T>(), "entity class is not an instantiable entity kind (entity_kind_list.h)" );
+	g_PendingEntityKind = kind_of<T>;
 	newEnt = new T; // this is the only place 'new' should be used!
+	if ( newEnt->GetKind() != kind_of<T> )
+		EntityKindFailure( "constructed without the kind of its class", className, (int)kind_of<T> );
 	newEnt->PostConstructor( className );
 	return newEnt;
 }
@@ -114,8 +120,21 @@ public:
 	}
 };
 
+// Registers an entity class: the factory for the map's classname, and the dispatch thunks of the class' kind
+// (entity_dispatch.h; the class must be in entity_kind_list.h, which is checked here).
 #define LINK_ENTITY_TO_CLASS(mapClassName,DLLClassName) \
+	KS_ENTITY_KINDS_DUMP_CLASS( DLLClassName ) \
+	KS_ENTITY_DEFINE_THUNKS( DLLClassName ) \
 	static CEntityFactory<DLLClassName> mapClassName( #mapClassName );
+
+// A further map name of a class that is already registered (once per class: the kind's thunks are defined there).
+#define LINK_ENTITY_TO_CLASS_ALIAS(mapClassName,DLLClassName) \
+	static CEntityFactory<DLLClassName> mapClassName( #mapClassName );
+
+// A class that is only made with CREATE_UNSAVED_ENTITY, never from a map: it still is an entity kind.
+#define KS_ENTITY_UNSAVED_CLASS(DLLClassName) \
+	KS_ENTITY_KINDS_DUMP_CLASS( DLLClassName ) \
+	KS_ENTITY_DEFINE_THUNKS( DLLClassName )
 
 
 //
@@ -170,7 +189,6 @@ inline bool FStrEq(const char *sz1, const char *sz2)
 }
 
 
-const char *nexttoken(char *token, const char *str, char sep);
 
 // Misc. Prototypes
 void		UTIL_SetSize			(CBaseEntity *pEnt, const Vector &vecMin, const Vector &vecMax);
@@ -287,7 +305,6 @@ private:
 	CBaseEntity *m_pList[MAX_SPHERE_QUERY];
 };
 
-enum soundlevel_t;
 
 // Drops an entity onto the floor
 int			UTIL_DropToFloor( CBaseEntity *pEntity, unsigned int mask, CBaseEntity *pIgnore = nullptr );
@@ -374,8 +391,6 @@ void		UTIL_SayText2Filter( IRecipientFilter& filter, CBasePlayer *pEntity, EUtil
 byte		*UTIL_LoadFileForMe( const char *filename, int *pLength );
 void        UTIL_FreeFile( byte *buffer );
 
-class CGameTrace;
-typedef CGameTrace trace_t;
 
 //-----------------------------------------------------------------------------
 // These are inlined for backwards compatibility
@@ -499,7 +514,6 @@ inline constexpr auto TELE_SILENT = 2;
 
 // Sound Utilities
 
-enum soundlevel_t;
 
 void SENTENCEG_Init();
 void SENTENCEG_Stop(edict_t *entity, int isentenceg, int ipick);
@@ -582,7 +596,6 @@ bool UTIL_IsFacingWithinTolerance( CBaseEntity *pViewer, CBaseEntity *pTarget, f
 
 void UTIL_GetDebugColorForRelationship( int nRelationship, int &r, int &g, int &b );
 
-struct datamap_t;
 extern const char	*UTIL_FunctionToName( datamap_t *pMap, inputfunc_t pFunction );
 extern void UTIL_FunctionFromName( datamap_t *pMap, const char *pName, inputfunc_t *ppFunction );
 
@@ -622,8 +635,6 @@ inline constexpr auto MAX_MULTI_TARGETS = 16;
 // NPCEvent.h declarations
 struct animevent_t;
 
-struct studiohdr_t;
-class CStudioHdr;
 
 extern void FireTargets( const char *targetName, CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 

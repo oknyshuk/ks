@@ -544,7 +544,7 @@ bool CDemoFile::IsOpen()
 
 void CDemoFile::Close()
 {
-	delete m_pBuffer;
+	DestroyDemoBuffer( m_pBuffer );
 	m_pBuffer = nullptr;
 }
 

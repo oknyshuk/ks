@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -48,7 +46,7 @@ void ToggleThirdPerson( bool bValue )
 	}
 }
 
-void ThirdPersonChange( IConVar *pConVar, const char *pOldValue, float flOldValue )
+void ThirdPersonChange( ConVar *pConVar, const char *pOldValue, float flOldValue )
 {
 	ConVarRef var( pConVar );
 

@@ -13,26 +13,26 @@ constexpr auto SUBD_TEXTURE_HEIGHT = 8192; // If we need more than 8192 patches,
 //-----------------------------------------------------------------------------
 // Subdivision surface manager class
 //-----------------------------------------------------------------------------
-class CSubDMgr : public ISubDMgr
+class CSubDMgr
 {
 public:
 	CSubDMgr();
 
-	virtual bool ShouldAllocateTextures();
-	virtual void AllocateTextures();
-	virtual void FreeTextures();
-	virtual void ReacquireResources();
-	virtual void ReleaseResources();
+	bool ShouldAllocateTextures();
+	void AllocateTextures();
+	void FreeTextures();
+	void ReacquireResources();
+	void ReleaseResources();
 	
-	virtual int GetWidth();
-	virtual int GetHeight();
-	virtual int GetOffsetGeometry();
-	virtual int GetOffsetTangents();
+	int GetWidth();
+	int GetHeight();
+	int GetOffsetGeometry();
+	int GetOffsetTangents();
 
-	virtual float* Lock( int nNumRows );
-	virtual void Unlock();
+	float* Lock( int nNumRows );
+	void Unlock();
 
-	virtual ShaderAPITextureHandle_t SubDTexture();
+	ShaderAPITextureHandle_t SubDTexture();
 
 private:
 	ShaderAPITextureHandle_t m_hSysMem;
@@ -47,7 +47,12 @@ private:
 // Singleton
 //-----------------------------------------------------------------------------
 static CSubDMgr s_SubDMgr;
-ISubDMgr *g_pSubDMgr = &s_SubDMgr;
+
+// ISubDMgr is a stateless facade; its members, defined below, forward to s_SubDMgr.
+static ISubDMgr s_SubDMgrFacade;
+ISubDMgr *g_pSubDMgr = &s_SubDMgrFacade;
+static CSubDMgr &SubDMgrImpl() { return s_SubDMgr; }
+#include "facade/isubdmgr.inl"
 
 
 //-----------------------------------------------------------------------------

@@ -4,9 +4,7 @@
 
 // Purpose: APIs for player pickup of physics objects
 
-import ks.math;
 #include "shared_classnames.h"
-import std;
 
 class CBaseEntity;
 class CBasePlayer;

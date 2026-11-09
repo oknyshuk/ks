@@ -22,13 +22,13 @@ class [[= ks::reflect::NetTable{ .name = "DT_FuncBrush" } ]]
 public:
 	DECLARE_CLASS( CFuncBrush, CBaseEntity );
 
-	virtual void Spawn( void );
-	virtual void Activate( void );
-	bool CreateVPhysics( void );
+	void Spawn_Impl( void );
+	void Activate_Impl( void );
+	bool CreateVPhysics_Impl( void );
 
-	virtual int	ObjectCaps( void ) { return HasSpawnFlags(SF_IGNORE_PLAYERUSE) ? BaseClass::ObjectCaps() : BaseClass::ObjectCaps() | FCAP_IMPULSE_USE; }
+	int	ObjectCaps_Impl( void ) { return HasSpawnFlags(SF_IGNORE_PLAYERUSE) ? BaseClass::ObjectCaps_Impl() : BaseClass::ObjectCaps_Impl() | FCAP_IMPULSE_USE; }
 
-	virtual int DrawDebugTextOverlays( void );
+	int DrawDebugTextOverlays_Impl( void );
 
 	void TurnOff( void );
 	void TurnOn( void );

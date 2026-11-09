@@ -21,11 +21,11 @@
 #include "gl_matsysiface.h"
 #include "cmd.h"
 #include <ihltvdirector.h>
-#include <ireplaydirector.h>
 import std;
 import ks.core;
 import ks.desktop;
 #include "MapReslistGenerator.h"
+#include "game_entry.h"
 #include "DevShotGenerator.h"
 #include "cdll_engine_int.h"
 #include "dt_send.h"
@@ -34,7 +34,6 @@ import ks.desktop;
 #include "tier2/tier2_logging.h"
 
 #include "engineui.h"
-#include "toolframework/itoolframework.h"
 
 constexpr auto ONE_HUNDRED_TWENTY_EIGHT_MB = (128 * 1024 * 1024);
 
@@ -76,7 +75,6 @@ bool g_bInErrorExit = false;
 static FileFindHandle_t	g_hfind = FILESYSTEM_INVALID_FIND_HANDLE;
 
 // The extension DLL directory--one entry per loaded DLL
-CSysModule *g_GameDLL = nullptr;
 
 // Prototype of an global method function
 typedef void ( * PFN_GlobalMethod)( edict_t *pEntity );
@@ -89,7 +87,6 @@ IServerGameClients *serverGameClients = nullptr;
 int g_iServerGameClientsVersion = 0;	// This matches the number at the end of the interface name (so for "ServerGameClients004", this would be 4).
 
 IHLTVDirector	*serverGameDirector = nullptr;
-IReplayDirector	*serverReplayDirector = nullptr;
 
 IServerGameTags *serverGameTags = nullptr;
 
@@ -619,7 +616,9 @@ void GetSpew( char *buf, std::size_t buflen )
 class CEngineConsoleLoggingListener : public ILoggingListener
 {
 public:
-	virtual void Log( const LoggingContext_t *pContext, const tchar *pMessage )
+	CEngineConsoleLoggingListener() : ILoggingListener( [this]( const LoggingContext_t *pContext, const tchar *pMessage ) { Log( pContext, pMessage ); } ) {}
+
+	void Log( const LoggingContext_t *pContext, const tchar *pMessage )
 	{
 		if ( ( pContext->m_Flags & LCF_DO_NOT_ECHO ) != 0 )
 		{
@@ -695,9 +694,9 @@ public:
 
 static CEngineConsoleLoggingListener s_EngineLoggingListener;
 static CFileLoggingListener s_FileLoggingListener;
-static InterfaceReg s_Reg_CFileLoggingListener_IFileLoggingListener( []() -> void * { return static_cast<IFileLoggingListener *>( &s_FileLoggingListener ); }, FILELOGGINGLISTENER_INTERFACE_VERSION );;
+static InterfaceReg s_Reg_CFileLoggingListener_CFileLoggingListener( []() -> void * { return static_cast<CFileLoggingListener *>( &s_FileLoggingListener ); }, FILELOGGINGLISTENER_INTERFACE_VERSION );;
 
-void DeveloperChangeCallback( IConVar *pConVar, const char *pOldString, float flOldValue )
+void DeveloperChangeCallback( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	// Set the "developer" spew group to the value...
 	ConVarRef var( pConVar );
@@ -857,45 +856,31 @@ void Sys_ShutdownGame( void )
 }
 
 //
-// Try to load a single DLL.  If it conforms to spec, keep it loaded, and add relevant
-// info to the DLL directory.  If not, ignore it entirely.
+// Get the interfaces of the game server linked into this executable.
 //
 
 CreateInterfaceFn g_ServerFactory;
 
 
-static bool LoadThisDll( char *szDllFilename, bool bServerOnly )
+static bool LoadServerGame()
 {
-	CSysModule *pDLL = nullptr;
-
-	// Load DLL, ignore if cannot
-	if ((pDLL = g_pFileSystem->LoadModule(szDllFilename, "GAMEBIN", false)) == nullptr)
-	{
-		ConMsg("Failed to load %s\n", szDllFilename);
-		goto IgnoreThisDLL;
-	}
-
-	// Load interface factory and any interfaces exported by the game .dll
-	g_ServerFactory = Sys_GetFactory( pDLL );
+	// Interface factory and the interfaces exported by the game server
+	g_ServerFactory = ServerGameFactory();
 	if ( g_ServerFactory )
 	{
 		g_bServerGameDLLGreaterThanV5 = true;
 		serverGameDLL = (IServerGameDLL*)g_ServerFactory(INTERFACEVERSION_SERVERGAMEDLL, nullptr);
 		if ( !serverGameDLL )
 		{
-			if ( !serverGameDLL )
-			{
-				Msg( "Could not get IServerGameDLL interface from library %s", szDllFilename );
-				goto IgnoreThisDLL;
-			}
+			Msg( "Could not get IServerGameDLL interface from the game server" );
+			goto IgnoreServerGame;
 		}
-
 
 		serverGameEnts = (IServerGameEnts*)g_ServerFactory(INTERFACEVERSION_SERVERGAMEENTS, nullptr);
 		if ( !serverGameEnts )
 		{
-			ConMsg( "Could not get IServerGameEnts interface from library %s", szDllFilename );
-			goto IgnoreThisDLL;
+			ConMsg( "Could not get IServerGameEnts interface from the game server" );
+			goto IgnoreServerGame;
 		}
 		
 		serverGameClients = (IServerGameClients*)g_ServerFactory(INTERFACEVERSION_SERVERGAMECLIENTS, nullptr);
@@ -914,21 +899,14 @@ static bool LoadThisDll( char *szDllFilename, bool bServerOnly )
 			}
 			else
 			{
-				ConMsg( "Could not get IServerGameClients interface from library %s", szDllFilename );
-				goto IgnoreThisDLL;
+				ConMsg( "Could not get IServerGameClients interface from the game server" );
+				goto IgnoreServerGame;
 			}
 		}
 		serverGameDirector = (IHLTVDirector*)g_ServerFactory(INTERFACEVERSION_HLTVDIRECTOR, nullptr);
 		if ( !serverGameDirector )
 		{
-			ConMsg( "Could not get IHLTVDirector interface from library %s", szDllFilename );
-			// this is not a critical 
-		}
-
-		serverReplayDirector = (IReplayDirector*)g_ServerFactory(INTERFACEVERSION_REPLAYDIRECTOR, nullptr);
-		if ( !serverReplayDirector )
-		{
-			ConMsg( "Could not get IReplayDirector interface from library %s", szDllFilename );
+			ConMsg( "Could not get IHLTVDirector interface from the game server" );
 			// this is not a critical 
 		}
 
@@ -937,26 +915,22 @@ static bool LoadThisDll( char *szDllFilename, bool bServerOnly )
 	}
 	else
 	{
-		ConMsg( "Could not find factory interface in library %s", szDllFilename );
-		goto IgnoreThisDLL;
+		ConMsg( "No game server in this executable" );
+		goto IgnoreServerGame;
 	}
 
-	g_GameDLL = pDLL;
 	return true;
 
-IgnoreThisDLL:
-	if (pDLL != nullptr)
-	{
-		g_pFileSystem->UnloadModule(pDLL);
-		serverGameDLL = nullptr;
-		serverGameEnts = nullptr;
-		serverGameClients = nullptr;
-	}
+IgnoreServerGame:
+	g_ServerFactory = nullptr;
+	serverGameDLL = nullptr;
+	serverGameEnts = nullptr;
+	serverGameClients = nullptr;
 	return false;
 }
 
 //
-// Scan DLL directory, load all DLLs that conform to spec.
+// Set up the game server.
 //
 void LoadEntityDLLs( const char *szBaseDir, bool bServerOnly )
 {
@@ -964,8 +938,6 @@ void LoadEntityDLLs( const char *szBaseDir, bool bServerOnly )
 	gmodinfo.version = 1;
 	gmodinfo.svonly  = true;
 
-	// Run through all DLLs found in the extension DLL directory
-	g_GameDLL = nullptr;
 	sv_noclipduringpause = nullptr;
 
 	// Listing file for this game.
@@ -982,20 +954,7 @@ void LoadEntityDLLs( const char *szBaseDir, bool bServerOnly )
 	}
 	modinfo->deleteThis();
 	
-	// Load the game .dll
-	char szDllFilename[ MAX_PATH ];
-
-	if ( s_bIsDedicatedServer && !CommandLine()->FindParm( "-novalveds" ) )
-	{
-		V_snprintf( szDllFilename, sizeof( szDllFilename ), "server_valve" );
-		LoadThisDll( szDllFilename, bServerOnly );
-	}
-	if ( !serverGameDLL )
-	{
-		V_snprintf( szDllFilename, sizeof( szDllFilename ), "server"  );
-		LoadThisDll( szDllFilename, bServerOnly );
-	}
-
+	LoadServerGame();
 
 	if ( serverGameDLL )
 	{
@@ -1048,12 +1007,10 @@ void Sys_OutputDebugString(const char *msg)
 //-----------------------------------------------------------------------------
 void UnloadEntityDLLs( void )
 {
-	if ( !g_GameDLL )
+	if ( !g_ServerFactory )
 		return;
 
-	// Unlink the cvars associated with game DLL
-	FileSystem_UnloadModule( g_GameDLL );
-	g_GameDLL = nullptr;
+	g_ServerFactory = nullptr;
 	serverGameDLL = nullptr;
 	serverGameEnts = nullptr;
 	serverGameClients = nullptr;

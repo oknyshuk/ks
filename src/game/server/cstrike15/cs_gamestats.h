@@ -4,13 +4,11 @@
 
 // Purpose: The CS game stats header
 
-import ks.tier1;
 #include "cs_blackmarket.h"
 #include "GameStats.h"
 #include "cs_gamestats_shared.h"
 #include "GameEventListener.h"
 #include "weapon_csbase.h"
-import std;
 
 // forward declares
 class CBreakableProp;
@@ -107,7 +105,7 @@ public:
 	void Event_MVPEarned( CCSPlayer* pPlayer );	
 	void Event_KnifeUse( CCSPlayer* pPlayer, bool bStab, int iDamage );
 
-	virtual void FireGameEvent( IGameEvent *event );
+	void FireGameEvent( IGameEvent *event );
 
 	void UpdatePlayerRoundStats(int winner);
 	void DumpMatchWeaponMetrics();

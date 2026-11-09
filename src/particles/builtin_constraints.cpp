@@ -25,7 +25,7 @@ class C_OP_ConstrainDistance : public CParticleOperatorInstance
 		return PARTICLE_ATTRIBUTE_XYZ_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
@@ -129,7 +129,7 @@ class C_OP_ConstrainDistanceToPath : public CParticleOperatorInstance
 		return PARTICLE_ATTRIBUTE_XYZ_MASK | PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const 
+	uint64 GetReadControlPointMask() const 
 	{ 
 		return ( 1ULL << m_PathParameters.m_nStartControlPointNumber ) |
 			( 1ULL << m_PathParameters.m_nEndControlPointNumber ); 
@@ -315,7 +315,7 @@ class C_OP_PlanarConstraint : public CParticleOperatorInstance
 		return PARTICLE_ATTRIBUTE_XYZ_MASK | PARTICLE_ATTRIBUTE_RADIUS_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const 
+	uint64 GetReadControlPointMask() const 
 	{ 
 		return 1ULL << m_nControlPointNumber; 
 	}
@@ -513,7 +513,7 @@ class C_OP_WorldCollideConstraint : public CParticleOperatorInstance
 		return PARTICLE_ATTRIBUTE_XYZ_MASK | PARTICLE_ATTRIBUTE_RADIUS_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const 
+	uint64 GetReadControlPointMask() const 
 	{ 
 		return 1ULL << 0; 
 	}
@@ -607,7 +607,7 @@ class C_OP_WorldTraceConstraint : public CParticleOperatorInstance
 		return PARTICLE_ATTRIBUTE_XYZ_MASK | PARTICLE_ATTRIBUTE_RADIUS_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const 
+	uint64 GetReadControlPointMask() const 
 	{ 
 		return 1ULL << 0; 
 	}
@@ -624,7 +624,7 @@ class C_OP_WorldTraceConstraint : public CParticleOperatorInstance
 	bool m_bKillonContact;
 	bool m_bConfirmCollision;
 
-	virtual bool IsFinalConstaint( void ) const
+	bool IsFinalConstaint( void ) const
 	{
 		return ( m_flBounceAmount != 0. ) || ( m_flSlideAmount != 0. );
 	}
@@ -1157,3 +1157,7 @@ void AddBuiltInParticleConstraints( void )
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_CONSTRAINT, C_OP_ConstrainDistanceToPath );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_CONSTRAINT, C_OP_BoxConstraint );
 }
+
+
+#define KS_PARTICLE_OP_GROUP Constraints
+#include "particle_operator_dispatch.inl"

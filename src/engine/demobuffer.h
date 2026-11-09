@@ -12,12 +12,15 @@ import ks.tier1;
 //-----------------------------------------------------------------------------
 struct DemoBufferInitParams_t
 {
-	virtual ~DemoBufferInitParams_t() {}	// Need this to make polymorphic
+	enum class kind_t : unsigned char { stream, memory };
+	explicit DemoBufferInitParams_t( kind_t kind ) : m_kind( kind ) {}
+
+	kind_t m_kind;
 };
 
 struct StreamDemoBufferInitParams_t : public DemoBufferInitParams_t
 {
-	StreamDemoBufferInitParams_t( char const* filename, char const* path, bool readOnly, int openfileflags ) : pFilename( filename ), pszPath( path ), bReadOnly( readOnly ), nOpenFileFlags( openfileflags ) {}
+	StreamDemoBufferInitParams_t( char const* filename, char const* path, bool readOnly, int openfileflags ) : DemoBufferInitParams_t( kind_t::stream ), pFilename( filename ), pszPath( path ), bReadOnly( readOnly ), nOpenFileFlags( openfileflags ) {}
 	char const*	pFilename;
 	char const*	pszPath;
 	bool		bReadOnly;
@@ -26,7 +29,7 @@ struct StreamDemoBufferInitParams_t : public DemoBufferInitParams_t
 
 struct MemoryDemoBufferInitParams_t : public DemoBufferInitParams_t
 {
-	MemoryDemoBufferInitParams_t( int maxsize ) : nMaxSize( maxsize ) {}
+	MemoryDemoBufferInitParams_t( int maxsize ) : DemoBufferInitParams_t( kind_t::memory ), nMaxSize( maxsize ) {}
 	int			nMaxSize;	// TODO: make use of this parameter
 };
 
@@ -36,46 +39,47 @@ struct MemoryDemoBufferInitParams_t : public DemoBufferInitParams_t
 // (demofile.cpp) with a common interface for writing to disk or writing to
 // a buffer in memory.
 //-----------------------------------------------------------------------------
-class IDemoBuffer : public IBaseInterface
+class IDemoBuffer
 {
 public:
-	virtual bool				Init( DemoBufferInitParams_t const& params ) = 0;
+	bool				Init( DemoBufferInitParams_t const& params );
 
-	virtual void				NotifySignonComplete() = 0;
+	void				NotifySignonComplete();
 
-	virtual bool				IsInitialized() const = 0;
-	virtual bool				IsValid() const = 0;
+	bool				IsInitialized() const;
+	bool				IsValid() const;
 
-	virtual void				WriteHeader( const void *pData, int nSize ) = 0;
+	void				WriteHeader( const void *pData, int nSize );
 
-	virtual void				NotifyBeginFrame() = 0;
-	virtual void				NotifyEndFrame() = 0;
+	void				NotifyBeginFrame();
+	void				NotifyEndFrame();
 
 	// Change where I'm writing (put)/reading (get)
-	virtual void				SeekPut( bool bAbsolute, int offset ) = 0;
-	virtual void				SeekGet( bool bAbsolute, int offset ) = 0;
+	void				SeekPut( bool bAbsolute, int offset );
+	void				SeekGet( bool bAbsolute, int offset );
 
 	// Where am I writing (put)/reading (get)?
-	virtual int					TellPut( ) const = 0;
-	virtual int					TellGet( ) const = 0;
+	int					TellPut( ) const;
+	int					TellGet( ) const;
 
 	// What's the most I've ever written?
-	virtual int					TellMaxPut( ) const = 0;
+	int					TellMaxPut( ) const;
 
-	virtual char				GetChar( ) = 0;
-	virtual unsigned char		GetUnsignedChar( ) = 0;
-	virtual int					GetInt( ) = 0;
-	virtual void				Get( void* pMem, int size ) = 0;
+	char				GetChar( );
+	unsigned char		GetUnsignedChar( );
+	int					GetInt( );
+	void				Get( void* pMem, int size );
 
-	virtual void				PutChar( char c ) = 0;
-	virtual void				PutUnsignedChar( unsigned char uc ) = 0;
-	virtual void				PutInt( int i ) = 0;
-	virtual void				Put( const void* pMem, int size ) = 0;
+	void				PutChar( char c );
+	void				PutUnsignedChar( unsigned char uc );
+	void				PutInt( int i );
+	void				Put( const void* pMem, int size );
 
-	virtual void				WriteTick( int nTick ) = 0;
+	void				WriteTick( int nTick );
 
-	virtual void				UpdateStartTick( int& nStartTick ) const = 0;
-	virtual void				DumpToFile( char const* pFilename, const demoheader_t &header ) const = 0;
+	void				UpdateStartTick( int& nStartTick ) const;
+	void				DumpToFile( char const* pFilename, const demoheader_t &header ) const;
 };
 
 IDemoBuffer *CreateDemoBuffer( bool bMemoryBuffer, const DemoBufferInitParams_t &params );
+void DestroyDemoBuffer( IDemoBuffer *pBuffer );

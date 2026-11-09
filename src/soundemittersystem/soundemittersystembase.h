@@ -36,88 +36,87 @@ struct CSoundEntry : public ks::pooled< CSoundEntry >
 //-----------------------------------------------------------------------------
 // Purpose: Base class for sound emitter system handling (can be used by tools)
 //-----------------------------------------------------------------------------
-class CSoundEmitterSystemBase : public CTier2AppSystem< ISoundEmitterSystemBase >
+class CSoundEmitterSystemBase : public ISoundEmitterSystemBase
 {
-	typedef CTier2AppSystem< ISoundEmitterSystemBase > BaseClass;
 
 public:
 	CSoundEmitterSystemBase();
-	virtual ~CSoundEmitterSystemBase() { }
+	~CSoundEmitterSystemBase() { }
 
-	// Methods of IAppSystem
-	virtual bool Connect( CreateInterfaceFn factory );
-	virtual InitReturnVal_t Init();
-	virtual void Shutdown();
-	virtual void Disconnect();
-	virtual void *QueryInterface( const char *pInterfaceName );
+	// App system protocol (a tier 2 system)
+	bool Connect( CreateInterfaceFn factory );
+	InitReturnVal_t Init();
+	void Shutdown();
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
 
 public:
-	virtual int	GetSoundIndex( const char *pName ) const;
-	virtual bool IsValidIndex( int index );
-	virtual int GetSoundCount( void );
+	int	GetSoundIndex( const char *pName ) const;
+	bool IsValidIndex( int index );
+	int GetSoundCount( void );
 
-	virtual const char *GetSoundName( int index );
-	virtual bool GetParametersForSound( const char *soundname, CSoundParameters& params, gender_t gender, bool isbeingemitted = false );
-	virtual const char *GetWaveName( WaveNameId_t sym );
+	const char *GetSoundName( int index );
+	bool GetParametersForSound( const char *soundname, CSoundParameters& params, gender_t gender, bool isbeingemitted = false );
+	const char *GetWaveName( WaveNameId_t sym );
 
-	virtual WaveNameId_t AddWaveName( const char *name );
+	WaveNameId_t AddWaveName( const char *name );
 
-	virtual soundlevel_t LookupSoundLevel( const char *soundname );
-	virtual const char *GetWavFileForSound( const char *soundname, char const *actormodel );
-	virtual const char *GetWavFileForSound( const char *soundname, gender_t gender );
+	soundlevel_t LookupSoundLevel( const char *soundname );
+	const char *GetWavFileForSound( const char *soundname, char const *actormodel );
+	const char *GetWavFileForSound( const char *soundname, gender_t gender );
 
-	virtual int		CheckForMissingWavFiles( bool verbose );
-	virtual const char *GetSourceFileForSound( int index ) const;
+	int		CheckForMissingWavFiles( bool verbose );
+	const char *GetSourceFileForSound( int index ) const;
 	// Iteration methods
-	virtual int		First() const;
-	virtual int		Next( int i ) const;
-	virtual int		InvalidIndex() const;
+	int		First() const;
+	int		Next( int i ) const;
+	int		InvalidIndex() const;
 
-	virtual CSoundParametersInternal *InternalGetParametersForSound( int index );
+	CSoundParametersInternal *InternalGetParametersForSound( int index );
 
 	// The host application is responsible for dealing with dirty sound scripts, etc.
-	virtual bool		AddSound( const char *soundname, const char *scriptfile, const CSoundParametersInternal& params );
-	virtual void		RemoveSound( const char *soundname );
+	bool		AddSound( const char *soundname, const char *scriptfile, const CSoundParametersInternal& params );
+	void		RemoveSound( const char *soundname );
 
-	virtual void		MoveSound( const char *soundname, const char *newscript );
+	void		MoveSound( const char *soundname, const char *newscript );
 
-	virtual void		RenameSound( const char *soundname, const char *newname );
-	virtual void		UpdateSoundParameters( const char *soundname, const CSoundParametersInternal& params );
+	void		RenameSound( const char *soundname, const char *newname );
+	void		UpdateSoundParameters( const char *soundname, const CSoundParametersInternal& params );
 
-	virtual int			GetNumSoundScripts() const;
-	virtual char const	*GetSoundScriptName( int index ) const;
-	virtual bool		IsSoundScriptDirty( int index ) const;
-	virtual int			FindSoundScript( const char *name ) const;
+	int			GetNumSoundScripts() const;
+	char const	*GetSoundScriptName( int index ) const;
+	bool		IsSoundScriptDirty( int index ) const;
+	int			FindSoundScript( const char *name ) const;
 
-	virtual void		SaveChangesToSoundScript( int scriptindex );
+	void		SaveChangesToSoundScript( int scriptindex );
 
-	virtual void		ExpandSoundNameMacros( CSoundParametersInternal& params, char const *wavename );
-	virtual gender_t	GetActorGender( char const *actormodel );
-	virtual void		GenderExpandString( char const *actormodel, char const *in, char *out, int maxlen );
-	virtual void		GenderExpandString( gender_t gender, char const *in, char *out, int maxlen );
-	virtual bool		IsUsingGenderToken( char const *soundname );
-	virtual unsigned int GetManifestFileTimeChecksum();
+	void		ExpandSoundNameMacros( CSoundParametersInternal& params, char const *wavename );
+	gender_t	GetActorGender( char const *actormodel );
+	void		GenderExpandString( char const *actormodel, char const *in, char *out, int maxlen );
+	void		GenderExpandString( gender_t gender, char const *in, char *out, int maxlen );
+	bool		IsUsingGenderToken( char const *soundname );
+	unsigned int GetManifestFileTimeChecksum();
 
-	virtual bool			GetParametersForSoundEx( const char *soundname, HSOUNDSCRIPTHASH& handle, CSoundParameters& params, gender_t gender, bool isbeingemitted = false );
-	virtual soundlevel_t	LookupSoundLevelByHandle( char const *soundname, HSOUNDSCRIPTHASH& handle );
-	virtual KeyValues		*GetOperatorKVByHandle( HSOUNDSCRIPTHASH& handle );
+	bool			GetParametersForSoundEx( const char *soundname, HSOUNDSCRIPTHASH& handle, CSoundParameters& params, gender_t gender, bool isbeingemitted = false );
+	soundlevel_t	LookupSoundLevelByHandle( char const *soundname, HSOUNDSCRIPTHASH& handle );
+	KeyValues		*GetOperatorKVByHandle( HSOUNDSCRIPTHASH& handle );
 
-	virtual char const		*GetSoundNameForHash( unsigned int hash ) const; // Returns NULL if hash not found!!!
-	virtual int 			GetSoundIndexForHash( unsigned int hash ) const;
-	virtual unsigned int	HashSoundName( char const *pchSndName ) const;
-	virtual bool			IsValidHash( unsigned int hash ) const;
+	char const		*GetSoundNameForHash( unsigned int hash ) const; // Returns NULL if hash not found!!!
+	int 			GetSoundIndexForHash( unsigned int hash ) const;
+	unsigned int	HashSoundName( char const *pchSndName ) const;
+	bool			IsValidHash( unsigned int hash ) const;
 
 	// Called from both client and server (single player) or just one (server only in dedicated server and client only if connected to a remote server)
 	// Called by LevelInitPreEntity to override sound scripts for the mod with level specific overrides based on custom mapnames, etc.
-	virtual void			AddSoundOverrides( char const *scriptfile );
+	void			AddSoundOverrides( char const *scriptfile );
 
 	// Called by either client or server in LevelShutdown to clear out custom overrides
-	virtual void			ClearSoundOverrides();
+	void			ClearSoundOverrides();
 
-	virtual void			DescribeSound( char const *soundname );
-	virtual void			Flush();
+	void			DescribeSound( char const *soundname );
+	void			Flush();
 
-	virtual void			AddSoundsFromFile( const char *filename, bool bPreload, bool bAutoCache, bool bIsOverride = false );
+	void			AddSoundsFromFile( const char *filename, bool bPreload, bool bAutoCache, bool bIsOverride = false );
 
 private:
 	bool InitSoundInternalParameters( const char *soundname, KeyValues *kv, CSoundParametersInternal& params );

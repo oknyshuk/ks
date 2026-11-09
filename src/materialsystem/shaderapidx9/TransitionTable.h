@@ -89,7 +89,7 @@ public:
 public:
 	// constructor, destructor
 	CTransitionTable( );
-	virtual ~CTransitionTable();
+	~CTransitionTable();
 
 	// Initialization, shutdown
 	bool Init( );

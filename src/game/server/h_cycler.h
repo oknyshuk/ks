@@ -14,13 +14,13 @@ public:
 	DECLARE_CLASS( CCycler, CAI_BaseNPC );
 
 	void GenericCyclerSpawn(char *szModel, Vector vecMin, Vector vecMax);
-	virtual int	ObjectCaps( void ) { return (BaseClass::ObjectCaps() | FCAP_IMPULSE_USE); }
-	int OnTakeDamage( const CTakeDamageInfo &info );
-	void Spawn( void );
-	void Precache( void );
-	void Think( void );
+	int	ObjectCaps_Impl( void ) { return (BaseClass::ObjectCaps_Impl() | FCAP_IMPULSE_USE); }
+	int OnTakeDamage_Impl( const CTakeDamageInfo &info );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	void Think_Impl( void );
 	//void Pain( float flDamage );
-	void Use ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Use_Impl ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	// Don't treat as a live target
 	virtual bool IsAlive( void ) { return false; }

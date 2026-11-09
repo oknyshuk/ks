@@ -9,7 +9,6 @@
 #elif defined(GAME_DLL)
 #endif
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "const.h"
 #include "string_t.h"
 #include "predictable_entity.h"
@@ -28,7 +27,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -46,7 +44,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -70,8 +67,6 @@ import ks.math;
 #include "animation.h"
 #include <vcollide_parse.h>
 #include <bone_setup.h>
-import std;
-import ks.vstdlib;
 
 #ifdef CLIENT_DLL
 #include "gamestringpool.h"
@@ -828,7 +823,7 @@ public:
 	CGameGibManager();
 	virtual ~CGameGibManager();
 
-	void Activate( void );
+	void Activate_Impl( void );
 	void AddGibToLRU( CBaseAnimating *pEntity );
 
 	inline bool AllowedToSpawnGib( void );
@@ -870,13 +865,13 @@ IMPLEMENT_REFLECT_DATAMAP( CGameGibManager )
 LINK_ENTITY_TO_CLASS( game_gib_manager, CGameGibManager );
 
 
-void CGameGibManager::Activate( void )
+void CGameGibManager::Activate_Impl( void )
 {
 	m_LRU.clear();
 
 	UpdateMaxPieces();
 
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 }
 
 

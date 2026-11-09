@@ -4,8 +4,6 @@
 // Purpose: Fires an output when the map spawns (or respawns if not set to
 //			only fire once). It can be set to check a global state before firing.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -23,7 +21,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -57,12 +54,12 @@ class CLogicAuto : public CBaseEntity, public CGameEventListener
 public:
 	DECLARE_CLASS( CLogicAuto, CBaseEntity );
 
-	void Activate(void);
-	void Think(void);
+	void Activate_Impl(void);
+	void Think_Impl(void);
 
-	int ObjectCaps(void) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	int ObjectCaps_Impl(void) { return BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION; }
 
-	virtual void FireGameEvent( IGameEvent *event );					// incoming event processing
+	void FireGameEvent( IGameEvent *event );					// incoming event processing
 
 	DECLARE_DATADESC();
 
@@ -91,12 +88,12 @@ IMPLEMENT_REFLECT_DATAMAP( CLogicAuto )
 //------------------------------------------------------------------------------
 // Purpose : Fire my outputs here if I fire on map reload
 //------------------------------------------------------------------------------
-void CLogicAuto::Activate(void)
+void CLogicAuto::Activate_Impl(void)
 {
 	ListenForGameEvent( "round_start" );
 	ListenForGameEvent( "teamplay_round_start" );
 
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	SetNextThink( gpGlobals->curtime + 0.2 );
 }
 
@@ -106,7 +103,7 @@ void CLogicAuto::Activate(void)
 //			targets if the global state is set or if there is not global state
 //			to check.
 //-----------------------------------------------------------------------------
-void CLogicAuto::Think(void)
+void CLogicAuto::Think_Impl(void)
 {
 	if (!m_globalstate || GlobalEntity_GetState(m_globalstate) == GLOBAL_ON)
 	{

@@ -5,9 +5,7 @@
 // Purpose: Utility functions for cell coordinate calculations
 // to reduce bandwidth usage
 
-import ks.math;
 #include "worldsize.h"
-import std;
 
 // Given a world coord, return the cell it should be in
 inline int CellFromCoord( int cellwidth, float f )

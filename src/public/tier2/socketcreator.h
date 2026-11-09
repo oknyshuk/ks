@@ -10,15 +10,11 @@ import ks.tier1;
 typedef ks::platform::socket *SocketHandle_t;
 
 
-struct ISocketCreatorListener
-{
-public:
-	// Methods to allow other classes to allocate data associated w/ sockets
-	// Return false to disallow socket acceptance
-	virtual bool ShouldAcceptSocket( SocketHandle_t hSocket, const netadr_t &netAdr ) = 0; 
-	virtual void OnSocketAccepted( SocketHandle_t hSocket, const netadr_t &netAdr, void** ppData ) = 0; 
-	virtual void OnSocketClosed( SocketHandle_t hSocket, const netadr_t &netAdr, void* pData ) = 0;
-};
+// A listener is any object with these three methods; CSocketCreator binds to it in the
+// templated constructor.
+//   bool ShouldAcceptSocket( SocketHandle_t hSocket, const netadr_t &netAdr );  // return false to disallow socket acceptance
+//   void OnSocketAccepted( SocketHandle_t hSocket, const netadr_t &netAdr, void** ppData );  // allocate data associated w/ the socket
+//   void OnSocketClosed( SocketHandle_t hSocket, const netadr_t &netAdr, void* pData );
 
 
 //-----------------------------------------------------------------------------
@@ -27,7 +23,17 @@ public:
 class CSocketCreator 
 {
 public:
-	CSocketCreator( ISocketCreatorListener *pListener = nullptr );
+	CSocketCreator();
+
+	template< class LISTENER >
+	CSocketCreator( LISTENER *pListener )
+		: m_fnShouldAcceptSocket( [pListener]( SocketHandle_t hSocket, const netadr_t &netAdr ) { return pListener->ShouldAcceptSocket( hSocket, netAdr ); } ),
+		  m_fnOnSocketAccepted( [pListener]( SocketHandle_t hSocket, const netadr_t &netAdr, void **ppData ) { pListener->OnSocketAccepted( hSocket, netAdr, ppData ); } ),
+		  m_fnOnSocketClosed( [pListener]( SocketHandle_t hSocket, const netadr_t &netAdr, void *pData ) { pListener->OnSocketClosed( hSocket, netAdr, pData ); } )
+	{
+		m_hListenSocket = nullptr;
+	}
+
 	~CSocketCreator();
 
 	// Call this once per frame
@@ -74,7 +80,9 @@ public:
 		bool operator==( const AcceptedSocket_t &rhs ) const { return ( m_Address.CompareAdr( rhs.m_Address ) == 0 ); }
 	};
 
-	ISocketCreatorListener *m_pListener;
+	std::move_only_function< bool( SocketHandle_t, const netadr_t & ) > m_fnShouldAcceptSocket;
+	std::move_only_function< void( SocketHandle_t, const netadr_t &, void ** ) > m_fnOnSocketAccepted;
+	std::move_only_function< void( SocketHandle_t, const netadr_t &, void * ) > m_fnOnSocketClosed;
 	std::vector< AcceptedSocket_t > m_hAcceptedSockets;
 	SocketHandle_t	m_hListenSocket;	// Used to accept connections
 	netadr_t		m_ListenAddress;	// Address used to listen on

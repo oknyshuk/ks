@@ -7,6 +7,7 @@ import ks.tier1;
 
 #include "filesystem.h"
 #include "datacache.h"
+#include "appframework/apptiers.h"
 
 //-----------------------------------------------------------------------------
 // Singleton
@@ -50,8 +51,9 @@ void DataCacheItem_t::DestroyResource()
 // CDataCacheSection
 //-----------------------------------------------------------------------------
 
-CDataCacheSection::CDataCacheSection( CDataCache *pSharedCache, IDataCacheClient *pClient, const char *pszName )
+CDataCacheSection::CDataCacheSection( CDataCache *pSharedCache, IDataCacheClient *pClient, const char *pszName, bool bSupportFastFind )
   :	m_pClient( pClient ),
+	m_bFastFind( bSupportFastFind ),
 	m_LRU( pSharedCache->m_LRU ),
 	m_mutex( pSharedCache->m_mutex ),
 	m_pSharedCache( pSharedCache ),
@@ -62,6 +64,11 @@ CDataCacheSection::CDataCacheSection( CDataCache *pSharedCache, IDataCacheClient
 	std::memset( &m_status, 0, sizeof(m_status) );
 	contract_assert( ( std::strlen(pszName) <= DC_MAX_CLIENT_NAME ) && "Cache client name too long \"%s\"" );
 	V_strncpy( szName, pszName, sizeof(szName) );
+
+	if ( m_bFastFind )
+	{
+		m_Handles.reserve( 1024 );
+	}
 
 	for ( int i = 0; i < DC_MAX_THREADS_FRAMELOCKED; i++ )
 	{
@@ -240,6 +247,19 @@ DataCacheHandle_t CDataCacheSection::Find( DataCacheClientID_t clientId )
 
 //---------------------------------------------------------
 DataCacheHandle_t CDataCacheSection::DoFind( DataCacheClientID_t clientId )
+{
+	if ( m_bFastFind )
+	{
+		std::scoped_lock lock( m_mutex );
+		auto it = m_Handles.find( clientId );
+		if( it != m_Handles.end() )
+			return it->second;
+		return DC_INVALID_HANDLE; 
+	}
+	return DoFindScan( clientId );
+}
+
+DataCacheHandle_t CDataCacheSection::DoFindScan( DataCacheClientID_t clientId )
 {
 	std::scoped_lock lock( m_mutex );
 	memhandle_t hCurrent;
@@ -970,28 +990,22 @@ void CDataCacheSection::ForceFlushDebug( bool bFlush )
 }
 
 //-----------------------------------------------------------------------------
-// CDataCacheSectionFastFind
+// Fast find sections track their items by client id
 //-----------------------------------------------------------------------------
-DataCacheHandle_t CDataCacheSectionFastFind::DoFind( DataCacheClientID_t clientId ) 
-{ 
-	std::scoped_lock lock( m_mutex );
-	auto it = m_Handles.find( clientId );
-	if( it != m_Handles.end() )
-		return it->second;
-	return DC_INVALID_HANDLE; 
-}
-
-
-void CDataCacheSectionFastFind::OnAdd( DataCacheClientID_t clientId, DataCacheHandle_t hCacheItem ) 
+void CDataCacheSection::OnAdd( DataCacheClientID_t clientId, DataCacheHandle_t hCacheItem ) 
 {
+	if ( !m_bFastFind )
+		return;
 	std::scoped_lock lock( m_mutex );
 	contract_assert( !m_Handles.contains( clientId ) );
 	m_Handles.insert_or_assign( clientId, hCacheItem );
 }
 
 
-void CDataCacheSectionFastFind::OnRemove( DataCacheClientID_t clientId ) 
+void CDataCacheSection::OnRemove( DataCacheClientID_t clientId ) 
 {
+	if ( !m_bFastFind )
+		return;
 	std::scoped_lock lock( m_mutex );
 	[[maybe_unused]] std::size_t nRemoved = m_Handles.erase( clientId );
 	contract_assert( nRemoved );
@@ -1005,7 +1019,7 @@ void CDataCacheSectionFastFind::OnRemove( DataCacheClientID_t clientId )
 //-----------------------------------------------------------------------------
 // Convar callback to change data cache 
 //-----------------------------------------------------------------------------
-void DataCacheSize_f( IConVar *pConVar, const char *pOldString, float flOldValue )
+void DataCacheSize_f( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	ConVarRef var( pConVar );
 	int nOldValue = (int)flOldValue;
@@ -1021,7 +1035,7 @@ ConVar datacachesize( "datacachesize", "32", 0, "Size in MB.", true, 0, true, 12
 //-----------------------------------------------------------------------------
 bool CDataCache::Connect( CreateInterfaceFn factory )
 {
-	if ( !BaseClass::Connect( factory ) )
+	if ( !AppSystemTier3Connect( factory ) )
 		return false;
 
 	g_DataCache.SetSize( datacachesize.GetInt() * 1024 * 1024 );
@@ -1033,7 +1047,7 @@ bool CDataCache::Connect( CreateInterfaceFn factory )
 void CDataCache::Disconnect()
 {
 	g_pDataCache = nullptr;
-	BaseClass::Disconnect();
+	AppSystemTier3Disconnect();
 }
 
 
@@ -1042,13 +1056,13 @@ void CDataCache::Disconnect()
 //-----------------------------------------------------------------------------
 InitReturnVal_t CDataCache::Init( void )
 {
-	return BaseClass::Init();
+	return AppSystemTier1Init();
 }
 
 void CDataCache::Shutdown( void )
 {
 	Flush( false, false );
-	BaseClass::Shutdown();
+	AppSystemTier1Shutdown();
 }
 
 
@@ -1146,10 +1160,7 @@ IDataCacheSection *CDataCache::AddSection( IDataCacheClient *pClient, const char
 		return pSection;
 	}
 
-	if ( !bSupportFastFind )
-		pSection = new CDataCacheSection( this, pClient, pszSectionName );
-	else
-		pSection = new CDataCacheSectionFastFind( this, pClient, pszSectionName );
+	pSection = new CDataCacheSection( this, pClient, pszSectionName, bSupportFastFind );
 		
 	pSection->SetLimits( limits );
 
@@ -1437,3 +1448,9 @@ const char *CDataCache::GetSectionName( int iIndex )
 
 	return "";
 }
+
+
+//-----------------------------------------------------------------------------
+// The IDataCacheSection and IDataCache members forward to CDataCacheSection and CDataCache
+//-----------------------------------------------------------------------------
+#include "facade/idatacache.inl"

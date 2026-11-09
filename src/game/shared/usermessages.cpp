@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.core;
 #include "cdll_client_int.h"
 #include "usermessages.h"
 
@@ -10,8 +8,25 @@ import ks.core;
 static ConVar cl_show_usermessage( "cl_show_usermessage", "0", 0, "Shows the incoming user messages for this client and dumps them out the type and size of the messages to the console. Setting this to 2 will display message contents as well" ); // filter incoming voice data
 
 //-----------------------------------------------------------------------------
-IUserMessageBinder::~IUserMessageBinder()
+extern int CL_GetHltvReplayDelay();
+std::shared_ptr< void > IUserMessageBinder::Parse( int32 nPassthroughFlags, const void *msg, int size, bool &bSilentIgnore )
 {
+	if ( size < 0 || size > NET_MAX_PAYLOAD )
+	{
+		return nullptr;
+	}
+
+	if ( CL_GetHltvReplayDelay() )
+	{
+		if ( nPassthroughFlags != m_nExpectedPassthroughInReplay )
+		{
+			// this is a wrong timeline message. Ignore it.
+			bSilentIgnore = true;
+			return nullptr;
+		}
+	}
+
+	return m_Parse( msg, size );
 }
 
 
@@ -58,12 +73,10 @@ bool CUserMessages::DispatchUserMessage( int msg_type, int32 nPassthroughFlags, 
 	}
 
 	bool bSilentIgnore = false;
-	void *pMsg = pHandler->Parse( nPassthroughFlags, msg, size, bSilentIgnore );
+	std::shared_ptr< void > pMsg = pHandler->Parse( nPassthroughFlags, msg, size, bSilentIgnore );
 
 	if ( bSilentIgnore )
 	{
-		if ( pMsg )
-			pHandler->Destroy( pMsg );
 		//DevMsg( "CUserMessages::DispatchUserMessage: Silently ignoring alt-timeline msg type %i\n", msg_type );
 		return true;
 	}
@@ -78,10 +91,10 @@ bool CUserMessages::DispatchUserMessage( int msg_type, int32 nPassthroughFlags, 
 	//handle logging to the console if this is enabled
 	if ( cl_show_usermessage.GetBool() )
 	{
-		Msg("DispatchUserMessage - %s(%d) bytes: %d\n", pHandler->TypeName(), msg_type, int( pHandler->ByteSize( pMsg ) ) );
+		Msg("DispatchUserMessage - %s(%d) bytes: %d\n", pHandler->TypeName(), msg_type, int( pHandler->ByteSize( pMsg.get() ) ) );
 		//handle message content display if they have it set to a value > 1
 		if( cl_show_usermessage.GetInt() > 1 )
-			Msg("%s", pHandler->Describe( pMsg ).c_str() );
+			Msg("%s", pHandler->Describe( pMsg.get() ).c_str() );
 	}
 
 	bool result = true;
@@ -90,7 +103,7 @@ bool CUserMessages::DispatchUserMessage( int msg_type, int32 nPassthroughFlags, 
 		IUserMessageBinder *h = binders[i];
 		if ( h )
 		{
-			result = h->Invoke( pMsg );
+			result = h->Invoke( pMsg.get() );
 		}
 
 		if ( !result )
@@ -98,8 +111,6 @@ bool CUserMessages::DispatchUserMessage( int msg_type, int32 nPassthroughFlags, 
 			break;
 		}
 	}
-
-	pHandler->Destroy( pMsg );
 
 	return result;
 }

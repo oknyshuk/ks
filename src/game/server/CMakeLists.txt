@@ -1,31 +1,15 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 oknyshuk
 
-add_library(server SHARED
-    ../../common/netmessages_codec.cpp
-    ../shared/achievementmgr.cpp
-    ../shared/achievements_hlx.cpp
+add_library(server OBJECT
     ../shared/activitylist.cpp
     ai_activity.cpp
-    ai_agent.cpp
     ai_baseactor.cpp
     ai_basehumanoid.cpp
     ai_basenpc.cpp
-    ai_addon.cpp
-    ai_basenpc_flyer.cpp
-    ai_basenpc_flyer_new.cpp
     ai_basenpc_movement.cpp
-    ai_basenpc_physicsflyer.cpp
     ai_basenpc_schedule.cpp
     ai_basenpc_squad.cpp
-    ai_behavior.cpp
-    ai_behavior_assault.cpp
-    ai_behavior_fear.cpp
-    ai_behavior_fightfromcover.cpp
-    ai_behavior_follow.cpp
-    ai_behavior_lead.cpp
-    ai_behavior_rappel.cpp
-    ai_behavior_standoff.cpp
     ai_blended_movement.cpp
     ai_concommands.cpp
     ai_condition.cpp
@@ -40,7 +24,6 @@ add_library(server SHARED
     AI_Interest_Target.cpp
     ai_link.cpp
     ai_localnavigator.cpp
-    ai_looktarget.cpp
     ai_memory.cpp
     ai_motor.cpp
     ai_moveprobe.cpp
@@ -53,31 +36,25 @@ add_library(server SHARED
     ai_node.cpp
     ai_pathfinder.cpp
     ai_planesolver.cpp
-    ai_playerally.cpp
     ai_responsesystem.cpp
     ai_route.cpp
     ai_schedule.cpp
     ai_scriptconditions.cpp
     ai_senses.cpp
-    ai_sentence.cpp
     ai_speech.cpp
     ai_speechqueue.cpp
     ai_expresserfollowup.cpp
-    ai_speechfilter.cpp
     ai_speechconcept.cpp
     ai_squad.cpp
     ai_squadslot.cpp
     ai_tacticalservices.cpp
     ai_task.cpp
-    ai_trackpather.cpp
     ai_utils.cpp
     ai_waypoint.cpp
     ambientgeneric.cpp
     ../shared/ammodef.cpp
     ../shared/animation.cpp
     ../shared/base_playeranimstate.cpp
-    base_transmit_proxy.cpp
-    ../shared/baseachievement.cpp
     baseanimating.cpp
     BaseAnimatingOverlay.cpp
     basecombatcharacter.cpp
@@ -85,6 +62,7 @@ add_library(server SHARED
     basecombatweapon.cpp
     ../shared/basecombatweapon_shared.cpp
     baseentity.cpp
+    entity_dispatch.cpp
     ../shared/baseentity_shared.cpp
     baseflex.cpp
     ../shared/basegrenade_shared.cpp
@@ -97,7 +75,6 @@ add_library(server SHARED
     beamspotlight.cpp
     bitstring.cpp
     bmodels.cpp
-    ../../public/tools/bonelist.cpp
     ../shared/bone_merge_cache.cpp
     buttons.cpp
     cbase.cpp
@@ -162,7 +139,6 @@ add_library(server SHARED
     flex_expresser.cpp
     fogcontroller.cpp
     fogvolume.cpp
-    foundryhelpers_server.cpp
     fourwheelvehiclephysics.cpp
     func_areaportal.cpp
     func_areaportalbase.cpp
@@ -239,7 +215,6 @@ add_library(server SHARED
     particle_light.cpp
     ../shared/particle_parse.cpp
     particle_system.cpp
-    ../shared/particlesystemquery.cpp
     pathcorner.cpp
     pathtrack.cpp
     phys_controller.cpp
@@ -286,31 +261,25 @@ add_library(server SHARED
     ../shared/ragdoll_shared.cpp
     RagdollBoogie.cpp
     recipientfilter.cpp
-    replaydirector.cpp
     rope.cpp
     ../shared/rope_helpers.cpp
     ../shared/datamap_keyvalue.cpp
-    ../shared/SceneCache.cpp
     sceneentity.cpp
     ../shared/sceneentity_shared.cpp
-    scratchpad_gamedll_helpers.cpp
     scripted.cpp
     scriptedtarget.cpp
     sendproxy.cpp
     ../shared/reflect_sendtable.cpp
     ../shared/reflect_datamap.cpp
     ../shared/sequence_Transitioner.cpp
-    ../server/serverbenchmark_base.cpp
     ServerNetworkProperty.cpp
     shadowcontrol.cpp
     ../shared/simtimer.cpp
-    ../shared/singleplay_gamerules.cpp
     skyboxswapper.cpp
     SkyCamera.cpp
     slideshow_display.cpp
     sound.cpp
     ../shared/SoundEmitterSystem.cpp
-    ../../public/SoundParametersInternal.cpp
     soundent.cpp
     ../shared/soundenvelope.cpp
     soundscape.cpp
@@ -319,7 +288,6 @@ add_library(server SHARED
     spotlightend.cpp
     ../shared/Sprite.cpp
     sprite_perfmonitor.cpp
-    ../shared/studio_shared.cpp
     subs.cpp
     sun.cpp
     sunlightshadowcontrol.cpp
@@ -359,20 +327,10 @@ add_library(server SHARED
     world.cpp
     ../shared/mp_shareddefs.cpp
     ../server/vote_controller.cpp
-    ../../public/closedcaptions.cpp
     gamehandle.cpp
     h_export.cpp
     init_factory.cpp
-    ../../public/interpolatortypes.cpp
-    ../../public/keyframe/keyframe.cpp
-    ../../public/map_utils.cpp
-    ../../public/rope_physics.cpp
-    ../../public/ScratchPadUtils.cpp
-    ../../public/server_class.cpp
     ../shared/sheetsimulator.cpp
-    ../../public/simple_physics.cpp
-    ../../public/stringregistry.cpp
-    ../../public/studio.cpp
     GameStats_BasicStatsFunctions.cpp
     basetempentity.cpp
     event_tempentity_tester.cpp
@@ -438,15 +396,11 @@ add_library(server SHARED
     nav_mesh_factory.cpp
     nav_node.cpp
     nav_simplify.cpp
-    entity_tools_server.cpp
-    toolframework_server.cpp
     hl2/Func_Monitor.cpp
     h_cycler.cpp
     ../shared/predicted_viewmodel.cpp
-    team_objectiveresource.cpp
     team_spawnpoint.cpp
     ../shared/teamplayroundbased_gamerules.cpp
-    ../shared/cstrike15/achievements_cs.cpp
     ../shared/cstrike15/basecsgrenade_projectile.cpp
     ../shared/cstrike15/cs_ammodef.cpp
     cstrike15/cs_autobuy.cpp
@@ -470,7 +424,6 @@ add_library(server SHARED
     ../shared/cstrike15/cs_shareddefs.cpp
     ../shared/econ/econ_item_schema_minimal.cpp
     cstrike15/cs_team.cpp
-    cstrike15/cs_vehicle_jeep.cpp
     ../shared/cstrike15/cs_weapon_parse.cpp
     ../shared/cstrike15/flashbang_projectile.cpp
     cstrike15/func_bomb_target.cpp
@@ -498,7 +451,6 @@ add_library(server SHARED
     ../shared/cstrike15/decoy_projectile.cpp
     ../shared/cstrike15/sensorgrenade_projectile.cpp
     cstrike15/cs_voteissues.cpp
-    ../shared/cstrike15/gametypes.cpp
     ../shared/cstrike15/weapon_basecsgrenade.cpp
     ../shared/cstrike15/weapon_c4.cpp
     ../shared/cstrike15/weapon_csbase.cpp
@@ -571,12 +523,11 @@ add_library(server SHARED
     cstrike15/cs_nav_generate.cpp
     cstrike15/cs_nav_mesh.cpp
     cstrike15/cs_nav_path.cpp
-    ${CMAKE_SOURCE_DIR}/platform/linux/linux_support.cpp
 )
-target_link_libraries(server PRIVATE ks_common ks_shared engine memoverride public_common responserules_runtime bonesetup particles mathlib_extended choreoobjects bitmap dmxloader tier1 tier2 tier3 interfaces mathlib)
+target_link_libraries(server PRIVATE ks_common ks_shared public_common game_public responserules_runtime bonesetup particles mathlib_extended choreoobjects bitmap dmxloader tier1 tier2 tier3 interfaces mathlib)
 target_include_directories(server PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/." "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15" "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15/bot" "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15/bot/states" "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15/control" "${CMAKE_CURRENT_SOURCE_DIR}/cstrike15/hostage" "${CMAKE_CURRENT_SOURCE_DIR}/../shared" "${CMAKE_CURRENT_SOURCE_DIR}/../shared/cstrike15" "${CMAKE_CURRENT_SOURCE_DIR}/../shared/cstrike15/bot" "${CMAKE_CURRENT_SOURCE_DIR}/../../utils/common")
 target_compile_definitions(server PRIVATE GAME_DLL=1 VECTOR=1 BOTS=1 CSTRIKE_DLL=1)
-set_target_properties(server PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-target_link_options(server PRIVATE LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/server.map)
-set_property(TARGET server APPEND PROPERTY LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/server.map")
 
+
+include(${CMAKE_SOURCE_DIR}/game/ks_side.cmake)
+ks_game_side(server server "${CMAKE_CURRENT_SOURCE_DIR}/ks_prelude.h")

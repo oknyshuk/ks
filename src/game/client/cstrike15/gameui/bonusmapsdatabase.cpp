@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "bonusmapsdatabase.h"
 #include "engineinterface.h"
 
@@ -22,7 +20,6 @@ const char g_pszMedalNames[4][8] =
 };
 
 
-const char *COM_GetModDirectory();
 
 
 bool WriteBonusMapSavedData( KeyValues *data )

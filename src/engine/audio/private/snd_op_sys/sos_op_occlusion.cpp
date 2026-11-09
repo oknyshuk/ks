@@ -89,7 +89,7 @@ void CSosOperatorOcclusion::Execute( void *pVoidMem, channel_t *pChannel, CScrat
 
 	// During signon just apply regular state machine since world hasn't been
 	//  created or settled yet...
-	if ( !SND_IsInGame() && !toolframework->InToolMode() )
+	if ( !SND_IsInGame() )
 	{
 		bDoNewTrace = false;
 	}

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -53,7 +51,7 @@ LINK_ENTITY_TO_CLASS( physics_cannister, CPhysicsCannister );
 
 IMPLEMENT_REFLECT_DATAMAP( CPhysicsCannister )
 
-void CPhysicsCannister::Spawn( void )
+void CPhysicsCannister::Spawn_Impl( void )
 {
 	Precache();
 	SetModel( STRING(GetModelName()) );
@@ -82,16 +80,16 @@ void CPhysicsCannister::Spawn( void )
 	}
 }
 
-void CPhysicsCannister::OnRestore()
+void CPhysicsCannister::OnRestore_Impl()
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 	if ( m_pController )
 	{
 		m_pController->SetEventHandler( &m_thruster );
 	}
 }
 
-bool CPhysicsCannister::CreateVPhysics()
+bool CPhysicsCannister::CreateVPhysics_Impl()
 {
 	bool asleep = HasSpawnFlags(SF_CANNISTER_ASLEEP);
 
@@ -99,7 +97,7 @@ bool CPhysicsCannister::CreateVPhysics()
 	return true;
 }
 
-bool CPhysicsCannister::TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace )
+bool CPhysicsCannister::TestCollision_Impl( const Ray_t &ray, unsigned int mask, trace_t& trace )
 {
 	Vector vecAbsMins, vecAbsMaxs;
 	CollisionProp()->WorldSpaceAABB( &vecAbsMins, &vecAbsMaxs );
@@ -107,7 +105,7 @@ bool CPhysicsCannister::TestCollision( const Ray_t &ray, unsigned int mask, trac
 	if ( !IsBoxIntersectingRay( vecAbsMins, vecAbsMaxs, ray.m_Start, ray.m_Delta ) )
 		return false;
 	
-	return BaseClass::TestCollision( ray, mask, trace );
+	return BaseClass::TestCollision_Impl( ray, mask, trace );
 }
 
 Vector CPhysicsCannister::CalcLocalThrust( const Vector &offset )
@@ -128,17 +126,17 @@ CPhysicsCannister::~CPhysicsCannister( void )
 {
 }
 
-void CPhysicsCannister::Precache( void )
+void CPhysicsCannister::Precache_Impl( void )
 {
 	PropBreakablePrecacheAll( GetModelName() );
 	if ( m_gasSound != NULL_STRING )
 	{
 		PrecacheScriptSound( STRING(m_gasSound) );
 	}
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
-int CPhysicsCannister::OnTakeDamage( const CTakeDamageInfo &info )
+int CPhysicsCannister::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	// HACKHACK: Shouldn't g_vecAttackDir be a parameter to this function?
 	if ( !m_takedamage )
@@ -176,7 +174,7 @@ int CPhysicsCannister::OnTakeDamage( const CTakeDamageInfo &info )
 }
 
 
-void CPhysicsCannister::TraceAttack( const CTakeDamageInfo &info, const Vector &dir, trace_t *ptr )
+void CPhysicsCannister::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &dir, trace_t *ptr )
 {
 	if ( !m_active && ptr->hitgroup != 0 )
 	{
@@ -185,7 +183,7 @@ void CPhysicsCannister::TraceAttack( const CTakeDamageInfo &info, const Vector &
 		VectorNormalize( direction );
 		CannisterActivate( info.GetAttacker(), direction );
 	}
-	BaseClass::TraceAttack( info, dir, ptr );
+	BaseClass::TraceAttack_Impl( info, dir, ptr );
 }
 
 
@@ -364,7 +362,7 @@ void CPhysicsCannister::ExplodeTouch( CBaseEntity *pOther )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPhysicsCannister::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
+void CPhysicsCannister::VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent )
 {
 	if ( m_bFired && m_active )
 	{
@@ -381,7 +379,7 @@ void CPhysicsCannister::VPhysicsCollision( int index, gamevcollisionevent_t *pEv
 		}
 	}
 
-	BaseClass::VPhysicsCollision( index, pEvent );
+	BaseClass::VPhysicsCollision_Impl( index, pEvent );
 }
 
 //-----------------------------------------------------------------------------
@@ -438,7 +436,7 @@ void CPhysicsCannister::OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CBasePlayer *CPhysicsCannister::HasPhysicsAttacker( float dt )
+CBasePlayer *CPhysicsCannister::HasPhysicsAttacker_Impl( float dt )
 {
 	if (gpGlobals->curtime - dt <= m_flLastPhysicsInfluenceTime)
 	{
@@ -449,9 +447,9 @@ CBasePlayer *CPhysicsCannister::HasPhysicsAttacker( float dt )
 //-----------------------------------------------------------------------------
 // Purpose: Update the visible representation of the physic system's representation of this object
 //-----------------------------------------------------------------------------
-void CPhysicsCannister::VPhysicsUpdate( IPhysicsObject *pPhysics )
+void CPhysicsCannister::VPhysicsUpdate_Impl( IPhysicsObject *pPhysics )
 {
-	BaseClass::VPhysicsUpdate( pPhysics );
+	BaseClass::VPhysicsUpdate_Impl( pPhysics );
 
 	// if this is the first time we have moved, fire our target
 	if ( HasSpawnFlags( SF_CANNISTER_ASLEEP ) )

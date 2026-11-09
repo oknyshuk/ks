@@ -2,8 +2,6 @@
 // Copyright (c) Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -281,7 +279,7 @@ void StartParticleEffect( const CEffectData &data, int nSplitScreenPlayerSlot /*
 
 	if ( data.m_fFlags & PARTICLE_DISPATCH_FROM_ENTITY )
 	{
-		if ( data.m_hEntity.Get() )
+		if ( EntityFromHandle( data.m_hEntity ) )
 		{
 			C_BaseEntity *pEnt = C_BaseEntity::Instance( data.m_hEntity );
 			// commented out assert. dormant entities have their particle system spawns stopped.
@@ -365,7 +363,7 @@ DECLARE_CLIENT_EFFECT( ParticleEffect, ParticleEffectCallback )
 //-----------------------------------------------------------------------------
 void ParticleEffectStopCallback( const CEffectData &data )
 {
-	if ( data.m_hEntity.Get() )
+	if ( EntityFromHandle( data.m_hEntity ) )
 	{
 		C_BaseEntity *pEnt = C_BaseEntity::Instance( data.m_hEntity );
 		if ( pEnt )

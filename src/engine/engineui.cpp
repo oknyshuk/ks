@@ -40,7 +40,6 @@
 #include "filesystem_engine.h"
 #include "igame.h"
 #include "cl_demoactionmanager.h"
-#include "enginebugreporter.h"
 #include "icolorcorrectiontools.h"
 #include "client.h"
 #include "server.h"
@@ -61,7 +60,6 @@ import ks.desktop;
 #include "localize/ilocalize.h"
 
 #include "engineui.h"
-#include "toolframework/itoolframework.h"
 #include "LoadScreenUpdate.h"
 
 
@@ -218,14 +216,14 @@ public:
 	~CEngineUI();
 
 	// Methods of IEngineUIInternal
-	virtual void Init();
-	virtual void Connect();
-	virtual void Shutdown();
-	virtual bool SetVGUIDirectories();
-	virtual bool IsInitialized() const;
-	virtual bool Key_Event( const InputEvent_t &event );
-	virtual void UpdateButtonState( const InputEvent_t &event );
-	virtual void PostInit();
+	void Init();
+	void Connect();
+	void Shutdown();
+	bool SetVGUIDirectories();
+	bool IsInitialized() const;
+	bool Key_Event( const InputEvent_t &event );
+	void UpdateButtonState( const InputEvent_t &event );
+	void PostInit();
 
 	CreateInterfaceFn GetGameUIFactory()
 	{
@@ -233,50 +231,50 @@ public:
 	}
 	
 	// handlers for game UI (main menu)
-	virtual void ActivateGameUI();
-	virtual bool HideGameUI();
-	virtual bool IsGameUIVisible();
+	void ActivateGameUI();
+	bool HideGameUI();
+	bool IsGameUIVisible();
 
 	// console
-	virtual void ShowConsole();
-	virtual void HideConsole();
-	virtual bool IsConsoleVisible();
-	virtual void ClearConsole();
+	void ShowConsole();
+	void HideConsole();
+	bool IsConsoleVisible();
+	void ClearConsole();
 
 	// level loading
-	virtual void OnLevelLoadingStarted( char const *levelName, bool bLocalServer );
-	virtual void OnLevelLoadingFinished();
-	virtual void NotifyOfServerConnect(const char *game, int IP, int connectionPort);
-	virtual void NotifyOfServerDisconnect();
-	virtual void UpdateProgressBar(LevelLoadingProgress_e progress, bool showDialog = true );
-	virtual void UpdateCustomProgressBar( float progress, const wchar_t *desc );
-	virtual void StartCustomProgress();
-	virtual void FinishCustomProgress();
-	virtual void UpdateSecondaryProgressBarWithFile( float progress, const char *pDesc, int nBytesTotal );
-	virtual void UpdateSecondaryProgressBar( float progress, const wchar_t *desc );
-	virtual void StartLoadingScreenForCommand( const char* command );
-	virtual void StartLoadingScreenForKeyValues( KeyValues* keyValues );
+	void OnLevelLoadingStarted( char const *levelName, bool bLocalServer );
+	void OnLevelLoadingFinished();
+	void NotifyOfServerConnect(const char *game, int IP, int connectionPort);
+	void NotifyOfServerDisconnect();
+	void UpdateProgressBar(LevelLoadingProgress_e progress, bool showDialog = true );
+	void UpdateCustomProgressBar( float progress, const wchar_t *desc );
+	void StartCustomProgress();
+	void FinishCustomProgress();
+	void UpdateSecondaryProgressBarWithFile( float progress, const char *pDesc, int nBytesTotal );
+	void UpdateSecondaryProgressBar( float progress, const wchar_t *desc );
+	void StartLoadingScreenForCommand( const char* command );
+	void StartLoadingScreenForKeyValues( KeyValues* keyValues );
 
-	virtual void EnabledProgressBarForNextLoad()
+	void EnabledProgressBarForNextLoad()
 	{
 		m_bShowProgressDialog = true;
 	}
 
 	// Should pause?
-	virtual bool ShouldPause();
-	virtual void ShowErrorMessage();
+	bool ShouldPause();
+	void ShowErrorMessage();
 
-	virtual void SetNotAllowedToHideGameUI( bool bNotAllowedToHide )
+	void SetNotAllowedToHideGameUI( bool bNotAllowedToHide )
 	{
 		m_bNotAllowedToHideGameUI = bNotAllowedToHide;
 	}
 
-	virtual void SetNotAllowedToShowGameUI( bool bNotAllowedToShow )
+	void SetNotAllowedToShowGameUI( bool bNotAllowedToShow )
 	{
 		m_bNotAllowedToShowGameUI = bNotAllowedToShow;
 	}
 
-	virtual void HideLoadingPlaque( void )
+	void HideLoadingPlaque( void )
 	{
 		if ( scr_drawloading )
 		{
@@ -295,23 +293,23 @@ public:
 	}
 
 	// Allows the level loading progress to show map-specific info
-	virtual void SetProgressLevelName( const char *levelName );
+	void SetProgressLevelName( const char *levelName );
 
-	virtual void OnToolModeChanged( bool bGameMode );
-	virtual InputContextHandle_t GetGameUIInputContext() { return m_hGameUIInputContext; }
+	void OnToolModeChanged( bool bGameMode );
+	InputContextHandle_t GetGameUIInputContext() { return m_hGameUIInputContext; }
 
-	virtual void NeedConnectionProblemWaitScreen();
-	virtual void ShowPasswordUI( char const *pchCurrentPW );
+	void NeedConnectionProblemWaitScreen();
+	void ShowPasswordUI( char const *pchCurrentPW );
 
 	void SetProgressBias( float bias );
 	void UpdateProgressBar( float progress, const char *pszDesc = nullptr, bool showDialog = true );
 
-	virtual bool IsPlayingFullScreenVideo();
+	bool IsPlayingFullScreenVideo();
 
-private:
+public:
 	void SetEngineVisible( bool state );
 
-	virtual void Simulate();
+	void Simulate();
 
 	// debug overlays
 	void HideDebugSystem();
@@ -320,7 +318,7 @@ private:
 	bool IsAltKeyDown();
 	bool IsCtrlKeyDown();
 
-private:
+public:
 	enum { MAX_NUM_FACTORIES = 5 };
 	CreateInterfaceFn m_FactoryList[MAX_NUM_FACTORIES];
 	int m_iNumFactories;
@@ -345,7 +343,6 @@ private:
 	std::vector< LoadingProgressEntry_t > m_LoadingProgress;
 
 	bool					m_bSaveProgress : 1;
-	bool					m_bNoShaderAPI : 1;
 	// game ui hiding control
 	bool					m_bNotAllowedToHideGameUI : 1;
 	bool					m_bNotAllowedToShowGameUI : 1;
@@ -357,6 +354,9 @@ private:
 
 	IMaterial *m_pConstantColorMaterial;
 };
+
+#include "facade/iengineui.inl"
+
 
 
 //-----------------------------------------------------------------------------
@@ -390,7 +390,6 @@ CEngineUI::CEngineUI()
 	
 	m_bShowProgressDialog = false;
 	m_bSaveProgress = false;
-	m_bNoShaderAPI = false;
 	m_bNotAllowedToHideGameUI = false;
 	m_bNotAllowedToShowGameUI = false;
 	m_ProgressBias = 0;
@@ -521,7 +520,6 @@ void CEngineUI::Init()
 		Cbuf_AddText( Cbuf_GetCurrentPlayer(), "rocket_console_show\n" );
 	}
 
-	m_bNoShaderAPI = CommandLine()->FindParm( "-noshaderapi" ) ? true : false;
 }
 
 void CEngineUI::PostInit()
@@ -559,7 +557,6 @@ void CEngineUI::Shutdown()
 		m_pConstantColorMaterial = nullptr;
 	}
 
-	bugreporter->Shutdown();
 	colorcorrectiontools->Shutdown();
 
 	demoaction->Shutdown();
@@ -604,7 +601,6 @@ void CEngineUI::SetEngineVisible( bool state )
 //-----------------------------------------------------------------------------
 bool CEngineUI::ShouldPause()
 {
-	return bugreporter->ShouldPause();
 	return false;
 }
 
@@ -916,10 +912,6 @@ void CEngineUI::UpdateProgressBar( LevelLoadingProgress_e progress, bool showDia
 	if ( !ThreadInMainThread() )
 		return;
 
-	// Don't update in tools mode; it renders the tools too, which takes forever!
-	if ( toolframework->InToolMode() )
-		return;
-
 	if (!g_pLoadingProgressDescriptions)
 		return;
 
@@ -1185,8 +1177,6 @@ bool CEngineUI::Key_Event( const InputEvent_t &event )
 void CEngineUI::Simulate()
 {
 
-	toolframework->UI_PreSimulateAllTools();
-
 	{
 		CVProfScope _( "CEngineUI::Simulate", 0, "UI_Simulate", false, BUDGETFLAG_OTHER );
 
@@ -1207,8 +1197,6 @@ void CEngineUI::Simulate()
 
 		UI_ActivateMouse();
 	}
-
-	toolframework->UI_PostSimulateAllTools();
 }
 
 void CEngineUI::HideDebugSystem( void )

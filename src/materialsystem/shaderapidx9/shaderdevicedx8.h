@@ -32,22 +32,22 @@ class CShaderDeviceMgrDx8 : public CShaderDeviceMgrBase
 public:
 	// constructor, destructor
 	CShaderDeviceMgrDx8();
-	virtual ~CShaderDeviceMgrDx8();
+	~CShaderDeviceMgrDx8();
 
 	// Methods of IAppSystem
-	virtual bool Connect( CreateInterfaceFn factory );
-	virtual void Disconnect();
-	virtual InitReturnVal_t Init();
-	virtual void Shutdown();
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	InitReturnVal_t Init();
+	void Shutdown();
 
 	// Methods of IShaderDevice
-	virtual int	 GetAdapterCount() const;
-	virtual void GetAdapterInfo( int adapter, MaterialAdapterInfo_t& info ) const;
-	virtual int	 GetModeCount( int nAdapter ) const;
-	virtual void GetModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter, int mode ) const;
-	virtual void GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter ) const;
-	virtual bool SetAdapter( int nAdapter, int nFlags );
-	virtual CreateInterfaceFn SetMode( void *hWnd, int nAdapter, const ShaderDeviceInfo_t& mode );
+	int	 GetAdapterCount() const;
+	void GetAdapterInfo( int adapter, MaterialAdapterInfo_t& info ) const;
+	int	 GetModeCount( int nAdapter ) const;
+	void GetModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter, int mode ) const;
+	void GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter ) const;
+	bool SetAdapter( int nAdapter, int nFlags );
+	CreateInterfaceFn SetMode( void *hWnd, int nAdapter, const ShaderDeviceInfo_t& mode );
 
 	// Determines hardware caps from D3D
 	bool ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapter );
@@ -59,7 +59,10 @@ public:
 	bool ValidateMode( int nAdapter, const ShaderDeviceInfo_t &info ) const;
 
 	// Returns the amount of video memory in bytes for a particular adapter
-	virtual int GetVidMemBytes( int nAdapter ) const;
+	int GetVidMemBytes( int nAdapter ) const;
+
+	// Returns the screen resolution
+	void GetDesktopResolution( int *pWidth, int *pHeight, int nAdapter ) const;
 
 	[[gnu::always_inline]] inline IDirect3D9 *D3D() const
 	{ 
@@ -72,9 +75,6 @@ protected:
 	bool DetermineHardwareCaps( );
 
 private:
-	// Returns the screen resolution
-	virtual void GetDesktopResolution( int *pWidth, int *pHeight, int nAdapter ) const;
-
 	// Initialize adapter information
 	void InitAdapterInfo();
 
@@ -122,54 +122,54 @@ class CShaderDeviceDx8 : public CShaderDeviceBase
 {
 	// Methods of IShaderDevice
 public:
-	virtual bool IsUsingGraphics() const;
-	virtual ImageFormat GetBackBufferFormat() const;
-	virtual void GetBackBufferDimensions( int& width, int& height ) const;
-	virtual const AspectRatioInfo_t &GetAspectRatioInfo( void ) const;
-	virtual void Present();
-	virtual IShaderBuffer* CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion );
-	virtual VertexShaderHandle_t CreateVertexShader( IShaderBuffer *pBuffer );
-	virtual void DestroyVertexShader( VertexShaderHandle_t hShader );
-	virtual GeometryShaderHandle_t CreateGeometryShader( IShaderBuffer* pShaderBuffer );
-	virtual void DestroyGeometryShader( GeometryShaderHandle_t hShader );
-	virtual PixelShaderHandle_t CreatePixelShader( IShaderBuffer* pShaderBuffer );
-	virtual void DestroyPixelShader( PixelShaderHandle_t hShader );
-	virtual void ReleaseResources( bool bReleaseManagedResources = true );
-	virtual void ReacquireResources();
-	virtual IMesh* CreateStaticMesh( VertexFormat_t format, const char *pBudgetGroup, IMaterial * pMaterial = nullptr, VertexStreamSpec_t *pStreamSpec = nullptr );
-	virtual void DestroyStaticMesh( IMesh* mesh );
-	virtual IVertexBuffer *CreateVertexBuffer( ShaderBufferType_t type, VertexFormat_t fmt, int nVertexCount, const char *pBudgetGroup );
-	virtual void DestroyVertexBuffer( IVertexBuffer *pVertexBuffer );
-	virtual IIndexBuffer *CreateIndexBuffer( ShaderBufferType_t bufferType, MaterialIndexFormat_t fmt, int nIndexCount, const char *pBudgetGroup );
-	virtual void DestroyIndexBuffer( IIndexBuffer *pIndexBuffer );
-	virtual IVertexBuffer *GetDynamicVertexBuffer( int nStreamID, VertexFormat_t vertexFormat, bool bBuffered = true );
-	virtual IIndexBuffer *GetDynamicIndexBuffer();
-	virtual void SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMin, float fGammaTVRangeMax, float fGammaTVExponent, bool bTVEnabled );
-	virtual void SpewDriverInfo() const;
-	virtual int GetCurrentAdapter() const;
-	virtual void EnableNonInteractiveMode( MaterialNonInteractiveMode_t mode, ShaderNonInteractiveInfo_t *pInfo = nullptr );
-	virtual void RefreshFrontBufferNonInteractive();
+	bool IsUsingGraphics() const;
+	ImageFormat GetBackBufferFormat() const;
+	void GetBackBufferDimensions( int& width, int& height ) const;
+	const AspectRatioInfo_t &GetAspectRatioInfo( void ) const;
+	void Present();
+	IShaderBuffer* CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion );
+	VertexShaderHandle_t CreateVertexShader( IShaderBuffer *pBuffer );
+	void DestroyVertexShader( VertexShaderHandle_t hShader );
+	GeometryShaderHandle_t CreateGeometryShader( IShaderBuffer* pShaderBuffer );
+	void DestroyGeometryShader( GeometryShaderHandle_t hShader );
+	PixelShaderHandle_t CreatePixelShader( IShaderBuffer* pShaderBuffer );
+	void DestroyPixelShader( PixelShaderHandle_t hShader );
+	void ReleaseResources( bool bReleaseManagedResources = true );
+	void ReacquireResources();
+	IMesh* CreateStaticMesh( VertexFormat_t format, const char *pBudgetGroup, IMaterial * pMaterial = nullptr, VertexStreamSpec_t *pStreamSpec = nullptr );
+	void DestroyStaticMesh( IMesh* mesh );
+	IVertexBuffer *CreateVertexBuffer( ShaderBufferType_t type, VertexFormat_t fmt, int nVertexCount, const char *pBudgetGroup );
+	void DestroyVertexBuffer( IVertexBuffer *pVertexBuffer );
+	IIndexBuffer *CreateIndexBuffer( ShaderBufferType_t bufferType, MaterialIndexFormat_t fmt, int nIndexCount, const char *pBudgetGroup );
+	void DestroyIndexBuffer( IIndexBuffer *pIndexBuffer );
+	IVertexBuffer *GetDynamicVertexBuffer( int nStreamID, VertexFormat_t vertexFormat, bool bBuffered = true );
+	IIndexBuffer *GetDynamicIndexBuffer();
+	void SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMin, float fGammaTVRangeMax, float fGammaTVExponent, bool bTVEnabled );
+	void SpewDriverInfo() const;
+	int GetCurrentAdapter() const;
+	void EnableNonInteractiveMode( MaterialNonInteractiveMode_t mode, ShaderNonInteractiveInfo_t *pInfo = nullptr );
+	void RefreshFrontBufferNonInteractive();
 
 	// Alternative method for ib/vs
 	// NOTE: If this works, remove GetDynamicVertexBuffer/IndexBuffer
 
 	// Methods of CShaderDeviceBase
 public:
-	virtual bool InitDevice( void* hWnd, int nAdapter, const ShaderDeviceInfo_t &info );
-	virtual void ShutdownDevice();
-	virtual bool IsDeactivated() const;
+	bool InitDevice( void* hWnd, int nAdapter, const ShaderDeviceInfo_t &info );
+	void ShutdownDevice();
+	bool IsDeactivated() const;
 
 	// Other public methods
 public:
 	// constructor, destructor
 	CShaderDeviceDx8();
-	virtual ~CShaderDeviceDx8();
+	~CShaderDeviceDx8();
 
 	// Call this when another app is initializing or finished initializing
-	virtual void OtherAppInitializing( bool initializing );
+	void OtherAppInitializing( bool initializing );
 	
 	// This handles any events queued because they were called outside of the owning thread
-	virtual void HandleThreadEvent( uint32 threadEvent );
+	void HandleThreadEvent( uint32 threadEvent );
 
 	// FIXME: Make private
 	// Which device are we using?
@@ -252,8 +252,8 @@ protected:
 							const char *strShaderProgram, const DWORD *shaderData, unsigned int shaderSize );
 
 	// FIXME: This is for backward compat; I still haven't solved a way of decoupling this
-	virtual bool OnAdapterSet() = 0;
-	virtual void ResetRenderState( bool bFullReset = true ) = 0;
+	bool OnAdapterSet();
+	void ResetRenderState( bool bFullReset = true );
 
 	// For measuring if we meed TCR 022 on the XBox (refreshing often enough)
 	void UpdatePresentStats();

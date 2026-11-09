@@ -3,8 +3,6 @@
 
 // Purpose: Allows movies to be played as a VGUI screen in the world
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -60,14 +57,15 @@ public:
 
 	virtual ~CMovieDisplay();
 
-	virtual bool KeyValue( const char *szKeyName, const char *szValue );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
 
-	virtual int  UpdateTransmitState();
-	virtual void SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
+	int  UpdateTransmitState_Impl();
+	void SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways );
 
-	virtual void Spawn( void );
-	virtual void Precache( void );
-	virtual void OnRestore( void );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	void OnRestore_Impl( void );
 
 	void	ScreenVisible( bool bVisible );
 
@@ -142,7 +140,7 @@ CMovieDisplay::~CMovieDisplay()
 //-----------------------------------------------------------------------------
 // Read in Hammer data
 //-----------------------------------------------------------------------------
-bool CMovieDisplay::KeyValue( const char *szKeyName, const char *szValue ) 
+bool CMovieDisplay::KeyValue_Impl( const char *szKeyName, const char *szValue ) 
 {
 	// NOTE: Have to do these separate because they set two values instead of one
 	if( FStrEq( szKeyName, "angles" ) )
@@ -164,13 +162,13 @@ bool CMovieDisplay::KeyValue( const char *szKeyName, const char *szValue )
 		return true;
 	}
 
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-int CMovieDisplay::UpdateTransmitState()
+int CMovieDisplay::UpdateTransmitState_Impl()
 {
 	if ( m_bDoFullTransmit )
 	{
@@ -184,19 +182,19 @@ int CMovieDisplay::UpdateTransmitState()
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-void CMovieDisplay::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
+void CMovieDisplay::SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways )
 {
 	// Are we already marked for transmission?
 	if ( (*pInfo->m_pTransmitEdict)[ entindex() ] )
 		return;
 
-	BaseClass::SetTransmit( pInfo, bAlways );
+	BaseClass::SetTransmit_Impl( pInfo, bAlways );
 }
 
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-void CMovieDisplay::Spawn( void )
+void CMovieDisplay::Spawn_Impl( void )
 {
 	// Move the strings into a networkable form
 	V_strcpy( m_szMovieFilename.GetForModify(), m_strMovieFilename.ToCStr() );
@@ -204,7 +202,7 @@ void CMovieDisplay::Spawn( void )
 
 	Precache();
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	m_bEnabled = false;
 
@@ -224,9 +222,9 @@ void CMovieDisplay::Spawn( void )
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-void CMovieDisplay::Precache( void )
+void CMovieDisplay::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	if ( m_bForcePrecache )
 	{
@@ -238,9 +236,9 @@ void CMovieDisplay::Precache( void )
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-void CMovieDisplay::OnRestore( void )
+void CMovieDisplay::OnRestore_Impl( void )
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	m_bDoFullTransmit = true;
 

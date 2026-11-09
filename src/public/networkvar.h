@@ -4,10 +4,6 @@
 #ifndef NETWORKVAR_H
 #define NETWORKVAR_H
 
-import ks.core;
-import std;
-import ks.math;
-import ks.tier1;
 
 #if defined( CLIENT_DLL ) || defined( GAME_DLL )
 	#include "basehandle.h"
@@ -44,73 +40,7 @@ inline constexpr auto NETWORKVAR_VECTOR_XY_SEPARATEZ_FLAG = 0x0004; // Is it a C
 
 
 
-// network vars use memcmp when fields are set.  To ensure proper behavior your
-// object's memory should be initialized to zero.  This happens for entities automatically
-// use this for other classes.
-class CMemZeroOnNew
-{
-public:
-	void *operator new( std::size_t nSize )
-	{
-		void *pMem = MemAlloc_Alloc( nSize );
-		V_memset( pMem, 0, nSize );
-		return pMem;
-	}
-
-	void* operator new( std::size_t nSize, int nBlockUse, const char *pFileName, int nLine )
-	{
-		void *pMem = MemAlloc_Alloc( nSize, pFileName, nLine );
-		V_memset( pMem, 0, nSize );
-		return pMem;
-	}
-
-	void operator delete(void *pData)
-	{
-		if ( pData )
-		{
-			g_pMemAlloc->Free(pData);
-		}
-	}
-
-	void operator delete( void* pData, int nBlockUse, const char *pFileName, int nLine )
-	{
-		if ( pData )
-		{
-			g_pMemAlloc->Free(pData, pFileName, nLine );
-		}
-	}
-};
-
-
-inline int InternalCheckDeclareClass( const char *pClassName, const char *pClassNameMatch, void *pTestPtr, void *pBasePtr )
-{
-	// This makes sure that casting from ThisClass to BaseClass works right. You'll get a compiler error if it doesn't
-	// work at all, and you'll get a runtime error if you use multiple inheritance.
-	contract_assert( pTestPtr == pBasePtr );
-	
-	// This is triggered by IMPLEMENT_SERVER_CLASS. It does DLLClassName::CheckDeclareClass( #DLLClassName ).
-	// If they didn't do a DECLARE_CLASS in DLLClassName, then it'll be calling its base class's version
-	// and the class names won't match.
-	contract_assert( (void*)pClassName == (void*)pClassNameMatch );
-	return 0;
-}
-
-
-template <typename T> 
-inline int CheckDeclareClass_Access( T *, const char *pShouldBe )
-{
-	return T::CheckDeclareClass( pShouldBe );
-}
-
-
-	#define DECLARE_CLASS( className, baseClassName ) \
-		typedef baseClassName BaseClass; \
-		typedef className ThisClass;
-
-	#define DECLARE_CLASS_GAMEROOT( className, baseClassName )	DECLARE_CLASS( className, baseClassName )
-	#define DECLARE_CLASS_NOFRIEND( className, baseClassName )	DECLARE_CLASS( className, baseClassName )
-
-	#define DECLARE_CLASS_NOBASE( className )					typedef className ThisClass;
+#include "declare_class.h"
 
 
 
@@ -553,6 +483,9 @@ private:
 
 // Network ehandle wrapper.
 #if defined( CLIENT_DLL ) || defined( GAME_DLL )
+	// Defined in the game's ehandle.h.
+	inline IHandleEntity *EntityFromHandle( const CBaseHandle &handle );
+
 	template< class Type, class Changer >
 	class CNetworkHandleBase : public CNetworkVarBase< CBaseHandle, Changer >
 	{
@@ -566,17 +499,17 @@ private:
 		const Type& operator=( const CNetworkHandleBase<Type,Changer> &val ) 
 		{ 
 			const CBaseHandle &handle = CNetworkVarBase<CBaseHandle,Changer>::Set( val.m_Value );
-			return *(const Type*)handle.Get();
+			return *(const Type*)EntityFromHandle( handle );
 		}
 
 		bool operator !() const 
 		{ 
-			return !this->m_Value.Get(); 
+			return !EntityFromHandle( this->m_Value ); 
 		}
 		
 		operator Type*() const 
 		{ 
-			return static_cast< Type* >( this->m_Value.Get() );
+			return static_cast< Type* >( EntityFromHandle( this->m_Value ) );
 		}
 
 		const Type* Set( const Type *val )
@@ -591,12 +524,12 @@ private:
 		
 		Type* Get() const 
 		{ 
-			return static_cast< Type* >( CNetworkHandleBase<Type,Changer>::m_Value.Get() );
+			return static_cast< Type* >( EntityFromHandle( CNetworkHandleBase<Type,Changer>::m_Value ) );
 		}
 
 		Type* operator->() const 
 		{ 
-			return static_cast< Type* >( CNetworkHandleBase<Type,Changer>::m_Value.Get() );
+			return static_cast< Type* >( EntityFromHandle( CNetworkHandleBase<Type,Changer>::m_Value ) );
 		}
 
 		bool operator==( const Type *val ) const 

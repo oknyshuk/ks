@@ -12,7 +12,7 @@ class CHLTVClient : public CBaseClient
 
 public:
 	CHLTVClient(int slot, CBaseServer *pServer);
-	virtual ~CHLTVClient();
+	~CHLTVClient();
 
 	// INetMsgHandler interface
 	void ConnectionClosing( const char *reason );
@@ -32,7 +32,7 @@ public:
 	bool	ExecuteStringCommand( const char *s );
 	void	SpawnPlayer( void );
 	bool	ShouldSendMessages( void );
-	bool	SendSnapshot( CClientFrame * pFrame ) override;
+	bool	SendSnapshot( CClientFrame * pFrame );
 	bool	SendSignonData( void );
 	
 	void	SetRate( int nRate, bool bForce );
@@ -42,22 +42,22 @@ public:
 public: // IClientMessageHandlers
 		
 	
-	virtual bool CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg ) override;
-	virtual bool CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg ) override;
+	bool CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg );
+	bool CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg );
 
-	virtual bool NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg ) override;
-	virtual bool NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg ) override { return true; }
+	bool NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg );
+	bool NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg ) { return true; }
 	
-	virtual bool CLCMsg_Move( const ks::net::CCLCMsg_Move& msg ) override;
-	virtual bool CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg ) override;
-	virtual bool CLCMsg_VoiceData( const ks::net::CCLCMsg_VoiceData& msg ) override;
-	virtual bool CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg ) override;
+	bool CLCMsg_Move( const ks::net::CCLCMsg_Move& msg );
+	bool CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg );
+	bool CLCMsg_VoiceData( const ks::net::CCLCMsg_VoiceData& msg );
+	bool CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg );
 
 public:
 	CClientFrame *GetDeltaFrame( int nTick );
 
-protected:
-	virtual bool	ProcessSignonStateMsg(int state, int spawncount) override;
+public:
+	bool	ProcessSignonStateMsg(int state, int spawncount);
 	
 public:
 	CHLTVServer *m_pHLTV;

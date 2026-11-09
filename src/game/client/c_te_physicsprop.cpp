@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -72,54 +70,12 @@ C_TEPhysicsProp::~C_TEPhysicsProp( void )
 
 
 //-----------------------------------------------------------------------------
-// Recording 
-//-----------------------------------------------------------------------------
-static inline void RecordPhysicsProp( const Vector& start, const QAngle &angles, 
-	const Vector& vel, int nModelIndex, int flags, int nSkin, int nEffects, color24 renderColor )
-{
-	if ( !ToolsEnabled() )
-		return;
-
-	if ( clienttools->IsInRecordingMode() )
-	{
-		const model_t* pModel = (nModelIndex != 0) ? modelinfo->GetModel( nModelIndex ) : nullptr;
-		const char *pModelName = pModel ? modelinfo->GetModelName( pModel ) : "";
-		Color convertedRenderColor((int)renderColor.r, (int)renderColor.g, (int)renderColor.b);
-
-		KeyValues *msg = new KeyValues( "TempEntity" );
-
- 		msg->SetInt( "te", TE_PHYSICS_PROP );
- 		msg->SetString( "name", "TE_PhysicsProp" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetFloat( "originx", start.x );
-		msg->SetFloat( "originy", start.y );
-		msg->SetFloat( "originz", start.z );
-		msg->SetFloat( "anglesx", angles.x );
-		msg->SetFloat( "anglesy", angles.y );
-		msg->SetFloat( "anglesz", angles.z );
-		msg->SetFloat( "velx", vel.x );
-		msg->SetFloat( "vely", vel.y );
-		msg->SetFloat( "velz", vel.z );
-  		msg->SetString( "model", pModelName );
- 		msg->SetInt( "breakmodel", flags );
-		msg->SetInt( "skin", nSkin );
-		msg->SetInt( "effects", nEffects );
-		msg->SetColor( "rendercolor", convertedRenderColor );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
-}
-
-
-//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void TE_PhysicsProp( IRecipientFilter& filter, float delay,
 	int modelindex, int skin, const Vector& pos, const QAngle &angles, const Vector& vel, int flags, int effects, color24 renderColor )
 {
 	tempents->PhysicsProp( modelindex, skin, pos, angles, vel, flags, effects, renderColor );
-	RecordPhysicsProp( pos, angles, vel, modelindex, flags, skin, effects, renderColor );
 }
 
 //-----------------------------------------------------------------------------
@@ -135,7 +91,6 @@ void C_TEPhysicsProp::PostDataUpdate( DataUpdateType_t updateType )
 	clrRenderConverted.b = m_clrRender.b;
 
 	tempents->PhysicsProp( m_nModelIndex, m_nSkin, m_vecOrigin, m_angRotation, m_vecVelocity, m_nFlags, m_nEffects, clrRenderConverted );
-	RecordPhysicsProp( m_vecOrigin, m_angRotation, m_vecVelocity, m_nModelIndex, m_nFlags, m_nSkin, m_nEffects, clrRenderConverted );
 }
 
 void TE_PhysicsProp( IRecipientFilter& filter, float delay, KeyValues *pKeyValues )

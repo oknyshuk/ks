@@ -40,11 +40,11 @@ public:
 	int		GetNumHitboxFires( void );
 	float	GetHitboxFireScale( void );
 
-	virtual void Precache();
-	virtual void UpdateOnRemove();
+	void Precache_Impl();
+	void UpdateOnRemove_Impl();
 
-	virtual void Spawn();
-	virtual void Activate();
+	void Spawn_Impl();
+	void Activate_Impl();
 
 	void	UseCheapEffect( bool bCheap );
 

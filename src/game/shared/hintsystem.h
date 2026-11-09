@@ -8,7 +8,6 @@
 #include "datamap.h"
 #include "shared_classnames.h"
 #include "simtimer.h"
-import std;
 
 class CBasePlayer;
 

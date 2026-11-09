@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -24,7 +21,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -38,7 +34,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -266,17 +261,17 @@ IMPLEMENT_REFLECT_TABLE( CBaseCSGrenadeProjectile, DT_BaseCSGrenadeProjectile );
 		return BaseClass::DrawModel( flags, instance );
 	}
 
-	void CBaseCSGrenadeProjectile::Spawn()
+	void CBaseCSGrenadeProjectile::Spawn_Impl()
 	{
 		m_flSpawnTime = gpGlobals->curtime;
-		BaseClass::Spawn();
+		BaseClass::Spawn_Impl();
 	}
 
 #else
 
-	void CBaseCSGrenadeProjectile::PostConstructor( const char *className )
+	void CBaseCSGrenadeProjectile::PostConstructor_Impl( const char *className )
 	{
-		BaseClass::PostConstructor( className );
+		BaseClass::PostConstructor_Impl( className );
 		TheBots->AddGrenade( this );
 	}
 
@@ -285,16 +280,16 @@ IMPLEMENT_REFLECT_TABLE( CBaseCSGrenadeProjectile, DT_BaseCSGrenadeProjectile );
 		TheBots->RemoveGrenade( this );
 	}
 
-	void CBaseCSGrenadeProjectile::Precache()
+	void CBaseCSGrenadeProjectile::Precache_Impl()
 	{
-		BaseClass::Precache();
+		BaseClass::Precache_Impl();
 		PrecacheEffect( "gunshotsplash" );
 	}
 
-	void CBaseCSGrenadeProjectile::Spawn( void )
+	void CBaseCSGrenadeProjectile::Spawn_Impl( void )
 	{
 		Precache();
-		BaseClass::Spawn();
+		BaseClass::Spawn_Impl();
 
 		SetSolidFlags( FSOLID_NOT_STANDABLE );
 		SetMoveType( MOVETYPE_FLYGRAVITY, MOVECOLLIDE_FLY_CUSTOM );
@@ -314,13 +309,13 @@ IMPLEMENT_REFLECT_TABLE( CBaseCSGrenadeProjectile, DT_BaseCSGrenadeProjectile );
 		m_nBounces = 0;
 	}
 
-	int	CBaseCSGrenadeProjectile::UpdateTransmitState()
+	int	CBaseCSGrenadeProjectile::UpdateTransmitState_Impl()
 	{
 		// always call ShouldTransmit() for grenades
 		return SetTransmitState( FL_EDICT_FULLCHECK );
 	}
 
-	int CBaseCSGrenadeProjectile::ShouldTransmit( const CCheckTransmitInfo *pInfo )
+	int CBaseCSGrenadeProjectile::ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo )
 	{
 		CBaseEntity *pRecipientEntity = CBaseEntity::Instance( pInfo->m_pClientEnt );
 		if ( pRecipientEntity->IsPlayer() )
@@ -369,7 +364,7 @@ IMPLEMENT_REFLECT_TABLE( CBaseCSGrenadeProjectile, DT_BaseCSGrenadeProjectile );
 		m_flDetonateTime = gpGlobals->curtime + timer;
 	}
 
-	unsigned int CBaseCSGrenadeProjectile::PhysicsSolidMaskForEntity( void ) const
+	unsigned int CBaseCSGrenadeProjectile::PhysicsSolidMaskForEntity_Impl( void ) const
 	{
 		if ( GetCollisionGroup() == COLLISION_GROUP_DEBRIS )
 		{
@@ -381,7 +376,7 @@ IMPLEMENT_REFLECT_TABLE( CBaseCSGrenadeProjectile, DT_BaseCSGrenadeProjectile );
 		}
 	}
 
-	void CBaseCSGrenadeProjectile::ResolveFlyCollisionCustom( trace_t &trace, Vector &vecMove )
+	void CBaseCSGrenadeProjectile::ResolveFlyCollisionCustom_Impl( trace_t &trace, Vector &vecMove )
 	{
 		const float kSleepVelocity = 20.0f;
 		const float kSleepVelocitySquared = kSleepVelocity * kSleepVelocity; 
@@ -607,7 +602,7 @@ IMPLEMENT_REFLECT_TABLE( CBaseCSGrenadeProjectile, DT_BaseCSGrenadeProjectile );
 
 	#define	MAX_WATER_SURFACE_DISTANCE	512
 
-	void CBaseCSGrenadeProjectile::Splash()
+	void CBaseCSGrenadeProjectile::Splash_Impl()
 	{
 		Vector centerPoint = GetAbsOrigin();
 		Vector normal( 0, 0, 1 );

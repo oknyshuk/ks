@@ -4,15 +4,11 @@
 
 // Purpose: Class to help with rendering CMDLs & CMergedMDLs to textures.
 
-import ks.core;
-import std;
 #include "irendertorthelperobject.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class IVTFTexture;
-class ITexture;
 
 class CRenderToRTHelper	: public IRenderToRTHelper
 {

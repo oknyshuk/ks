@@ -25,8 +25,6 @@
 #include <c_team.h>
 
 #include <rocketui/rmlui.h>
-import ks.core;
-import std;
 
 DECLARE_HUDELEMENT( RkHudScoreboard );
 

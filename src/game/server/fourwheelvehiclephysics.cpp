@@ -3,8 +3,6 @@
 
 // Purpose: A moving vehicle that is used as a battering ram
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -1075,7 +1073,7 @@ void CFourWheelVehiclePhysics::UpdateDriverControls( CUserCmd *cmd, float flFram
 
 	if( pDriver && pDriver->IsPlayer() )
 	{
-		pPlayerDriver = dynamic_cast<CBasePlayer*>(pDriver);
+		pPlayerDriver = entity_cast<CBasePlayer>(pDriver);
 
 		if( cmd->forwardmove == 0.0f && (fabs(cmd->sidemove) < 200.0f) )
 		{

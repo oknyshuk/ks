@@ -12,7 +12,6 @@ add_library(tier1 STATIC
     circularbuffer.cpp
     commandbuffer.cpp
     convar.cpp
-    datamanager.cpp
     diff.cpp
     exprevaluator.cpp
     generichash.cpp
@@ -51,6 +50,7 @@ target_sources(ks_tier1 PUBLIC
           ks.tier1-iappsystem.cppm
           ks.tier1-icvar.cppm
           ks.tier1-convar.cppm
+          ks.tier1-cvar.cppm
           ks.tier1-commandbuffer.cppm
           ks.tier1-convar_serverbounded.cppm
           ks.tier1-tier1.cppm
@@ -93,6 +93,7 @@ target_sources(ks_tier1 PUBLIC
           ks.tier1-hierarchicalbitvec.cppm
           ks.tier1-iconvar.cppm
           ks.tier1-interface.cppm
+          ks.tier1-registry.cppm
           ks.tier1-intern_pool.cppm
           ks.tier1-intrusive_list.cppm
           ks.tier1-intrusive_ptr.cppm

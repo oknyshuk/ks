@@ -131,7 +131,7 @@ public:
 	virtual IClientNetworkable*	GetClientNetworkable()	{ return nullptr; }
 	virtual IClientRenderable*	GetClientRenderable()	{ return this; }
 	virtual IClientEntity*		GetIClientEntity()		{ return nullptr; }
-	virtual C_BaseEntity*		GetBaseEntity()			{ return nullptr; }
+	virtual IClientUnknown*		GetBaseEntity()			{ return nullptr; }
 	virtual IClientThinkable*	GetClientThinkable()	{ return nullptr; }
 	virtual IClientAlphaProperty*	GetClientAlphaProperty()	{ return m_pClientAlphaProperty; }
 
@@ -344,56 +344,56 @@ private:
 //-----------------------------------------------------------------------------
 // The engine's static prop manager
 //-----------------------------------------------------------------------------
-class CStaticPropMgr : public IStaticPropMgrEngine, public IStaticPropMgrClient, public IStaticPropMgrServer
+class CStaticPropMgr : public IStaticPropMgrEngine, public IStaticPropMgr
 {
 public:
 	// constructor, destructor
 	CStaticPropMgr();
-	virtual ~CStaticPropMgr();
+	~CStaticPropMgr();
 
 	// methods of IStaticPropMgrEngine
-	virtual bool Init();
-	virtual void Shutdown();
-	virtual void LevelInit();
-	virtual void LevelInitClient();
-	virtual void LevelShutdown();
-	virtual void LevelShutdownClient();
-	virtual bool IsPropInPVS( IHandleEntity *pHandleEntity, const byte *pVis ) const;
-	virtual void DisableCSMRenderingForStaticProp( int staticPropIndex );
-	virtual ICollideable *GetStaticProp( IHandleEntity *pHandleEntity );
-	virtual void RecomputeStaticLighting( );
-	virtual LightCacheHandle_t GetLightCacheHandleForStaticProp( IHandleEntity *pHandleEntity );
+	bool Init();
+	void Shutdown();
+	void LevelInit();
+	void LevelInitClient();
+	void LevelShutdown();
+	void LevelShutdownClient();
+	bool IsPropInPVS( IHandleEntity *pHandleEntity, const byte *pVis ) const;
+	void DisableCSMRenderingForStaticProp( int staticPropIndex );
+	ICollideable *GetStaticProp( IHandleEntity *pHandleEntity );
+	void RecomputeStaticLighting( );
+	LightCacheHandle_t GetLightCacheHandleForStaticProp( IHandleEntity *pHandleEntity );
 	inline bool IsStaticProp_Inline( IHandleEntity *pHandleEntity ) const
 	{
 		return (!pHandleEntity) || ( (pHandleEntity->GetRefEHandle().GetSerialNumber() == (STATICPROP_EHANDLE_MASK >> NUM_SERIAL_NUM_SHIFT_BITS) ) != 0 );
 	}
-	virtual bool IsStaticProp( IHandleEntity *pHandleEntity ) const;
-	virtual bool IsStaticProp( CBaseHandle handle ) const;
-	virtual int GetStaticPropIndex( IHandleEntity *pHandleEntity ) const;
-	virtual ICollideable *GetStaticPropByIndex( int propIndex );
+	bool IsStaticProp( IHandleEntity *pHandleEntity ) const;
+	bool IsStaticProp( CBaseHandle handle ) const;
+	int GetStaticPropIndex( IHandleEntity *pHandleEntity ) const;
+	ICollideable *GetStaticPropByIndex( int propIndex );
 
 	// methods of IStaticPropMgrClient
-	virtual void TraceRayAgainstStaticProp( const Ray_t& ray, int staticPropIndex, trace_t& tr );
-	virtual void AddDecalToStaticProp( Vector const& rayStart, Vector const& rayEnd,
-		int staticPropIndex, int decalIndex, bool doTrace, trace_t& tr, void *pvProxyUserData = nullptr, const Vector* saxis = nullptr, int32 nAdditionalDecalFlags = 0 ) override;
-	virtual void AddShadowToStaticProp( unsigned short shadowHandle, IClientRenderable* pRenderable );
-	virtual void RemoveAllShadowsFromStaticProp( IClientRenderable* pRenderable );
-	virtual void GetStaticPropMaterialColorAndLighting( trace_t* pTrace,
+	void TraceRayAgainstStaticProp( const Ray_t& ray, int staticPropIndex, trace_t& tr );
+	void AddDecalToStaticProp( Vector const& rayStart, Vector const& rayEnd,
+		int staticPropIndex, int decalIndex, bool doTrace, trace_t& tr, void *pvProxyUserData = nullptr, const Vector* saxis = nullptr, int32 nAdditionalDecalFlags = 0 );
+	void AddShadowToStaticProp( unsigned short shadowHandle, IClientRenderable* pRenderable );
+	void RemoveAllShadowsFromStaticProp( IClientRenderable* pRenderable );
+	void GetStaticPropMaterialColorAndLighting( trace_t* pTrace,
 		int staticPropIndex, Vector& lighting, Vector& matColor );
-	virtual void CreateVPhysicsRepresentations( IPhysicsEnvironment	*physenv, IVPhysicsKeyHandler *pDefaults, void *pGameData );
+	void CreateVPhysicsRepresentations( IPhysicsEnvironment	*physenv, IVPhysicsKeyHandler *pDefaults, void *pGameData );
 
 	// methods of IStaticPropMgrServer
 
 	//Changes made specifically to support the Portal mod (smack Dave Kircher if something breaks)
 	//===================================================================
-	virtual void GetAllStaticProps( std::vector< ICollideable * > *pOutput );
-	virtual void GetAllStaticPropsInAABB( const Vector &vMins, const Vector &vMaxs, std::vector< ICollideable * > *pOutput );
-	virtual void GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vector &vExtent1, const Vector &vExtent2, const Vector &vExtent3, std::vector< ICollideable * > *pOutput );
+	void GetAllStaticProps( std::vector< ICollideable * > *pOutput );
+	void GetAllStaticPropsInAABB( const Vector &vMins, const Vector &vMaxs, std::vector< ICollideable * > *pOutput );
+	void GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vector &vExtent1, const Vector &vExtent2, const Vector &vExtent3, std::vector< ICollideable * > *pOutput );
 	//===================================================================
 
-	virtual void GetLightingOrigins( Vector *pLightingOrigins, int nOriginStride, int nCount, IClientRenderable **ppRenderable, int nRenderableStride ); 
-	virtual void ConfigureSystemLevel( int nCPULevel, int nGPULevel );
-	virtual void RestoreStaticProps();
+	void GetLightingOrigins( Vector *pLightingOrigins, int nOriginStride, int nCount, IClientRenderable **ppRenderable, int nRenderableStride ); 
+	void ConfigureSystemLevel( int nCPULevel, int nGPULevel );
+	void RestoreStaticProps();
 
 	// Internal methods
 	const Vector &ViewOrigin() const { return m_vecLastViewOrigin; }
@@ -404,7 +404,7 @@ public:
 	void DrawStaticProps_Fast( IClientRenderable **pProps, const RenderableInstance_t *pInstances, int count, bool bShadowDepth );
 	void DrawStaticProps_FastPipeline( IClientRenderable **pProps, const RenderableInstance_t *pInstances, int count, bool bShadowDepth );
 
-private:
+public:
 	void OutputLevelStats( void );
 	void PrecacheLighting();
 	void UpdatePropVisibility( int nCPULevel, int nGPULevel );
@@ -417,7 +417,7 @@ private:
 
 	int HandleEntityToIndex( IHandleEntity *pHandleEntity ) const;
 
-private:
+public:
 	// Unique static prop models
 
 	// The list of all static props
@@ -433,6 +433,9 @@ private:
 	int								m_nLastCPULevel;
 	int								m_nLastGPULevel;
 };
+
+#include "facade/istaticpropmgr.inl"
+
 
 
 //-----------------------------------------------------------------------------

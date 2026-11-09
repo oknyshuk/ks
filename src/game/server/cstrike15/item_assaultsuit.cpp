@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "edict.h"
 #include "eiface.h"
@@ -34,16 +32,18 @@ import ks.tier1;
 
 class CItemAssaultSuit : public CItem
 {
-	void Spawn( void )
+	public: void Spawn_Impl( void )
 	{ 
 		Precache( );
-		CItem::Spawn( );
+		CItem::Spawn_Impl( );
 	}
+	private:
 	
-	void Precache( void )
+	public: void Precache_Impl( void )
 	{
 		PrecacheScriptSound( "BaseCombatCharacter.ItemPickup2" );
 	}
+	private:
 	
 	bool MyTouch( CBasePlayer *pBasePlayer )
 	{

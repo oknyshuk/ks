@@ -15,8 +15,6 @@
 #include "rkhud_model.h"
 
 #include <rocketui/rmlui.h>
-import ks.core;
-import std;
 
 Rml::ElementDocument *RkPanelLoad( Rml::ElementDocument *&doc, RocketDesinationContext_t ctx,
                                    const char *file, LoadDocumentFn onLoad,

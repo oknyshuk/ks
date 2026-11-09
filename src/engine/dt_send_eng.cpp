@@ -53,6 +53,7 @@ public:
 							m_pNewStateProxies( pNewStateProxies ),
 							m_nNewStateProxies( nNewStateProxies )
 						{
+							m_RecurseAndCallProxies = { std::cw<&CPropCullStack::RecurseAndCallProxies>, this };
 							m_pPrecalc = pPrecalc;
 							m_iClient = iClient;
 						}
@@ -107,7 +108,7 @@ public:
 		}
 	}
 
-	virtual void RecurseAndCallProxies( CSendNode *pNode, unsigned char *pStructBase )
+	void RecurseAndCallProxies( CSendNode *pNode, unsigned char *pStructBase )
 	{
 		// Remember where the game code pointed us for this datatable's data so 
 		m_pProxies[ pNode->GetRecursiveProxyIndex() ] = pStructBase;
@@ -1333,6 +1334,7 @@ public:
 	CPropOffsetStack( CSendTablePrecalc *pPrecalc ) :
 		CDatatableStack( pPrecalc, nullptr, -1 )
 	{
+		m_RecurseAndCallProxies = { std::cw<&CPropOffsetStack::RecurseAndCallProxies>, this };
 		m_pPropMapStackPrecalc = pPrecalc;
 	}
 
@@ -1344,7 +1346,7 @@ public:
 
 	}
 
-	virtual void RecurseAndCallProxies( CSendNode *pNode, unsigned char *pStructBase )
+	void RecurseAndCallProxies( CSendNode *pNode, unsigned char *pStructBase )
 	{
 		// Remember where the game code pointed us for this datatable's data so 
 		m_pProxies[ pNode->GetRecursiveProxyIndex() ] = pStructBase;

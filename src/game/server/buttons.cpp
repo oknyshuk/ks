@@ -3,8 +3,6 @@
 
 // Purpose: Implements buttons.
 
-import std;
-import ks.vstdlib;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -68,7 +66,7 @@ LINK_ENTITY_TO_CLASS( func_button, CBaseButton );
 IMPLEMENT_REFLECT_SERVERCLASS( CBaseButton, DT_BaseButton )
 
 
-void CBaseButton::Precache( void )
+void CBaseButton::Precache_Impl( void )
 {
 	// get door button sounds, for doors which require buttons to open
 	if (m_bLockedSound)
@@ -127,7 +125,7 @@ void CBaseButton::Precache( void )
 //			szValue - 
 // Output : Returns true if handled, false if not.
 //-----------------------------------------------------------------------------
-bool CBaseButton::KeyValue( const char *szKeyName, const char *szValue )
+bool CBaseButton::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "locked_sound"))
 	{
@@ -151,7 +149,7 @@ bool CBaseButton::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
@@ -290,7 +288,7 @@ void CBaseButton::InputPressOut( inputdata_t &inputdata )
 //			bitsDamageType - 
 // Output : 
 //-----------------------------------------------------------------------------
-int CBaseButton::OnTakeDamage( const CTakeDamageInfo &info )
+int CBaseButton::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	m_OnDamaged.FireOutput(m_hActivator, this);
 
@@ -348,7 +346,7 @@ int CBaseButton::OnTakeDamage( const CTakeDamageInfo &info )
 }
 
 
-void CBaseButton::Spawn( )
+void CBaseButton::Spawn_Impl( )
 { 
 	//----------------------------------------------------
 	//determine sounds for buttons
@@ -459,7 +457,7 @@ void CBaseButton::Spawn( )
 
 //-----------------------------------------------------------------------------
 
-bool CBaseButton::CreateVPhysics()
+bool CBaseButton::CreateVPhysics_Impl()
 {
 	VPhysicsInitShadow( false, false );
 	return true;
@@ -693,9 +691,9 @@ void CBaseButton::ButtonActivate( void )
 //-----------------------------------------------------------------------------
 // Purpose: Enables or disables the use capability based on our spawnflags.
 //-----------------------------------------------------------------------------
-int	CBaseButton::ObjectCaps(void)
+int	CBaseButton::ObjectCaps_Impl(void)
 {
-	return((BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION) |
+	return((BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION) |
 			(HasSpawnFlags(SF_BUTTON_USE_ACTIVATES) ? (FCAP_IMPULSE_USE | FCAP_USE_IN_RADIUS) : 0));
 }
 
@@ -799,9 +797,9 @@ void CBaseButton::ButtonBackHome( void )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-int CBaseButton::DrawDebugTextOverlays()
+int CBaseButton::DrawDebugTextOverlays_Impl()
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -840,7 +838,7 @@ int CBaseButton::DrawDebugTextOverlays()
 LINK_ENTITY_TO_CLASS( func_rot_button, CRotButton );
 
 
-void CRotButton::Spawn( void )
+void CRotButton::Spawn_Impl( void )
 {
 	//----------------------------------------------------
 	//determine sounds for buttons
@@ -913,7 +911,7 @@ void CRotButton::Spawn( void )
 }
 
 
-bool CRotButton::CreateVPhysics( void )
+bool CRotButton::CreateVPhysics_Impl( void )
 {
 	VPhysicsInitShadow( false, false );
 	return true;
@@ -937,7 +935,7 @@ LINK_ENTITY_TO_CLASS( momentary_rot_button, CMomentaryRotButton );
 //-----------------------------------------------------------------------------
 // Purpose: Called when spawning, after keyvalues have been handled.
 //-----------------------------------------------------------------------------
-void CMomentaryRotButton::Spawn( void )
+void CMomentaryRotButton::Spawn_Impl( void )
 {
 	CBaseToggle::AxisDir();
 
@@ -1024,9 +1022,9 @@ void CMomentaryRotButton::Spawn( void )
 	m_bDisabled = false;
 }
 
-int	CMomentaryRotButton::ObjectCaps( void ) 
+int	CMomentaryRotButton::ObjectCaps_Impl( void ) 
 { 
-	int flags = BaseClass::ObjectCaps();
+	int flags = BaseClass::ObjectCaps_Impl();
 	if (!HasSpawnFlags(SF_BUTTON_USE_ACTIVATES))
 	{
 		return flags;
@@ -1041,7 +1039,7 @@ int	CMomentaryRotButton::ObjectCaps( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CMomentaryRotButton::CreateVPhysics( void )
+bool CMomentaryRotButton::CreateVPhysics_Impl( void )
 {
 	VPhysicsInitShadow( false, false );
 
@@ -1265,7 +1263,7 @@ void CMomentaryRotButton::SetPositionMoveDone(void)
 //			useType - 
 //			value - 
 //-----------------------------------------------------------------------------
-void CMomentaryRotButton::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CMomentaryRotButton::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	if ( m_bDisabled == true )
 		return;
@@ -1477,9 +1475,9 @@ void CMomentaryRotButton::UpdateThink( void )
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CMomentaryRotButton::DrawDebugTextOverlays(void) 
+int CMomentaryRotButton::DrawDebugTextOverlays_Impl(void) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{

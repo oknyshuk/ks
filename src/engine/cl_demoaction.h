@@ -80,19 +80,28 @@ class CBaseDemoAction
 public:
 
 							CBaseDemoAction();
-	virtual 				~CBaseDemoAction();
+	~CBaseDemoAction();
 
-	virtual bool			Init( KeyValues *pInitData );
-	virtual bool			Update( const DemoActionTimingContext& tc );
+	// Deletes the object as the class it really is
+	void					DeleteThis();
+	bool Init( KeyValues *pInitData );
 
-	// Do whatever the even is supposed to do
-	virtual void			FireAction( void ) = 0;
 
-	virtual void			Reset( void );
+	bool			InitBase( KeyValues *pInitData );
+	bool Update( const DemoActionTimingContext& tc );
 
-	virtual void			SaveKeysToBuffer( int depth, ks::text_writer& buf );
+	bool			UpdateBase( const DemoActionTimingContext& tc );
+	void FireAction( void );
 
-	virtual void			OnActionFinished( void );
+	void			Reset( void );
+	void SaveKeysToBuffer( int depth, ks::text_writer& buf );
+
+
+	void			SaveKeysToBufferBase( int depth, ks::text_writer& buf );
+	void OnActionFinished( void );
+
+
+	void			OnActionFinishedBase( void );
 
 // Public methods
 public:
@@ -144,7 +153,7 @@ public:
 	// Serialization helper ( handles indenting )
 	static void				BufPrintf( int depth, ks::text_writer& buf, char const *fmt, ... );
 
-private:
+public:
 
 	enum
 	{

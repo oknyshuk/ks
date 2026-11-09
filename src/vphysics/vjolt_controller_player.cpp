@@ -498,3 +498,6 @@ void JoltPhysicsPlayerController::SetGround( JoltPhysicsObject *pGround )
 		m_pGround->AddListener( this );
 	}
 }
+
+//-------------------------------------------------------------------------------------------------
+#include "facade/iphysicsplayercontroller.inl"

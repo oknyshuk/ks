@@ -6,11 +6,9 @@
 //			engine interface
 
 // these stupid set of includes are required to use the cdll_int interface
-import std;
 //#include "wrect.h"
 
 // engine interface
-import ks.tier1;
 #include "cdll_int.h"
 #include "eiface.h"
 #include "tier2/tier2.h"

@@ -254,10 +254,10 @@ bool CSys::LoadModules( CDedicatedAppSystemGroup *pAppSystemGroup )
 	return true;
 }
 
-extern int main(int argc, char *argv[]);
+extern int DedicatedServerMain(int argc, char *argv[]);
 extern "C" int DedicatedMain( int argc, char *argv[] );
 
 int DedicatedMain( int argc, char *argv[] )
 {
-	return main(argc,argv);
+	return DedicatedServerMain(argc,argv);
 }

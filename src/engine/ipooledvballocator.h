@@ -14,22 +14,21 @@ class IPooledVBAllocator
 {
 public:
 
-	virtual ~IPooledVBAllocator() {};
 
 	// Allocate the shared vertex buffer
-	virtual bool			Init( VertexFormat_t format, int numVerts ) = 0;
+	bool			Init( VertexFormat_t format, int numVerts );
 	// Free the shared vertex buffer (after Deallocate is called for all sub-allocs)
-	virtual void			Clear() = 0;
+	void			Clear();
 
 	// Get the shared mesh (vertex buffer) from which sub-allocations are made
-	virtual IMesh			*GetSharedMesh() = 0;
+	IMesh			*GetSharedMesh();
 
 	// Get a pointer to the start of the vertex buffer data
-	virtual void			*GetVertexBufferBase() = 0;
-	virtual int				GetNumVertsAllocated() = 0; 
+	void			*GetVertexBufferBase();
+	int				GetNumVertsAllocated(); 
 
 	// Allocate a sub-range of 'numVerts' from free space in the shared vertex buffer
 	// (returns the byte offset from the start of the VB to the new allocation)
-	virtual int				Allocate( int numVerts ) = 0;
-	virtual void			Deallocate( int offset, int numVerts ) = 0;
+	int				Allocate( int numVerts );
+	void			Deallocate( int offset, int numVerts );
 };

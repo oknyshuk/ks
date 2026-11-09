@@ -3,8 +3,6 @@
 
 // Purpose: Utility code.
 
-import std;
-import ks.vstdlib;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -436,7 +434,7 @@ void UTIL_Remove( IServerNetworkable *oldObj )
 	// mark it for deletion	
 	pProp->MarkForDeletion( );
 
-	CBaseEntity *pBaseEnt = oldObj->GetBaseEntity();
+	CBaseEntity *pBaseEnt = EntityCast<CBaseEntity>( oldObj->GetBaseEntity() );
 	if ( pBaseEnt )
 	{
 		g_bReceivedChainedUpdateOnRemove = false;
@@ -1920,24 +1918,6 @@ float UTIL_ScaleForGravity( float desiredGravity )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: Implemented for mathlib.c error handling
-// Input  : *error - 
-//-----------------------------------------------------------------------------
-extern "C" void Sys_Error( char *error, ... )
-{
-	std::va_list	argptr;
-	char	string[1024];
-	
-	__builtin_va_start( argptr, error );
-	V_vsnprintf( string, sizeof(string), error, argptr );
-	__builtin_va_end( argptr );
-
-	Warning( "%s", string );
-	contract_assert( 0 );
-}
-
-
-//-----------------------------------------------------------------------------
 // Purpose: Spawns an entity into the game, initializing it with the map ent data block
 // Input  : *pEntity - the newly created entity
 //			*mapData - pointer a block of entity map data
@@ -2468,7 +2448,7 @@ void UTIL_PredictedPosition( CBaseEntity *pTarget, float flTimeDelta, Vector *ve
 		else
 		{
 			// See if we're an animating entity
-			CBaseAnimating *pAnimating = dynamic_cast<CBaseAnimating *>(pTarget);
+			CBaseAnimating *pAnimating = entity_cast<CBaseAnimating>(pTarget);
 			if ( pAnimating != nullptr )
 			{
 				vecPredictedVel = pAnimating->GetGroundSpeedVelocity();
@@ -2530,8 +2510,8 @@ void UTIL_PointAtNamedEntity( CBaseEntity *pDest, string_t strTarget )
 //-----------------------------------------------------------------------------
 bool UTIL_TransferPoseParameters( CBaseEntity *pSourceEntity, CBaseEntity *pDestEntity )
 {
-	CBaseAnimating *pSourceBaseAnimating = dynamic_cast<CBaseAnimating*>( pSourceEntity );
-	CBaseAnimating *pDestBaseAnimating = dynamic_cast<CBaseAnimating*>( pDestEntity );
+	CBaseAnimating *pSourceBaseAnimating = entity_cast<CBaseAnimating>( pSourceEntity );
+	CBaseAnimating *pDestBaseAnimating = entity_cast<CBaseAnimating>( pDestEntity );
 
 	if ( !pSourceBaseAnimating || !pDestBaseAnimating )
 		return false;

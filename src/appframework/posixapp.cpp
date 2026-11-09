@@ -29,40 +29,12 @@ void *GetAppInstance()
 
 
 //-----------------------------------------------------------------------------
-// Sets the application instance, should only be used if you're not calling AppMain.
+// Sets the application instance
 //-----------------------------------------------------------------------------
 void SetAppInstance( void* hInstance )
 {
 	s_HInstance = (HINSTANCE)hInstance;
 }
-
-
-//-----------------------------------------------------------------------------
-// Version of AppMain used by windows applications
-//-----------------------------------------------------------------------------
-
-int AppMain( void* hInstance, void* hPrevInstance, const char* lpCmdLine, int nCmdShow, CAppSystemGroup *pAppSystemGroup )
-{
-	contract_assert( 0 );
-	return -1;
-}
-
-static CNonFatalLoggingResponsePolicy s_NonFatalLoggingResponsePolicy;
-
-//-----------------------------------------------------------------------------
-// Version of AppMain used by console applications
-//-----------------------------------------------------------------------------
-int AppMain( int argc, char **argv, CAppSystemGroup *pAppSystemGroup )
-{
-	contract_assert( pAppSystemGroup );
-
-	LoggingSystem_SetLoggingResponsePolicy( &s_NonFatalLoggingResponsePolicy );
-	s_HInstance = nullptr;
-	CommandLine()->CreateCmdLine( argc, argv );
-
-	return pAppSystemGroup->Run( );
-}
-
 
 
 //-----------------------------------------------------------------------------
@@ -75,9 +47,8 @@ int AppMain( int argc, char **argv, CAppSystemGroup *pAppSystemGroup )
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
-CFSApplication::CFSApplication( CFSAppSystemGroup *pAppSystemGroup )
+CFSApplicationBase::CFSApplicationBase()
 {
-	m_pChildAppSystemGroup = pAppSystemGroup;
 	m_pFileSystem = nullptr;
 }
 
@@ -85,7 +56,7 @@ CFSApplication::CFSApplication( CFSAppSystemGroup *pAppSystemGroup )
 //-----------------------------------------------------------------------------
 // Create necessary interfaces
 //-----------------------------------------------------------------------------
-bool CFSApplication::Create( )
+bool CFSApplicationBase::Create( )
 {
 	FileSystem_SetErrorMode( FS_ERRORMODE_NONE );
 
@@ -104,15 +75,10 @@ bool CFSApplication::Create( )
 	return true;
 }
 
-bool CFSApplication::GetFileSystemDLLName( char *pOut, int nMaxBytes )
-{
-	return FileSystem_GetFileSystemDLLName( pOut, nMaxBytes ) == FS_OK;
-}
-
 //-----------------------------------------------------------------------------
 // The file system pointer is invalid at this point
 //-----------------------------------------------------------------------------
-void CFSApplication::Destroy()
+void CFSApplicationBase::Destroy()
 {
 	m_pFileSystem = nullptr;
 }
@@ -121,44 +87,11 @@ void CFSApplication::Destroy()
 //-----------------------------------------------------------------------------
 // Pre-init, shutdown
 //-----------------------------------------------------------------------------
-bool CFSApplication::PreInit( )
+bool CFSApplicationBase::PreInit( )
 {
 	return true;
 }
 
-void CFSApplication::PostShutdown( )
+void CFSApplicationBase::PostShutdown( )
 {
-}
-
-
-//-----------------------------------------------------------------------------
-// Run main loop
-//-----------------------------------------------------------------------------
-int CFSApplication::Main( )
-{
-	// Now that the file system is loaded, we can load up main libraries through it
-	m_pChildAppSystemGroup->Setup( m_pFileSystem, this );
-	return m_pChildAppSystemGroup->Run( );
-}
-
-
-int CFSApplication::Startup()
-{
-	int nRetVal = BaseClass::Startup();
-	if ( GetCurrentStage() != NONE )
-		return nRetVal;
-	
-	if ( FileSystem_SetBasePaths( m_pFileSystem ) != FS_OK )
-		return 0;
-	
-	// Now that the file system is loaded, we can load up main libraries through it
-	m_pChildAppSystemGroup->Setup( m_pFileSystem, this );
-	return m_pChildAppSystemGroup->Startup();
-}
-
-
-void CFSApplication::Shutdown()
-{
-	m_pChildAppSystemGroup->Shutdown();
-	BaseClass::Shutdown();
 }

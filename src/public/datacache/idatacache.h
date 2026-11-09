@@ -167,174 +167,190 @@ enum DataCacheAddFlags_t
 class IDataCacheSection
 {
 public:
-    virtual ~IDataCacheSection() { };
 	//--------------------------------------------------------
 
-	virtual IDataCache *GetSharedCache() = 0;
-	virtual const char *GetName() = 0;
+	IDataCache *GetSharedCache();
+	const char *GetName();
 
 	//--------------------------------------------------------
 	// Purpose: Controls cache size & options
 	//--------------------------------------------------------
-	virtual void SetLimits( const DataCacheLimits_t &limits ) = 0;
-	virtual void SetOptions( unsigned options ) = 0;
+	void SetLimits( const DataCacheLimits_t &limits );
+	void SetOptions( unsigned options );
 
 
 	//--------------------------------------------------------
 	// Purpose: Get the current state of the section
 	//--------------------------------------------------------
-	virtual void GetStatus( DataCacheStatus_t *pStatus, DataCacheLimits_t *pLimits = nullptr ) = 0;
+	void GetStatus( DataCacheStatus_t *pStatus, DataCacheLimits_t *pLimits = nullptr );
 
 
 	//--------------------------------------------------------
 	// Purpose: Add an item to the cache.  Purges old items if over budget, returns false if item was already in cache.
 	//--------------------------------------------------------
-	virtual void EnsureCapacity( unsigned nBytes, unsigned nItems = 1 ) = 0;
+	void EnsureCapacity( unsigned nBytes, unsigned nItems = 1 );
 
 
 	//--------------------------------------------------------
 	// Purpose: Add an item to the cache.  Purges old items if over budget, returns false if item was already in cache.
 	//--------------------------------------------------------
-	virtual bool Add( DataCacheClientID_t clientId, const void *pItemData, unsigned size, DataCacheHandle_t *pHandle ) = 0;
+	bool Add( DataCacheClientID_t clientId, const void *pItemData, unsigned size, DataCacheHandle_t *pHandle );
 
 	//--------------------------------------------------------
 	// Purpose: Finds an item in the cache, returns NULL if item is not in cache. Not a cheap operation if section not configured for fast find.
 	//--------------------------------------------------------
-	virtual DataCacheHandle_t Find( DataCacheClientID_t clientId ) = 0;
+	DataCacheHandle_t Find( DataCacheClientID_t clientId );
 
 
 	//--------------------------------------------------------
 	// Purpose: Get an item out of the cache and remove it. No callbacks are executed unless explicity specified.
 	//--------------------------------------------------------
-	virtual DataCacheRemoveResult_t Remove( DataCacheHandle_t handle, const void **ppItemData, unsigned *pItemSize = nullptr, bool bNotify = false ) = 0;
+	DataCacheRemoveResult_t Remove( DataCacheHandle_t handle, const void **ppItemData, unsigned *pItemSize = nullptr, bool bNotify = false );
 	DataCacheRemoveResult_t Remove( DataCacheHandle_t handle, bool bNotify = false )	{ return Remove( handle, nullptr, nullptr, bNotify ); }
 
 
 	//--------------------------------------------------------
 	// Purpose: Returns if the data is currently in memory, but does *not* change its location in the LRU
 	//--------------------------------------------------------
-	virtual bool IsPresent( DataCacheHandle_t handle ) = 0;
+	bool IsPresent( DataCacheHandle_t handle );
 
 
 	//--------------------------------------------------------
 	// Purpose: Lock an item in the cache, returns NULL if item is not in the cache.
 	//--------------------------------------------------------
-	virtual void *Lock( DataCacheHandle_t handle ) = 0;
+	void *Lock( DataCacheHandle_t handle );
 
 
 	//--------------------------------------------------------
 	// Purpose: Unlock a previous lock.
 	//--------------------------------------------------------
-	virtual int Unlock( DataCacheHandle_t handle ) = 0;
+	int Unlock( DataCacheHandle_t handle );
 
 
 	//--------------------------------------------------------
 	// Purpose: Get an item without locking it, returns NULL if item is not in the cache. Use with care!
 	//--------------------------------------------------------
-	virtual void *Get( DataCacheHandle_t handle, bool bFrameLock = false ) = 0;
-	virtual void *GetNoTouch( DataCacheHandle_t handle, bool bFrameLock = false ) = 0;
+	void *Get( DataCacheHandle_t handle, bool bFrameLock = false );
+	void *GetNoTouch( DataCacheHandle_t handle, bool bFrameLock = false );
 
 	//--------------------------------------------------------
 	// Purpose: "Frame locking" (not game frame). A crude way to manage locks over relatively 
 	//			short periods. Does not affect normal locks/unlocks
 	//--------------------------------------------------------
-	virtual int BeginFrameLocking() = 0;
-	virtual bool IsFrameLocking() = 0;
-	virtual void *FrameLock( DataCacheHandle_t handle ) = 0;
-	virtual int EndFrameLocking() = 0;
-	virtual int *GetFrameUnlockCounterPtr() = 0;
+	int BeginFrameLocking();
+	bool IsFrameLocking();
+	void *FrameLock( DataCacheHandle_t handle );
+	int EndFrameLocking();
+	int *GetFrameUnlockCounterPtr();
 
 
 	//--------------------------------------------------------
 	// Purpose: Lock management, not for the feint of heart
 	//--------------------------------------------------------
-	virtual int GetLockCount( DataCacheHandle_t handle ) = 0;
-	virtual int BreakLock( DataCacheHandle_t handle ) = 0;
+	int GetLockCount( DataCacheHandle_t handle );
+	int BreakLock( DataCacheHandle_t handle );
 
 
 	//--------------------------------------------------------
 	// Purpose: Explicitly mark an item as "recently used"
 	//--------------------------------------------------------
-	virtual bool Touch( DataCacheHandle_t handle ) = 0;
+	bool Touch( DataCacheHandle_t handle );
 
 
 	//--------------------------------------------------------
 	// Purpose: Explicitly mark an item as "least recently used". 
 	//--------------------------------------------------------
-	virtual bool Age( DataCacheHandle_t handle ) = 0;
+	bool Age( DataCacheHandle_t handle );
 
 
 	//--------------------------------------------------------
 	// Purpose: Empty the cache. Returns bytes released, will remove locked items if force specified
 	//--------------------------------------------------------
-	virtual unsigned Flush( bool bUnlockedOnly = true, bool bNotify = true ) = 0;
+	unsigned Flush( bool bUnlockedOnly = true, bool bNotify = true );
 
 
 	//--------------------------------------------------------
 	// Purpose: Dump the oldest items to free the specified amount of memory. Returns amount actually freed
 	//--------------------------------------------------------
-	virtual unsigned Purge( unsigned nBytes ) = 0;
+	unsigned Purge( unsigned nBytes );
 
 	//--------------------------------------------------------
 	// Purpose: Output the state of the section
 	//--------------------------------------------------------
-	virtual void OutputReport( DataCacheReportType_t reportType = DC_SUMMARY_REPORT ) = 0;
+	void OutputReport( DataCacheReportType_t reportType = DC_SUMMARY_REPORT );
 
 	//--------------------------------------------------------
 	// Purpose: Updates the size used by a specific item (locks the item, kicks
 	//  other items out to make room as necessary, unlocks the item).
 	//--------------------------------------------------------
-	virtual void UpdateSize( DataCacheHandle_t handle, unsigned int nNewSize ) = 0;
+	void UpdateSize( DataCacheHandle_t handle, unsigned int nNewSize );
 
 
 	//--------------------------------------------------------
 	// Purpose: Access to the mutex. More explicit control during get-then-lock sequences
 	// to ensure object stays valid during "then"
 	//--------------------------------------------------------
-	virtual void LockMutex() = 0;
-	virtual void UnlockMutex() = 0;
+	void LockMutex();
+	void UnlockMutex();
 
 	//--------------------------------------------------------
 	// Purpose: Add an item to the cache.  Purges old items if over budget, returns false if item was already in cache.
 	//--------------------------------------------------------
-	virtual bool AddEx( DataCacheClientID_t clientId, const void *pItemData, unsigned size, unsigned flags, DataCacheHandle_t *pHandle ) = 0;
+	bool AddEx( DataCacheClientID_t clientId, const void *pItemData, unsigned size, unsigned flags, DataCacheHandle_t *pHandle );
 
-	virtual unsigned int GetOptions() = 0;
+	unsigned int GetOptions();
 
 	// Batch oriented get/lock
-	virtual void GetAndLockMultiple( void **ppData, int nCount, DataCacheHandle_t *pHandles ) = 0;
+	void GetAndLockMultiple( void **ppData, int nCount, DataCacheHandle_t *pHandles );
 };
 
 
 //-----------------------------------------------------------------------------
 // IDataCacheClient
 //
-// Purpose: Connection between the cache and the owner of a cache section
+// Purpose: Connection between the cache and the owner of a cache section. The owner holds one
+//			and passes it to AddSection; the two operations are callables (the owner is not
+//			derived from anything). Without a callable the default applies: notifications
+//			other than the informational ones are an error, and items have no name.
 //
 //-----------------------------------------------------------------------------
 class IDataCacheClient
 {
 public:
-    virtual ~IDataCacheClient() { };
+	using HandleCacheNotification_t = std::move_only_function< bool( const DataCacheNotification_t & ) >;
+	using GetItemName_t = std::move_only_function< bool( DataCacheClientID_t, const void *, char *, unsigned ) >;
+
+	IDataCacheClient() = default;
+	IDataCacheClient( HandleCacheNotification_t pfnHandleCacheNotification, GetItemName_t pfnGetItemName = nullptr )
+		: m_pfnHandleCacheNotification( std::move( pfnHandleCacheNotification ) ),
+		  m_pfnGetItemName( std::move( pfnGetItemName ) )
+	{
+	}
+	IDataCacheClient( const IDataCacheClient & ) = delete;
+	IDataCacheClient &operator=( const IDataCacheClient & ) = delete;
+
 	//--------------------------------------------------------
 	// 
 	//--------------------------------------------------------
-	virtual bool HandleCacheNotification( const DataCacheNotification_t &notification  ) = 0;
-
+	bool HandleCacheNotification( const DataCacheNotification_t &notification  )
+	{
+		if ( m_pfnHandleCacheNotification )
+			return m_pfnHandleCacheNotification( notification );
+		return DefaultHandleCacheNotification( notification );
+	}
 
 	//--------------------------------------------------------
 	// 
 	//--------------------------------------------------------
-	virtual bool GetItemName( DataCacheClientID_t clientId, const void *pItem, char *pDest, unsigned nMaxLen  ) = 0;
-};
+	bool GetItemName( DataCacheClientID_t clientId, const void *pItem, char *pDest, unsigned nMaxLen  )
+	{
+		if ( m_pfnGetItemName )
+			return m_pfnGetItemName( clientId, pItem, pDest, nMaxLen );
+		return false;
+	}
 
-//-------------------------------------
-
-class CDefaultDataCacheClient : public IDataCacheClient
-{
-public:
-    virtual ~CDefaultDataCacheClient() { };
-	virtual bool HandleCacheNotification( const DataCacheNotification_t &notification  )
+	// What a client without its own handler does (and the fallback of one that handles only some notifications)
+	static bool DefaultHandleCacheNotification( const DataCacheNotification_t &notification  )
 	{
 		switch ( notification.type )
 		{
@@ -352,10 +368,9 @@ public:
 		return false;
 	}
 
-	virtual bool GetItemName( DataCacheClientID_t clientId, const void *pItem, char *pDest, unsigned nMaxLen  )
-	{
-		return false;
-	}
+private:
+	HandleCacheNotification_t m_pfnHandleCacheNotification;
+	GetItemName_t m_pfnGetItemName;
 };
 
 
@@ -365,60 +380,71 @@ public:
 // Purpose: The global shared cache. Manages sections and overall budgets.
 //
 //-----------------------------------------------------------------------------
-class IDataCache : public IAppSystem
+class IDataCache
 {
 public:
 	//--------------------------------------------------------
+	// App system protocol. Not an IAppSystem: CAppSystemGroup drives it by kind (see AppSystemRef).
+	//--------------------------------------------------------
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t Init();
+	void Shutdown();
+	const AppSystemInfo_t *GetDependencies() { return nullptr; }
+	void Reconnect( CreateInterfaceFn factory, const char *pInterfaceName ) { ReconnectInterface( factory, pInterfaceName ); }
+
+	//--------------------------------------------------------
 	// Purpose: Controls cache size.
 	//--------------------------------------------------------
-	virtual void SetSize( int nMaxBytes ) = 0;
-	virtual void SetOptions( unsigned options ) = 0;
-	virtual void SetSectionLimits( const char *pszSectionName, const DataCacheLimits_t &limits ) = 0;
+	void SetSize( int nMaxBytes );
+	void SetOptions( unsigned options );
+	void SetSectionLimits( const char *pszSectionName, const DataCacheLimits_t &limits );
 
 
 	//--------------------------------------------------------
 	// Purpose: Get the current state of the cache
 	//--------------------------------------------------------
-	virtual void GetStatus( DataCacheStatus_t *pStatus, DataCacheLimits_t *pLimits = nullptr ) = 0;
+	void GetStatus( DataCacheStatus_t *pStatus, DataCacheLimits_t *pLimits = nullptr );
 
 
 	//--------------------------------------------------------
 	// Purpose: Add a section to the cache
 	//--------------------------------------------------------
-	virtual IDataCacheSection *AddSection( IDataCacheClient *pClient, const char *pszSectionName, const DataCacheLimits_t &limits = DataCacheLimits_t(), bool bSupportFastFind = false ) = 0;
+	IDataCacheSection *AddSection( IDataCacheClient *pClient, const char *pszSectionName, const DataCacheLimits_t &limits = DataCacheLimits_t(), bool bSupportFastFind = false );
 
 
 	//--------------------------------------------------------
 	// Purpose: Remove a section from the cache
 	//--------------------------------------------------------
-	virtual void RemoveSection( const char *pszClientName, bool bCallFlush = true ) = 0;
+	void RemoveSection( const char *pszClientName, bool bCallFlush = true );
 	void RemoveSection( IDataCacheSection *pSection, bool bCallFlush = true )	{ if ( pSection) RemoveSection( pSection->GetName() ); }
 
 
 	//--------------------------------------------------------
 	// Purpose: Find a section of the cache
 	//--------------------------------------------------------
-	virtual IDataCacheSection *FindSection( const char *pszClientName ) = 0;
+	IDataCacheSection *FindSection( const char *pszClientName );
 
 	//--------------------------------------------------------
 	// Purpose: Dump the oldest items to free the specified amount of memory. Returns amount actually freed
 	//--------------------------------------------------------
-	virtual unsigned Purge( unsigned nBytes ) = 0;
+	unsigned Purge( unsigned nBytes );
 
 
 	//--------------------------------------------------------
 	// Purpose: Empty the cache. Returns bytes released, will remove locked items if force specified
 	//--------------------------------------------------------
-	virtual unsigned Flush( bool bUnlockedOnly = true, bool bNotify = true ) = 0;
+	unsigned Flush( bool bUnlockedOnly = true, bool bNotify = true );
 
 
 	//--------------------------------------------------------
 	// Purpose: Output the state of the cache
 	//--------------------------------------------------------
-	virtual void OutputReport( DataCacheReportType_t reportType = DC_SUMMARY_REPORT, const char *pszSection = nullptr ) = 0;
+	void OutputReport( DataCacheReportType_t reportType = DC_SUMMARY_REPORT, const char *pszSection = nullptr );
 
-	virtual int GetSectionCount() = 0;
-	virtual const char *GetSectionName( int iIndex ) = 0;
+	int GetSectionCount();
+	const char *GetSectionName( int iIndex );
 };
 
 //-----------------------------------------------------------------------------
@@ -426,13 +452,14 @@ public:
 //-----------------------------------------------------------------------------
 
 template< class STORAGE_TYPE, class CREATE_PARAMS, class LOCK_TYPE = STORAGE_TYPE * >
-class CManagedDataCacheClient : public CDefaultDataCacheClient
+class CManagedDataCacheClient
 {
 public:
 	typedef CManagedDataCacheClient<STORAGE_TYPE, CREATE_PARAMS, LOCK_TYPE> CCacheClientBaseClass;
 
 	CManagedDataCacheClient()
-		: m_pCache( nullptr )
+		: m_pCache( nullptr ),
+		  m_Client( [this]( const DataCacheNotification_t &notification ) { return HandleCacheNotification( notification ); } )
 	{
 	}
 
@@ -440,7 +467,7 @@ public:
 	{
 		if ( !m_pCache )
 		{
-			m_pCache = pSharedCache->AddSection( this, pszSectionName, limits, bSupportFastFind );
+			m_pCache = pSharedCache->AddSection( &m_Client, pszSectionName, limits, bSupportFastFind );
 		}
 	}
 
@@ -544,7 +571,7 @@ public:
 			break;
 		}
 
-		return CDefaultDataCacheClient::HandleCacheNotification( notification );
+		return IDataCacheClient::DefaultHandleCacheNotification( notification );
 	}
 
 
@@ -562,6 +589,7 @@ protected:
 
 private:
 	IDataCacheSection *m_pCache;
+	IDataCacheClient m_Client;
 
 };
 

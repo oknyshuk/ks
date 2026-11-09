@@ -413,7 +413,7 @@ void CBaseDemoAction::BufPrintf( int depth, ks::text_writer& buf, char const *fm
 // Purpose: 
 // Input  : buf - 
 //-----------------------------------------------------------------------------
-void CBaseDemoAction::SaveKeysToBuffer( int depth, ks::text_writer& buf )
+void CBaseDemoAction::SaveKeysToBufferBase( int depth, ks::text_writer& buf )
 {
 	// All derived actions will need to do a BaseClass::SaveKeysToBuffer call
 	g_bSaveChained = true;
@@ -475,7 +475,7 @@ void CBaseDemoAction::SetActionName( char const *name )
 // Input  : *pInitData - 
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-bool CBaseDemoAction::Init( KeyValues *pInitData )
+bool CBaseDemoAction::InitBase( KeyValues *pInitData )
 {
 	char const *actionname = pInitData->GetString( "name", "" );
 	if ( !actionname || !actionname[ 0 ] )
@@ -558,7 +558,7 @@ void CBaseDemoAction::SetStartTime( float t )
 // Input  : demoframe - 
 //			demotime - 
 //-----------------------------------------------------------------------------
-bool CBaseDemoAction::Update( const DemoActionTimingContext& tc )
+bool CBaseDemoAction::UpdateBase( const DemoActionTimingContext& tc )
 {
 	// Already fired and done?
 	if ( HasActionFinished() )
@@ -647,6 +647,6 @@ void CBaseDemoAction::Reset( void )
 	SetFinishedAction( false );
 }
 
-void CBaseDemoAction::OnActionFinished( void )
+void CBaseDemoAction::OnActionFinishedBase( void )
 {
 }

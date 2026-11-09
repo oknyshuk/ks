@@ -19,8 +19,6 @@
 #include "c_playerresource.h"
 
 #include <rocketui/rmlui.h>
-import ks.tier1;
-import std;
 
 DECLARE_HUDELEMENT( RkHudRadar );
 
@@ -73,7 +71,7 @@ static void BindRadar( Rml::DataModelConstructor &c )
 }
 RK_HUD_SECTION( BindRadar );
 
-static void RadarSizeChanged( IConVar *pConvar, const char *szOldValue, float fOldValue )
+static void RadarSizeChanged( ConVar *pConvar, const char *szOldValue, float fOldValue )
 {
     RkHudRadar *pRadar = GET_HUDELEMENT( RkHudRadar );
     if( !pRadar )

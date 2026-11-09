@@ -17,12 +17,12 @@ public:
 	CServerRemoteAccess();
 
 	// handles a request
-	virtual void WriteDataRequest( ra_listener_id listener, const void *buffer, int bufferSize );
+	void WriteDataRequest( ra_listener_id listener, const void *buffer, int bufferSize );
 	void WriteDataRequest( CRConServer *pNetworkListener, ra_listener_id listener, const void *buffer, int bufferSize);
 
 	// gets return value from the server
 	// returns the number of bytes read
-	virtual int ReadDataResponse( ra_listener_id listener, void *buffer, int bufferSize);
+	int ReadDataResponse( ra_listener_id listener, void *buffer, int bufferSize);
 	int GetDataResponseSize( ra_listener_id listener );
 
 	// sends a message to all the watching admin UI's
@@ -30,8 +30,8 @@ public:
 
 	void SendVProfData( ra_listener_id listenerID, bool bGroupData, void *data, int len );
 
-	virtual ra_listener_id GetNextListenerID( bool authConnection, const netadr_t *adr = nullptr );
-	virtual void RegisterAdminUIID( ra_listener_id listener ) { m_AdminUIID = listener; }
+	ra_listener_id GetNextListenerID( bool authConnection, const netadr_t *adr = nullptr );
+	void RegisterAdminUIID( ra_listener_id listener ) { m_AdminUIID = listener; }
 
 	ra_listener_id GetAdminUIID() { return m_AdminUIID; }
 	void GetStatsString(char *buf, int bufSize); // also used by the 'stats' command
@@ -40,7 +40,7 @@ public:
 
 	void RemoteBug( const char *pBugPath );
 
-private:
+public:
 	void RespondString( ra_listener_id listener, int requestID, const char *pString );
 	void RequestValue( ra_listener_id listener, int requestID, const char *variable );
 	void SetValue(const char *variable, const char *value);

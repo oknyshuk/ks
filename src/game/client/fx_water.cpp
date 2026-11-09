@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -327,27 +325,6 @@ void RippleCallback( const CEffectData &data )
 DECLARE_CLIENT_EFFECT_BEGIN( waterripple, RippleCallback )
 	PRECACHE( SHARED, "FX_WaterRipple" )
 DECLARE_CLIENT_EFFECT_END()
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *pDebugName - 
-// Output : WaterDebrisEffect*
-//-----------------------------------------------------------------------------
-WaterDebrisEffect* WaterDebrisEffect::Create( const char *pDebugName )
-{
-	return new WaterDebrisEffect( pDebugName );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *pParticle - 
-//			timeDelta - 
-// Output : float
-//-----------------------------------------------------------------------------
-float WaterDebrisEffect::UpdateAlpha( const SimpleParticle *pParticle )
-{
-	return ( ((float)pParticle->m_uchStartAlpha/255.0f) * std::sin( std::numbers::pi * (pParticle->m_flLifetime / pParticle->m_flDieTime) ) );
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: 

@@ -16,13 +16,11 @@ enum PaintMode_t
 class IEngineUI
 {
 public:
-	virtual					~IEngineUI( void ) { }
 
-	virtual bool			IsGameUIVisible() = 0;
+	bool			IsGameUIVisible();
 
-	virtual void			ActivateGameUI() = 0;
+	void			ActivateGameUI();
 };
 
 inline constexpr const char *VENGINE_UI_VERSION = "VEngineUI001";
 
-extern IEngineUI *engineui;

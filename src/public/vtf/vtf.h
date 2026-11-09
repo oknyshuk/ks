@@ -12,33 +12,33 @@ import ks.math;
 
 
 //-----------------------------------------------------------------------------
-// Interface to get at various bits of a VTF texture
+// Interface to get at various bits of a VTF texture. Non-virtual facade: the only
+// implementation is CVTFTexture (vtf.cpp), to which the members forward.
 //-----------------------------------------------------------------------------
 class IVTFTexture
 {
 public:
-    virtual ~IVTFTexture() { }
 	// Initializes the texture and allocates space for the bits
 	// In most cases, you shouldn't force the mip count.
-	virtual bool Init( int nWidth, int nHeight, int nDepth, ImageFormat fmt, int nFlags, int iFrameCount, int nForceMipCount = -1 ) = 0;
+	bool Init( int nWidth, int nHeight, int nDepth, ImageFormat fmt, int nFlags, int iFrameCount, int nForceMipCount = -1 );
 
 	// Methods to set other texture fields
-	virtual void SetBumpScale( float flScale ) = 0;
-	virtual void SetReflectivity( const Vector &vecReflectivity ) = 0;
+	void SetBumpScale( float flScale );
+	void SetReflectivity( const Vector &vecReflectivity );
 
 	// Methods to initialize the low-res image
-	virtual void InitLowResImage( int nWidth, int nHeight, ImageFormat fmt ) = 0;
+	void InitLowResImage( int nWidth, int nHeight, ImageFormat fmt );
 
 	// set the resource data (for writers). pass size=0 to delete data. if pdata is not null,
 	// the resource data will be copied from *pData
-	virtual void *SetResourceData( uint32 eType, void const *pData, std::size_t nDataSize ) = 0;
+	void *SetResourceData( uint32 eType, void const *pData, std::size_t nDataSize );
 
 	// find the resource data and return a pointer to it. The data pointed to by this pointer will
 	// go away when the ivtftexture does. retruns null if resource not present
-	virtual void *GetResourceData( uint32 eType, std::size_t *pDataSize ) const = 0;
+	void *GetResourceData( uint32 eType, std::size_t *pDataSize ) const;
 
 	// Locates the resource entry info if it's present, easier than crawling array types
-	virtual bool HasResourceEntry( uint32 eType ) const = 0;
+	bool HasResourceEntry( uint32 eType ) const;
 
 	// Retrieve available resource types of this IVTFTextures
 	//		arrTypesBuffer			buffer to be filled with resource types available.
@@ -46,7 +46,7 @@ public:
 	// Returns:
 	//		number of resource types available (can be greater than "numTypesBufferElems"
 	//		in which case only first "numTypesBufferElems" are copied to "arrTypesBuffer")
-	virtual unsigned int GetResourceTypes( uint32 *arrTypesBuffer, int numTypesBufferElems ) const = 0;
+	unsigned int GetResourceTypes( uint32 *arrTypesBuffer, int numTypesBufferElems ) const;
 
 	// When unserializing, we can skip a certain number of mip levels,
 	// and we also can just load everything but the image data
@@ -54,77 +54,77 @@ public:
 	// VTFBufferHeaderSize() method below to only read that much from the file
 	// NOTE: If you skip mip levels, the height + width of the texture will
 	// change to reflect the size of the largest read in mip level
-	virtual bool Unserialize( ks::byte_reader &buf, bool bHeaderOnly = false, int nSkipMipLevels = 0 ) = 0;
-	virtual bool Serialize( ks::byte_writer &buf ) = 0;
+	bool Unserialize( ks::byte_reader &buf, bool bHeaderOnly = false, int nSkipMipLevels = 0 );
+	bool Serialize( ks::byte_writer &buf );
 
 	// These are methods to help with optimization:
 	// Once the header is read in, they indicate where to start reading
 	// other data (measured from file start), and how many bytes to read....
-	virtual void LowResFileInfo( int *pStartLocation, int *pSizeInBytes) const = 0;
-	virtual void ImageFileInfo( int nFrame, int nFace, int nMip, int *pStartLocation, int *pSizeInBytes) const = 0;
-	virtual int FileSize( int nMipSkipCount = 0 ) const = 0;
+	void LowResFileInfo( int *pStartLocation, int *pSizeInBytes) const;
+	void ImageFileInfo( int nFrame, int nFace, int nMip, int *pStartLocation, int *pSizeInBytes) const;
+	int FileSize( int nMipSkipCount = 0 ) const;
 
 	// Attributes...
-	virtual int Width() const = 0;
-	virtual int Height() const = 0;
-	virtual int Depth() const = 0;
-	virtual int MipCount() const = 0;
+	int Width() const;
+	int Height() const;
+	int Depth() const;
+	int MipCount() const;
 
 	// returns the size of one row of a particular mip level
-	virtual int RowSizeInBytes( int nMipLevel ) const = 0;
+	int RowSizeInBytes( int nMipLevel ) const;
 
 	// returns the size of one face of a particular mip level
-	virtual int FaceSizeInBytes( int nMipLevel ) const = 0;
+	int FaceSizeInBytes( int nMipLevel ) const;
 
-	virtual ImageFormat Format() const = 0;
-	virtual int FaceCount() const = 0;
-	virtual int FrameCount() const = 0;
-	virtual int Flags() const = 0;
+	ImageFormat Format() const;
+	int FaceCount() const;
+	int FrameCount() const;
+	int Flags() const;
 
-	virtual float BumpScale() const = 0;
+	float BumpScale() const;
 
-	virtual int LowResWidth() const = 0;
-	virtual int LowResHeight() const = 0;
-	virtual ImageFormat LowResFormat() const = 0;
+	int LowResWidth() const;
+	int LowResHeight() const;
+	ImageFormat LowResFormat() const;
 
 	// NOTE: reflectivity[0] = blue, [1] = greem, [2] = red
-	virtual const Vector &Reflectivity() const = 0;
+	const Vector &Reflectivity() const;
 
-	virtual bool IsCubeMap() const = 0;
-	virtual bool IsNormalMap() const = 0;
-	virtual bool IsVolumeTexture() const = 0;
+	bool IsCubeMap() const;
+	bool IsNormalMap() const;
+	bool IsVolumeTexture() const;
 
 	// Computes the dimensions of a particular mip level
-	virtual void ComputeMipLevelDimensions( int iMipLevel, int *pMipWidth, int *pMipHeight, int *pMipDepth ) const = 0;
+	void ComputeMipLevelDimensions( int iMipLevel, int *pMipWidth, int *pMipHeight, int *pMipDepth ) const;
 
 	// Computes the size (in bytes) of a single mipmap of a single face of a single frame 
-	virtual int ComputeMipSize( int iMipLevel ) const = 0;
+	int ComputeMipSize( int iMipLevel ) const;
 
 	// Computes the size of a subrect (specified at the top mip level) at a particular lower mip level
-	virtual void ComputeMipLevelSubRect( Rect_t* pSrcRect, int nMipLevel, Rect_t *pSubRect ) const = 0;
+	void ComputeMipLevelSubRect( Rect_t* pSrcRect, int nMipLevel, Rect_t *pSubRect ) const;
 
 	// Computes the size (in bytes) of a single face of a single frame
 	// All mip levels starting at the specified mip level are included
-	virtual int ComputeFaceSize( int iStartingMipLevel = 0 ) const = 0;
+	int ComputeFaceSize( int iStartingMipLevel = 0 ) const;
 
 	// Computes the total size (in bytes) of all faces, all frames
-	virtual int ComputeTotalSize() const = 0;
+	int ComputeTotalSize() const;
 
 	// Returns the base address of the image data
-	virtual uint8 *ImageData() = 0;
+	uint8 *ImageData();
 
 	// Returns a pointer to the data associated with a particular frame, face, and mip level
-	virtual uint8 *ImageData( int iFrame, int iFace, int iMipLevel ) = 0;
+	uint8 *ImageData( int iFrame, int iFace, int iMipLevel );
 
 	// Returns a pointer to the data associated with a particular frame, face, mip level, and offset
-	virtual uint8 *ImageData( int iFrame, int iFace, int iMipLevel, int x, int y, int z = 0 ) = 0;
+	uint8 *ImageData( int iFrame, int iFace, int iMipLevel, int x, int y, int z = 0 );
 
 	// Returns the base address of the low-res image data
-	virtual uint8 *LowResImageData() = 0;
+	uint8 *LowResImageData();
 
 	// Converts the textures image format. Use IMAGE_FORMAT_DEFAULT
 	// if you want to be able to use various tool functions below
-	virtual	void ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV, bool bNormalToDXT5GA = false ) = 0;
+	void ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV, bool bNormalToDXT5GA = false );
 
 	// NOTE: The following methods only work on textures using the
 	// IMAGE_FORMAT_DEFAULT!
@@ -133,40 +133,40 @@ public:
 	// The look dir indicates the direction of the center of the sphere
 	// NOTE: Only call this *after* cube faces have been correctly
 	// oriented (using FixCubemapFaceOrientation)
-	virtual void GenerateSpheremap( LookDir_t lookDir = LOOK_DOWN_Z ) = 0;
+	void GenerateSpheremap( LookDir_t lookDir = LOOK_DOWN_Z );
 
 	// Generate spheremap based on the current cube faces (only works for cubemaps)
 	// The look dir indicates the direction of the center of the sphere
 	// NOTE: Only call this *after* cube faces have been correctly
 	// oriented (using FixCubemapFaceOrientation)
-	virtual void GenerateHemisphereMap( uint8 *pSphereMapBitsRGBA, int targetWidth, 
-		int targetHeight, LookDir_t lookDir, int iFrame ) = 0;
+	void GenerateHemisphereMap( uint8 *pSphereMapBitsRGBA, int targetWidth, 
+		int targetHeight, LookDir_t lookDir, int iFrame );
 
 	// Fixes the cubemap faces orientation from our standard to the
 	// standard the material system needs.
-	virtual void FixCubemapFaceOrientation( ) = 0;
+	void FixCubemapFaceOrientation( );
 
 	// Generates mipmaps from the base mip levels
-	virtual void GenerateMipmaps() = 0;
+	void GenerateMipmaps();
 
 	// Put 1/miplevel (1..n) into alpha.
-	virtual void PutOneOverMipLevelInAlpha() = 0;
+	void PutOneOverMipLevelInAlpha();
 
 	// Scale alpha by miplevel/mipcount
-	virtual void PremultAlphaWithMipFraction() = 0;
+	void PremultAlphaWithMipFraction();
 	
 	// Computes the reflectivity
-	virtual void ComputeReflectivity( ) = 0;
+	void ComputeReflectivity( );
 
 	// Computes the alpha flags
-	virtual void ComputeAlphaFlags() = 0;
+	void ComputeAlphaFlags();
 
 	// Generate the low-res image bits
-	virtual bool ConstructLowResImage() = 0;
+	bool ConstructLowResImage();
 
 	// Gets the texture all internally consistent assuming you've loaded
 	// mip 0 of all faces of all frames
-	virtual void PostProcess(bool bGenerateSpheremap, LookDir_t lookDir = LOOK_DOWN_Z, bool bAllowFixCubemapOrientation = true, bool bLoadedMiplevels = false) = 0;
+	void PostProcess(bool bGenerateSpheremap, LookDir_t lookDir = LOOK_DOWN_Z, bool bAllowFixCubemapOrientation = true, bool bLoadedMiplevels = false);
 
 	// Blends adjacent pixels on cubemap borders, since the card doesn't do it. If the texture
 	// is S3TC compressed, then it has to do it AFTER the texture has been compressed to prevent
@@ -174,16 +174,16 @@ public:
 	//
 	// If bSkybox is true, it assumes the faces are oriented in the way the engine draws the skybox
 	// (which happens to be different from the way cubemaps have their faces).
-	virtual void MatchCubeMapBorders( int iStage, ImageFormat finalFormat, bool bSkybox ) = 0;
+	void MatchCubeMapBorders( int iStage, ImageFormat finalFormat, bool bSkybox );
 
 	// Sets threshhold values for alphatest mipmapping
-	virtual void SetAlphaTestThreshholds( float flBase, float flHighFreq ) = 0;
+	void SetAlphaTestThreshholds( float flBase, float flHighFreq );
 
-	virtual bool IsPreTiled() const = 0;
+	bool IsPreTiled() const;
 
 
 	// Sets post-processing flags (settings are copied, pointer passed to distinguish between structure versions)
-	virtual void SetPostProcessingSettings( VtfProcessingOptions const *pOptions ) = 0;
+	void SetPostProcessingSettings( VtfProcessingOptions const *pOptions );
 };
 
 //-----------------------------------------------------------------------------

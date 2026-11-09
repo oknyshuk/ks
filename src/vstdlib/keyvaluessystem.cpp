@@ -22,96 +22,9 @@ template <typename T1> [[gnu::always_inline]] inline auto MEM_4BYTES_AS_0_AND_3B
 template <typename T1> [[gnu::always_inline]] inline auto MEM_4BYTES_FROM_0_AND_3BYTES( T1 x03bytes ) { return ( ( (uint32) (x03bytes) ) >> 8 ); }
 
 //-----------------------------------------------------------------------------
-// Purpose: Central storage point for KeyValues memory and symbols
-//-----------------------------------------------------------------------------
-class CKeyValuesSystem : public IKeyValuesSystem
-{
-public:
-	CKeyValuesSystem();
-	~CKeyValuesSystem();
-
-	// registers the size of the KeyValues in the specified instance
-	// so it can build a properly sized memory pool for the KeyValues objects
-	// the sizes will usually never differ but this is for versioning safety
-	void RegisterSizeofKeyValues(int size);
-
-	// allocates/frees a KeyValues object from the shared mempool
-	void *AllocKeyValuesMemory(int size);
-	void FreeKeyValuesMemory(void *pMem);
-
-	// symbol table access (used for key names)
-	HKeySymbol GetSymbolForString( const char *name, bool bCreate );
-	const char *GetStringForSymbol(HKeySymbol symbol);
-
-	// returns the wide version of ansi, also does the lookup on #'d strings
-	void GetLocalizedFromANSI( const char *ansi, wchar_t *outBuf, int unicodeBufferSizeInBytes);
-	void GetANSIFromLocalized( const wchar_t *wchar, char *outBuf, int ansiBufferSizeInBytes );
-
-	// for debugging, adds KeyValues record into global list so we can track memory leaks
-	virtual void AddKeyValuesToMemoryLeakList(void *pMem, HKeySymbol name);
-	virtual void RemoveKeyValuesFromMemoryLeakList(void *pMem);
-
-	// set/get a value for keyvalues resolution symbol
-	// e.g.: SetKeyValuesExpressionSymbol( "LOWVIOLENCE", true ) - enables [$LOWVIOLENCE]
-	virtual void SetKeyValuesExpressionSymbol( const char *name, bool bValue );
-	virtual bool GetKeyValuesExpressionSymbol( const char *name );
-
-	// symbol table access from code with case-preserving requirements (used for key names)
-	virtual HKeySymbol GetSymbolForStringCaseSensitive( HKeySymbol &hCaseInsensitiveSymbol, const char *name, bool bCreate = true );
-
-private:
-	int m_iMaxKeyValuesSize;
-
-	// string hash table
-	/*
-	Here's the way key values system data structures are laid out:
-	hash table with 2047 hash buckets:
-	[0] { hash_item_t }
-	[1]
-	[2]
-	...
-	each hash_item_t's stringIndex is an offset in m_Strings memory
-	at that offset we store the actual null-terminated string followed
-	by another 3 bytes for an alternative capitalization.
-	These 3 trailing bytes are set to 0 if no alternative capitalization
-	variants are present in the dictionary.
-	These trailing 3 bytes are interpreted as stringIndex into m_Strings
-	memory for the next	alternative capitalization
-
-	Getting a string value by HKeySymbol : constant time access at the
-	string memory represented by stringIndex
-
-	Getting a symbol for a string value:
-	1)	compute the hash
-	2)	start walking the hash-bucket using special version of stricmp
-		until a case insensitive match is found
-	3a) for case-insensitive lookup return the found stringIndex
-	3b) for case-sensitive lookup keep walking the list of alternative
-		capitalizations using strcmp until exact case match is found
-	*/
-	CMemoryStack m_Strings;
-	struct hash_item_t
-	{
-		int stringIndex;
-		hash_item_t *next;
-	};
-	ks::fixed_pool m_HashItemMemPool;
-	std::vector< hash_item_t > m_HashTable;
-	int CaseInsensitiveHash(const char *string, int iBounds);
-
-	std::map< void *, int > m_KeyValuesTrackingList;	// live block -> name symbol
-
-	std::map< HKeySymbol, bool > m_KvConditionalSymbolTable;
-
-	std::recursive_mutex m_mutex;
-};
-
-// EXPOSE_SINGLE_INTERFACE(CKeyValuesSystem, IKeyValuesSystem, KEYVALUES_INTERFACE_VERSION);
-
-//-----------------------------------------------------------------------------
 // Instance singleton and expose interface to rest of code
 //-----------------------------------------------------------------------------
-static CKeyValuesSystem g_KeyValuesSystem;
+static IKeyValuesSystem g_KeyValuesSystem;
 
 IKeyValuesSystem *KeyValuesSystem()
 {
@@ -121,8 +34,8 @@ IKeyValuesSystem *KeyValuesSystem()
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
-CKeyValuesSystem::CKeyValuesSystem() :
-	m_HashItemMemPool(sizeof(hash_item_t), 64, ks::fixed_pool::grow::fast, "CKeyValuesSystem::m_HashItemMemPool")
+IKeyValuesSystem::IKeyValuesSystem() :
+	m_HashItemMemPool(sizeof(hash_item_t), 64, ks::fixed_pool::grow::fast, "IKeyValuesSystem::m_HashItemMemPool")
 {
 	// initialize hash table
 	m_HashTable.resize( m_HashTable.size() + 2047 );
@@ -132,7 +45,7 @@ CKeyValuesSystem::CKeyValuesSystem() :
 		m_HashTable[i].next = nullptr;
 	}
 
-	m_Strings.Init( "CKeyValuesSystem::m_Strings", 4*1024*1024, 64*1024, 0, 4 );
+	m_Strings.Init( "IKeyValuesSystem::m_Strings", 4*1024*1024, 64*1024, 0, 4 );
 	// Make 0 stringIndex to never be returned, by allocating
 	// and wasting minimal number of alignment bytes now:
 	char *pszEmpty = ((char *)m_Strings.Alloc(1));
@@ -144,7 +57,7 @@ CKeyValuesSystem::CKeyValuesSystem() :
 //-----------------------------------------------------------------------------
 // Purpose: Destructor
 //-----------------------------------------------------------------------------
-CKeyValuesSystem::~CKeyValuesSystem()
+IKeyValuesSystem::~IKeyValuesSystem()
 {
 }
 
@@ -153,7 +66,7 @@ CKeyValuesSystem::~CKeyValuesSystem()
 //			so it can build a properly sized memory pool for the KeyValues objects
 //			the sizes will usually never differ but this is for versioning safety
 //-----------------------------------------------------------------------------
-void CKeyValuesSystem::RegisterSizeofKeyValues(int size)
+void IKeyValuesSystem::RegisterSizeofKeyValues(int size)
 {
 	if (size > m_iMaxKeyValuesSize)
 	{
@@ -164,7 +77,7 @@ void CKeyValuesSystem::RegisterSizeofKeyValues(int size)
 //-----------------------------------------------------------------------------
 // Purpose: allocates a KeyValues object from the shared mempool
 //-----------------------------------------------------------------------------
-void *CKeyValuesSystem::AllocKeyValuesMemory(int size)
+void *IKeyValuesSystem::AllocKeyValuesMemory(int size)
 {
 	return MemAlloc_Alloc( size );
 }
@@ -172,7 +85,7 @@ void *CKeyValuesSystem::AllocKeyValuesMemory(int size)
 //-----------------------------------------------------------------------------
 // Purpose: frees a KeyValues object from the shared mempool
 //-----------------------------------------------------------------------------
-void CKeyValuesSystem::FreeKeyValuesMemory(void *pMem)
+void IKeyValuesSystem::FreeKeyValuesMemory(void *pMem)
 {
 	g_pMemAlloc->Free( pMem );
 }
@@ -180,7 +93,7 @@ void CKeyValuesSystem::FreeKeyValuesMemory(void *pMem)
 //-----------------------------------------------------------------------------
 // Purpose: symbol table access (used for key names)
 //-----------------------------------------------------------------------------
-HKeySymbol CKeyValuesSystem::GetSymbolForString( const char *name, bool bCreate )
+HKeySymbol IKeyValuesSystem::GetSymbolForString( const char *name, bool bCreate )
 {
 	if ( !name )
 	{
@@ -243,7 +156,7 @@ HKeySymbol CKeyValuesSystem::GetSymbolForString( const char *name, bool bCreate 
 //-----------------------------------------------------------------------------
 // Purpose: symbol table access (used for key names)
 //-----------------------------------------------------------------------------
-HKeySymbol CKeyValuesSystem::GetSymbolForStringCaseSensitive( HKeySymbol &hCaseInsensitiveSymbol, const char *name, bool bCreate )
+HKeySymbol IKeyValuesSystem::GetSymbolForStringCaseSensitive( HKeySymbol &hCaseInsensitiveSymbol, const char *name, bool bCreate )
 {
 	if ( !name )
 	{
@@ -356,7 +269,7 @@ HKeySymbol CKeyValuesSystem::GetSymbolForStringCaseSensitive( HKeySymbol &hCaseI
 //-----------------------------------------------------------------------------
 // Purpose: symbol table access
 //-----------------------------------------------------------------------------
-const char *CKeyValuesSystem::GetStringForSymbol(HKeySymbol symbol)
+const char *IKeyValuesSystem::GetStringForSymbol(HKeySymbol symbol)
 {
 	if ( symbol == -1 )
 	{
@@ -368,21 +281,21 @@ const char *CKeyValuesSystem::GetStringForSymbol(HKeySymbol symbol)
 //-----------------------------------------------------------------------------
 // Purpose: adds KeyValues record into global list so we can track memory leaks
 //-----------------------------------------------------------------------------
-void CKeyValuesSystem::AddKeyValuesToMemoryLeakList(void *pMem, HKeySymbol name)
+void IKeyValuesSystem::AddKeyValuesToMemoryLeakList(void *pMem, HKeySymbol name)
 {
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: used to track memory leaks
 //-----------------------------------------------------------------------------
-void CKeyValuesSystem::RemoveKeyValuesFromMemoryLeakList(void *pMem)
+void IKeyValuesSystem::RemoveKeyValuesFromMemoryLeakList(void *pMem)
 {
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: generates a simple hash value for a string
 //-----------------------------------------------------------------------------
-int CKeyValuesSystem::CaseInsensitiveHash(const char *string, int iBounds)
+int IKeyValuesSystem::CaseInsensitiveHash(const char *string, int iBounds)
 {
 	unsigned int hash = 0;
 
@@ -405,7 +318,7 @@ int CKeyValuesSystem::CaseInsensitiveHash(const char *string, int iBounds)
 // Purpose: set/get a value for keyvalues resolution symbol
 // e.g.: SetKeyValuesExpressionSymbol( "LOWVIOLENCE", true ) - enables [$LOWVIOLENCE]
 //-----------------------------------------------------------------------------
-void CKeyValuesSystem::SetKeyValuesExpressionSymbol( const char *name, bool bValue )
+void IKeyValuesSystem::SetKeyValuesExpressionSymbol( const char *name, bool bValue )
 {
 	if ( !name )
 		return;
@@ -421,7 +334,7 @@ void CKeyValuesSystem::SetKeyValuesExpressionSymbol( const char *name, bool bVal
 	}
 }
 
-bool CKeyValuesSystem::GetKeyValuesExpressionSymbol( const char *name )
+bool IKeyValuesSystem::GetKeyValuesExpressionSymbol( const char *name )
 {
 	if ( !name )
 		return false;

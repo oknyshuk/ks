@@ -3,8 +3,6 @@
 
 // Purpose: An entity that allows level designer control over the fog parameters.
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -17,7 +15,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -71,9 +68,9 @@ CFogController::~CFogController()
 {
 }
 
-void CFogController::Spawn( void )
+void CFogController::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	m_fog.colorPrimaryLerpTo = m_fog.colorPrimary;
 	m_fog.colorSecondaryLerpTo = m_fog.colorSecondary;
@@ -82,9 +79,9 @@ void CFogController::Spawn( void )
 //-----------------------------------------------------------------------------
 // Activate!
 //-----------------------------------------------------------------------------
-void CFogController::Activate( ) 
+void CFogController::Activate_Impl( ) 
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( m_bUseAngles )
 	{
@@ -96,7 +93,7 @@ void CFogController::Activate( )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CFogController::UpdateTransmitState()
+int CFogController::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
@@ -198,9 +195,9 @@ void CFogController::InputSetAngles( inputdata_t &inputdata )
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CFogController::DrawDebugTextOverlays(void) 
+int CFogController::DrawDebugTextOverlays_Impl(void) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -414,9 +411,9 @@ public:
 	DECLARE_CLASS( CFogTrigger, CBaseTrigger );
 	DECLARE_DATADESC();
 
-	virtual void Spawn( void );
-	virtual void StartTouch( CBaseEntity *other );
-	virtual void EndTouch( CBaseEntity *other );
+	void Spawn_Impl( void );
+	void StartTouch_Impl( CBaseEntity *other );
+	void EndTouch_Impl( CBaseEntity *other );
 
 	fogparams_t *GetFog( void )
 	{
@@ -433,22 +430,22 @@ IMPLEMENT_REFLECT_DATAMAP( CFogTrigger )
 
 
 //--------------------------------------------------------------------------------------------------------
-void CFogTrigger::Spawn( void )
+void CFogTrigger::Spawn_Impl( void )
 {
 	AddSpawnFlags( SF_TRIGGER_ALLOW_ALL );
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	InitTrigger();
 }
 
 
 //--------------------------------------------------------------------------------------------------------
-void CFogTrigger::StartTouch( CBaseEntity *other )
+void CFogTrigger::StartTouch_Impl( CBaseEntity *other )
 {
 	if ( !PassesTriggerFilters( other ) )
 		return;
 
-	BaseClass::StartTouch( other );
+	BaseClass::StartTouch_Impl( other );
 
 	CBaseCombatCharacter *character = other->MyCombatCharacterPointer();
 	if ( !character )
@@ -459,12 +456,12 @@ void CFogTrigger::StartTouch( CBaseEntity *other )
 
 
 //--------------------------------------------------------------------------------------------------------
-void CFogTrigger::EndTouch( CBaseEntity *other )
+void CFogTrigger::EndTouch_Impl( CBaseEntity *other )
 {
 	if ( !PassesTriggerFilters( other ) )
 		return;
 
-	BaseClass::EndTouch( other );
+	BaseClass::EndTouch_Impl( other );
 
 	CBaseCombatCharacter *character = other->MyCombatCharacterPointer();
 	if ( !character )

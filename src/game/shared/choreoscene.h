@@ -7,13 +7,10 @@ class CChoreoChannel;
 class CChoreoActor;
 class IChoreoEventCallback;
 class CEventRelativeTag;
-namespace ks { class byte_reader; class byte_writer; class text_writer; }
 class CFlexAnimationTrack;
 class ISceneTokenProcessor;
 class IChoreoStringPool;
 
-import ks.tier1;
-import std;
 #include "expressionsample.h"
 #include "choreoevent.h"
 

@@ -5,8 +5,6 @@
 
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -20,7 +18,6 @@ import std;
 #include "view.h"
 #include "mumble.h"
 
-const char *COM_GetModDirectory(); // return the mod dir (rather than the complete -game param, which can be a path)
 
 struct MumbleSharedMemory_t
 {

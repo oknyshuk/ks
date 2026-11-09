@@ -1,7 +1,6 @@
 #pragma once
 
 #include "rocketui/rmlui.h"
-import ks.core;
 #include "reflect_annotations.h"
 // ClientInferno.cpp
 // Render client-side Inferno effects
@@ -9,7 +8,6 @@ import ks.core;
 // Copyright (c) 2005 Turtle Rock Studios, Inc. - All Rights Reserved
 
 
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"

@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
-import std;
 #include "ai_movesolver.h"
 #include "ehandle.h"
 #include "simtimer.h"
@@ -14,7 +12,6 @@ import std;
 // Forward declarations
 //-----------------------------------------------------------------------------
 class CBaseEntity;
-struct edict_t;
 class CAI_BaseNPC;
 class CAI_Motor;
 class CAI_Navigator;

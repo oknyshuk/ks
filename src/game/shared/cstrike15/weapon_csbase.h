@@ -102,7 +102,6 @@ struct BobState_t
 float CalcViewModelBobHelper( CBasePlayer *player, BobState_t *pBobState, int nVMIndex = 0 );
 void AddViewModelBobHelper( Vector &origin, QAngle &angles, BobState_t *pBobState );
 
-class CCSWeaponVisualsDataProcessor;
 #endif
 
 class [[= ks::reflect::NetTable{ .name = "DT_WeaponCSBase" } ]]
@@ -125,7 +124,7 @@ public:
 		DECLARE_DATADESC();
 
 		virtual void CheckRespawn();
-		virtual CBaseEntity* Respawn();
+		KS_VIRTUAL CBaseEntity* Respawn_Impl();
 		
 		virtual const Vector& GetBulletSpread();
 		virtual float	GetDefaultAnimSpeed();
@@ -140,7 +139,7 @@ public:
 
 		void Materialize();
 		void AttemptToMaterialize();
-		virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+		KS_VIRTUAL void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 		virtual bool IsRemoveable();
 
@@ -227,7 +226,7 @@ public:
 	// return true if this weapon is a kinf of the given weapon type (ie: "IsKindOf" WEAPONTYPE_RIFLE )
 	bool IsKindOf( CSWeaponType type ) const			{ return GetCSWpnData().GetWeaponType() == type; }
 
-	const char		*GetTracerType( void ) { return GetCSWpnData().GetTracerEffectName( GetEconItemView() ); }
+	const char		*GetTracerType_Impl( void ) { return GetCSWpnData().GetTracerEffectName( GetEconItemView() ); }
 
 	loadout_positions_t GetDefaultLoadoutSlot( void ) { return (loadout_positions_t)( GetEconItemView() ? GetEconItemView()->GetItemDefinition()->GetLoadoutSlot( 0 ) : 0 ); }
 
@@ -286,10 +285,11 @@ public:
 	#else
 		virtual void	Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCharacter *pOperator );
 		virtual bool	Reload();
-		virtual void	Spawn();
-		virtual bool	KeyValue( const char *szKeyName, const char *szValue );
+		KS_VIRTUAL void	Spawn_Impl();
+		using BaseClass::KeyValue_Impl;
+	KS_VIRTUAL bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
 
-		virtual bool PhysicsSplash( const Vector &centerPoint, const Vector &normal, float rawSpeed, float scaledSpeed );
+		KS_VIRTUAL bool PhysicsSplash_Impl( const Vector &centerPoint, const Vector &normal, float rawSpeed, float scaledSpeed );
 
 	#endif
 
@@ -300,7 +300,7 @@ public:
 	virtual void	SendViewModelAnim( int nSequence );
 	virtual void	SecondaryAttack( void );
 	virtual bool	CanPrimaryAttack( void ) {return true;}
-	virtual void	Precache( void );
+	KS_VIRTUAL void	Precache_Impl( void );
 	virtual bool	CanBeSelected( void );
 	virtual Activity GetDeployActivity( void );
 	virtual bool	DefaultDeploy( char *szViewModel, char *szWeaponModel, int iActivity, char *szAnimExt );

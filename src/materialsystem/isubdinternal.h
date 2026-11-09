@@ -16,21 +16,21 @@ class ITextureInternal;
 class ISubDMgr
 {
 public:
-	virtual bool ShouldAllocateTextures() = 0;			//
-	virtual void AllocateTextures() = 0;				// Allocate & free textures
-	virtual void FreeTextures() = 0;					//
-	virtual void ReleaseResources() = 0;
-	virtual void ReacquireResources() = 0;
+	bool ShouldAllocateTextures();			//
+	void AllocateTextures();				// Allocate & free textures
+	void FreeTextures();					//
+	void ReleaseResources();
+	void ReacquireResources();
 
-	virtual int GetWidth() = 0;
-	virtual int GetHeight() = 0;
-	virtual int GetOffsetGeometry() = 0;
-	virtual int GetOffsetTangents() = 0;
+	int GetWidth();
+	int GetHeight();
+	int GetOffsetGeometry();
+	int GetOffsetTangents();
 
-	virtual float* Lock( int nNumRows ) = 0;
-	virtual void Unlock() = 0;
+	float* Lock( int nNumRows );
+	void Unlock();
 
-	virtual ShaderAPITextureHandle_t SubDTexture() = 0;		// Return the subd position texture
+	ShaderAPITextureHandle_t SubDTexture();		// Return the subd position texture
 };
 
 extern ISubDMgr *g_pSubDMgr;

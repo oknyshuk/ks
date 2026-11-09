@@ -10,7 +10,6 @@
 #include "baseentity.h"
 class CBasePlayer;
 
-namespace ks::net { struct CEngineGotvSyncPacket; }
 
 extern INetworkStringTable *g_pStringTableInfoPanel;
 
@@ -36,7 +35,7 @@ public:
   // Player is running a command
   virtual void PostClientMessagesSent(void);
   virtual void SetCommandClient(int index);
-  virtual CPlayerState *GetPlayerState(edict_t *player);
+  virtual void *GetPlayerState(edict_t *player);
   virtual void ClientEarPosition(edict_t *pEntity, Vector *pEarOrigin);
   virtual bool
   ClientReplayEvent(edict_t *pEdict,
@@ -106,7 +105,6 @@ public:
   virtual CStandardSendProxies *GetStandardSendProxies();
 
   virtual void PostInit();
-  virtual void PostToolsInit();
   virtual void Think(bool finalTick);
 
   virtual void OnQueryCvarValueFinished(QueryCvarCookie_t iCookie,

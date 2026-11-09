@@ -4,10 +4,8 @@
 
 // Purpose: Team management class. Contains all the details for a specific team
 
-import ks.tier1;
 #include "reflect_annotations.h"
 
-import std;
 #include "team.h"
 
 //-----------------------------------------------------------------------------
@@ -26,8 +24,8 @@ public:
 	// Initialization
 	virtual void Init( const char *pName, int iNumber );
 	
-	virtual void Precache( void );
-	virtual void Think( void );
+	void Precache_Impl( void );
+	void Think_Impl( void );
 
 	void OnRoundPreStart( void );
 

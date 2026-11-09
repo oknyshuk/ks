@@ -3423,3 +3423,5 @@ it was once.
 		pPad->Flush();
 	}
 */
+
+#include "facade/ivtftexture.inl"

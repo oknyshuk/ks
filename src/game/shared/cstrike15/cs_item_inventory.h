@@ -4,9 +4,7 @@
 
 // Purpose: Container that allows client & server access to data in player inventories & loadouts
 
-import ks.tier1;
 #include "networkvar.h"
-import std;
 #include "item_inventory.h"
 #include "cs_shareddefs.h"
 #include "weapon_parse.h"

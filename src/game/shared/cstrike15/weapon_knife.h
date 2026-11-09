@@ -32,9 +32,9 @@ public:
 	virtual bool HasPrimaryAmmo();
 	virtual bool CanBeSelected();
 	
-	virtual void Precache();
+	KS_VIRTUAL void Precache_Impl();
 
-	void Spawn();
+	void Spawn_Impl();
 	bool SwingOrStab( CSWeaponMode weaponMode );
 	void PrimaryAttack();
 	void SecondaryAttack();

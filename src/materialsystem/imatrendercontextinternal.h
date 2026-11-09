@@ -16,59 +16,78 @@ class IMaterialInternal;
 typedef Vector4D LightCube_t[6];
 
 
+class CMatRenderContextBase;
+
+// The render context implementations; every context is created as exactly one of them.
+// IMatRenderContext and IMatRenderContextInternal forward each call to the implementation named by
+// the kind (cmatrendercontextdispatch.cpp).
+enum class MatRenderContextKind : unsigned char
+{
+	Hardware,	// CMatRenderContext: draws through the shader API
+	Queued,		// CMatQueuedRenderContext: records the calls for the hardware context
+};
+
 class IMatRenderContextInternal : public IMatRenderContext
 {
-	// For now, stuck implementing these until IMaterialSystem is reworked
-	bool Connect(CreateInterfaceFn) { return true; }
-	void Disconnect(void) {}
-	void *QueryInterface(const char *pszInterface) { return nullptr;	}
-	InitReturnVal_t Init(void) { return INIT_OK; }
-	void Shutdown(void) {}
-
 public:
-	virtual float GetFloatRenderingParameter(int parm_number) const = 0;
-	virtual int GetIntRenderingParameter(int parm_number) const = 0;
-	virtual ITexture *GetTextureRenderingParameter(int parm_number) const = 0;
-	virtual Vector GetVectorRenderingParameter(int parm_number) const = 0;
+	MatRenderContextKind Kind() const { return m_Kind; }
 
-	virtual void SwapBuffers() = 0;
+	// Functions of the shared base class that the hardware context overrides; the base class
+	// calls them, so they dispatch on the kind too.
+	void UpdateHeightClipUserClipPlane( void );
+	void ApplyCustomClipPlanes( void );
+	void CommitRenderTargetAndViewport( void );
+	void OnRenderDataUnreferenced();
 
-	virtual void SetCurrentMaterialInternal(IMaterialInternal* pCurrentMaterial) = 0;
-	virtual IMaterialInternal* GetCurrentMaterialInternal() const = 0;
-	virtual int GetLightmapPage() = 0;
-	virtual void ForceDepthFuncEquals( bool) = 0;
+	float GetFloatRenderingParameter(int parm_number) const;
+	int GetIntRenderingParameter(int parm_number) const;
+	ITexture *GetTextureRenderingParameter(int parm_number) const;
+	Vector GetVectorRenderingParameter(int parm_number) const;
 
-	virtual bool InFlashlightMode() const = 0;
-	virtual bool IsCascadedShadowMapping() const = 0;
-	virtual void BindStandardTexture( Sampler_t, TextureBindFlags_t nBindFlags, StandardTextureId_t ) = 0;
-	virtual void GetLightmapDimensions( int *, int *) = 0;
-	virtual MorphFormat_t GetBoundMorphFormat() = 0;
-	virtual ITexture *GetRenderTargetEx( int ) = 0;
-	virtual void DrawClearBufferQuad( unsigned char, unsigned char, unsigned char, unsigned char, bool, bool, bool ) = 0;
+	void SwapBuffers();
 
-	virtual bool OnDrawMesh( IMesh *pMesh, int firstIndex, int numIndices ) = 0;
-	virtual bool OnDrawMesh( IMesh *pMesh, CPrimList *pLists, int nLists ) = 0;
-	virtual bool OnDrawMeshModulated( IMesh *pMesh, const Vector4D &diffuseModulation, int firstIndex, int numIndices ) = 0;
-	virtual bool OnSetFlexMesh( IMesh *pStaticMesh, IMesh *pMesh, int nVertexOffsetInBytes ) = 0;
-	virtual bool OnSetColorMesh( IMesh *pStaticMesh, IMesh *pMesh, int nVertexOffsetInBytes ) = 0;
-	virtual bool OnSetPrimitiveType( IMesh *pMesh, MaterialPrimitiveType_t type ) = 0;
+	void SetCurrentMaterialInternal(IMaterialInternal* pCurrentMaterial);
+	IMaterialInternal* GetCurrentMaterialInternal() const;
+	int GetLightmapPage();
+	void ForceDepthFuncEquals( bool);
 
-	virtual void SyncMatrices() = 0;
-	virtual void SyncMatrix( MaterialMatrixMode_t ) = 0;
+	bool InFlashlightMode() const;
+	bool IsCascadedShadowMapping() const;
+	void BindStandardTexture( Sampler_t, TextureBindFlags_t nBindFlags, StandardTextureId_t );
+	void GetLightmapDimensions( int *, int *);
+	MorphFormat_t GetBoundMorphFormat();
+	ITexture *GetRenderTargetEx( int );
+	void DrawClearBufferQuad( unsigned char, unsigned char, unsigned char, unsigned char, bool, bool, bool );
 
-	virtual void ForceHardwareSync() = 0;
-	virtual void BeginFrame() = 0;
-	virtual void EndFrame() = 0;
+	bool OnDrawMesh( IMesh *pMesh, int firstIndex, int numIndices );
+	bool OnDrawMesh( IMesh *pMesh, CPrimList *pLists, int nLists );
+	bool OnDrawMeshModulated( IMesh *pMesh, const Vector4D &diffuseModulation, int firstIndex, int numIndices );
+	bool OnSetFlexMesh( IMesh *pStaticMesh, IMesh *pMesh, int nVertexOffsetInBytes );
+	bool OnSetColorMesh( IMesh *pStaticMesh, IMesh *pMesh, int nVertexOffsetInBytes );
+	bool OnSetPrimitiveType( IMesh *pMesh, MaterialPrimitiveType_t type );
 
-	virtual void SetFrameTime( float frameTime ) = 0;
-	virtual void SetCurrentProxy( void *pProxy ) = 0;
-	virtual void MarkRenderDataUnused( bool bBeginFrame ) = 0;
-	virtual CMatCallQueue *GetCallQueueInternal() = 0;
+	void SyncMatrices();
+	void SyncMatrix( MaterialMatrixMode_t );
 
-	virtual void EvictManagedResources() = 0;
+	void ForceHardwareSync();
+	void BeginFrame();
+	void EndFrame();
 
-	virtual ShaderAPITextureHandle_t GetLightmapTexture( int nLightmapPage ) = 0;
-	virtual bool IsRenderingPaint() const = 0;
-	virtual ShaderAPITextureHandle_t GetPaintmapTexture( int nLightmapPage ) = 0;
+	void SetFrameTime( float frameTime );
+	void SetCurrentProxy( void *pProxy );
+	void MarkRenderDataUnused( bool bBeginFrame );
+	CMatCallQueue *GetCallQueueInternal();
+
+	void EvictManagedResources();
+
+	ShaderAPITextureHandle_t GetLightmapTexture( int nLightmapPage );
+	bool IsRenderingPaint() const;
+	ShaderAPITextureHandle_t GetPaintmapTexture( int nLightmapPage );
 	
+
+protected:
+	explicit IMatRenderContextInternal( MatRenderContextKind kind ) : m_Kind( kind ) {}
+
+private:
+	MatRenderContextKind m_Kind;
 };

@@ -7,28 +7,28 @@ class ISplitScreen
 {
 public:
 
-	virtual bool			Init() = 0;
-	virtual void			Shutdown() = 0;
+	bool			Init();
+	void			Shutdown();
 
-	virtual bool			AddSplitScreenUser( int nSlot, int nPlayerIndex ) = 0;
-	virtual bool			AddBaseUser( int nSlot, int nPlayerIndex ) = 0;
-	virtual bool			RemoveSplitScreenUser( int nSlot, int nPlayerIndex ) = 0;
-	virtual int				GetActiveSplitScreenPlayerSlot() = 0;
-	virtual int				SetActiveSplitScreenPlayerSlot( int nSlot ) = 0;
+	bool			AddSplitScreenUser( int nSlot, int nPlayerIndex );
+	bool			AddBaseUser( int nSlot, int nPlayerIndex );
+	bool			RemoveSplitScreenUser( int nSlot, int nPlayerIndex );
+	int				GetActiveSplitScreenPlayerSlot();
+	int				SetActiveSplitScreenPlayerSlot( int nSlot );
 
-	virtual bool			IsValidSplitScreenSlot( int nSlot ) = 0;
-	virtual int				FirstValidSplitScreenSlot() = 0; // -1 == invalid
-	virtual int				NextValidSplitScreenSlot( int nPreviousSlot ) = 0; // -1 == invalid
+	bool			IsValidSplitScreenSlot( int nSlot );
+	int				FirstValidSplitScreenSlot(); // -1 == invalid
+	int				NextValidSplitScreenSlot( int nPreviousSlot ); // -1 == invalid
 
-	virtual int				GetNumSplitScreenPlayers() = 0;
-	virtual int				GetSplitScreenPlayerEntity( int nSlot ) = 0;
-	virtual INetChannel		*GetSplitScreenPlayerNetChan( int nSlot ) = 0;
+	int				GetNumSplitScreenPlayers();
+	int				GetSplitScreenPlayerEntity( int nSlot );
+	INetChannel		*GetSplitScreenPlayerNetChan( int nSlot );
 
-	virtual bool			IsDisconnecting( int nSlot ) = 0;
-	virtual void			SetDisconnecting( int nSlot, bool bState ) = 0;
+	bool			IsDisconnecting( int nSlot );
+	void			SetDisconnecting( int nSlot, bool bState );
 
-	virtual bool			SetLocalPlayerIsResolvable( char const *pchContext, int nLine, bool bResolvable ) = 0;
-	virtual bool			IsLocalPlayerResolvable() = 0;
+	bool			SetLocalPlayerIsResolvable( char const *pchContext, int nLine, bool bResolvable );
+	bool			IsLocalPlayerResolvable();
 };
 
 #ifndef DEDICATED

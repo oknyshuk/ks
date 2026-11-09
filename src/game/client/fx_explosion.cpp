@@ -4,8 +4,6 @@
 // Purpose: Base explosion effect
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "sharedvar.h"

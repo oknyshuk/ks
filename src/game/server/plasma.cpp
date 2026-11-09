@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "edict.h"
 #include "eiface.h"
 #include "iserverentity.h"
@@ -85,7 +83,7 @@ void CPlasma::EnableSmoke( int state )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPlasma::Precache( void )
+void CPlasma::Precache_Impl( void )
 {
 	PrecacheModel( "sprites/plasma1.vmt" );
 	PrecacheModel( "sprites/fire_floor.vmt" );

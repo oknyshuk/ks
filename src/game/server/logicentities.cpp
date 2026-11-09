@@ -3,8 +3,6 @@
 
 // Purpose: Implements many of the entities that control logic flow within a map.
 
-import std;
-import ks.vstdlib;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -54,7 +52,7 @@ public:
 	DECLARE_CLASS( CLogicScript, CPointEntity );
 	DECLARE_DATADESC();
 
-	void RunVScripts()
+	void RunVScripts_Impl()
 	{
 		/*
 			EntityGroup <- [];
@@ -129,7 +127,7 @@ public:
 				g_pScriptVM->ReleaseScript( hAddScript );
 			}
 		}
-		BaseClass::RunVScripts();
+		BaseClass::RunVScripts_Impl();
 	}
 
 	[[= ks::reflect::Key{ .name = "Group16", .index = 15 } ]] [[= ks::reflect::Key{ .name = "Group14", .index = 14 } ]] [[= ks::reflect::Key{ .name = "Group13", .index = 13 } ]] [[= ks::reflect::Key{ .name = "Group12", .index = 12 } ]] [[= ks::reflect::Key{ .name = "Group11", .index = 11 } ]] [[= ks::reflect::Key{ .name = "Group10", .index = 10 } ]] [[= ks::reflect::Key{ .name = "Group09", .index = 9 } ]] [[= ks::reflect::Key{ .name = "Group08", .index = 8 } ]] [[= ks::reflect::Key{ .name = "Group07", .index = 7 } ]] [[= ks::reflect::Key{ .name = "Group06", .index = 6 } ]] [[= ks::reflect::Key{ .name = "Group05", .index = 5 } ]] [[= ks::reflect::Key{ .name = "Group04", .index = 4 } ]] [[= ks::reflect::Key{ .name = "Group03", .index = 3 } ]] [[= ks::reflect::Key{ .name = "Group02", .index = 2 } ]] [[= ks::reflect::Key{ .name = "Group01", .index = 1 } ]] [[= ks::reflect::Key{ .name = "Group00", .index = 0 } ]] string_t m_iszGroupMembers[MAX_SCRIPT_GROUP];
@@ -376,15 +374,15 @@ class CTimerEntity : public CLogicalEntity
 public:
 	DECLARE_CLASS( CTimerEntity, CLogicalEntity );
 
-	void Spawn( void );
-	void Think( void );
+	void Spawn_Impl( void );
+	void Think_Impl( void );
 
 	void Toggle( void );
 	void Enable( void );
 	void Disable( void );
 	void FireTimer( void );
 
-	int DrawDebugTextOverlays(void);
+	int DrawDebugTextOverlays_Impl(void);
 
 	// outputs
 	[[= ks::reflect::Key{ .name = "OnTimer" } ]] COutputEvent m_OnTimer;
@@ -424,7 +422,7 @@ IMPLEMENT_REFLECT_DATAMAP( CTimerEntity )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CTimerEntity::Spawn( void )
+void CTimerEntity::Spawn_Impl( void )
 {
 	if (!m_iUseRandomTime && (m_flRefireTime < LOGIC_TIMER_MIN_INTERVAL))
 	{
@@ -445,7 +443,7 @@ void CTimerEntity::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CTimerEntity::Think( void )
+void CTimerEntity::Think_Impl( void )
 {
 	FireTimer();
 }
@@ -646,9 +644,9 @@ void CTimerEntity::InputSubtractFromTimer( inputdata_t &inputdata )
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CTimerEntity::DrawDebugTextOverlays( void ) 
+int CTimerEntity::DrawDebugTextOverlays_Impl( void ) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -680,9 +678,9 @@ class CLogicLineToEntity : public CLogicalEntity
 public:
 	DECLARE_CLASS( CLogicLineToEntity, CLogicalEntity );
 
-	void Activate(void);
-	void Spawn( void );
-	void Think( void );
+	void Activate_Impl(void);
+	void Spawn_Impl( void );
+	void Think_Impl( void );
 
 	// outputs
 	[[= ks::reflect::Key{ .name = "Line" } ]] COutputVector m_Line;
@@ -705,9 +703,9 @@ IMPLEMENT_REFLECT_DATAMAP( CLogicLineToEntity )
 //-----------------------------------------------------------------------------
 // Find the entities
 //-----------------------------------------------------------------------------
-void CLogicLineToEntity::Activate(void)
+void CLogicLineToEntity::Activate_Impl(void)
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if (m_target != NULL_STRING)
 	{
@@ -750,7 +748,7 @@ void CLogicLineToEntity::Activate(void)
 //-----------------------------------------------------------------------------
 // Find the entities
 //-----------------------------------------------------------------------------
-void CLogicLineToEntity::Spawn(void)
+void CLogicLineToEntity::Spawn_Impl(void)
 {
 	SetNextThink( gpGlobals->curtime + 0.01f );
 }
@@ -759,7 +757,7 @@ void CLogicLineToEntity::Spawn(void)
 //-----------------------------------------------------------------------------
 // Find the entities
 //-----------------------------------------------------------------------------
-void CLogicLineToEntity::Think(void)
+void CLogicLineToEntity::Think_Impl(void)
 {
 	CBaseEntity* pDest = m_EndEntity.Get();
 	CBaseEntity* pSrc = m_StartEntity.Get();
@@ -791,7 +789,7 @@ public:
 
 	DECLARE_CLASS( CMathRemap, CLogicalEntity );
 
-	void Spawn(void);
+	void Spawn_Impl(void);
 
 	// Keys
 	[[= ks::reflect::Key{ .name = "in1" } ]] float m_flInMin;
@@ -823,7 +821,7 @@ IMPLEMENT_REFLECT_DATAMAP( CMathRemap )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CMathRemap::Spawn(void)
+void CMathRemap::Spawn_Impl(void)
 {
 	//
 	// Avoid a divide by zero in ValueChanged.
@@ -906,7 +904,7 @@ public:
 
 	DECLARE_CLASS( CMathColorBlend, CLogicalEntity );
 
-	void Spawn(void);
+	void Spawn_Impl(void);
 
 	// Keys
 	[[= ks::reflect::Key{ .name = "inmin" } ]] float m_flInMin;
@@ -934,7 +932,7 @@ IMPLEMENT_REFLECT_DATAMAP( CMathColorBlend )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CMathColorBlend::Spawn(void)
+void CMathColorBlend::Spawn_Impl(void)
 {
 	//
 	// Avoid a divide by zero in ValueChanged.
@@ -1026,7 +1024,7 @@ class CEnvGlobal : public CLogicalEntity
 public:
 	DECLARE_CLASS( CEnvGlobal, CLogicalEntity );
 
-	void Spawn( void );
+	void Spawn_Impl( void );
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
@@ -1037,7 +1035,7 @@ public:
 	[[= ks::reflect::Input{ .name = "AddToCounter", .type = FIELD_INTEGER } ]] void InputAddToCounter( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "GetCounter", .type = FIELD_VOID } ]] void InputGetCounter( inputdata_t &inputdata );
 
-	int DrawDebugTextOverlays(void);
+	int DrawDebugTextOverlays_Impl(void);
 
 	DECLARE_DATADESC();
 
@@ -1059,7 +1057,7 @@ LINK_ENTITY_TO_CLASS( env_global, CEnvGlobal );
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvGlobal::Spawn( void )
+void CEnvGlobal::Spawn_Impl( void )
 {
 	if ( !m_globalstate )
 	{
@@ -1207,10 +1205,10 @@ void CEnvGlobal::InputToggle( inputdata_t &inputdata )
 // Input  :
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CEnvGlobal::DrawDebugTextOverlays(void) 
+int CEnvGlobal::DrawDebugTextOverlays_Impl(void) 
 {
 	// Skip AIClass debug overlays
-	int text_offset = CBaseEntity::DrawDebugTextOverlays();
+	int text_offset = CBaseEntity::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -1253,11 +1251,12 @@ class CMultiSource : public CLogicalEntity
 public:
 	DECLARE_CLASS( CMultiSource, CLogicalEntity );
 
-	void Spawn( );
-	bool KeyValue( const char *szKeyName, const char *szValue );
-	void Use( ::CBaseEntity *pActivator, ::CBaseEntity *pCaller, USE_TYPE useType, float value );
-	int	ObjectCaps( void ) { return(BaseClass::ObjectCaps() | FCAP_MASTER); }
-	bool IsTriggered( ::CBaseEntity *pActivator );
+	void Spawn_Impl( );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	void Use_Impl( ::CBaseEntity *pActivator, ::CBaseEntity *pCaller, USE_TYPE useType, float value );
+	int	ObjectCaps_Impl( void ) { return(BaseClass::ObjectCaps_Impl() | FCAP_MASTER); }
+	bool IsTriggered_Impl( ::CBaseEntity *pActivator );
 	void Register( void );
 
 	DECLARE_DATADESC();
@@ -1283,7 +1282,7 @@ LINK_ENTITY_TO_CLASS( multisource, CMultiSource );
 //			szValue - Value for key.
 // Output : Returns true if the key was handled, false if not.
 //-----------------------------------------------------------------------------
-bool CMultiSource::KeyValue( const char *szKeyName, const char *szValue )
+bool CMultiSource::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (	FStrEq(szKeyName, "style") ||
 				FStrEq(szKeyName, "height") ||
@@ -1295,7 +1294,7 @@ bool CMultiSource::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
@@ -1305,7 +1304,7 @@ bool CMultiSource::KeyValue( const char *szKeyName, const char *szValue )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CMultiSource::Spawn()
+void CMultiSource::Spawn_Impl()
 { 
 	SetNextThink( gpGlobals->curtime + 0.1f );
 	m_spawnflags |= SF_MULTI_INIT;	// Until it's initialized
@@ -1320,7 +1319,7 @@ void CMultiSource::Spawn()
 //			useType - 
 //			value - 
 //-----------------------------------------------------------------------------
-void CMultiSource::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CMultiSource::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 { 
 	int i = 0;
 
@@ -1357,7 +1356,7 @@ void CMultiSource::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CMultiSource::IsTriggered( CBaseEntity * )
+bool CMultiSource::IsTriggered_Impl( CBaseEntity * )
 {
 	// Is everything triggered?
 	int i = 0;
@@ -1435,10 +1434,14 @@ private:
 
 	[[= ks::reflect::Key{ .name = "StartDisabled" } ]] bool m_bDisabled;
 
-	bool KeyValue(const char *szKeyName, const char *szValue);
-	void Spawn(void);
+	public: using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl(const char *szKeyName, const char *szValue);
+	private:
+	public: void Spawn_Impl(void);
+	private:
 
-	int DrawDebugTextOverlays(void);
+	public: int DrawDebugTextOverlays_Impl(void);
+	private:
 
 	void UpdateOutValue(CBaseEntity *pActivator, float fNewValue);
 
@@ -1479,7 +1482,7 @@ IMPLEMENT_REFLECT_DATAMAP( CMathCounter )
 //-----------------------------------------------------------------------------
 // Purpose: Handles key values from the BSP before spawn is called.
 //-----------------------------------------------------------------------------
-bool CMathCounter::KeyValue(const char *szKeyName, const char *szValue)
+bool CMathCounter::KeyValue_Impl(const char *szKeyName, const char *szValue)
 {
 	//
 	// Set the initial value of the counter.
@@ -1490,14 +1493,14 @@ bool CMathCounter::KeyValue(const char *szKeyName, const char *szValue)
 		return(true);
 	}
 
-	return(BaseClass::KeyValue(szKeyName, szValue));
+	return(BaseClass::KeyValue_Impl(szKeyName, szValue));
 }
 
 
 //-----------------------------------------------------------------------------
 // Purpose: Called before spawning, after key values have been set.
 //-----------------------------------------------------------------------------
-void CMathCounter::Spawn( void )
+void CMathCounter::Spawn_Impl( void )
 {
 	//
 	// Make sure max and min are ordered properly or clamp won't work.
@@ -1524,9 +1527,9 @@ void CMathCounter::Spawn( void )
 // Input  :
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CMathCounter::DrawDebugTextOverlays( void ) 
+int CMathCounter::DrawDebugTextOverlays_Impl( void ) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -1857,7 +1860,8 @@ private:
 	int m_nLastShuffleCase;
 	unsigned char m_uchShuffleCaseMap[MAX_LOGIC_CASES];
 
-	void Spawn(void);
+	public: void Spawn_Impl(void);
+	private:
 
 	int BuildCaseMap(unsigned char *puchMap);
 
@@ -1884,7 +1888,7 @@ IMPLEMENT_REFLECT_DATAMAP( CLogicCase )
 //-----------------------------------------------------------------------------
 // Purpose: Called before spawning, after key values have been set.
 //-----------------------------------------------------------------------------
-void CLogicCase::Spawn( void )
+void CLogicCase::Spawn_Impl( void )
 {
 	m_nLastShuffleCase = -1;
 }
@@ -2037,7 +2041,7 @@ class CLogicCompare : public CLogicalEntity
 	DECLARE_CLASS( CLogicCompare, CLogicalEntity );
 
 public:
-	int DrawDebugTextOverlays(void);
+	int DrawDebugTextOverlays_Impl(void);
 
 private:
 	// Inputs
@@ -2133,9 +2137,9 @@ void CLogicCompare::DoCompare(CBaseEntity *pActivator, float flInValue)
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CLogicCompare::DrawDebugTextOverlays( void ) 
+int CLogicCompare::DrawDebugTextOverlays_Impl( void ) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -2164,11 +2168,11 @@ class CLogicBranch : public CLogicalEntity
 	
 public:
 
-	void UpdateOnRemove();
+	void UpdateOnRemove_Impl();
 
 	void AddLogicBranchListener( CBaseEntity *pEntity );
 	inline bool GetLogicBranchState();
-	virtual int DrawDebugTextOverlays( void );
+	int DrawDebugTextOverlays_Impl( void );
 
 private:
 
@@ -2206,7 +2210,7 @@ IMPLEMENT_REFLECT_DATAMAP( CLogicBranch )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CLogicBranch::UpdateOnRemove()
+void CLogicBranch::UpdateOnRemove_Impl()
 {
 	for ( int i = 0; i < std::ssize( m_Listeners ); i++ )
 	{
@@ -2217,7 +2221,7 @@ void CLogicBranch::UpdateOnRemove()
 		}
 	}
 	
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 	
 
@@ -2326,9 +2330,9 @@ void CLogicBranch::AddLogicBranchListener( CBaseEntity *pEntity )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CLogicBranch::DrawDebugTextOverlays( void )
+int CLogicBranch::DrawDebugTextOverlays_Impl( void )
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -2544,13 +2548,13 @@ public:
 		}
 	}
 
-	void Activate( void )
+	void Activate_Impl( void )
 	{
 		if ( m_disabled )
 		{
 			EnableCollisions( false );
 		}
-		BaseClass::Activate();
+		BaseClass::Activate_Impl();
 	}
 
 	[[= ks::reflect::Input{ .name = "DisableCollisions", .type = FIELD_VOID } ]]
@@ -2593,9 +2597,12 @@ class CLogicBranchList : public CLogicalEntity
 {
 	DECLARE_CLASS( CLogicBranchList, CLogicalEntity );
 
-	virtual void Spawn();
-	virtual void Activate();
-	virtual int DrawDebugTextOverlays( void );
+	public: void Spawn_Impl();
+	private:
+	public: void Activate_Impl();
+	private:
+	public: int DrawDebugTextOverlays_Impl( void );
+	private:
 
 private:
 
@@ -2635,7 +2642,7 @@ IMPLEMENT_REFLECT_DATAMAP( CLogicBranchList )
 //-----------------------------------------------------------------------------
 // Purpose: Called before spawning, after key values have been set.
 //-----------------------------------------------------------------------------
-void CLogicBranchList::Spawn( void )
+void CLogicBranchList::Spawn_Impl( void )
 {
 }
 
@@ -2643,7 +2650,7 @@ void CLogicBranchList::Spawn( void )
 //-----------------------------------------------------------------------------
 // Finds all the logic_branches that we are monitoring and register ourselves with them.
 //-----------------------------------------------------------------------------
-void CLogicBranchList::Activate( void )
+void CLogicBranchList::Activate_Impl( void )
 {
 	for ( int i = 0; i < MAX_LOGIC_BRANCH_NAMES; i++ )
 	{
@@ -2663,7 +2670,7 @@ void CLogicBranchList::Activate( void )
 		}
 	}
 	
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 }
 
 
@@ -2756,9 +2763,9 @@ void CLogicBranchList::DoTest( CBaseEntity *pActivator )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CLogicBranchList::DrawDebugTextOverlays( void )
+int CLogicBranchList::DrawDebugTextOverlays_Impl( void )
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{

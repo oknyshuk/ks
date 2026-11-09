@@ -21,7 +21,7 @@ public:
 	DECLARE_CLASS( CInfoLadderDismount, CBaseEntity );
 	DECLARE_NETWORKCLASS();
 
-	virtual void DrawDebugGeometryOverlays();
+	KS_VIRTUAL void DrawDebugGeometryOverlays_Impl();
 };
 
 typedef CHandle< CInfoLadderDismount > CInfoLadderDismountHandle;
@@ -44,9 +44,9 @@ public:
 	CFuncLadder();
 	~CFuncLadder();
 
-	virtual void Spawn();
+	KS_VIRTUAL void Spawn_Impl();
 
-	virtual void DrawDebugGeometryOverlays(void);
+	KS_VIRTUAL void DrawDebugGeometryOverlays_Impl(void);
 
 	int					GetDismountCount() const;
 	CInfoLadderDismount	*GetDismount( int index );
@@ -65,7 +65,7 @@ public:
 	void	PlayerGotOn( CBasePlayer *pPlayer );
 	void	PlayerGotOff( CBasePlayer *pPlayer );
 
-	virtual void Activate();
+	KS_VIRTUAL void Activate_Impl();
 
 	bool	DontGetOnLadder( void ) const;
 
@@ -103,7 +103,8 @@ private:
 	[[= ks::reflect::Key{ .name = "OnPlayerGotOnLadder" } ]] COutputEvent	m_OnPlayerGotOnLadder;
 	[[= ks::reflect::Key{ .name = "OnPlayerGotOffLadder" } ]] COutputEvent	m_OnPlayerGotOffLadder;
 
-	virtual int UpdateTransmitState();
+	public: KS_VIRTUAL int UpdateTransmitState_Impl();
+	private:
 #endif
 };
 

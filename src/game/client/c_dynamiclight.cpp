@@ -4,8 +4,6 @@
 // Purpose: Dynamic light
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "const.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"

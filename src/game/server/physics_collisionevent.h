@@ -4,9 +4,7 @@
 
 // Purpose: Pulling CCollisionEvent's definition out of physics.cpp so it can be abstracted upon (for the portal mod)
 
-import ks.vstdlib;
 #include "physics.h"
-import std;
 #include "takedamageinfo.h"
 #include "baseentity.h"
 

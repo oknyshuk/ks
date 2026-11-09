@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
 #include "cs_shareddefs.h"
 #include "cs_weapon_parse.h"
 

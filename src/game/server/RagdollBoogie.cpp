@@ -6,8 +6,6 @@
 //			   to ignite a target entity.
 //			2) An entity that can be created at runtime to ignite a target entity.
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -77,9 +75,9 @@ CRagdollBoogie *CRagdollBoogie::Create( CBaseEntity *pTarget, float flMagnitude,
 //-----------------------------------------------------------------------------
 // Spawn
 //-----------------------------------------------------------------------------
-void CRagdollBoogie::Precache()
+void CRagdollBoogie::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	PrecacheEffect( "TeslaHitboxes" );
 
@@ -89,11 +87,11 @@ void CRagdollBoogie::Precache()
 //-----------------------------------------------------------------------------
 // Spawn
 //-----------------------------------------------------------------------------
-void CRagdollBoogie::Spawn()
+void CRagdollBoogie::Spawn_Impl()
 {
 	Precache();
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	SetThink( &CRagdollBoogie::BoogieThink );
 	SetNextThink( gpGlobals->curtime + 0.01f );

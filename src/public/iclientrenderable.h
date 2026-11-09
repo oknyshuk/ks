@@ -11,6 +11,8 @@ import ks.tier1;
 struct model_t;
 
 extern void DefaultRenderBoundsWorldspace( IClientRenderable *pRenderable, Vector &absMins, Vector &absMaxs );
+// What DefaultRenderBoundsWorldspace() does is up to the game client, which installs it here.
+extern void (*g_pfnClientRenderBoundsWorldspace)( IClientRenderable *pRenderable, Vector &absMins, Vector &absMaxs );
 
 //-----------------------------------------------------------------------------
 // Handles to a client shadow
@@ -313,7 +315,7 @@ public:
 	virtual IClientRenderable*	GetClientRenderable()	{ return this; }
 	virtual IClientNetworkable*	GetClientNetworkable()	{ return 0; }
 	virtual IClientEntity*		GetIClientEntity()		{ return 0; }
-	virtual C_BaseEntity*		GetBaseEntity()			{ return 0; }
+	virtual IClientUnknown*		GetBaseEntity()			{ return 0; }
 	virtual IClientThinkable*	GetClientThinkable()	{ return 0; }
 	virtual IClientAlphaProperty*	GetClientAlphaProperty() { return 0; }
 

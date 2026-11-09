@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "shareddefs.h"
@@ -31,7 +29,7 @@ public:
 	DECLARE_CLASS( CHostageRescueZone, CBaseTrigger );
 
 	void CHostageRescue();
-	void Spawn();
+	void Spawn_Impl();
 	virtual void ReInitOnRoundStart( void );
 
 	void HostageRescueTouch( CBaseEntity* pOther );
@@ -47,8 +45,8 @@ class CInfoInstructorHintHostageRescueZone : public CPointEntity
 public:
 	DECLARE_CLASS( CInfoInstructorHintHostageRescueZone, CPointEntity );
 
-	void Spawn( void );
-	virtual int UpdateTransmitState( void )	// set transmit filter to transmit always
+	void Spawn_Impl( void );
+	int UpdateTransmitState_Impl( void )	// set transmit filter to transmit always
 	{
 		return SetTransmitState( FL_EDICT_ALWAYS );
 	}

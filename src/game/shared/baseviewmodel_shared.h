@@ -2,14 +2,12 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 #include "const.h"
 #include "shareddefs.h"
 
 #include "predictable_entity.h"
-import std;
 #include "baseplayer_shared.h"
 #include "shared_classnames.h"
 #include "ihasowner.h"
@@ -95,9 +93,9 @@ public:
 							~CBaseViewModel( void );
 
 
-	bool IsViewable(void) { return false; }
+	bool IsViewable_Impl(void) { return false; }
 
-	virtual void					UpdateOnRemove( void );
+	KS_VIRTUAL void					UpdateOnRemove_Impl( void );
 
 	// Weapon client handling
 	virtual void			SendViewModelMatchingSequence( int sequence );
@@ -116,9 +114,9 @@ public:
 	// Returns which viewmodel it is
 	int						ViewModelIndex( ) const;
 
-	virtual void			Precache( void );
+	KS_VIRTUAL void			Precache_Impl( void );
 
-	virtual void			Spawn( void );
+	KS_VIRTUAL void			Spawn_Impl( void );
 
 	virtual CBaseEntity *GetOwner( void ) { return m_hOwner; };
 
@@ -164,9 +162,9 @@ public:
 	virtual void			SetShouldIgnoreOffsetAndAccuracy( bool bIgnore ) { m_bShouldIgnoreOffsetAndAccuracy = bIgnore; }
 
 #if !defined( CLIENT_DLL )
-	virtual int				UpdateTransmitState( void );
-	virtual int				ShouldTransmit( const CCheckTransmitInfo *pInfo );
-	virtual void			SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
+	KS_VIRTUAL int				UpdateTransmitState_Impl( void );
+	KS_VIRTUAL int				ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo );
+	KS_VIRTUAL void			SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways );
 #else
 
 	virtual void			FireEvent( const Vector& origin, const QAngle& angles, int event, const char *options );

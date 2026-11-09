@@ -7,7 +7,6 @@
 #include "matchmaking/imatchframework.h"
 #include "c_cs_player.h"
 #include "usermessages.h"
-import std;
 #include "util_shared.h"
 
 enum PostProcessEffect_t
@@ -64,7 +63,7 @@ public:
 	float	flWeight;
 };
 
-class ClientModeCSNormal : public ClientModeShared, public IMatchEventsSink
+class ClientModeCSNormal : public ClientModeShared
 {
 DECLARE_CLASS( ClientModeCSNormal, ClientModeShared );
 
@@ -91,7 +90,7 @@ public:
 
 	int				GetDeathMessageStartHeight( void );
 
-	virtual void	FireGameEvent( IGameEvent *event );
+	void	FireGameEvent( IGameEvent *event );
 	virtual void	PostRenderVGui();
 	virtual void	PreRender(CViewSetup *pSetup) override;
 

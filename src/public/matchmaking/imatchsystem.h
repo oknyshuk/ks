@@ -6,24 +6,13 @@ import ks.tier1;
 
 class IPlayerManager;
 class IGameManager;
-class IServerManager;
-class ISearchManager;
 class IMatchVoice;
-class IDatacenter;
-class IDlcManager;
 
 class IMatchSystem
 {
 public:
-	virtual IPlayerManager * GetPlayerManager() = 0;
+	IPlayerManager * GetPlayerManager();
 
-	virtual IMatchVoice * GetMatchVoice() = 0;
+	IMatchVoice * GetMatchVoice();
 
-	virtual IServerManager * GetUserGroupsServerManager() = 0;
-
-	virtual ISearchManager * CreateGameSearchManager( KeyValues *pParams ) = 0;
-
-	virtual IDatacenter * GetDatacenter() = 0;
-
-	virtual IDlcManager * GetDlcManager() = 0;
 };

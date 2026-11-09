@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
+import std;
+import ks.core;
+import ks.math;
 import ks.tier1;
 #include "../game/shared/choreoscene.h"
 #include "../game/shared/choreoevent.h"
 #include "../game/shared/iscenetokenprocessor.h"
-import std;
 
 //-----------------------------------------------------------------------------
 // Purpose: Helper for parsing scene data file

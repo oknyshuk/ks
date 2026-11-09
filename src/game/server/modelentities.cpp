@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -54,7 +51,7 @@ IMPLEMENT_REFLECT_DATAMAP( CFuncBrush )
 
 IMPLEMENT_REFLECT_SERVERCLASS( CFuncBrush, DT_FuncBrush )
 
-void CFuncBrush::Spawn( void )
+void CFuncBrush::Spawn_Impl( void )
 {
 	SetMoveType( MOVETYPE_PUSH );  // so it doesn't get pushed by anything
 
@@ -84,9 +81,9 @@ void CFuncBrush::Spawn( void )
 	}
 }
 
-void CFuncBrush::Activate( void )
+void CFuncBrush::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	IPhysicsObject *pPhysObject = VPhysicsGetObject();
 	if( pPhysObject )
@@ -97,7 +94,7 @@ void CFuncBrush::Activate( void )
 
 //-----------------------------------------------------------------------------
 
-bool CFuncBrush::CreateVPhysics( void )
+bool CFuncBrush::CreateVPhysics_Impl( void )
 {
 
 	// NOTE: Don't init this static.  It's pretty common for these to be constrained
@@ -120,9 +117,9 @@ bool CFuncBrush::CreateVPhysics( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CFuncBrush::DrawDebugTextOverlays( void )
+int CFuncBrush::DrawDebugTextOverlays_Impl( void )
 {
-	int nOffset = BaseClass::DrawDebugTextOverlays();
+	int nOffset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -273,10 +270,10 @@ public:
 	DECLARE_CLASS( CTriggerBrush, CBaseEntity );
 
 	// engine inputs
-	void Spawn( void );
-	void StartTouch( CBaseEntity *pOther );
-	void EndTouch( CBaseEntity *pOther );
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Spawn_Impl( void );
+	void StartTouch_Impl( CBaseEntity *pOther );
+	void EndTouch_Impl( CBaseEntity *pOther );
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	// input filtering (use/touch/blocked)
 	bool PassesInputFilter( CBaseEntity *pOther, int filter );
@@ -310,7 +307,7 @@ LINK_ENTITY_TO_CLASS( trigger_brush, CTriggerBrush );
 IMPLEMENT_REFLECT_DATAMAP( CTriggerBrush )
 
 
-void CTriggerBrush::Spawn( void )
+void CTriggerBrush::Spawn_Impl( void )
 {
 	SetSolid( SOLID_BSP );
 	AddSolidFlags( FSOLID_TRIGGER );
@@ -329,13 +326,13 @@ void CTriggerBrush::Spawn( void )
 // Purpose: Called when an entity starts touching us.
 // Input  : pOther - the entity that is now touching us.
 //-----------------------------------------------------------------------------
-void CTriggerBrush::StartTouch( CBaseEntity *pOther )
+void CTriggerBrush::StartTouch_Impl( CBaseEntity *pOther )
 {
 	if ( PassesInputFilter(pOther, m_iInputFilter) && !(m_iInputFilter & TRIGGER_IGNORETOUCH) )
 	{
 		m_OnStartTouch.FireOutput( pOther, this );
 		if ( !m_iDontMessageParent )
-			BaseClass::StartTouch( pOther );
+			BaseClass::StartTouch_Impl( pOther );
 	}
 }
 
@@ -344,14 +341,14 @@ void CTriggerBrush::StartTouch( CBaseEntity *pOther )
 // Purpose: Called when an entity stops touching us.
 // Input  : pOther - the entity that was touching us.
 //-----------------------------------------------------------------------------
-void CTriggerBrush::EndTouch( CBaseEntity *pOther )
+void CTriggerBrush::EndTouch_Impl( CBaseEntity *pOther )
 {
 	if ( PassesInputFilter(pOther, m_iInputFilter) && !(m_iInputFilter & TRIGGER_IGNORETOUCH) )
 	{
 		m_OnEndTouch.FireOutput( pOther, this );
 
 		if ( !m_iDontMessageParent )
-			BaseClass::EndTouch( pOther );
+			BaseClass::EndTouch_Impl( pOther );
 	}
 }
 
@@ -363,14 +360,14 @@ void CTriggerBrush::EndTouch( CBaseEntity *pOther )
 //			useType - 
 //			value - 
 //-----------------------------------------------------------------------------
-void CTriggerBrush::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CTriggerBrush::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	if ( PassesInputFilter(pActivator, m_iInputFilter) && !(m_iInputFilter & TRIGGER_IGNOREUSE) )
 	{
 		m_OnUse.FireOutput( pActivator, this );
 		if ( !m_iDontMessageParent )
 		{
-			BaseClass::Use( pActivator, pCaller, useType, value );
+			BaseClass::Use_Impl( pActivator, pCaller, useType, value );
 		}
 	}
 }

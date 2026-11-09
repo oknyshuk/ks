@@ -102,93 +102,93 @@ class ISpatialPartition
 public:
 	// Create/destroy a handle for this dude in our system. Destroy
 	// will also remove it from all lists it happens to be in
-	virtual SpatialPartitionHandle_t CreateHandle( IHandleEntity *pHandleEntity ) = 0;
+	SpatialPartitionHandle_t CreateHandle( IHandleEntity *pHandleEntity );
 
 	// A fast method of creating a handle + inserting into the tree in the right place
-	virtual SpatialPartitionHandle_t CreateHandle( IHandleEntity *pHandleEntity,
-		SpatialPartitionListMask_t listMask, const Vector& mins, const Vector& maxs ) = 0; 
+	SpatialPartitionHandle_t CreateHandle( IHandleEntity *pHandleEntity,
+		SpatialPartitionListMask_t listMask, const Vector& mins, const Vector& maxs ); 
 
-	virtual void DestroyHandle( SpatialPartitionHandle_t handle ) = 0;
+	void DestroyHandle( SpatialPartitionHandle_t handle );
 
 	// Adds, removes an handle from a particular spatial partition list
 	// There can be multiple partition lists; each has a unique id
-	virtual void Insert( SpatialPartitionListMask_t listMask, 
-		SpatialPartitionHandle_t handle ) = 0;
-	virtual void Remove( SpatialPartitionListMask_t listMask, 
-		SpatialPartitionHandle_t handle ) = 0;
+	void Insert( SpatialPartitionListMask_t listMask, 
+		SpatialPartitionHandle_t handle );
+	void Remove( SpatialPartitionListMask_t listMask, 
+		SpatialPartitionHandle_t handle );
 
 	// Same as calling Remove() then Insert(). For performance-sensitive areas where you want to save a call.
-	virtual void RemoveAndInsert( SpatialPartitionListMask_t removeMask, SpatialPartitionListMask_t insertMask, 
-		SpatialPartitionHandle_t handle ) = 0;
+	void RemoveAndInsert( SpatialPartitionListMask_t removeMask, SpatialPartitionListMask_t insertMask, 
+		SpatialPartitionHandle_t handle );
 
 	// This will remove a particular handle from all lists
-	virtual void Remove( SpatialPartitionHandle_t handle ) = 0;
+	void Remove( SpatialPartitionHandle_t handle );
 
 	// Call this when an entity moves...
-	virtual void ElementMoved( SpatialPartitionHandle_t handle, 
-		const Vector& mins, const Vector& maxs ) = 0;
+	void ElementMoved( SpatialPartitionHandle_t handle, 
+		const Vector& mins, const Vector& maxs );
 
 	// A fast method to insert + remove a handle from the tree...
 	// This is used to suppress collision of a single model..
-	virtual SpatialTempHandle_t HideElement( SpatialPartitionHandle_t handle ) = 0;
-	virtual void UnhideElement( SpatialPartitionHandle_t handle, SpatialTempHandle_t tempHandle ) = 0;
+	SpatialTempHandle_t HideElement( SpatialPartitionHandle_t handle );
+	void UnhideElement( SpatialPartitionHandle_t handle, SpatialTempHandle_t tempHandle );
 	
 	// Installs callbacks to get called right before a query occurs
-	virtual void InstallQueryCallback( IPartitionQueryCallback *pCallback ) = 0;
-	virtual void RemoveQueryCallback( IPartitionQueryCallback *pCallback ) = 0;
+	void InstallQueryCallback( IPartitionQueryCallback *pCallback );
+	void RemoveQueryCallback( IPartitionQueryCallback *pCallback );
 
 	// Gets all entities in a particular volume...
 	// if coarseTest == true, it'll return all elements that are in
 	// spatial partitions that intersect the box
 	// if coarseTest == false, it'll return only elements that truly intersect
-	virtual void EnumerateElementsInBox(
+	void EnumerateElementsInBox(
 		SpatialPartitionListMask_t listMask,  
 		const Vector& mins, 
 		const Vector& maxs, 
 		bool coarseTest, 
 		IPartitionEnumerator* pIterator 
-		) = 0;
+		);
 
-	virtual void EnumerateElementsInSphere(
+	void EnumerateElementsInSphere(
 		SpatialPartitionListMask_t listMask, 
 		const Vector& origin, 
 		float radius, 
 		bool coarseTest, 
 		IPartitionEnumerator* pIterator 
-		) = 0;
+		);
 
-	virtual void EnumerateElementsAlongRay(
+	void EnumerateElementsAlongRay(
 		SpatialPartitionListMask_t listMask, 
 		const Ray_t& ray, 
 		bool coarseTest, 
 		IPartitionEnumerator* pIterator 
-		) = 0;
+		);
 
-	virtual void EnumerateElementsAtPoint( 
+	void EnumerateElementsAtPoint( 
 		SpatialPartitionListMask_t listMask, 
 		const Vector& pt, 
 		bool coarseTest, 
 		IPartitionEnumerator* pIterator
-		) = 0;
+		);
 
 	// For debugging.... suppress queries on particular lists
-	virtual void SuppressLists( SpatialPartitionListMask_t nListMask, bool bSuppress ) = 0;
-	virtual SpatialPartitionListMask_t GetSuppressedLists() = 0;
+	void SuppressLists( SpatialPartitionListMask_t nListMask, bool bSuppress );
+	SpatialPartitionListMask_t GetSuppressedLists();
 
-	virtual void RenderAllObjectsInTree( float flTime ) = 0;
-	virtual void RenderObjectsInPlayerLeafs( const Vector &vecPlayerMin, const Vector &vecPlayerMax, float flTime ) = 0;
-	virtual void RenderLeafsForRayTraceStart( float flTime ) = 0;
-	virtual void RenderLeafsForRayTraceEnd( void ) = 0;
-	virtual void RenderLeafsForHullTraceStart( float flTime ) = 0;
-	virtual void RenderLeafsForHullTraceEnd( void ) = 0;
-	virtual void RenderLeafsForBoxStart( float flTime ) = 0;
-	virtual void RenderLeafsForBoxEnd( void ) = 0;
-	virtual void RenderLeafsForSphereStart( float flTime ) = 0;
-	virtual void RenderLeafsForSphereEnd( void ) = 0;
+	void RenderAllObjectsInTree( float flTime );
+	void RenderObjectsInPlayerLeafs( const Vector &vecPlayerMin, const Vector &vecPlayerMax, float flTime );
+	void RenderLeafsForRayTraceStart( float flTime );
+	void RenderLeafsForRayTraceEnd( void );
+	void RenderLeafsForHullTraceStart( float flTime );
+	void RenderLeafsForHullTraceEnd( void );
+	void RenderLeafsForBoxStart( float flTime );
+	void RenderLeafsForBoxEnd( void );
+	void RenderLeafsForSphereStart( float flTime );
+	void RenderLeafsForSphereEnd( void );
 
-	virtual void RenderObjectsInBox( const Vector &vecMin, const Vector &vecMax, float flTime ) = 0;
-	virtual void RenderObjectsInSphere( const Vector &vecCenter, float flRadius, float flTime ) = 0;
-	virtual void RenderObjectsAlongRay( const Ray_t& ray, float flTime ) = 0;
+	void RenderObjectsInBox( const Vector &vecMin, const Vector &vecMax, float flTime );
+	void RenderObjectsInSphere( const Vector &vecCenter, float flRadius, float flTime );
+	void RenderObjectsAlongRay( const Ray_t& ray, float flTime );
 
-	virtual void ReportStats( const char *pFileName ) = 0;
+	void ReportStats( const char *pFileName );
 };

@@ -3,8 +3,6 @@
 
 // Purpose: Interface layer for ipion IVP physics.
 
-import std;
-import ks.vstdlib;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.vstdlib;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -68,7 +65,6 @@ import ks.vstdlib;
 #include "vphysics/performance.h"
 #include "positionwatcher.h"
 #include "vphysics/constraints.h"
-#include "vphysics2_interface.h"
 #include "vphysics2_interface_flags.h"
 
 void PrecachePhysicsSounds( void );
@@ -93,7 +89,7 @@ static IPhysicsObject *PhysCreateWorld( CBaseEntity *pWorld );
 static void PhysFrame( float deltaTime );
 static bool IsDebris( int collisionGroup );
 
-void TimescaleChanged( IConVar *var, const char *pOldString, float flOldValue )
+void TimescaleChanged( ConVar *var, const char *pOldString, float flOldValue )
 {
 	if ( physenv )
 	{
@@ -633,9 +629,9 @@ bool FindMaxContact( IPhysicsObject *pObject, float minForce, IPhysicsObject **p
 	return false;
 }
 
+extern bool PropIsGib(CBaseEntity *pEntity);
 bool CCollisionEvent::ShouldFreezeObject( IPhysicsObject *pObject )
 {
-	extern bool PropIsGib(CBaseEntity *pEntity);
 	// for now, don't apply a per-object limit to ai MOVETYPE_PUSH objects
 	// NOTE: If this becomes a problem (too many collision checks this tick) we should add a path
 	// to inform the logic in VPhysicsUpdatePusher() about the limit being applied so 
@@ -1317,7 +1313,7 @@ static void surfaceprop( const CCommand &args )
 	{
 		const model_t *pModel = modelinfo->GetModel( tr.Ent<CBaseEntity>()->GetModelIndex() );
 		const char *pModelName = STRING(tr.Ent<CBaseEntity>()->GetModelName());
-		if ( tr.DidHitWorld() && tr.hitbox > 0 )
+		if ( TraceDidHitWorld( tr ) && tr.hitbox > 0 )
 		{
 			ICollideable *pCollide = staticpropmgr->GetStaticPropByIndex( tr.hitbox-1 );
 			pModel = pCollide->GetCollisionModel();
@@ -1445,11 +1441,11 @@ public:
 
 // traverses the graph of attachments (currently supports springs & constraints) starting at an entity
 // Then turns on debug info for each link in the graph (springs/constraints are links)
+extern bool GetSpringAttachments( CBaseEntity *pEntity, CBaseEntity *pAttach[2], IPhysicsObject *pAttachVPhysics[2] );
+extern bool GetConstraintAttachments( CBaseEntity *pEntity, CBaseEntity *pAttach[2], IPhysicsObject *pAttachVPhysics[2] );
+extern void DebugConstraint(CBaseEntity *pEntity);
 static void DebugConstraints( CBaseEntity *pEntity )
 {
-	extern bool GetSpringAttachments( CBaseEntity *pEntity, CBaseEntity *pAttach[2], IPhysicsObject *pAttachVPhysics[2] );
-	extern bool GetConstraintAttachments( CBaseEntity *pEntity, CBaseEntity *pAttach[2], IPhysicsObject *pAttachVPhysics[2] );
-	extern void DebugConstraint(CBaseEntity *pEntity);
 
 	if ( !pEntity )
 		return;

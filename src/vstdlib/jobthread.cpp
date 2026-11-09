@@ -172,117 +172,15 @@ int	CJobQueue::m_MinPriority = JP_LOW;
 class CJobThread;
 
 //-----------------------------------------------------------------------------
-//
-// CThreadPool
-//
-//-----------------------------------------------------------------------------
-
-class CThreadPool : public CRefCounted1<IThreadPool, CRefCountServiceMT>
-{
-public:
-	CThreadPool();
-	~CThreadPool();
-
-	//-----------------------------------------------------
-	// Thread functions
-	//-----------------------------------------------------
-	bool Start( const ThreadPoolStartParams_t &startParams = ThreadPoolStartParams_t() ) { return Start( startParams, nullptr ); }
-	bool Start( const ThreadPoolStartParams_t &startParams, const char *pszNameOverride );
-	bool Stop( int timeout = TT_INFINITE );
-	void Distribute( bool bDistribute = true, int *pAffinityTable = nullptr );
-
-	//-----------------------------------------------------
-	// Functions for any thread
-	//-----------------------------------------------------
-	unsigned GetJobCount()							{ return m_nJobs; }
-	int NumThreads();
-	int NumIdleThreads();
-
-	//-----------------------------------------------------
-	// Pause/resume processing jobs
-	//-----------------------------------------------------
-	int SuspendExecution();
-	int ResumeExecution();
-
-	//-----------------------------------------------------
-	// Offer the current thread to the pool
-	//-----------------------------------------------------
-	virtual int YieldWait( CThreadEvent **pEvents, int nEvents, bool bWaitAll = true, unsigned timeout = TT_INFINITE );
-	virtual int YieldWait( CJob **, int nJobs, bool bWaitAll = true, unsigned timeout = TT_INFINITE );
-	void Yield( unsigned timeout );
-	virtual int YieldWaitPerFrameJobs( );
-
-	//-----------------------------------------------------
-	// Add a native job to the queue (master thread)
-	//-----------------------------------------------------
-	void AddJob( CJob * );
-	virtual void AddPerFrameJob( CJob * );
-	void InsertJobInQueue( CJob * );
-
-	//-----------------------------------------------------
-	// Add an function object to the queue (master thread)
-	//-----------------------------------------------------
-	void AddFunctorInternal( CFunctor *, CJob ** = nullptr, const char *pszDescription = nullptr, unsigned flags = 0 );
-
-	//-----------------------------------------------------
-	// Remove a job from the queue (master thread)
-	//-----------------------------------------------------
-	virtual void ChangePriority( CJob *p, JobPriority_t priority );
-
-	//-----------------------------------------------------
-	// Bulk job manipulation (blocking)
-	//-----------------------------------------------------
-	int ExecuteToPriority( JobPriority_t toPriority, JobFilter_t pfnFilter = nullptr  );
-	int AbortAll();
-
-private:
-	enum
-	{
-		IO_STACKSIZE = ( 64 * 1024 ),
-		COMPUTATION_STACKSIZE = 0,
-	};
-
-	//-----------------------------------------------------
-	//
-	//-----------------------------------------------------
-	CJob *PeekJob();
-	CJob *GetDummyJob();
-
-	//-----------------------------------------------------
-	// Thread functions
-	//-----------------------------------------------------
-	int Run();
-
-private:
-	friend class CJobThread;
-
-	CJobQueue				m_SharedQueue;
-	std::atomic<int>			m_nIdleThreads;
-	std::vector< CJobThread * > m_Threads;
-
-	std::recursive_mutex		m_SuspendMutex;
-	int						m_nSuspend;
-	std::atomic<int>			m_nJobs;
-
-	// Some jobs should only be executed on the threadpool thread(s). Ie: the rendering thread has the GL context
-	//	and the main thread coming in and "helping" with jobs breaks that pretty nicely. This flag states that
-	//	only the threadpool threads should execute these jobs.
-	bool					m_bExecOnThreadPoolThreadsOnly;
-
-	std::recursive_mutex		m_PerFrameJobListMutex;
-	ks::small_vector< CJob *, 2048 >	m_PerFrameJobs;
-};
-
-//-----------------------------------------------------------------------------
 
 IThreadPool *CreateNewThreadPool()
 {
-	return new CThreadPool;
+	return new IThreadPool;
 }
 
 void DestroyThreadPool( IThreadPool *pPool )
 {
-	delete static_cast<CThreadPool*>( pPool );
+	delete pPool;
 }
 
 //-----------------------------------------------------------------------------
@@ -331,38 +229,14 @@ static int DefaultGlobalWorkerCount()
 	return ( nSplit > 3 ) ? nSplit : 3;
 }
 
-class CGlobalThreadPool : public CThreadPool
-{
-public:
-	virtual bool Start( const ThreadPoolStartParams_t &startParamsIn )
-	{
-		int nThreads = ( CommandLine()->ParmValue( "-threads", -1 ) - 1 );
-		ThreadPoolStartParams_t startParams = startParamsIn;
-
-		if ( nThreads >= 0 )
-		{
-			startParams.nThreads = nThreads;
-		}
-		else
-		{
-			startParams.nThreads = DefaultGlobalWorkerCount();
-		}
-		return CThreadPool::Start( startParams, "GlobPool" );
-	}
-	virtual bool OnFinalRelease()
-	{
-		contract_assert( false && "Releasing global thread pool object!" );
-		return false;
-	}
-};
-
 //-----------------------------------------------------------------------------
 
 class CJobThread : public CWorkerThread
 {
 public:
-	CJobThread( CThreadPool *pOwner, int iThread ) : 
-		m_SharedQueue( pOwner->m_SharedQueue ),
+	CJobThread( IThreadPool *pOwner, int iThread ) : 
+		CWorkerThread( [this] { return Run(); } ),
+		m_SharedQueue( *pOwner->m_pSharedQueue ),
 		m_pOwner( pOwner ),
 		m_iThread( iThread )
 	{
@@ -470,41 +344,45 @@ private:
 
 	CJobQueue			m_DirectQueue;
 	CJobQueue &			m_SharedQueue;
-	CThreadPool *		m_pOwner;
+	IThreadPool *		m_pOwner;
 	CThreadManualEvent	m_IdleEvent;
 	int					m_iThread;
 };
 
 //-----------------------------------------------------------------------------
 
-CGlobalThreadPool g_ThreadPool;
+IThreadPool g_ThreadPool( true );
 IThreadPool *g_pThreadPool = &g_ThreadPool;
 
 IThreadPool *g_pAlternateThreadPool;
 
 //-----------------------------------------------------------------------------
 //
-// CThreadPool
+// IThreadPool
 //
 //-----------------------------------------------------------------------------
 
-CThreadPool::CThreadPool() :
+IThreadPool::IThreadPool( bool bGlobalPool ) :
+	m_iRefs( 1 ),
+	m_bGlobalPool( bGlobalPool ),
+	m_pSharedQueue( std::make_unique<CJobQueue>() ),
 	m_nIdleThreads( 0 ),
+	m_nSuspend( 0 ),
 	m_nJobs( 0 ),
-	m_nSuspend( 0 )
+	m_bExecOnThreadPoolThreadsOnly( false )
 {
 }
 
 //---------------------------------------------------------
 
-CThreadPool::~CThreadPool()
+IThreadPool::~IThreadPool()
 {
 }
 
 //---------------------------------------------------------
 // 
 //---------------------------------------------------------
-int CThreadPool::NumThreads()
+int IThreadPool::NumThreads()
 {
 	return std::ssize( m_Threads );
 }
@@ -512,7 +390,7 @@ int CThreadPool::NumThreads()
 //---------------------------------------------------------
 // 
 //---------------------------------------------------------
-int CThreadPool::NumIdleThreads()
+int IThreadPool::NumIdleThreads()
 {
 	return m_nIdleThreads;
 }
@@ -520,7 +398,7 @@ int CThreadPool::NumIdleThreads()
 //---------------------------------------------------------
 // Pause/resume processing jobs
 //---------------------------------------------------------
-int CThreadPool::SuspendExecution()
+int IThreadPool::SuspendExecution()
 {
 	std::scoped_lock lock( m_SuspendMutex );
 
@@ -554,7 +432,7 @@ int CThreadPool::SuspendExecution()
 
 //---------------------------------------------------------
 
-int CThreadPool::ResumeExecution()
+int IThreadPool::ResumeExecution()
 {
 	std::scoped_lock lock( m_SuspendMutex );
 	contract_assert( ( m_nSuspend >= 1 ) && "Attempted resume when not suspended" );
@@ -571,7 +449,7 @@ int CThreadPool::ResumeExecution()
 
 //---------------------------------------------------------
 
-int CThreadPool::YieldWait( CThreadEvent **pEvents, int nEvents, bool bWaitAll, unsigned timeout )
+int IThreadPool::YieldWait( CThreadEvent **pEvents, int nEvents, bool bWaitAll, unsigned timeout )
 {
 	contract_assert( timeout == TT_INFINITE ); // unimplemented
 	int result;
@@ -580,7 +458,7 @@ int CThreadPool::YieldWait( CThreadEvent **pEvents, int nEvents, bool bWaitAll, 
 	timeout = 0;
 	while ( ( result = CThreadEvent::WaitForMultiple( nEvents, pEvents, bWaitAll, timeout ) ) == TW_TIMEOUT )
 	{
-		if (!m_bExecOnThreadPoolThreadsOnly && m_SharedQueue.Pop( &pJob ) )
+		if (!m_bExecOnThreadPoolThreadsOnly && m_pSharedQueue->Pop( &pJob ) )
 		{
 			ServiceJobAndRelease( pJob );
 			m_nJobs--;
@@ -606,7 +484,7 @@ int CThreadPool::YieldWait( CThreadEvent **pEvents, int nEvents, bool bWaitAll, 
 
 //---------------------------------------------------------
 
-int CThreadPool::YieldWait( CJob **ppJobs, int nJobs, bool bWaitAll, unsigned timeout )
+int IThreadPool::YieldWait( CJob **ppJobs, int nJobs, bool bWaitAll, unsigned timeout )
 {
 	std::inplace_vector< CThreadEvent*, 64 > handles;
 	if ( nJobs > int( handles.capacity() ) - 2 )
@@ -624,7 +502,7 @@ int CThreadPool::YieldWait( CJob **ppJobs, int nJobs, bool bWaitAll, unsigned ti
 
 //---------------------------------------------------------
 
-void CThreadPool::Yield( unsigned timeout )
+void IThreadPool::Yield( unsigned timeout )
 {
 	// @MULTICORE (toml 10/24/2006): not implemented
 	contract_assert( ThreadInMainThread() );
@@ -640,7 +518,7 @@ void CThreadPool::Yield( unsigned timeout )
 //---------------------------------------------------------
 // Block until all per-frame jobs are done
 //---------------------------------------------------------
-int CThreadPool::YieldWaitPerFrameJobs( )
+int IThreadPool::YieldWaitPerFrameJobs( )
 {
 	ks::ScratchArena<> scratch;
 	// NOTE: Per-Frame jobs may spawn other per-frame jobs.
@@ -677,7 +555,7 @@ int CThreadPool::YieldWaitPerFrameJobs( )
 //---------------------------------------------------------
 // Add a job to the queue
 //---------------------------------------------------------
-void CThreadPool::AddJob( CJob *pJob )
+void IThreadPool::AddJob( CJob *pJob )
 {
 	if ( !pJob )
 	{
@@ -729,7 +607,7 @@ void CThreadPool::AddJob( CJob *pJob )
 // Add a native job to the queue (master thread)
 // Call YieldWaitPerFrameJobs() to wait only until all per-frame jobs are done
 //-----------------------------------------------------
-void CThreadPool::AddPerFrameJob( CJob *pJob )
+void IThreadPool::AddPerFrameJob( CJob *pJob )
 {
 	m_PerFrameJobListMutex.lock();
 	pJob->AddRef();
@@ -743,7 +621,7 @@ void CThreadPool::AddPerFrameJob( CJob *pJob )
 //---------------------------------------------------------
 //
 //---------------------------------------------------------
-void CThreadPool::InsertJobInQueue( CJob *pJob )
+void IThreadPool::InsertJobInQueue( CJob *pJob )
 {
 	CJobQueue *pQueue;
 
@@ -752,7 +630,7 @@ void CThreadPool::InsertJobInQueue( CJob *pJob )
 		int iThread = pJob->GetServiceThread();
 		if ( iThread == -1 || !ks::is_valid_index( m_Threads, iThread ) )
 		{
-			pQueue = &m_SharedQueue;
+			pQueue = m_pSharedQueue.get();
 		}
 		else
 		{
@@ -770,43 +648,20 @@ void CThreadPool::InsertJobInQueue( CJob *pJob )
 }
 
 //---------------------------------------------------------
-// Add an function object to the queue (master thread)
-//---------------------------------------------------------
-
-void CThreadPool::AddFunctorInternal( CFunctor *pFunctor, CJob **ppJob, const char *pszDescription, unsigned flags )
-{
-	// Note: assumes caller has handled refcount
-	CJob *pJob = new CFunctorJob( pFunctor, pszDescription );
-
-	pJob->SetFlags( flags );
-
-	AddJob( pJob );
-
-	if ( ppJob )
-	{
-		*ppJob = pJob;
-	}
-	else
-	{
-		pJob->Release();
-	}
-}
-
-//---------------------------------------------------------
 // Remove a job from the queue
 //---------------------------------------------------------
 
-void CThreadPool::ChangePriority( CJob *pJob, JobPriority_t priority )
+void IThreadPool::ChangePriority( CJob *pJob, JobPriority_t priority )
 {
 	// Right now, only support upping the priority
 	if ( pJob->GetPriority() < priority )
 	{
 		pJob->SetPriority( priority );
-		m_SharedQueue.Push( pJob );
+		m_pSharedQueue->Push( pJob );
 	}
 	else
 	{
-		ExecuteOnce( [&]{ if ( pJob->GetPriority() != priority ) DevMsg( "CThreadPool::RemoveJob not implemented right now" ); } );
+		ExecuteOnce( [&]{ if ( pJob->GetPriority() != priority ) DevMsg( "IThreadPool::RemoveJob not implemented right now" ); } );
 	}
 
 }
@@ -817,7 +672,7 @@ void CThreadPool::ChangePriority( CJob *pJob, JobPriority_t priority )
 
 constexpr auto THREADED_EXECUTETOPRIORITY = 0; //  Not ready for general consumption [8/4/2010 tom]
 
-int CThreadPool::ExecuteToPriority( JobPriority_t iToPriority, JobFilter_t pfnFilter )
+int IThreadPool::ExecuteToPriority( JobPriority_t iToPriority, JobFilter_t pfnFilter )
 {
 	if ( !THREADED_EXECUTETOPRIORITY || pfnFilter )
 	{
@@ -858,9 +713,9 @@ int CThreadPool::ExecuteToPriority( JobPriority_t iToPriority, JobFilter_t pfnFi
 
 			}
 
-			while ( m_SharedQueue.Count( (JobPriority_t)iCurPriority ) )
+			while ( m_pSharedQueue->Count( (JobPriority_t)iCurPriority ) )
 			{
-				m_SharedQueue.Pop( &pJob );
+				m_pSharedQueue->Pop( &pJob );
 				if ( pfnFilter && !(*pfnFilter)( pJob ) )
 				{
 					if ( pJob->CanExecute() )
@@ -909,7 +764,7 @@ int CThreadPool::ExecuteToPriority( JobPriority_t iToPriority, JobFilter_t pfnFi
 		do
 		{
 			YieldWait( (CThreadEvent **)handles.data(), std::ssize( handles ), true, TT_INFINITE );
-			if ( m_SharedQueue.Pop( &pJob ) )
+			if ( m_pSharedQueue->Pop( &pJob ) )
 			{
 				ServiceJobAndRelease( pJob );
 				m_nJobs--;
@@ -926,13 +781,13 @@ int CThreadPool::ExecuteToPriority( JobPriority_t iToPriority, JobFilter_t pfnFi
 //
 //---------------------------------------------------------
 
-int CThreadPool::AbortAll()
+int IThreadPool::AbortAll()
 {
 	SuspendExecution();
 	CJob *pJob;
 
 	int iAborted = 0;
-	while ( m_SharedQueue.Pop( &pJob ) )
+	while ( m_pSharedQueue->Pop( &pJob ) )
 	{
 		pJob->Abort();
 		pJob->Release();
@@ -959,10 +814,31 @@ int CThreadPool::AbortAll()
 }
 
 //---------------------------------------------------------
-// CThreadPool thread functions
+// IThreadPool thread functions
 //---------------------------------------------------------
 
-bool CThreadPool::Start( const ThreadPoolStartParams_t &startParams, const char *pszName )
+bool IThreadPool::Start( const ThreadPoolStartParams_t &startParamsIn )
+{
+	if ( m_bGlobalPool )
+	{
+		// The engine's global pool sizes itself
+		int nThreads = ( CommandLine()->ParmValue( "-threads", -1 ) - 1 );
+		ThreadPoolStartParams_t startParams = startParamsIn;
+
+		if ( nThreads >= 0 )
+		{
+			startParams.nThreads = nThreads;
+		}
+		else
+		{
+			startParams.nThreads = DefaultGlobalWorkerCount();
+		}
+		return Start( startParams, "GlobPool" );
+	}
+	return Start( startParamsIn, nullptr );
+}
+
+bool IThreadPool::Start( const ThreadPoolStartParams_t &startParams, const char *pszName )
 {
 
 	int nThreads = startParams.nThreads;
@@ -1058,7 +934,7 @@ bool CThreadPool::Start( const ThreadPoolStartParams_t &startParams, const char 
 
 //---------------------------------------------------------
 
-void CThreadPool::Distribute( bool bDistribute, int *pAffinityTable )
+void IThreadPool::Distribute( bool bDistribute, int *pAffinityTable )
 {
 	if ( bDistribute )
 	{
@@ -1101,7 +977,7 @@ void CThreadPool::Distribute( bool bDistribute, int *pAffinityTable )
 
 //---------------------------------------------------------
 
-bool CThreadPool::Stop( int timeout )
+bool IThreadPool::Stop( int timeout )
 {
 
 	for ( int i = 0; i < std::ssize( m_Threads ); i++ )
@@ -1121,34 +997,12 @@ bool CThreadPool::Stop( int timeout )
 	}
 
 	m_nJobs = 0;
-	m_SharedQueue.Flush();
+	m_pSharedQueue->Flush();
 	m_nIdleThreads = 0;
 	m_Threads.clear();
 
 	return true;
 }
-
-//---------------------------------------------------------
-
-CJob *CThreadPool::GetDummyJob()
-{
-	class CDummyJob : public CJob
-	{
-	public:
-		CDummyJob()
-		{
-			Execute();
-		}
-
-		virtual JobStatus_t DoExecute() { return JOB_OK; }
-	};
-
-	static CDummyJob dummyJob;
-
-	dummyJob.AddRef();
-	return &dummyJob;
-}
-
 
 namespace ThreadPoolTest 
 {
@@ -1156,46 +1010,41 @@ int g_iSleep;
 
 CThreadEvent g_done;
 int g_nTotalToComplete;
-CThreadPool *g_pTestThreadPool;
+IThreadPool *g_pTestThreadPool;
 
-class CCountJob : public CJob
+std::atomic<int> g_nCountJobsRun;
+
+// The work of one test job. bDoWork is a copy of the flag, so it is cleared per job.
+JobStatus_t CountJobExecute( bool bDoWork )
 {
-public:
-	virtual JobStatus_t DoExecute()
+	g_nCountJobsRun++;
+	ThreadPause();
+	if ( g_iSleep >= 0)
+		ThreadSleep( g_iSleep );
+	if ( bDoWork )
 	{
-		m_nCount++;
-		ThreadPause();
-		if ( g_iSleep >= 0)
-			ThreadSleep( g_iSleep );
-		if ( bDoWork )
+		byte pMemory[1024];
+		int i;
+		for ( i = 0; i < 1024; i++ )
 		{
-			byte pMemory[1024];
-			int i;
-			for ( i = 0; i < 1024; i++ )
-			{
-				pMemory[i] = std::rand();
-			}
-			for ( i = 0; i < 50; i++ )
-			{
-				std::sqrt( (float)HashBlock( pMemory, 1024 ) + HashBlock( pMemory, 1024 ) + 10.0 );
-			}
-			bDoWork = false;
+			pMemory[i] = std::rand();
 		}
-		if ( m_nCount == g_nTotalToComplete )
-			g_done.Set();
-		return 0;
+		for ( i = 0; i < 50; i++ )
+		{
+			std::sqrt( (float)HashBlock( pMemory, 1024 ) + HashBlock( pMemory, 1024 ) + 10.0 );
+		}
 	}
+	if ( g_nCountJobsRun == g_nTotalToComplete )
+		g_done.Set();
+	return JOB_OK;
+}
 
-	static std::atomic<int> m_nCount;
-	bool bDoWork;
-};
-std::atomic<int> CCountJob::m_nCount;
 int g_nTotalAtFinish;
 
 void Test( bool bDistribute, bool bSleep = true, bool bFinishExecute = false, bool bDoWork = false, bool bIncludeMain = false, bool bPrioritized = false )
 {
 	int nJobCount = 4000;
-	CCountJob *jobs = new CCountJob[4000];
+	std::vector<CJob *> jobs( 4000 );
 	for ( int bInterleavePushPop = 0; bInterleavePushPop < 2; bInterleavePushPop++ )
 	{
 		for ( g_iSleep = -10; g_iSleep <= 10; g_iSleep += 10 )
@@ -1205,7 +1054,7 @@ void Test( bool bDistribute, bool bSleep = true, bool bFinishExecute = false, bo
 			int nIncrement = ( false ) ? 1 : 2;
 			for ( int i = 1; i <= nMaxThreads; i += nIncrement )
 			{
-				CCountJob::m_nCount = 0;
+				g_nCountJobsRun = 0;
 				g_nTotalAtFinish = 0;
 				ThreadPoolStartParams_t params;
 				params.nThreads = i;
@@ -1224,13 +1073,13 @@ void Test( bool bDistribute, bool bSleep = true, bool bFinishExecute = false, bo
 				timer.Start();
 				for ( int j = 0; j < nJobCount; j++ )
 				{
-					jobs[j].SetFlags( JF_QUEUE );
-					jobs[j].bDoWork = bDoWork;
+					jobs[j] = new CJob( [bDoWork]() { return CountJobExecute( bDoWork ); } );
+					jobs[j]->SetFlags( JF_QUEUE );
 					if ( bPrioritized )
 					{
-						jobs[j].SetPriority( (JobPriority_t)RandomInt( JP_LOW, JP_IMMEDIATE ) );
+						jobs[j]->SetPriority( (JobPriority_t)RandomInt( JP_LOW, JP_IMMEDIATE ) );
 					}
-					g_pTestThreadPool->AddJob( &jobs[j] );
+					g_pTestThreadPool->AddJob( jobs[j] );
 					if ( bSleep && j % 16 == 0 )
 					{
 						ThreadSleep( 0 );
@@ -1256,7 +1105,7 @@ void Test( bool bDistribute, bool bSleep = true, bool bFinishExecute = false, bo
 						g_done.Wait();
 					}
 				}
-				g_nTotalAtFinish = CCountJob::m_nCount;
+				g_nTotalAtFinish = g_nCountJobsRun;
 				timer.End();
 				g_pTestThreadPool->SuspendExecution();
 				suspendTimer.End();
@@ -1267,25 +1116,35 @@ void Test( bool bDistribute, bool bSleep = true, bool bFinishExecute = false, bo
 				int counts[9] = { 0 };
 				for ( int j = 0; j < nJobCount; j++ )
 				{
-					if ( jobs[j].GetServiceThread() != -1 )
+					if ( jobs[j]->GetServiceThread() != -1 )
 					{
-						counts[jobs[j].GetServiceThread()+1]++;
-						jobs[j].ClearServiceThread();
+						counts[jobs[j]->GetServiceThread()+1]++;
+						jobs[j]->ClearServiceThread();
 					}
-					else if ( jobs[j].GetStatus() == JOB_OK )
+					else if ( jobs[j]->GetStatus() == JOB_OK )
 					{
 						counts[0]++;
 					}
 				}
 
+				for ( int j = 0; j < nJobCount; j++ )
+				{
+					jobs[j]->Release();
+					jobs[j] = nullptr;
+				}
+
 				Msg( "ThreadPoolTest:         %d threads -- %d (%d) jobs processed in %fms, %fms to suspend (%f/%f) [ (main) %d, %d, %d, %d, %d, %d, %d, %d, %d]\n", 
-					i, (int)g_nTotalAtFinish, (int)CCountJob::m_nCount, timer.GetDuration().GetMillisecondsF(), suspendTimer.GetDuration().GetMillisecondsF() - timer.GetDuration().GetMillisecondsF(),
-					timer.GetDuration().GetMillisecondsF() / (float)CCountJob::m_nCount, (suspendTimer.GetDuration().GetMillisecondsF())/(float)g_nTotalAtFinish,
+					i, (int)g_nTotalAtFinish, (int)g_nCountJobsRun, timer.GetDuration().GetMillisecondsF(), suspendTimer.GetDuration().GetMillisecondsF() - timer.GetDuration().GetMillisecondsF(),
+					timer.GetDuration().GetMillisecondsF() / (float)g_nCountJobsRun, (suspendTimer.GetDuration().GetMillisecondsF())/(float)g_nTotalAtFinish,
 					counts[0], counts[1], counts[2], counts[3], counts[4], counts[5], counts[6], counts[7], counts[8] );
 			}
 		}
 	}
-	delete[]jobs;
+	for ( CJob *pJob : jobs )
+	{
+		if ( pJob )
+			pJob->Release();
+	}
 }
 
 
@@ -1293,55 +1152,47 @@ bool g_bOutputError;
 volatile int g_ReadyToExecute;
 std::atomic<int> g_nReady;
 
-class CExecuteTestJob : public CJob
+// Does some work, then checks it has not been (or is being) completed behind its back.
+JobStatus_t ExecuteTestJobExecute( CJob *pSelf )
 {
-public:
-	virtual JobStatus_t DoExecute()
+	byte pMemory[1024];
+	int i;
+	for ( i = 0; i < 1024; i++ )
 	{
-		byte pMemory[1024];
-		int i;
-		for ( i = 0; i < 1024; i++ )
-		{
-			pMemory[i] = std::rand();
-		}
-		for ( i = 0; i < 50; i++ )
-		{
-			std::sqrt( (float)HashBlock( pMemory, 1024 ) + HashBlock( pMemory, 1024 ) + 10.0 );
-		}
-		if ( AccessEvent()->Check() || IsFinished() )
-		{
-			if ( !g_bOutputError )
-			{
-				Msg( "Forced execute test failed!\n" );
-				DebuggerBreakIfDebugging();
-			}
-		}
-		return 0;
+		pMemory[i] = std::rand();
 	}
-};
-
-class CExecuteTestExecuteJob : public CJob
-{
-public:
-	virtual JobStatus_t DoExecute()
+	for ( i = 0; i < 50; i++ )
 	{
-		bool bAbort = ( RandomInt(  1, 10 ) == 1 );
-		g_nReady++;
-		while ( !g_ReadyToExecute )
+		std::sqrt( (float)HashBlock( pMemory, 1024 ) + HashBlock( pMemory, 1024 ) + 10.0 );
+	}
+	if ( pSelf->AccessEvent()->Check() || pSelf->IsFinished() )
+	{
+		if ( !g_bOutputError )
 		{
-			ThreadPause();
+			Msg( "Forced execute test failed!\n" );
+			DebuggerBreakIfDebugging();
 		}
+	}
+	return JOB_OK;
+}
 
-		if ( !bAbort )
-			m_pTestJob->Execute();
-		else
-			m_pTestJob->Abort();
-		g_nReady--;
-		return 0;
+// Waits for the go signal, then forces (or aborts) the test job from a pool thread.
+JobStatus_t ExecuteTestExecuteJobExecute( CJob *pTestJob )
+{
+	bool bAbort = ( RandomInt(  1, 10 ) == 1 );
+	g_nReady++;
+	while ( !g_ReadyToExecute )
+	{
+		ThreadPause();
 	}
 
-	CExecuteTestJob *m_pTestJob;
-};
+	if ( !bAbort )
+		pTestJob->Execute();
+	else
+		pTestJob->Abort();
+	g_nReady--;
+	return JOB_OK;
+}
 
 
 void TestForcedExecute()
@@ -1358,15 +1209,16 @@ void TestForcedExecute()
 			g_pTestThreadPool->Start( params, "Tst" );
 
 			int nJobCount = 4000;
-			CExecuteTestJob *jobs = new CExecuteTestJob[nJobCount];
+			std::vector<CJob *> jobs( nJobCount );
 			for ( int j = 0; j < nJobCount; j++ )
 			{
+				// the job refers to itself through its slot in jobs
+				jobs[j] = new CJob( [pJob = (CJob **)&jobs[j]]() { return ExecuteTestJobExecute( *pJob ); } );
 				g_ReadyToExecute = false;
 				for ( int k = 0; k < i; k++ )
 				{
-					CExecuteTestExecuteJob *pJob = new CExecuteTestExecuteJob;
+					CJob *pJob = new CJob( [pTestJob = jobs[j]]() { return ExecuteTestExecuteJobExecute( pTestJob ); } );
 					pJob->SetFlags( JF_QUEUE );
-					pJob->m_pTestJob = &jobs[j];
 					g_pTestThreadPool->AddJob( pJob );
 					pJob->Release();
 				}
@@ -1376,14 +1228,15 @@ void TestForcedExecute()
 				}
 				g_ReadyToExecute = true;
 				ThreadSleep();
-				jobs[j].Execute();
+				jobs[j]->Execute();
 				while ( g_nReady > 0 )
 				{
 					ThreadPause();
 				}
 			}
 			g_pTestThreadPool->Stop();
-			delete []jobs;
+			for ( CJob *pJob : jobs )
+				pJob->Release();
 		}
 	}
 	Msg( "TestForcedExecute DONE\n" );
@@ -1393,7 +1246,7 @@ void TestForcedExecute()
 
 void RunThreadPoolTests()
 {
-	CThreadPool pool;
+	IThreadPool pool;
 	ThreadPoolTest::g_pTestThreadPool = &pool;
 	RunTSQueueTests(10000);
 	RunTSListTests(10000);

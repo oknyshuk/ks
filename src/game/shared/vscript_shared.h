@@ -3,6 +3,7 @@
 // Copyright (c) 2008 Valve Corporation
 
 #include "vscript/ivscript.h"
+#include "vscript/vscript_game.h"
 
 extern LoggingChannelID_t LOG_VScript;;
 

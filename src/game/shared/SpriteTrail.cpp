@@ -5,11 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
-import ks.vstdlib;
 #include "const.h"
 #include "string_t.h"
 #include "predictableid.h"
@@ -25,7 +21,6 @@ import ks.vstdlib;
 #include "cdll_client_int.h"
 #include "engine/ivmodelinfo.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "edict.h"
 #include "eiface.h"
 #include "iserverentity.h"
@@ -124,20 +119,20 @@ CSpriteTrail::CSpriteTrail( void )
 	m_flEndWidth = -1.0f;
 }
 
-void CSpriteTrail::Spawn( void )
+void CSpriteTrail::Spawn_Impl( void )
 {
 #ifdef CLIENT_DLL
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 #else
 
 	if ( GetModelName() != NULL_STRING )
 	{
-		BaseClass::Spawn();
+		BaseClass::Spawn_Impl();
 		return;
 	}
 
 	SetModelName( m_iszSpriteName );
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	SetSolid( SOLID_NONE );
 	SetMoveType( MOVETYPE_NOCLIP );
@@ -151,9 +146,9 @@ void CSpriteTrail::Spawn( void )
 //-----------------------------------------------------------------------------
 // Sets parameters of the sprite trail
 //-----------------------------------------------------------------------------
-void CSpriteTrail::Precache( void ) 
+void CSpriteTrail::Precache_Impl( void ) 
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	if ( m_iszSpriteName != NULL_STRING )
 	{

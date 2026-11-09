@@ -13,7 +13,6 @@
 #include "reflect_annotations.h"
 
 #include "baseentity.h"
-import std;
 
 class CInfoRemarkable : public CPointEntity
 {
@@ -24,7 +23,7 @@ public:
 	static tRemarkableList *GetListOfAllThatIsRemarkable( void );
 
 	~CInfoRemarkable();
-	void	Spawn( void );
+	void	Spawn_Impl( void );
 	inline void ResetCount( void ) { m_iTimesRemarkedUpon = 0; } // reset the number of times commented upon (eg at map restart)
 	
 	inline const char *GetRemarkContext( void ) const

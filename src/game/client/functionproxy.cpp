@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "functionproxy.h"
+#include "entity_cast.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imaterial.h"
 #include "iclientrenderable.h"
@@ -186,7 +185,7 @@ void CResultProxy::SetVecResult( float x, float y, float z, float w )
 C_BaseEntity *CResultProxy::BindArgToEntity( void *pArg )
 {
 	IClientRenderable *pRend = (IClientRenderable *)pArg;
-	return pRend->GetIClientUnknown()->GetBaseEntity();
+	return EntityCast<C_BaseEntity>( pRend->GetIClientUnknown()->GetBaseEntity() );
 }
 
 IMaterial *CResultProxy::GetMaterial()

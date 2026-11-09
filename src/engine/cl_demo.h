@@ -47,10 +47,10 @@ public: // IDemoPlayer interface implementation:
 
 	bool	StartPlayback( const char *filename, bool bAsTimeDemo, CDemoPlaybackParameters_t const *pPlaybackParameters, int nStartingTick = -1 ) ;
 	bool StartBroadcastPlayback( int nStartingTick );
-	virtual bool	IsPlayingBack( void ) const override; // true if demo loaded and playing back
-	virtual bool	IsPlaybackPaused( void ) const override; // true if playback paused
-	virtual bool	IsPlayingTimeDemo( void ) const override; // true if playing back in timedemo mode
-	CDemoPlaybackParameters_t const * GetDemoPlaybackParameters() override;
+	bool	IsPlayingBack( void ) const; // true if demo loaded and playing back
+	bool	IsPlaybackPaused( void ) const; // true if playback paused
+	bool	IsPlayingTimeDemo( void ) const; // true if playing back in timedemo mode
+	CDemoPlaybackParameters_t const * GetDemoPlaybackParameters();
 	void	PausePlayback( float seconds );
 	void	SkipToTick( int tick, bool bRelative, bool bPause );
 	void	SkipToImportantTick( const DemoImportantTick_t *pTick );
@@ -61,14 +61,14 @@ public: // IDemoPlayer interface implementation:
 
 	int		GetPlaybackStartTick( void );
 	int		GetPlaybackTick( void );
-	virtual int 	GetPlaybackDeltaTick( void ) ;
-	virtual int		GetPacketTick( void ) ;
+	int 	GetPlaybackDeltaTick( void ) ;
+	int		GetPacketTick( void ) ;
 	float	GetPlaybackTimeScale( void );
 	int		GetTotalTicks( void );
 
-	virtual bool	IsSkipping( void ) const override; // true, if demo player skipping trough packets
+	bool	IsSkipping( void ) const; // true, if demo player skipping trough packets
 	// true if demoplayer can skip backwards
-	virtual bool	CanSkipBackwards( void ) const override { return false; }
+	bool	CanSkipBackwards( void ) const { return false; }
 	
 	void	SetPlaybackTimeScale( float timescale );
 	void	InterpolateViewpoint(); // override viewpoint
@@ -78,7 +78,7 @@ public: // IDemoPlayer interface implementation:
 	void	SetPacketReadSuspended( bool bSuspendPacketReading );
 
 
-	virtual IDemoStream* GetDemoStream() override { return &m_DemoFile; }
+	CDemoFile* GetDemoStream() { return &m_DemoFile; }
 public:	// other public functions
 	void	MarkFrame( float flFPSVariability );
 	void	SetBenchframe( int tick, const char *filename );
@@ -88,24 +88,24 @@ public:	// other public functions
 	bool	ParseAheadForInterval( int curtick, int intervalticks );
 	void	InterpolateDemoCommand( int nSlot, int targettick, DemoCommandQueue& prev, DemoCommandQueue& next );
 
-	void	SetImportantEventData( const KeyValues *pData ) override;
+	void	SetImportantEventData( const KeyValues *pData );
 	void	GetImportantGameEventIDs();
 	void	ScanForImportantTicks( void );
-	int		FindNextImportantTick( int nCurrentTick, const char *pEventName = nullptr ) override; // -1 = no next important tick
-	int		FindPreviousImportantTick( int nCurrentTick, const char *pEventName = nullptr ) override; // -1 = no previous important tick
+	int		FindNextImportantTick( int nCurrentTick, const char *pEventName = nullptr ); // -1 = no next important tick
+	int		FindPreviousImportantTick( int nCurrentTick, const char *pEventName = nullptr ); // -1 = no previous important tick
 	int		FindNextImportantTickByXuidAndEvent( int nCurrentTick, const CPlayerId &playerUID, const char *pKeyWithXuid, const char *pEventName = nullptr ); // -1 = no next important tick
 	int		FindPreviousImportantTickByXuidAndEvent( int nCurrentTick, const CPlayerId &playerUID, const char *pKeyWithXuid, const char *pEventName = nullptr ); // -1 = no next important tick
 	int		FindNextImportantTickByXuid( int nCurrentTick, const CPlayerId &playerUID ); // -1 = no next important tick
 
-	const DemoImportantTick_t *GetImportantTick( int nIndex ) override;
-	const DemoImportantGameEvent_t *GetImportantGameEvent( const char *pszEventName ) override;
-	void	ListImportantTicks( void ) override;
-	void	SetHighlightXuid( uint64 xuid, bool bLowlights ) override;
-	void	ListHighlightData( void ) override;
+	const DemoImportantTick_t *GetImportantTick( int nIndex );
+	const DemoImportantGameEvent_t *GetImportantGameEvent( const char *pszEventName );
+	void	ListImportantTicks( void );
+	void	SetHighlightXuid( uint64 xuid, bool bLowlights );
+	void	ListHighlightData( void );
 
-	bool	ScanDemo( const char *filename, const char* pszMode ) override;
+	bool	ScanDemo( const char *filename, const char* pszMode );
 
-protected:
+public:
 	bool	OverrideView( democmdinfo_t& info );
 	void	BuildHighlightList( void );
 
@@ -152,7 +152,7 @@ public:
 	std::vector< DemoImportantTick_t >				m_ImportantTicks;
 	KeyValues										*m_pImportantEventData;
 
-private:
+public:
 	int				m_nRestartFilePos;
 	bool			m_bSavedInterpolateState;
 	CPlayerId		m_highlightPlayerID;
@@ -191,7 +191,7 @@ public:
 
 	void	ResetDemoInterpolation( void );
 
-protected:
+public:
 
 	void	ResyncDemoClock( void );
 	void	StartupDemoFile( void );

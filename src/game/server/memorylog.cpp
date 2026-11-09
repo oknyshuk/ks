@@ -3,8 +3,6 @@
 
 // Purpose: See memorylog.h
 
-import std;
-import ks.tier1;
 #include "shareddefs.h"
 #include "util.h"
 #include "memorylog.h"

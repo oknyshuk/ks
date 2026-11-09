@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imesh.h"
-import std;
 #include "tier2/beamsegdraw.h"
 #include "c_pixel_visibility.h"
 #include "iclientrenderable.h"
@@ -18,7 +16,6 @@ import std;
 // Forward declarations
 //-----------------------------------------------------------------------------
 
-struct model_t;
 struct BeamTrail_t;
 
 //-----------------------------------------------------------------------------
@@ -146,6 +143,7 @@ void DrawRing( int noise_divisions, float *prgNoise, void (*pfnNoise)( float *no
 			  const model_t* spritemodel, float frame, int rendermode, 
 			  const Vector& source, const Vector& delta, float width, float amplitude, 
 			  float freq, float speed, int segments, float* color, float flHDRColorScale = 1.0f );
+void DrawSprite( const Vector &vecOrigin, float flWidth, float flHeight, color32 color );
 void DrawBeamFollow( const model_t* spritemodel, BeamTrail_t* pHead, int frame, int rendermode, Vector& delta, 
 					Vector& screen, Vector& screenLast, float die, const Vector& source, 
 					int flags, float width, float amplitude, float freq, float* color, float flHDRColorScale = 1.0f );
@@ -156,4 +154,3 @@ class CEngineSprite *Draw_SetSpriteTexture( const model_t *pSpriteModel, int fra
 //-----------------------------------------------------------------------------
 // Assumes the material has already been bound
 //-----------------------------------------------------------------------------
-void DrawSprite( const Vector &vecOrigin, float flWidth, float flHeight, color32 color );

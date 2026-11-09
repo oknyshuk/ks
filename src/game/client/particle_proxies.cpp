@@ -3,8 +3,6 @@
 
 // Purpose: This module implements all the proxies used by the particle systems.
 
-import std;
-import ks.core;
 #include "particlemgr.h"
 #include "materialsystem/imaterialproxy.h"
 #include "materialsystem/imaterialvar.h"

@@ -29,56 +29,56 @@ extern ConVar mat_supportflashlight;
 //-----------------------------------------------------------------------------
 // Implementation of the shader system
 //-----------------------------------------------------------------------------
-class CShaderSystem : public IShaderSystemInternal
+class CShaderSystem
 {
 public:
 	CShaderSystem();
 
 	// Methods of IShaderSystem
-	virtual ShaderAPITextureHandle_t GetShaderAPITextureBindHandle( ITexture *pTexture, int nFrameVar, int nTextureChannel = 0 );
+	ShaderAPITextureHandle_t GetShaderAPITextureBindHandle( ITexture *pTexture, int nFrameVar, int nTextureChannel = 0 );
 
-	virtual void		BindTexture( Sampler_t sampler1, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrame = 0 );
-	virtual void		BindTexture( Sampler_t sampler1, Sampler_t sampler2, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrame = 0 );
-	virtual void		BindVertexTexture( VertexTextureSampler_t vtSampler, ITexture *pTexture, int nFrame = 0 );
+	void		BindTexture( Sampler_t sampler1, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrame = 0 );
+	void		BindTexture( Sampler_t sampler1, Sampler_t sampler2, TextureBindFlags_t nBindFlags, ITexture *pTexture, int nFrame = 0 );
+	void		BindVertexTexture( VertexTextureSampler_t vtSampler, ITexture *pTexture, int nFrame = 0 );
 
-	virtual void		TakeSnapshot( );
-	virtual void		DrawSnapshot( const unsigned char *pInstanceCommandBuffer, bool bMakeActualDrawCall = true );
-	virtual bool		IsUsingGraphics() const;
+	void		TakeSnapshot( );
+	void		DrawSnapshot( const unsigned char *pInstanceCommandBuffer, bool bMakeActualDrawCall = true );
+	bool		IsUsingGraphics() const;
 
 	// Methods of IShaderSystemInternal
-	virtual void		Init();
-	virtual void		Shutdown();
-	virtual void		ModInit();
-	virtual void		ModShutdown();
+	void		Init();
+	void		Shutdown();
+	void		ModInit();
+	void		ModShutdown();
 
-	virtual bool		LoadShaderDLL( const char *pFullPath );
-	virtual bool		LoadShaderDLL( const char *pFullPath, const char *pPathID, bool bModShaderDLL );
-	virtual void		UnloadShaderDLL( const char *pFullPath );
+	bool		LoadShaderDLL( const char *pFullPath );
+	bool		LoadShaderDLL( const char *pFullPath, const char *pPathID, bool bModShaderDLL );
+	void		UnloadShaderDLL( const char *pFullPath );
 
-	virtual IShader*	FindShader( char const* pShaderName );
-	virtual void		CreateDebugMaterials();
-	virtual void		CleanUpDebugMaterials();
-	virtual char const* ShaderStateString( int i ) const;
-	virtual int			ShaderStateCount( ) const;
+	IShader*	FindShader( char const* pShaderName );
+	void		CreateDebugMaterials();
+	void		CleanUpDebugMaterials();
+	char const* ShaderStateString( int i ) const;
+	int			ShaderStateCount( ) const;
 
-	virtual void		InitShaderParameters( IShader *pShader, IMaterialVar **params, const char *pMaterialName );
-	virtual void		InitShaderInstance( IShader *pShader, IMaterialVar **params, const char *pMaterialName, const char *pTextureGroupName );
-	virtual bool		InitRenderState( IShader *pShader, int numParams, IMaterialVar **params, ShaderRenderState_t* pRenderState, char const* pMaterialName );
-	virtual void		CleanupRenderState( ShaderRenderState_t* pRenderState );
-	virtual void		DrawElements( IShader *pShader, IMaterialVar **params, ShaderRenderState_t* pShaderState, VertexCompressionType_t vertexCompression, uint32 nVarChangeID, uint32 nModulationFlags, bool bRenderingPreTessPatchMesh );
+	void		InitShaderParameters( IShader *pShader, IMaterialVar **params, const char *pMaterialName );
+	void		InitShaderInstance( IShader *pShader, IMaterialVar **params, const char *pMaterialName, const char *pTextureGroupName );
+	bool		InitRenderState( IShader *pShader, int numParams, IMaterialVar **params, ShaderRenderState_t* pRenderState, char const* pMaterialName );
+	void		CleanupRenderState( ShaderRenderState_t* pRenderState );
+	void		DrawElements( IShader *pShader, IMaterialVar **params, ShaderRenderState_t* pShaderState, VertexCompressionType_t vertexCompression, uint32 nVarChangeID, uint32 nModulationFlags, bool bRenderingPreTessPatchMesh );
 
 	// Used to iterate over all shaders for editing purposes
-	virtual int			ShaderCount() const;
-	virtual int			GetShaders( int nFirstShader, int nMaxCount, IShader **ppShaderList ) const;
+	int			ShaderCount() const;
+	int			GetShaders( int nFirstShader, int nMaxCount, IShader **ppShaderList ) const;
 
 	// Methods of IShaderInit
-	virtual void		LoadTexture( IMaterialVar *pTextureVar, const char *pTextureGroupName, int nAdditionalCreationFlags = 0 );
-	virtual void		LoadBumpMap( IMaterialVar *pTextureVar, const char *pTextureGroupName, int nAdditionalCreationFlags = 0 );
-	virtual void		LoadCubeMap( IMaterialVar **ppParams, IMaterialVar *pTextureVar, int nAdditionalCreationFlags = 0 );
+	void		LoadTexture( IMaterialVar *pTextureVar, const char *pTextureGroupName, int nAdditionalCreationFlags = 0 );
+	void		LoadBumpMap( IMaterialVar *pTextureVar, const char *pTextureGroupName, int nAdditionalCreationFlags = 0 );
+	void		LoadCubeMap( IMaterialVar **ppParams, IMaterialVar *pTextureVar, int nAdditionalCreationFlags = 0 );
 
 	bool CanUseEditorMaterials() const;
 
-	virtual void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics );
+	void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics );
 
 private:
 	struct ShaderDLLInfo_t
@@ -189,8 +189,16 @@ private:
 // Singleton
 //-----------------------------------------------------------------------------
 static CShaderSystem s_ShaderSystem;
-IShaderSystemInternal *g_pShaderSystem = &s_ShaderSystem;
-static InterfaceReg s_Reg_CShaderSystem_IShaderSystem( []() -> void * { return static_cast<IShaderSystem *>( &s_ShaderSystem ); }, SHADERSYSTEM_INTERFACE_VERSION );;
+
+// IShaderInit, IShaderSystem and IShaderSystemInternal are stateless facades; their members, defined
+// below, forward to s_ShaderSystem.
+static IShaderSystemInternal s_ShaderSystemFacade;
+IShaderSystemInternal *g_pShaderSystem = &s_ShaderSystemFacade;
+static CShaderSystem &ShaderSystemImpl() { return s_ShaderSystem; }
+#include "facade/ishaderinit.inl"
+#include "facade/ishadersystem.inl"
+#include "facade/ishadersysteminternal.inl"
+static InterfaceReg s_Reg_CShaderSystem_IShaderSystem( []() -> void * { return static_cast<IShaderSystem *>( &s_ShaderSystemFacade ); }, SHADERSYSTEM_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------
@@ -220,8 +228,7 @@ CShaderSystem::CShaderSystem() : m_bForceUsingGraphicsReturnTrue( false )
 void CShaderSystem::Init()
 {
 	m_bForceUsingGraphicsReturnTrue = false;
-	if ( CommandLine()->FindParm( "-noshaderapi" ) ||
-		 CommandLine()->FindParm( "-makereslists" ) )
+	if ( CommandLine()->FindParm( "-makereslists" ) )
 	{
 		m_bForceUsingGraphicsReturnTrue = true;
 	}
@@ -1337,7 +1344,7 @@ void CShaderSystem::DrawElements( IShader *pShader, IMaterialVar **params,
 //-----------------------------------------------------------------------------
 bool CShaderSystem::IsUsingGraphics() const
 {
-	// YWB Hack if running with -noshaderapi/-makereslists this forces materials to "precache" which means they will resolve their .vtf files for
+	// YWB Hack if running with -makereslists this forces materials to "precache" which means they will resolve their .vtf files for
 	//  things like normal/height/dudv maps...
 	if ( m_bForceUsingGraphicsReturnTrue )
 		return true;

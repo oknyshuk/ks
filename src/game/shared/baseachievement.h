@@ -11,7 +11,6 @@
 inline constexpr const char *AWARD_ID_NONE = "";
 
 class CAchievementMgr;
-class IPlayerLocal;
 
 //
 // Base class for achievements
@@ -102,7 +101,9 @@ public:
 	virtual bool CheckAchievementsEnabled( void );
 
 protected:
-	virtual void FireGameEvent( IGameEvent *event );
+public:
+	void FireGameEvent( IGameEvent *event );
+protected:
 	virtual void FireGameEvent_Internal( IGameEvent *event ) {};
 	void SetVictimFilter( const char *pClassName );
 	void SetAttackerFilter( const char *pClassName );
@@ -156,35 +157,6 @@ public:
 	DECLARE_DATADESC();
 };
 
-class CFailableAchievement : public CBaseAchievement
-{
-	DECLARE_CLASS( CFailableAchievement, CBaseAchievement );
-public:
-	CFailableAchievement();
-	void SetFailed();	
-
-	virtual bool ShouldSaveWithGame();
-	virtual void PreRestoreSavedGame();
-	virtual void PostRestoreSavedGame();
-	virtual bool IsAchieved() { return !m_bFailed && BaseClass::IsAchieved(); }
-	virtual bool IsActive() { return m_bActivated && !m_bFailed && BaseClass::IsActive(); }
-	bool IsFailed() { return m_bFailed; }
-
-	virtual void OnMapEvent( const char *pEventName );
-	virtual void OnActivationEvent() { Activate(); }
-	virtual void OnEvaluationEvent();
-	virtual const char *GetActivationEventName() =0;
-	virtual const char *GetEvaluationEventName() =0;
-
-protected:
-	void Activate();
-
-	bool	m_bActivated;		// are we activated? (If there is a map event that turns us on, has that happened)
-	bool	m_bFailed;			// has this achievement failed
-	
-public:
-};
-
 class CMapAchievement : public CBaseAchievement
 {
 	virtual void Init()
@@ -194,26 +166,6 @@ class CMapAchievement : public CBaseAchievement
 	}
 };
 
-
-//----------------------------------------------------------------------------------------------------------------
-class CAchievement_AchievedCount : public CBaseAchievement
-{
-public:
-	void Init();
-	virtual bool IsMetaAchievement() { return true; }
-
-	int GetLowRange() { return m_iLowRange; }
-	int GetHighRange() { return m_iHighRange; }
-	int GetNumRequired() { return m_iNumRequired; }
-
-protected:
-	void SetAchievementsRequired( int iNumRequired, int iLowRange, int iHighRange );
-
-private:
-	int m_iNumRequired;
-	int m_iLowRange;
-	int m_iHighRange;
-};
 
 //
 // Helper class for achievement creation

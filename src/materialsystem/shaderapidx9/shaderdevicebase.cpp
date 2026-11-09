@@ -138,10 +138,9 @@ void CShaderDeviceMgrBase::Disconnect()
 //-----------------------------------------------------------------------------
 void *CShaderDeviceMgrBase::QueryInterface( const char *pInterfaceName )
 {
-	if ( !V_stricmp( pInterfaceName, SHADER_DEVICE_MGR_INTERFACE_VERSION ) )
-		return ( IShaderDeviceMgr* )this;
-	if ( !V_stricmp( pInterfaceName, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION ) )
-		return ( IMaterialSystemHardwareConfig* )g_pHardwareConfigDx8;
+	if ( !V_stricmp( pInterfaceName, SHADER_DEVICE_MGR_INTERFACE_VERSION ) ||
+		 !V_stricmp( pInterfaceName, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION ) )
+		return Sys_GetFactoryThis()( pInterfaceName, nullptr );
 	return nullptr;
 }
 
@@ -712,12 +711,11 @@ void* CShaderDeviceMgrBase::ShaderInterfaceFactory( const char *pInterfaceName, 
 	{
 		*pReturnCode = IFACE_OK;
 	}
-	if ( !V_stricmp( pInterfaceName, SHADER_DEVICE_INTERFACE_VERSION ) )
-		return static_cast< IShaderDevice* >( g_pShaderDeviceBase );
-	if ( !V_stricmp( pInterfaceName, SHADERAPI_INTERFACE_VERSION ) )
-		return static_cast< IShaderAPI* >( g_pShaderAPIBase );
-	if ( !V_stricmp( pInterfaceName, SHADERSHADOW_INTERFACE_VERSION ) )
-		return static_cast< IShaderShadow* >( g_pShaderShadow );
+	// The facades registered by the shader API classes
+	if ( !V_stricmp( pInterfaceName, SHADER_DEVICE_INTERFACE_VERSION ) ||
+		 !V_stricmp( pInterfaceName, SHADERAPI_INTERFACE_VERSION ) ||
+		 !V_stricmp( pInterfaceName, SHADERSHADOW_INTERFACE_VERSION ) )
+		return Sys_GetFactoryThis()( pInterfaceName, pReturnCode );
 
 	if ( pReturnCode )
 	{
@@ -764,23 +762,6 @@ bool CShaderDeviceBase::ThreadOwnsDevice() const
 {
 	if ( ThreadGetCurrentId() == m_dwThreadId )
 		return true;
-	return false;
-}
-
-
-// Methods of IShaderDevice
-ImageFormat CShaderDeviceBase::GetBackBufferFormat() const
-{
-	return IMAGE_FORMAT_UNKNOWN;
-}
-
-int CShaderDeviceBase::StencilBufferBits() const
-{
-	return 0;
-}
-
-bool CShaderDeviceBase::IsAAEnabled() const
-{
 	return false;
 }
 

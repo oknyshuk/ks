@@ -7,13 +7,11 @@
 
 // NOTE: most tempents are singletons.
 
-import ks.tier1;
 #include "reflect_annotations.h"
 
 #include "particlemgr.h"
 #include "c_basetempentity.h"
 #include "particles_simple.h"
-import std;
 
 inline constexpr auto SIMSHIFT = 10;
 

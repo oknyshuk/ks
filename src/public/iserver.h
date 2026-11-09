@@ -11,48 +11,47 @@ class IClient;
 
 typedef struct player_info_s player_info_t;
 
-class IServer : public IConnectionlessPacketHandler
+class IServer
 {
 public:
-	virtual	~IServer() {}
 
-	virtual int		GetNumClients( void ) const = 0; // returns current number of clients
-	virtual int		GetNumProxies( void ) const = 0; // returns number of attached HLTV proxies
-	virtual int		GetNumFakeClients() const = 0; // returns number of fake clients/bots
-	virtual int		GetMaxClients( void ) const = 0; // returns current client limit
-	virtual IClient	*GetClient( int index ) = 0; // returns interface to client 
-	virtual int		GetClientCount() const = 0; // returns number of clients slots (used & unused)
-	virtual int		GetUDPPort( void ) const = 0; // returns current used UDP port
-	virtual float	GetTime( void ) const = 0;	// returns game world time
-	virtual int		GetTick( void ) const = 0;	// returns game world tick
-	virtual float	GetTickInterval( void ) const = 0; // tick interval in seconds
-	virtual float	GetTimescale( void ) const = 0; // returns the game time scale (multiplied in conjunction with host_timescale)
-	virtual const char *GetName( void ) const = 0;	// public server name
-	virtual const char *GetMapName( void ) const = 0; // current map name (BSP)
-	virtual int		GetSpawnCount( void ) const = 0;	
-	virtual int		GetNumClasses( void ) const = 0;
-	virtual int		GetClassBits( void ) const = 0;
-	virtual void	GetNetStats( float &avgIn, float &avgOut ) = 0; // total net in/out in bytes/sec
-	virtual int		GetNumPlayers() = 0;
-	virtual	bool	GetPlayerInfo( int nClientIndex, player_info_t *pinfo ) = 0;
+	int		GetNumClients( void ) const; // returns current number of clients
+	int		GetNumProxies( void ) const; // returns number of attached HLTV proxies
+	int		GetNumFakeClients() const; // returns number of fake clients/bots
+	int		GetMaxClients( void ) const; // returns current client limit
+	IClient	*GetClient( int index ); // returns interface to client 
+	int		GetClientCount() const; // returns number of clients slots (used & unused)
+	int		GetUDPPort( void ) const; // returns current used UDP port
+	float	GetTime( void ) const;	// returns game world time
+	int		GetTick( void ) const;	// returns game world tick
+	float	GetTickInterval( void ) const; // tick interval in seconds
+	float	GetTimescale( void ) const; // returns the game time scale (multiplied in conjunction with host_timescale)
+	const char *GetName( void ) const;	// public server name
+	const char *GetMapName( void ) const; // current map name (BSP)
+	int		GetSpawnCount( void ) const;	
+	int		GetNumClasses( void ) const;
+	int		GetClassBits( void ) const;
+	void	GetNetStats( float &avgIn, float &avgOut ); // total net in/out in bytes/sec
+	int		GetNumPlayers();
+	bool	GetPlayerInfo( int nClientIndex, player_info_t *pinfo );
 
-	virtual bool	IsActive( void ) const = 0;	
-	virtual bool	IsLoading( void ) const = 0;
-	virtual bool	IsDedicated( void ) const = 0;
-	virtual bool	IsPaused( void ) const = 0;
-	virtual bool	IsMultiplayer( void ) const = 0;
-	virtual bool	IsPausable() const = 0;
-	virtual bool	IsHLTV() const = 0;
-	virtual bool	IsReplay() const = 0;
+	bool	IsActive( void ) const;	
+	bool	IsLoading( void ) const;
+	bool	IsDedicated( void ) const;
+	bool	IsPaused( void ) const;
+	bool	IsMultiplayer( void ) const;
+	bool	IsPausable() const;
+	bool	IsHLTV() const;
+	bool	IsReplay() const;
 
-	virtual const char * GetPassword() const = 0;	// returns the password or NULL if none set	
+	const char * GetPassword() const;	// returns the password or NULL if none set	
 
-	virtual void	SetPaused(bool paused) = 0;
-	virtual void	SetTimescale( float flTimescale ) = 0;
-	virtual void	SetPassword(const char *password) = 0; // set password (NULL to disable)
+	void	SetPaused(bool paused);
+	void	SetTimescale( float flTimescale );
+	void	SetPassword(const char *password); // set password (NULL to disable)
 
-	virtual void	BroadcastMessage( INetMessage &msg, bool onlyActive = false, bool reliable = false) = 0;
-	virtual void	BroadcastMessage( INetMessage &msg, IRecipientFilter &filter ) = 0;
+	void	BroadcastMessage( INetMessage &msg, bool onlyActive = false, bool reliable = false);
+	void	BroadcastMessage( INetMessage &msg, IRecipientFilter &filter );
 
-	virtual void	DisconnectClient( IClient *client, const char *reason ) = 0;
+	void	DisconnectClient( IClient *client, const char *reason );
 };

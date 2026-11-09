@@ -36,8 +36,6 @@
 #include "cs_player_resource.h"
 #include "weapon_c4.h"
 #include <coordsize.h>
-import std;
-import ks.tier1;
 #include "cs_bot_manager.h"
 #include "cs_gamerules.h"
 #include "cs_bot.h"
@@ -361,7 +359,7 @@ void CCSPlayerResource::UpdatePlayerData( void )
 	BaseClass::UpdatePlayerData();
 }
 
-void CCSPlayerResource::Spawn( void )
+void CCSPlayerResource::Spawn_Impl( void )
 {
 	m_iPlayerC4 = 0;
 	m_iPlayerVIP = 0;
@@ -414,7 +412,7 @@ void CCSPlayerResource::Spawn( void )
 		m_nEndMatchNextMapVotes.Set( i, 0 );
 	}
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 const Vector CCSPlayerResource::GetBombsiteAPosition()

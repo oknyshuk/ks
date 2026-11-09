@@ -5,7 +5,6 @@
 // Purpose: Singleton manager for spatial entities on the client
 
 #include "igamesystem.h"
-import std;
 
 class C_SpatialEntity;
 

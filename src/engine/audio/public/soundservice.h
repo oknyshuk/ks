@@ -28,93 +28,97 @@ import std;
 class ISoundServices
 {
 public:
+	ISoundServices() { m_frameTime = 0; }
+
 	//---------------------------------
 	// Allocate a block of memory that will be automatically
 	// cleaned up on level change
 	//---------------------------------
-	virtual void *LevelAlloc( int nBytes, const char *pszTag ) = 0;
+	void *LevelAlloc( int nBytes, const char *pszTag );
 
 	//---------------------------------
 	// Notification that someone called S_ExtraUpdate()
 	//---------------------------------
-	virtual void OnExtraUpdate() = 0;
+	void OnExtraUpdate();
 
 	//---------------------------------
 	// Return false if the entity doesn't exist or is out of the PVS, in which case the sound shouldn't be heard.
 	//---------------------------------
-	virtual bool GetSoundSpatialization( int entIndex, SpatializationInfo_t& info ) = 0;
+	bool GetSoundSpatialization( int entIndex, SpatializationInfo_t& info );
 
 	//---------------------------------
 	// This is the client's clock, which follows the servers and thus isn't 100% smooth all the time (it is in single player)
 	//---------------------------------
-	virtual float GetClientTime() = 0;
+	float GetClientTime();
 
 	//---------------------------------
 	// This is the engine's filtered timer, it's pretty smooth all the time
 	//---------------------------------
-	virtual float GetHostTime() = 0;
+	float GetHostTime();
 
 	//---------------------------------
 	//---------------------------------
-	virtual int GetViewEntity( int nSlot ) = 0;
+	int GetViewEntity( int nSlot );
 
 	//---------------------------------
 	//---------------------------------
-	virtual float GetHostFrametime() = 0;
-	virtual void SetSoundFrametime( float realDt, float hostDt ) = 0;
+	float GetHostFrametime();
+	void SetSoundFrametime( float realDt, float hostDt );
 
 	//---------------------------------
 	//---------------------------------
-	virtual int GetServerCount() = 0;
+	int GetServerCount();
 
 	//---------------------------------
 	//---------------------------------
-	virtual bool IsPlayer( SoundSource source ) = 0;
+	bool IsPlayer( SoundSource source );
 
 	// -1 if local player not spectating anyone, otherwise the index of the player being spectated
-	virtual int GetSpectatorTarget( ClientDLLObserverMode_t *pObserverMode ) = 0;
+	int GetSpectatorTarget( ClientDLLObserverMode_t *pObserverMode );
 
 	//---------------------------------
 	//---------------------------------
-	virtual void OnChangeVoiceStatus( int entity, int iSsSlot, bool status) = 0;
+	void OnChangeVoiceStatus( int entity, int iSsSlot, bool status);
 
 	// returns false if the player can't hear the other client due to game rules (eg. the other team)
-	virtual bool GetPlayerAudible( int iPlayerIndex ) = 0;
+	bool GetPlayerAudible( int iPlayerIndex );
 
 	// Is the player fully connected (don't do DSP processing if not)
-	virtual bool IsConnected() = 0;
+	bool IsConnected();
 
 	// Calls into client .dll with list of close caption tokens to construct a caption out of
-	virtual void EmitSentenceCloseCaption( char const *tokenstream ) = 0;
+	void EmitSentenceCloseCaption( char const *tokenstream );
 	// Calls into client .dll with list of close caption tokens to construct a caption out of
-	virtual void EmitCloseCaption( char const *captionname, float duration ) = 0;
+	void EmitCloseCaption( char const *captionname, float duration );
 
-	virtual char const *GetGameDir() = 0;
+	char const *GetGameDir();
 
 	// If the game is paused, certain audio will pause, too (anything with phoneme/sentence data for now)
-	virtual bool	IsGamePaused() = 0;
+	bool	IsGamePaused();
 
 	// restarts the sound system externally
-	virtual void	RestartSoundSystem() = 0;
+	void	RestartSoundSystem();
 
-	virtual void	GetAllSoundFilesReferencedInReslists( std::set< FileNameHandle_t >& list ) = 0;
-	virtual void	GetAllManifestFiles( std::set< FileNameHandle_t >& list ) = 0;
-	virtual void	GetAllSoundFilesInManifest( std::set< FileNameHandle_t >& list, char const *manifestfile ) = 0;
+	void	GetAllSoundFilesReferencedInReslists( std::set< FileNameHandle_t >& list );
+	void	GetAllManifestFiles( std::set< FileNameHandle_t >& list );
+	void	GetAllSoundFilesInManifest( std::set< FileNameHandle_t >& list, char const *manifestfile );
 
-	virtual void	CacheBuildingStart() = 0;
-	virtual void	CacheBuildingUpdateProgress( float percent, char const *cachefile ) = 0;
-	virtual void	CacheBuildingFinish() = 0;
+	void	CacheBuildingStart();
+	void	CacheBuildingUpdateProgress( float percent, char const *cachefile );
+	void	CacheBuildingFinish();
 
 	// For building sound cache manifests
-	virtual int			GetPrecachedSoundCount() = 0;
-	virtual char const *GetPrecachedSound( int index ) = 0;
+	int			GetPrecachedSoundCount();
+	char const *GetPrecachedSound( int index );
 
-	virtual void		OnSoundStarted( int guid, StartSoundParams_t& params, char const *soundname  ) = 0;
-	virtual void		OnSoundStopped( int guid, int soundsource, int channel, char const *soundname ) = 0;
+	char const *GetUILanguage();
 
-	virtual bool		GetToolSpatialization( int iUserData, int guid, SpatializationInfo_t& info ) = 0;
+	bool ShouldSuppressNonUISounds();
 
-	virtual char const *GetUILanguage() = 0;
+private:
+	void CacheSoundsFromResFile( bool quiet, std::set< FileNameHandle_t >& list, char const *resfile, bool checkandcleanname = true );
+
+	float m_frameTime;
 };
 
 //-------------------------------------

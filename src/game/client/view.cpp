@@ -3,12 +3,10 @@
 
 // Console GPU alignment stub (not used on PC)
 #include "rocketui/rmlui.h"
-import ks.tier1;
 #ifndef GPU_RESOLVE_ALIGNMENT
 #define GPU_RESOLVE_ALIGNMENT 1
 #endif
 
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -32,7 +30,6 @@ import std;
 #include "prediction.h"
 #include "viewrender.h"
 #include "c_te_legacytempents.h"
-#include "cl_mat_stub.h"
 #include "iclientvehicle.h"
 #include "c_world.h"
 #include "bitmap/tgawriter.h"
@@ -52,9 +49,6 @@ import std;
 
 
 	
-void ToolFramework_AdjustEngineViewport( int& x, int& y, int& width, int& height );
-bool ToolFramework_SetupEngineView( Vector &origin, QAngle &angles, float &fov );
-bool ToolFramework_SetupEngineMicrophone( Vector &origin, QAngle &angles );
 
 
 extern ConVar default_fov;
@@ -258,6 +252,7 @@ static ConCommand centerview( "centerview", StartPitchDrift );
 //-----------------------------------------------------------------------------
 // Purpose: Initializes all view systems
 //-----------------------------------------------------------------------------
+extern CMaterialReference g_material_WriteZ;
 void CViewRender::Init( void )
 {
 	memset( &m_PitchDrift, 0, sizeof( m_PitchDrift ) );
@@ -274,7 +269,6 @@ void CViewRender::Init( void )
 	m_ModulateSingleColor.Init( "engine/modulatesinglecolor", TEXTURE_GROUP_OTHER );
 	m_WhiteMaterial.Init( "vgui/white", TEXTURE_GROUP_OTHER );
 	
-	extern CMaterialReference g_material_WriteZ;
 	g_material_WriteZ.Init( "engine/writez", TEXTURE_GROUP_OTHER );
 
 	for ( int i = 0; i < MAX_SPLITSCREEN_PLAYERS ; ++i )
@@ -715,9 +709,6 @@ void CViewRender::SetUpView()
 		pCSPlayer->CalcViewModelView( view.origin, view.angles );
 	}
 
-	// give the toolsystem a chance to override the view
-	ToolFramework_SetupEngineView( view.origin, view.angles, view.fov );
-
 	if ( engine->IsPlayingDemo() )
 	{
 		if ( cl_demoviewoverride.GetFloat() > 0.0f )
@@ -750,8 +741,6 @@ void CViewRender::SetUpView()
 	audioState.m_Origin = view.origin;
 	audioState.m_Angles = view.angles;
 	audioState.m_bIsUnderwater = pPlayer && pPlayer->AudioStateIsUnderwater( view.origin );
-
-	ToolFramework_SetupAudioState( audioState );
 
 	view.origin = audioState.m_Origin;
 	view.angles = audioState.m_Angles;
@@ -995,8 +984,6 @@ void CViewRender::Render( vrect_t *rect )
 
 	m_bAllowViewAccess = true;
 
-	// Stub out the material system if necessary.
-	CMatStubHandler matStub;
 	engine->EngineStats_BeginFrame();
 
 	// Assume normal vis
@@ -1005,9 +992,6 @@ void CViewRender::Render( vrect_t *rect )
 	float flViewportScale = mat_viewportscale.GetFloat();
 
 	vrect_t engineRect = *rect;
-
-	// The tool framework wants to adjust the entire 3d viewport, not the per-split screen one from below
-	ToolFramework_AdjustEngineViewport( engineRect.x, engineRect.y, engineRect.width, engineRect.height );
 
 	IterateRemoteSplitScreenViewSlots_Push( true );
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
@@ -1104,9 +1088,6 @@ void CViewRender::Render( vrect_t *rect )
 
 	engine->EngineStats_EndFrame();
 
-	// Stop stubbing the material system so we can see the budget panel
-	matStub.End();
-
 	// Render the new-style embedded UI
 	// TODO: when embedded UI will be used for HUD, we will need it to maintain
 	// a separate screen for HUD and a separate screen stack for pause menu & main menu.
@@ -1190,7 +1171,7 @@ static void getpos( const CCommand &args )
 
 ConCommand getpos_exact( "getpos_exact", getpos, "dump origin and angles to the console" );
 
-static void PlayDistance_Callback( IConVar *pConVar, const char *pOldString, float flOldValue )
+static void PlayDistance_Callback( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	// diabled for now, reenable if we have specific things we need to change for "play distance"
 /*
@@ -1242,7 +1223,7 @@ static void PlayDistance_Callback( IConVar *pConVar, const char *pOldString, flo
 static ConVar play_distance( "play_distance", "1", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE, "Set to 1:\"2 foot\" or 2:\"10 foot\" presets.", PlayDistance_Callback );
 
 /*
-static void HudPresetSize_Callback( IConVar *pConVar, const char *pOldString, float flOldValue )
+static void HudPresetSize_Callback( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	ConVarRef var( pConVar );
 
@@ -1274,7 +1255,7 @@ static void HudPresetSize_Callback( IConVar *pConVar, const char *pOldString, fl
 static ConVar play_distance( "play_distance", "2", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE, "1:\"Small\", 2:\"Medium\", 3:\"Couch\" ", HudPresetSize_Callback );
 */
 
-static void ViewmodelPresetPos_Callback( IConVar *pConVar, const char *pOldString, float flOldValue )
+static void ViewmodelPresetPos_Callback( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	ConVarRef var( pConVar );
 

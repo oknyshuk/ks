@@ -3,7 +3,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "particles_simple.h"
-#include "particle_litsmokeemitter.h"
 
 // Use these to fire and forget particles.
 // pParticle should be ON THE STACK - ie: don't allocate it from a CSimpleEmitter or from the particle manager.

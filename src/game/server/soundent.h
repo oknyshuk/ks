@@ -218,12 +218,12 @@ public:
 	CSoundEnt();
 	virtual ~CSoundEnt();
 
-	virtual void OnRestore();
-	void Precache ( void );
-	void Spawn( void );
-	void Think( void );
+	void OnRestore_Impl();
+	void Precache_Impl ( void );
+	void Spawn_Impl( void );
+	void Think_Impl( void );
 	void Initialize ( void );
-	int ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	int ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION; }
 
 	static int		InsertSound ( int iType, const Vector &vecOrigin, int iVolume, float flDuration, CBaseEntity *pOwner = nullptr, int soundChannelIndex = SOUNDENT_CHANNEL_UNSPECIFIED, CBaseEntity *pSoundTarget = nullptr );
 	static int		ActiveList( void );// return the head of the active list

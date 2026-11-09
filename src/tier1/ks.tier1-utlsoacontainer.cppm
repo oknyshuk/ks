@@ -121,8 +121,6 @@ enum EAttributeDataType
 
 inline constexpr auto MAX_SOA_FIELDS = 32;
 
-class KMeansQuantizedValue;
-class IKMeansErrorMetric;
 
 typedef fltx4 (*UNARYSIMDFUNCTION)( fltx4 const & );
 typedef fltx4 (*BINARYSIMDFUNCTION)( fltx4 const &, fltx4 const & );
@@ -340,12 +338,6 @@ public:
 
 	/// find the largest value of a vector attribute
 	void FindLargestMagnitudeVector( int nAttr, int *nx, int *ny, int *nz );
-
-	void KMeansQuantization( int const *pFieldIndices, int nNumFields,
-							 KMeansQuantizedValue *pOutValues,
-							 int nNumResultsDesired, IKMeansErrorMetric *pErrorCalculator,
-							 int nFieldToStoreIndexInto, int nNumIterations,
-							 int nChannelToReceiveErrorSignal = -1 );
 
 	// Calculate the signed distance, in voxels, between all voxels and a surface boundary defined
 	// by nSrcField being >0. Voxels with nSrcField <0 will end up with negative distances. Voxels
@@ -635,58 +627,6 @@ template<BINARYSIMDFUNCTION fn> float CSOAContainer::ReduceAttr( int nSrcAttr, f
 	return SubFloat( fl4Result, 0 );
 }
 
-inline constexpr auto QUANTIZER_NJOBS = 1; // # of simultaneous subjobs to execute for kmeans quantizer
-
-// kmeans quantization classes
-// the array of quantized values returned by quantization
-class KMeansQuantizedValue
-{
-public:
-	FourVectors m_vecValuePosition;							// replicated
-	fltx4 m_fl4Values[MAX_SOA_FIELDS];						// replicated
-	float m_flValueAccumulators[QUANTIZER_NJOBS][MAX_SOA_FIELDS];
-	float m_flWeightAccumulators[QUANTIZER_NJOBS];
-
-	[[gnu::always_inline]] inline float operator()( int n )
-	{
-		return SubFloat( m_fl4Values[n], 0 );
-	}
-
-};
-
-class KMeansSampleDescriptor
-{
-public:
-	fltx4 *m_pInputValues[MAX_SOA_FIELDS];
-
-	[[gnu::always_inline]] inline fltx4 const & operator()( int nField ) const
-	{
-		return *m_pInputValues[nField];
-	}
-
-};
-
-class IKMeansErrorMetric
-{
-public:
-	virtual void CalculateError( KMeansSampleDescriptor const &sampleAddresses,
-								 FourVectors const &v4SamplePositions,
-								 KMeansQuantizedValue const &valueToCompareAgainst,
-								 fltx4 *pfl4ErrOut ) =0;
-
-	// for things like normalization, etc
-	virtual void PostAdjustQuantizedValue( KMeansQuantizedValue &valueToAdjust )
-	{
-	}
-
-	// for global fixup after each adjustment step
-	virtual void PostStep( int const *pFieldIndices, int nNumFields,
-						   KMeansQuantizedValue *pValues, int nNumQuantizedValues,
-						   int nIndexField, CSOAContainer &data )
-	{
-	}
-
-};
 
 [[gnu::always_inline]] inline CSOAContainer::CSOAContainer( void )
 {

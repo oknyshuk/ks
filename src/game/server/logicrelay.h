@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
 #include "reflect_annotations.h"
 
-import std;
 #include "shareddefs.h"
 #include "util.h"
 #include "predictable_entity.h"
@@ -28,8 +26,8 @@ public:
 
 	CLogicRelay();
 
-	void Activate();
-	void Think();
+	void Activate_Impl();
+	void Think_Impl();
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );

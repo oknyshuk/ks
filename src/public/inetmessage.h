@@ -11,68 +11,80 @@ class INetMsgHandler;
 class INetMessage;
 class INetChannel;
 
+// A net message: the closed set of message classes is listed in common/netmessage_list.h; the operations
+// that depend on the message class dispatch on m_kind (defined in common/netmessages.cpp).
 class INetMessage
 {
 public:
-	virtual	~INetMessage() {};
+	INetMessage( unsigned char kind, int type, int group, bool reliable )
+		: m_kind( kind ), m_bReliable( reliable ), m_nType( type ), m_nGroup( group ) {}
 
 	// Use these to setup who can hear whose voice.
 	// Pass in client indices (which are their ent indices - 1).
 	
-	virtual void	SetNetChannel(INetChannel * netchan) { DebuggerBreak(); return; }
-	virtual void	SetReliable( bool state ) = 0;	// set to true if it's a reliable message
+	void	SetNetChannel( INetChannel * netchan ) { DebuggerBreak(); return; }
+	void	SetReliable( bool state ) { m_bReliable = state; }	// set to true if it's a reliable message
 	
-	virtual bool	Process( void ) { DebuggerBreak(); return false; }
+	bool	Process( void ) { DebuggerBreak(); return false; }
 	
-	virtual	bool	ReadFromBuffer( bf_read &buffer ) = 0; // returns true if parsing was OK
-	virtual	bool	WriteToBuffer( bf_write &buffer ) const = 0;	// returns true if writing was OK
+	bool	ReadFromBuffer( bf_read &buffer ); // returns true if parsing was OK
+	bool	WriteToBuffer( bf_write &buffer ) const;	// returns true if writing was OK
 		
-	virtual bool	IsReliable( void ) const = 0;  // true, if message needs reliable handling
+	bool	IsReliable( void ) const { return m_bReliable; }  // true, if message needs reliable handling
 	
-	virtual int				GetType( void ) const = 0; // returns module specific header tag eg svc_serverinfo
-	virtual int				GetGroup( void ) const = 0;	// returns net message group of this message
-	virtual const char		*GetName( void ) const = 0;	// returns network message name, eg "svc_serverinfo"
+	int				GetType( void ) const { return m_nType; } // returns module specific header tag eg svc_serverinfo
+	int				GetGroup( void ) const { return m_nGroup; }	// returns net message group of this message
+	const char		*GetName( void ) const;	// returns network message name, eg "svc_serverinfo"
 
-	virtual INetChannel		*GetNetChannel( void ) const { DebuggerBreak(); return nullptr; }
+	INetChannel		*GetNetChannel( void ) const { DebuggerBreak(); return nullptr; }
 
-	virtual const char		*ToString( void ) const = 0; // returns a human readable string about message content
-	virtual std::size_t			GetSize() const = 0;
+	const char		*ToString( void ) const; // returns a human readable string about message content
+	std::size_t			GetSize() const;
+
+	// Deletes the message as the class it really is
+	void			DeleteThis();
+
+protected:
+	unsigned char	m_kind;		// net_message_kind of the message class (common/netmessage_list.h)
+	bool			m_bReliable;
+	int				m_nType;
+	int				m_nGroup;
 };
 
-class INetMessageBinder
+// For owners of messages that are not released by a plain delete
+struct INetMessageDeleter
 {
-public:
-	virtual	~INetMessageBinder() {};
-
-	virtual int	GetType( void ) const = 0; // returns module specific header tag eg svc_serverinfo
-	virtual void SetNetChannel(INetChannel * netchan) = 0; // netchannel this message is from/for
-	virtual INetMessage *CreateFromBuffer( bf_read &buffer ) = 0;
-	virtual bool Process( const INetMessage &src ) = 0;
+	void operator()( INetMessage *pMsg ) const { pMsg->DeleteThis(); }
 };
 
 class INetChannelHandler
 {
 public:
-	virtual	~INetChannelHandler( void ) {};
+	enum class handler_kind_t : unsigned char { client, state };
+	explicit INetChannelHandler( handler_kind_t kind ) : m_handler_kind( kind ) {}
 
-	virtual void ConnectionStart(INetChannel *chan) = 0;	// called first time network channel is established
-	virtual void ConnectionStop( ) = 0;	// called first time network channel is established
 
-	virtual void ConnectionClosing(const char *reason) = 0; // network channel is being closed by remote site
+	void ConnectionStart(INetChannel *chan);	// called first time network channel is established
+	void ConnectionStop( );	// called first time network channel is established
 
-	virtual void ConnectionCrashed(const char *reason) = 0; // network error occured
+	void ConnectionClosing(const char *reason); // network channel is being closed by remote site
 
-	virtual void PacketStart(int incoming_sequence, int outgoing_acknowledged) = 0;	// called each time a new packet arrived
+	void ConnectionCrashed(const char *reason); // network error occured
 
-	virtual void PacketEnd( void ) = 0; // all messages has been parsed
+	void PacketStart(int incoming_sequence, int outgoing_acknowledged);	// called each time a new packet arrived
 
-	virtual void FileRequested(const char *fileName, unsigned int transferID, bool isReplayDemoFile) = 0; // other side request a file for download
+	void PacketEnd( void ); // all messages has been parsed
 
-	virtual void FileReceived(const char *fileName, unsigned int transferID, bool isReplayDemoFile) = 0; // we received a file
+	void FileRequested(const char *fileName, unsigned int transferID, bool isReplayDemoFile); // other side request a file for download
 
-	virtual void FileDenied(const char *fileName, unsigned int transferID, bool isReplayDemoFile) = 0;	// a file request was denied by other side
+	void FileReceived(const char *fileName, unsigned int transferID, bool isReplayDemoFile); // we received a file
 
-	virtual void FileSent(const char *fileName, unsigned int transferID, bool isReplayDemoFile) = 0;	// we sent a file
+	void FileDenied(const char *fileName, unsigned int transferID, bool isReplayDemoFile);	// a file request was denied by other side
 
-	virtual bool ChangeSplitscreenUser( int nSplitScreenUserSlot ) = 0; // interleaved networking used by SS system is changing the SS player slot that the subsequent messages pertain to
+	void FileSent(const char *fileName, unsigned int transferID, bool isReplayDemoFile);	// we sent a file
+
+	bool ChangeSplitscreenUser( int nSplitScreenUserSlot ); // interleaved networking used by SS system is changing the SS player slot that the subsequent messages pertain to
+
+protected:
+	handler_kind_t m_handler_kind;
 };

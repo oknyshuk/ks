@@ -34,56 +34,43 @@ class IStaticPropMgr
 {
 public:
 	// Create physics representations of props
-	virtual void	CreateVPhysicsRepresentations( IPhysicsEnvironment *physenv, IVPhysicsKeyHandler *pDefaults, void *pGameData ) = 0;
+	void	CreateVPhysicsRepresentations( IPhysicsEnvironment *physenv, IVPhysicsKeyHandler *pDefaults, void *pGameData );
 
 	// Purpose: Trace a ray against the specified static Prop. Returns point of intersection in trace_t
-	virtual void	TraceRayAgainstStaticProp( const Ray_t& ray, int staticPropIndex, trace_t& tr ) = 0;
+	void	TraceRayAgainstStaticProp( const Ray_t& ray, int staticPropIndex, trace_t& tr );
 
 	// Is a base handle a static prop?
-	virtual bool	IsStaticProp( IHandleEntity *pHandleEntity ) const = 0;
-	virtual bool	IsStaticProp( CBaseHandle handle ) const = 0;
+	bool	IsStaticProp( IHandleEntity *pHandleEntity ) const;
+	bool	IsStaticProp( CBaseHandle handle ) const;
 
 	// returns a collideable interface to static props
-	virtual ICollideable *GetStaticPropByIndex( int propIndex ) = 0;
-};
+	ICollideable *GetStaticPropByIndex( int propIndex );
 
-class IStaticPropMgrClient : public IStaticPropMgr
-{
-public:
 	// Adds decals to static props, returns point of decal in trace_t
-	virtual void	AddDecalToStaticProp( const Vector& rayStart, const Vector& rayEnd,
-		int staticPropIndex, int decalIndex, bool doTrace, trace_t& tr, void *pvProxyUserData = nullptr, const Vector* saxis = nullptr, int nAdditionalDecalFlags = 0 ) = 0;
+	void	AddDecalToStaticProp( const Vector& rayStart, const Vector& rayEnd,
+		int staticPropIndex, int decalIndex, bool doTrace, trace_t& tr, void *pvProxyUserData = nullptr, const Vector* saxis = nullptr, int nAdditionalDecalFlags = 0 );
 
 	// Adds/removes shadows from static props
-	virtual void	AddShadowToStaticProp( unsigned short shadowHandle, IClientRenderable* pRenderable ) = 0;
-	virtual void	RemoveAllShadowsFromStaticProp( IClientRenderable* pRenderable ) = 0;
+	void	AddShadowToStaticProp( unsigned short shadowHandle, IClientRenderable* pRenderable );
+	void	RemoveAllShadowsFromStaticProp( IClientRenderable* pRenderable );
 
 	// Gets the lighting + material color of a static prop
-	virtual void	GetStaticPropMaterialColorAndLighting( trace_t* pTrace,
-		int staticPropIndex, Vector& lighting, Vector& matColor ) = 0;
+	void	GetStaticPropMaterialColorAndLighting( trace_t* pTrace,
+		int staticPropIndex, Vector& lighting, Vector& matColor );
 
 	//Changes made specifically to support the Portal mod (smack Dave Kircher if something breaks) (Added separately to both client and server to not mess with versioning)
 	//===================================================================
-	virtual void GetAllStaticProps( std::vector< ICollideable * > *pOutput ) = 0; //testing function that will eventually be removed
-	virtual void GetAllStaticPropsInAABB( const Vector &vMins, const Vector &vMaxs, std::vector< ICollideable * > *pOutput ) = 0; //get all static props that exist wholly or partially in an AABB
-	virtual void GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vector &vExtent1, const Vector &vExtent2, const Vector &vExtent3, std::vector< ICollideable * > *pOutput ) = 0; //get all static props that exist wholly or partially in an OBB
+	void GetAllStaticProps( std::vector< ICollideable * > *pOutput ); //testing function that will eventually be removed
+	void GetAllStaticPropsInAABB( const Vector &vMins, const Vector &vMaxs, std::vector< ICollideable * > *pOutput ); //get all static props that exist wholly or partially in an AABB
+	void GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vector &vExtent1, const Vector &vExtent2, const Vector &vExtent3, std::vector< ICollideable * > *pOutput ); //get all static props that exist wholly or partially in an OBB
 	//===================================================================
 
-	virtual void DrawStaticProps( IClientRenderable **pProps, const RenderableInstance_t *pInstances, int count, bool bShadowDepth, bool drawVCollideWireframe ) = 0;
+	void DrawStaticProps( IClientRenderable **pProps, const RenderableInstance_t *pInstances, int count, bool bShadowDepth, bool drawVCollideWireframe );
 
 	// Returns the lighting origins of a number of static props
-	virtual void GetLightingOrigins( Vector *pLightingOrigins, int nOriginStride, int nCount, IClientRenderable **ppRenderable, int nRenderableStride ) = 0; 
+	void GetLightingOrigins( Vector *pLightingOrigins, int nOriginStride, int nCount, IClientRenderable **ppRenderable, int nRenderableStride ); 
 };
 
-class IStaticPropMgrServer : public IStaticPropMgr
-{
-public:
-
-
-	//Changes made specifically to support the Portal mod (smack Dave Kircher if something breaks) (Added separately to both client and server to not mess with versioning)
-	//===================================================================
-	virtual void GetAllStaticProps( std::vector< ICollideable * > *pOutput ) = 0; //testing function that will eventually be removed
-	virtual void GetAllStaticPropsInAABB( const Vector &vMins, const Vector &vMaxs, std::vector< ICollideable * > *pOutput ) = 0; //get all static props that exist wholly or partially in an AABB
-	virtual void GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vector &vExtent1, const Vector &vExtent2, const Vector &vExtent3, std::vector< ICollideable * > *pOutput ) = 0; //get all static props that exist wholly or partially in an OBB
-	//===================================================================
-};
+// One object serves both sides of the engine: the client and the server game code use the same class.
+using IStaticPropMgrClient = IStaticPropMgr;
+using IStaticPropMgrServer = IStaticPropMgr;

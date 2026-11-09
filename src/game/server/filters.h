@@ -32,7 +32,7 @@ public:
 	DECLARE_DATADESC();
 
 	bool PassesFilter( CBaseEntity *pCaller, CBaseEntity *pEntity );
-	bool PassesDamageFilter( const CTakeDamageInfo &info );
+	bool PassesDamageFilter_Impl( const CTakeDamageInfo &info );
 
 	[[= ks::reflect::Key{ .name = "Negated" } ]] bool m_bNegated;
 

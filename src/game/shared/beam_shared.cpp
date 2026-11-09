@@ -7,10 +7,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -26,7 +23,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -44,7 +40,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -100,17 +95,17 @@ class CInfoTarget : public CPointEntity
 public:
 	DECLARE_CLASS( CInfoTarget, CPointEntity );
 
-	void	Spawn( void );
-	virtual int UpdateTransmitState();
+	void	Spawn_Impl( void );
+	KS_VIRTUAL int UpdateTransmitState_Impl();
 };
 
 
 //-----------------------------------------------------------------------------
 // Force transmission
 //-----------------------------------------------------------------------------
-void CInfoTarget::Spawn( void )
+void CInfoTarget::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	if ( HasSpawnFlags(0x01) )
 	{
@@ -122,12 +117,12 @@ void CInfoTarget::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: Always transmitted to clients
 //-----------------------------------------------------------------------------
-int CInfoTarget::UpdateTransmitState()
+int CInfoTarget::UpdateTransmitState_Impl()
 {
 	// Spawn flags 2 means we always transmit
 	if ( HasSpawnFlags(0x02) )
 		return SetTransmitState( FL_EDICT_ALWAYS );
-	return BaseClass::UpdateTransmitState();
+	return BaseClass::UpdateTransmitState_Impl();
 }
 
 
@@ -214,7 +209,7 @@ CBeam::CBeam( void )
 // Purpose: 
 // Input  : *szModelName - 
 //-----------------------------------------------------------------------------
-void CBeam::SetModel( const char *szModelName )
+void CBeam::SetModel_Impl( const char *szModelName )
 {
 	int modelIndex = modelinfo->GetModelIndex( szModelName );
 	const model_t *model = modelinfo->GetModel( modelIndex );
@@ -225,12 +220,12 @@ void CBeam::SetModel( const char *szModelName )
 #if !defined( CLIENT_DLL )
 	UTIL_SetModel( this, szModelName );
 #else
-	BaseClass::SetModel( szModelName );
+	BaseClass::SetModel_Impl( szModelName );
 #endif
 }
 
 
-void CBeam::Spawn( void )
+void CBeam::Spawn_Impl( void )
 {
 	SetMoveType( MOVETYPE_NONE );
 	SetSolid( SOLID_NONE );							// Remove model & collisions
@@ -244,7 +239,7 @@ void CBeam::Spawn( void )
 }
 
 
-void CBeam::Precache( void )
+void CBeam::Precache_Impl( void )
 {
 	if ( GetOwnerEntity() )
 	{
@@ -705,22 +700,22 @@ void CBeam::InputNoise( inputdata_t &inputdata )
 	SetNoise( inputdata.value.Float() );
 }
 
-int CBeam::UpdateTransmitState( void )
+int CBeam::UpdateTransmitState_Impl( void )
 {
 	// we must call ShouldTransmit() if we have a move parent
 	if ( GetMoveParent() )
 		return SetTransmitState( FL_EDICT_FULLCHECK );
 
-	return BaseClass::UpdateTransmitState( );
+	return BaseClass::UpdateTransmitState_Impl( );
 }
 
-void CBeam::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
+void CBeam::SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways )
 {
 	// Are we already marked for transmission?
 	if ( (*pInfo->m_pTransmitEdict)[ entindex() ] )
 		return;
 
-	BaseClass::SetTransmit( pInfo, bAlways );
+	BaseClass::SetTransmit_Impl( pInfo, bAlways );
 	
 	// Force our attached entities to go too...
 	for ( int i=0; i < MAX_BEAM_ENTS; ++i )
@@ -732,7 +727,7 @@ void CBeam::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 	}
 }
 
-int CBeam::ShouldTransmit( const CCheckTransmitInfo *pInfo )
+int CBeam::ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo )
 {
 	if ( IsEffectActive( EF_NODRAW ) )
 		return FL_EDICT_DONTSEND;
@@ -743,7 +738,7 @@ int CBeam::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 		return GetMoveParent()->ShouldTransmit( pInfo );
 	}
 
-	return BaseClass::ShouldTransmit( pInfo );
+	return BaseClass::ShouldTransmit_Impl( pInfo );
 }
 
 #endif
@@ -752,10 +747,10 @@ int CBeam::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 // Purpose: Draw any debug text overlays.
 // Output : Returns the new text offset from the top.
 //-----------------------------------------------------------------------------
-int CBeam::DrawDebugTextOverlays(void)
+int CBeam::DrawDebugTextOverlays_Impl(void)
 {
 #if !defined( CLIENT_DLL )
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
 		// Print state
@@ -1001,139 +996,5 @@ void CBeam::ComputeBounds( Vector& mins, Vector& maxs )
 	mins -= vecAbsOrigin;
 	maxs -= vecAbsOrigin;
 }
-
-void CBeam::GetToolRecordingState( KeyValues *msg )
-{
-	BaseClass::GetToolRecordingState( msg );
-
-	Vector vTemp;
-
-	KeyValues *pKV = CIFM_EntityKeyValuesHandler_AutoRegister::FindOrCreateNonConformantKeyValues( msg );
-	pKV->SetString( CIFM_EntityKeyValuesHandler_AutoRegister::GetHandlerIDKeyString(), "C_Beam" );
-	
-	pKV->SetInt( "entIndex", (index != -1) ? index : GetRefEHandle().GetSerialNumber() ); //if the index is -1 (client entity), fall back on the serial number
-
-	
-	//pKV->SetInt( "beamType", m_nBeamType );
-	pKV->SetInt( "beamType", BEAM_POINTS ); //need to make sure we remove all dependancy on outside data.
-
-	pKV->SetInt( "beamEnts", m_nNumBeamEnts );
-	
-	vTemp = GetAbsStartPos();
-	pKV->SetFloat( "start_x", vTemp.x );
-	pKV->SetFloat( "start_y", vTemp.y );
-	pKV->SetFloat( "start_z", vTemp.z );
-
-	vTemp = GetAbsEndPos();
-	pKV->SetFloat( "end_x", vTemp.x );
-	pKV->SetFloat( "end_y", vTemp.y );
-	pKV->SetFloat( "end_z", vTemp.z );
-
-	pKV->SetInt( "ModelIndex", GetModelIndex() );
-	pKV->SetInt( "HaloIndex", m_nHaloIndex );
-	pKV->SetFloat( "HaloScale", m_fHaloScale );
-	pKV->SetFloat( "Width", GetWidth() );
-	pKV->SetFloat( "EndWidth", GetEndWidth() );
-	pKV->SetFloat( "FadeLength", GetFadeLength() );
-	pKV->SetFloat( "Noise", GetNoise() );
-	pKV->SetInt( "Brightness", GetRenderAlpha() );
-	pKV->SetFloat( "ScrollRate", GetScrollRate() );
-	pKV->SetInt( "beamFlags", GetBeamFlags() );
-
-	pKV->SetInt( "color_r", GetRenderColorR() );
-	pKV->SetInt( "color_g", GetRenderColorG() );
-	pKV->SetInt( "color_b", GetRenderColorB() );
-
-	pKV->SetFloat( "color_hdrscale", GetHDRColorScale() );
-
-	pKV->SetFloat( "startframe", m_fStartFrame );
-	pKV->SetFloat( "framerate", m_flFrameRate );
-}
-
-void CBeam::RestoreToToolRecordedState( KeyValues *pKV )
-{
-	Vector vTemp;
-	
-	SetType( pKV->GetInt( "beamType" ) );
-
-	m_nNumBeamEnts = pKV->GetInt( "beamEnts" );
-
-	vTemp.x = pKV->GetFloat( "start_x" );
-	vTemp.y = pKV->GetFloat( "start_y" );
-	vTemp.z = pKV->GetFloat( "start_z" );
-	SetAbsStartPos( vTemp );
-
-	vTemp.x = pKV->GetFloat( "end_x" );
-	vTemp.y = pKV->GetFloat( "end_y" );
-	vTemp.z = pKV->GetFloat( "end_z" );
-	SetAbsEndPos( vTemp );
-
-	SetModelIndex( pKV->GetInt( "ModelIndex" ) );
-	m_nHaloIndex = pKV->GetInt( "HaloIndex" );
-	m_fHaloScale = pKV->GetFloat( "HaloScale" );
-	SetWidth( pKV->GetFloat( "Width" ) );
-	SetEndWidth( pKV->GetFloat( "EndWidth" ) );
-	SetFadeLength( pKV->GetFloat( "FadeLength" ) );
-	SetNoise( pKV->GetFloat( "Noise" ) );
-	int iBrightness = pKV->GetInt( "Brightness", 255 );
-	iBrightness = std::min( iBrightness, 255 );
-	iBrightness = std::max( iBrightness, 0 );
-	SetRenderAlpha( (byte)iBrightness );
-	//pKV->GetFloat( "Brightness", 255 ); //<-----------------------------revisit
-	SetScrollRate( pKV->GetFloat( "ScrollRate" ) );
-	m_nBeamFlags = pKV->GetInt( "beamFlags" );
-
-
-	SetRenderColorR( (byte)pKV->GetInt( "color_r" ) );
-	SetRenderColorG( (byte)pKV->GetInt( "color_g" ) );
-	SetRenderColorB( (byte)pKV->GetInt( "color_b" ) );
-
-	SetHDRColorScale( pKV->GetFloat( "color_hdrscale" ) );
-
-	m_fStartFrame = pKV->GetFloat( "startframe" );
-	m_flFrameRate = pKV->GetFloat( "framerate" );
-
-	for (int i=0;i<MAX_BEAM_ENTS;i++)
-	{
-		m_hAttachEntity.Set( i, INVALID_EHANDLE );
-		m_nAttachIndex.Set( i, 0 );
-	}
-
-	SetSize( -Vector( 16384.0f, 16384.0f, 16384.0f ), Vector( 16384.0f, 16384.0f, 16384.0f ) );
-	m_VisibilityBits.set();
-}
-
-class C_Beam_NonConformantDataHandler : public CIFM_EntityKeyValuesHandler_RecreateEntities
-{
-public:
-	C_Beam_NonConformantDataHandler( void ) 
-		: CIFM_EntityKeyValuesHandler_RecreateEntities( "C_Beam" )
-	{ }
-
-	virtual void *CreateInstance( void )
-	{
-		return new CBeam;
-	}
-
-	virtual void DestroyInstance( void *pEntity )
-	{
-		CBeam *pCastEntity = (CBeam *)pEntity;
-		clienttools->RemoveClientRenderable( pCastEntity );
-		delete pCastEntity;
-	}
-
-	virtual void HandleInstance( void *pEntity, KeyValues *pKeyValues )
-	{
-		CBeam *pCastEntity = (CBeam *)pEntity;
-		pCastEntity->RestoreToToolRecordedState( pKeyValues );
-		if( pCastEntity->RenderHandle() == INVALID_CLIENT_RENDER_HANDLE )
-		{
-			clienttools->AddClientRenderable( pCastEntity, false, RENDERABLE_IS_TRANSLUCENT );
-		}
-		clienttools->MarkClientRenderableDirty( pCastEntity );
-	}
-};
-
-static C_Beam_NonConformantDataHandler s_BeamEntityIFMHandler;
 
 #endif

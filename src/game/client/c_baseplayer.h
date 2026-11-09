@@ -5,7 +5,6 @@
 // Purpose: Client-side CBasePlayer.
 //			- Manages the player's flashlight effect.
 
-import ks.tier1;
 #include "baseplayer_shared.h"
 #include "c_playerlocaldata.h"
 #include "c_basecombatcharacter.h"
@@ -13,7 +12,6 @@ import ks.tier1;
 #include "usercmd.h"
 #include "shareddefs.h"
 #include "timedevent.h"
-import std;
 #include "fx_water.h"
 #include "hintsystem.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
@@ -25,7 +23,6 @@ import std;
 class C_BaseCombatWeapon;
 class C_BaseViewModel;
 class C_FuncLadder;
-enum CrossPlayPlatform_t;
 class C_WearableItem;
 
 extern int g_nKillCamMode;
@@ -163,8 +160,6 @@ public:
 	void				CalcViewRoll( QAngle& eyeAngles );
 	virtual void		CalcViewBob( Vector& eyeOrigin );
 	virtual void		CalcAddViewmodelCameraAnimation( Vector& eyeOrigin, QAngle& eyeAngles );
-
-	void				CreateWaterEffects( void );
 
 	virtual void			SetPlayerUnderwater( bool state );
 	void					UpdateUnderwaterState( void );
@@ -797,12 +792,6 @@ private:
 	int				m_iOldAmmo[ MAX_AMMO_TYPES ];
 
 	C_CommandContext		m_CommandContext;
-
-	// For underwater effects
-	float							m_flWaterSurfaceZ;
-	bool							m_bResampleWaterSurface;
-	TimedEvent						m_tWaterParticleTimer;
-	ks::intrusive_ptr<WaterDebrisEffect>	m_pWaterEmitter;
 
 	bool							m_bPlayerUnderwater;
 

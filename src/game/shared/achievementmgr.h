@@ -7,7 +7,6 @@
 #include "baseachievement.h"
 #include "GameEventListener.h"
 #include "iachievementmgr.h"
-import std;
 #include "usermessages.h"
 
 inline constexpr auto THINK_CLEAR = -1;
@@ -18,9 +17,8 @@ enum SyncAchievementValueDirection_t
 	ACHIEVEMENT_READ_ACHIEVEMENT
 };
 
-typedef void* AsyncHandle_t;
 
-class CAchievementMgr : public CAutoGameSystemPerFrame, public CGameEventListener, public IMatchEventsSink
+class CAchievementMgr : public CAutoGameSystemPerFrame, public CGameEventListener
 {
 public:
 	CAchievementMgr();
@@ -77,7 +75,7 @@ public:
 
 	void CheckSignInState( bool bCheck ) { m_bCheckSigninState = bCheck; }
 
-	// IMatchEventsSink
+	// Match events
 	virtual void OnEvent( KeyValues *pEvent );
 
 	bool WereCheatsEverOn( void ) { return m_bCheatsEverOn; }
@@ -100,8 +98,10 @@ public:
 
 	CUserMessageBinder m_UMCMsgAchievementEvent;
 
-private:
+public:
 	void FireGameEvent( IGameEvent *event );
+
+private:
 
 	// [sbodenbender] gobetween for UI and profile data
 	UIProfileInfo				m_UIProfileInfo;

@@ -63,8 +63,8 @@ public:
 	~CFogController();
 
 	// Parse data from a map file
-	virtual void Activate();
-	virtual int UpdateTransmitState();
+	void Activate_Impl();
+	int UpdateTransmitState_Impl();
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "SetStartDist", .type = FIELD_FLOAT } ]] void InputSetStartDist(inputdata_t &data);
@@ -86,10 +86,10 @@ public:
 
 	[[= ks::reflect::Input{ .name = "StartFogTransition", .type = FIELD_VOID } ]] void InputStartFogTransition(inputdata_t &data);
 
-	int DrawDebugTextOverlays(void);
+	int DrawDebugTextOverlays_Impl(void);
 
 	void SetLerpValues( void );
-	void Spawn( void );
+	void Spawn_Impl( void );
 
 	bool IsMaster( void )					{ return HasSpawnFlags( SF_FOG_MASTER ); }
 
@@ -121,7 +121,7 @@ public:
 
 	virtual void LevelInitPreEntity();
 	virtual void LevelInitPostEntity();
-	virtual void FireGameEvent( IGameEvent *pEvent );
+	void FireGameEvent( IGameEvent *pEvent );
 	CFogController *GetMasterFogController( void )			{ return m_hMasterController; }
 	void SetMasterController( CFogController *pFogController );
 

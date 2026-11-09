@@ -8,12 +8,12 @@ import ks.core;
 class IGameUIFuncs
 {
 public:
-	virtual bool		IsKeyDown( const char *keyname, bool& isdown ) = 0;
-	virtual const char	*GetBindingForButtonCode( ButtonCode_t code ) = 0;
-	virtual ButtonCode_t GetButtonCodeForBind( const char *pBind, int userId = -1 ) = 0;
-	virtual void		GetVideoModes( struct vmode_s **liststart, int *count ) = 0;
-	virtual void		SetFriendsID( uint friendsID, const char *friendsName ) = 0;
-	virtual void		GetDesktopResolution( int &width, int &height ) = 0;
+	bool		IsKeyDown( const char *keyname, bool& isdown );
+	const char	*GetBindingForButtonCode( ButtonCode_t code );
+	ButtonCode_t GetButtonCodeForBind( const char *pBind, int userId = -1 );
+	void		GetVideoModes( struct vmode_s **liststart, int *count );
+	void		SetFriendsID( uint friendsID, const char *friendsName );
+	void		GetDesktopResolution( int &width, int &height );
 };
 
 inline constexpr const char *VENGINE_GAMEUIFUNCS_VERSION = "VENGINE_GAMEUIFUNCS_VERSION005";

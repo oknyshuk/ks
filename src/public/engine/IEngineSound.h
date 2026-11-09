@@ -45,15 +45,18 @@ inline constexpr const char *IENGINESOUND_SERVER_INTERFACE_VERSION = "IEngineSou
 class IEngineSound
 {
 public:
+	enum class kind_t : unsigned char { server, client };
+	explicit IEngineSound( kind_t kind ) : m_kind( kind ) {}
+
 	// Precache a particular sample
-	virtual bool PrecacheSound( const char *pSample, bool bPreload = false, bool bIsUISound = false ) = 0;
-	virtual bool IsSoundPrecached( const char *pSample ) = 0;
-	virtual void PrefetchSound( const char *pSample ) = 0;
-	virtual bool IsLoopingSound( const char *pSample ) = 0;
+	bool PrecacheSound( const char *pSample, bool bPreload = false, bool bIsUISound = false );
+	bool IsSoundPrecached( const char *pSample );
+	void PrefetchSound( const char *pSample );
+	bool IsLoopingSound( const char *pSample );
 
 	// Just loads the file header and checks for duration (not hooked up for .mp3's yet)
 	// Is accessible to server and client though
-	virtual float GetSoundDuration( const char *pSample ) = 0;  
+	float GetSoundDuration( const char *pSample );  
 
 	// Pitch of 100 is no pitch shift.  Pitch > 100 up to 255 is a higher pitch, pitch < 100
 	// down to 1 is a lower pitch.   150 to 70 is the realistic range.
@@ -63,60 +66,63 @@ public:
 	// NOTE: setting iEntIndex to -1 will cause the sound to be emitted from the local
 	// player (client-side only)
 	// Will return the sound guid. If negative, the guid is unknown (call may be successful or not). 0 if the sound was not emitted. Positive if the guid is valid.
-	virtual int EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH nSoundEntryHash, const char *pSample, 
+	int EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH nSoundEntryHash, const char *pSample, 
 		float flVolume, float flAttenuation, int nSeed, int iFlags = 0, int iPitch = PITCH_NORM, 
-		const Vector *pOrigin = nullptr, const Vector *pDirection = nullptr, std::vector< Vector >* pUtlVecOrigins = nullptr, bool bUpdatePositions = true, float soundtime = 0.0f, int speakerentity = -1 ) = 0;
+		const Vector *pOrigin = nullptr, const Vector *pDirection = nullptr, std::vector< Vector >* pUtlVecOrigins = nullptr, bool bUpdatePositions = true, float soundtime = 0.0f, int speakerentity = -1 );
 
-	virtual int EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH nSoundEntryHash, const char *pSample, 
+	int EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH nSoundEntryHash, const char *pSample, 
 		float flVolume, soundlevel_t iSoundlevel, int nSeed, int iFlags = 0, int iPitch = PITCH_NORM, 
-		const Vector *pOrigin = nullptr, const Vector *pDirection = nullptr, std::vector< Vector >* pUtlVecOrigins = nullptr, bool bUpdatePositions = true, float soundtime = 0.0f, int speakerentity = -1 ) = 0;
+		const Vector *pOrigin = nullptr, const Vector *pDirection = nullptr, std::vector< Vector >* pUtlVecOrigins = nullptr, bool bUpdatePositions = true, float soundtime = 0.0f, int speakerentity = -1 );
 
-	virtual void EmitSentenceByIndex( IRecipientFilter& filter, int iEntIndex, int iChannel, int iSentenceIndex, 
+	void EmitSentenceByIndex( IRecipientFilter& filter, int iEntIndex, int iChannel, int iSentenceIndex, 
 		float flVolume, soundlevel_t iSoundlevel, int nSeed, int iFlags = 0, int iPitch = PITCH_NORM,
-		const Vector *pOrigin = nullptr, const Vector *pDirection = nullptr, std::vector< Vector >* pUtlVecOrigins = nullptr, bool bUpdatePositions = true, float soundtime = 0.0f, int speakerentity = -1 ) = 0;
+		const Vector *pOrigin = nullptr, const Vector *pDirection = nullptr, std::vector< Vector >* pUtlVecOrigins = nullptr, bool bUpdatePositions = true, float soundtime = 0.0f, int speakerentity = -1 );
 
-	virtual void StopSound( int iEntIndex, int iChannel, const char *pSample, HSOUNDSCRIPTHASH nSoundEntryHash = SOUNDEMITTER_INVALID_HASH ) = 0;
+	void StopSound( int iEntIndex, int iChannel, const char *pSample, HSOUNDSCRIPTHASH nSoundEntryHash = SOUNDEMITTER_INVALID_HASH );
 
 	// stop all active sounds (client only)
-	virtual void StopAllSounds(bool bClearBuffers) = 0;
+	void StopAllSounds(bool bClearBuffers);
 
 	// Set the room type for a player (client only)
-	virtual void SetRoomType( IRecipientFilter& filter, int roomType ) = 0;
+	void SetRoomType( IRecipientFilter& filter, int roomType );
 
 	// Set the dsp preset for a player (client only)
-	virtual void SetPlayerDSP( IRecipientFilter& filter, int dspType, bool fastReset ) = 0;
+	void SetPlayerDSP( IRecipientFilter& filter, int dspType, bool fastReset );
 	
 	// emit an "ambient" sound that isn't spatialized
 	// only available on the client, assert on server
-	virtual int EmitAmbientSound( const char *pSample, float flVolume, int iPitch = PITCH_NORM, int flags = 0, float soundtime = 0.0f ) = 0;
+	int EmitAmbientSound( const char *pSample, float flVolume, int iPitch = PITCH_NORM, int flags = 0, float soundtime = 0.0f );
 
 
 //	virtual EntChannel_t	CreateEntChannel() = 0;
 
-	virtual float GetDistGainFromSoundLevel( soundlevel_t soundlevel, float dist ) = 0;
+	float GetDistGainFromSoundLevel( soundlevel_t soundlevel, float dist );
 
 	// Client .dll only functions
-	virtual int		GetGuidForLastSoundEmitted() = 0;
-	virtual bool	IsSoundStillPlaying( int guid ) = 0;
-	virtual void	StopSoundByGuid( int guid, bool bForceSync = false ) = 0;
+	int		GetGuidForLastSoundEmitted();
+	bool	IsSoundStillPlaying( int guid );
+	void	StopSoundByGuid( int guid, bool bForceSync = false );
 	// Set's master volume (0.0->1.0)
-	virtual void	SetVolumeByGuid( int guid, float fvol ) = 0;
+	void	SetVolumeByGuid( int guid, float fvol );
 
 	// Retrieves list of all active sounds
-	virtual void	GetActiveSounds( std::vector< SndInfo_t >& sndlist ) = 0;
+	void	GetActiveSounds( std::vector< SndInfo_t >& sndlist );
 
-	virtual void	PrecacheSentenceGroup( const char *pGroupName ) = 0;
-	virtual void	NotifyBeginMoviePlayback() = 0;
-	virtual void	NotifyEndMoviePlayback() = 0;
-	virtual bool	IsMoviePlaying() = 0;
+	void	PrecacheSentenceGroup( const char *pGroupName );
+	void	NotifyBeginMoviePlayback();
+	void	NotifyEndMoviePlayback();
+	bool	IsMoviePlaying();
 
-	virtual bool	GetSoundChannelVolume( const char* sound, float &flVolumeLeft, float &flVolumeRight ) = 0;
+	bool	GetSoundChannelVolume( const char* sound, float &flVolumeLeft, float &flVolumeRight );
 	
-	virtual float	GetElapsedTimeByGuid( int guid ) = 0;
+	float	GetElapsedTimeByGuid( int guid );
 
 	// engine capable of playing sounds?
-	virtual bool GetPreventSound( void ) = 0;
+	bool GetPreventSound( void );
 
-	virtual void SetReplaySoundFade( float flReplayVolume ) = 0;
-	virtual float GetReplaySoundFade()const = 0;
+	void SetReplaySoundFade( float flReplayVolume );
+	float GetReplaySoundFade()const;
+
+private:
+	kind_t m_kind;
 };

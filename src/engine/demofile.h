@@ -8,7 +8,6 @@
 import ks.tier1;
 
 import std;
-#include "demostream.h"
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
@@ -18,7 +17,7 @@ struct CDemoPlaybackParameters_t;
 //-----------------------------------------------------------------------------
 // Demo file 
 //-----------------------------------------------------------------------------
-class CDemoFile  : public IDemoStream
+class CDemoFile
 {
 public:
 	CDemoFile();
@@ -71,10 +70,10 @@ public:
 
 	void	WriteFileBytes( FileHandle_t fh, int length );
 
-	virtual const char* GetUrl( void ) override { return m_szFileName; }
-	virtual float GetTicksPerSecond() override;
-	virtual float GetTicksPerFrame() override;
-	virtual int	GetTotalTicks( void ) override;
+	const char* GetUrl( void ) { return m_szFileName; }
+	float GetTicksPerSecond();
+	float GetTicksPerFrame();
+	int	GetTotalTicks( void );
 public:
 	char			m_szFileName[MAX_PATH];	//name of current demo file
 	demoheader_t    m_DemoHeader;  //general demo info

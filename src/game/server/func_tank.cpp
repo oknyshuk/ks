@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.vstdlib;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -18,7 +16,6 @@ import ks.vstdlib;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -291,9 +288,9 @@ void CFuncTank::NPC_FindController( void )
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CFuncTank::DrawDebugTextOverlays(void) 
+int CFuncTank::DrawDebugTextOverlays_Impl(void) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -357,7 +354,7 @@ int CFuncTank::DrawDebugTextOverlays(void)
 // Input  :
 // Output : 
 //-----------------------------------------------------------------------------
-void CFuncTank::DrawDebugGeometryOverlays(void) 
+void CFuncTank::DrawDebugGeometryOverlays_Impl(void) 
 {
 	// Center
 	QAngle angCenter;
@@ -382,7 +379,7 @@ void CFuncTank::DrawDebugGeometryOverlays(void)
 	AngleVectors( angCenter, &vecForward );
 	NDebugOverlay::Line( GetAbsOrigin(), GetAbsOrigin() + (vecForward * 128), 255,0,0, true, 0.1);
 
-	BaseClass::DrawDebugGeometryOverlays();
+	BaseClass::DrawDebugGeometryOverlays_Impl();
 }
 
 //-----------------------------------------------------------------------------
@@ -457,7 +454,7 @@ CBaseEntity *CFuncTank::FindTarget( string_t targetName, CBaseEntity *pActivator
 //			szValue - 
 // Output : 
 //-----------------------------------------------------------------------------
-bool CFuncTank::KeyValue( const char *szKeyName, const char *szValue )
+bool CFuncTank::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "barrel"))
 	{
@@ -477,7 +474,7 @@ bool CFuncTank::KeyValue( const char *szKeyName, const char *szValue )
 		return true;
 	}
 
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 
@@ -495,7 +492,7 @@ inline constexpr int MAX_FIRING_SPREADS = std::size( gTankSpread );
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CFuncTank::Spawn( void )
+void CFuncTank::Spawn_Impl( void )
 {
 	Precache();
 
@@ -624,9 +621,9 @@ void CFuncTank::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CFuncTank::Activate( void )
+void CFuncTank::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	// Necessary for save/load
 	if ( (m_iszBarrelAttachment != NULL_STRING) && (m_nBarrelAttachment == 0) )
@@ -639,14 +636,14 @@ void CFuncTank::Activate( void )
 	}
 }
 
-bool CFuncTank::CreateVPhysics()
+bool CFuncTank::CreateVPhysics_Impl()
 {
 	VPhysicsInitShadow( false, false );
 	return true;
 }
 
 
-void CFuncTank::Precache( void )
+void CFuncTank::Precache_Impl( void )
 {
 	if ( m_iszSpriteSmoke != NULL_STRING )
 		PrecacheModel( STRING(m_iszSpriteSmoke) );
@@ -663,13 +660,13 @@ void CFuncTank::Precache( void )
 	PrecacheScriptSound( "Func_Tank.BeginUse" );
 }
 
-void CFuncTank::UpdateOnRemove( void )
+void CFuncTank::UpdateOnRemove_Impl( void )
 {
 	if ( HasController() )
 	{
 		StopControl();
 	}
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 
@@ -705,9 +702,9 @@ Vector CFuncTank::WorldBarrelPosition( void )
 //-----------------------------------------------------------------------------
 // Make the parent's pose parameters match the func_tank 
 //-----------------------------------------------------------------------------
-void CFuncTank::PhysicsSimulate( void )
+void CFuncTank::PhysicsSimulate_Impl( void )
 {
-	BaseClass::PhysicsSimulate();
+	BaseClass::PhysicsSimulate_Impl();
 
 	if ( m_bUsePoseParameters && GetParent() )
 	{
@@ -727,7 +724,7 @@ void CFuncTank::PhysicsSimulate( void )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-bool CFuncTank::OnControls( CBaseEntity *pTest )
+bool CFuncTank::OnControls_Impl( CBaseEntity *pTest )
 {
 	// Is the tank controllable.
 	if ( !IsControllable() )
@@ -1124,7 +1121,7 @@ int CFuncTank::GetRandomBurst( void )
 //			useType - 
 //			value - 
 //-----------------------------------------------------------------------------
-void CFuncTank::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CFuncTank::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	if ( !IsControllable() )
 		return;
@@ -1215,7 +1212,7 @@ bool CFuncTank::InRange2( float flRange2 )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CFuncTank::Think( void )
+void CFuncTank::Think_Impl( void )
 {
 	m_hFuncTankTarget = nullptr;
 
@@ -1771,7 +1768,7 @@ void CFuncTank::DoMuzzleFlash( void )
 // Purpose: 
 // Output : const char
 //-----------------------------------------------------------------------------
-const char *CFuncTank::GetTracerType( void )
+const char *CFuncTank::GetTracerType_Impl( void )
 {
 	if ( m_iEffectHandling == EH_AR2 )
 		return "AR2Tracer";
@@ -2012,7 +2009,7 @@ public:
 	DECLARE_CLASS( CFuncTankPulseLaser, CFuncTankGun );
 	DECLARE_DATADESC();
 
-	void Precache();
+	void Precache_Impl();
 	void Fire( int bulletCount, const Vector &barrelEnd, const Vector &forward, CBaseEntity *pAttacker );
 
 	[[= ks::reflect::Key{ .name = "PulseSpeed" } ]] float		m_flPulseSpeed;
@@ -2031,7 +2028,7 @@ IMPLEMENT_REFLECT_DATAMAP( CFuncTankPulseLaser )
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
-void CFuncTankPulseLaser::Precache(void)
+void CFuncTankPulseLaser::Precache_Impl(void)
 {
 	UTIL_PrecacheOther( "grenade_beam" );
 
@@ -2039,7 +2036,7 @@ void CFuncTankPulseLaser::Precache(void)
 	{
 		PrecacheScriptSound( STRING(m_sPulseFireSound) );
 	}
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 //------------------------------------------------------------------------------
 // Purpose :
@@ -2057,9 +2054,9 @@ class CFuncTankLaser : public CFuncTank
 {
 	DECLARE_CLASS( CFuncTankLaser, CFuncTank );
 public:
-	void	Activate( void );
+	void	Activate_Impl( void );
 	void	Fire( int bulletCount, const Vector &barrelEnd, const Vector &forward, CBaseEntity *pAttacker );
-	void	Think( void );
+	void	Think_Impl( void );
 	CEnvLaser *GetLaser( void );
 
 	DECLARE_DATADESC();
@@ -2074,9 +2071,9 @@ LINK_ENTITY_TO_CLASS( func_tanklaser, CFuncTankLaser );
 IMPLEMENT_REFLECT_DATAMAP( CFuncTankLaser )
 
 
-void CFuncTankLaser::Activate( void )
+void CFuncTankLaser::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( !GetLaser() )
 	{
@@ -2114,12 +2111,12 @@ CEnvLaser *CFuncTankLaser::GetLaser( void )
 }
 
 
-void CFuncTankLaser::Think( void )
+void CFuncTankLaser::Think_Impl( void )
 {
 	if ( m_pLaser && (gpGlobals->curtime > m_laserTime) )
 		m_pLaser->TurnOff();
 
-	CFuncTank::Think();
+	CFuncTank::Think_Impl();
 }
 
 
@@ -2150,7 +2147,7 @@ class CFuncTankRocket : public CFuncTank
 public:
 	DECLARE_CLASS( CFuncTankRocket, CFuncTank );
 
-	void Precache( void );
+	void Precache_Impl( void );
 	void Fire( int bulletCount, const Vector &barrelEnd, const Vector &forward, CBaseEntity *pAttacker );
 	virtual float GetShotSpeed() { return m_flRocketSpeed; }
 
@@ -2164,10 +2161,10 @@ IMPLEMENT_REFLECT_DATAMAP( CFuncTankRocket )
 
 LINK_ENTITY_TO_CLASS( func_tankrocket, CFuncTankRocket );
 
-void CFuncTankRocket::Precache( void )
+void CFuncTankRocket::Precache_Impl( void )
 {
 	UTIL_PrecacheOther( "rpg_missile" );
-	CFuncTank::Precache();
+	CFuncTank::Precache_Impl();
 }
 
 void CFuncTankRocket::Fire( int bulletCount, const Vector &barrelEnd, const Vector &forward, CBaseEntity *pAttacker )
@@ -2184,15 +2181,15 @@ public:
 	DECLARE_CLASS( CFuncTankAirboatGun, CFuncTank );
  	DECLARE_DATADESC();
 
-	void Precache( void );
-	virtual void Spawn();
-	virtual void Activate();
+	void Precache_Impl( void );
+	void Spawn_Impl();
+	void Activate_Impl();
 	virtual void Fire( int bulletCount, const Vector &barrelEnd, const Vector &forward, CBaseEntity *pAttacker );
 	virtual void ControllerPostFrame();
 	virtual void OnStopControlled();
-	virtual const char *GetTracerType( void );
+	const char *GetTracerType_Impl( void );
 	virtual Vector WorldBarrelPosition( void );
-	virtual void DoImpactEffect( trace_t &tr, int nDamageType );
+	void DoImpactEffect_Impl( trace_t &tr, int nDamageType );
 
 private:
 	void CreateSounds();
@@ -2223,9 +2220,9 @@ LINK_ENTITY_TO_CLASS( func_tankairboatgun, CFuncTankAirboatGun );
 //-----------------------------------------------------------------------------
 // Precache: 
 //-----------------------------------------------------------------------------
-void CFuncTankAirboatGun::Precache( void )
+void CFuncTankAirboatGun::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 	PrecacheScriptSound( "Airboat.FireGunLoop" );
 	PrecacheScriptSound( "Airboat.FireGunRevDown");
 	CreateSounds();
@@ -2235,9 +2232,9 @@ void CFuncTankAirboatGun::Precache( void )
 //-----------------------------------------------------------------------------
 // Precache: 
 //-----------------------------------------------------------------------------
-void CFuncTankAirboatGun::Spawn( void )
+void CFuncTankAirboatGun::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	m_flNextHeavyShotTime = 0.0f;
 	m_bIsFiring = false;
 	m_flLastImpactEffectTime = -1;
@@ -2247,13 +2244,13 @@ void CFuncTankAirboatGun::Spawn( void )
 //-----------------------------------------------------------------------------
 // Attachment indices
 //-----------------------------------------------------------------------------
-void CFuncTankAirboatGun::Activate()
+void CFuncTankAirboatGun::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( m_iszAirboatGunModel != NULL_STRING )
 	{
-		m_hAirboatGunModel = dynamic_cast<CBaseAnimating*>( gEntList.FindEntityByName( nullptr, m_iszAirboatGunModel, nullptr ) );
+		m_hAirboatGunModel = entity_cast<CBaseAnimating>( gEntList.FindEntityByName( nullptr, m_iszAirboatGunModel, nullptr ) );
 		if ( m_hAirboatGunModel )
 		{
 			m_nGunBarrelAttachment = m_hAirboatGunModel->LookupAttachment( "muzzle" );
@@ -2365,7 +2362,7 @@ Vector CFuncTankAirboatGun::WorldBarrelPosition( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-const char *CFuncTankAirboatGun::GetTracerType( void ) 
+const char *CFuncTankAirboatGun::GetTracerType_Impl( void ) 
 {
 	if ( gpGlobals->curtime >= m_flNextHeavyShotTime )
 		return "AirboatGunHeavyTracer";
@@ -2393,7 +2390,7 @@ void CFuncTankAirboatGun::DoMuzzleFlash( void )
 //-----------------------------------------------------------------------------
 // Allows the shooter to change the impact effect of his bullets
 //-----------------------------------------------------------------------------
-void CFuncTankAirboatGun::DoImpactEffect( trace_t &tr, int nDamageType )
+void CFuncTankAirboatGun::DoImpactEffect_Impl( trace_t &tr, int nDamageType )
 {
 	// The airboat spits out so much crap that we need to do cheaper versions
 	// of the impact effects. Also, we need to do less of them.
@@ -2457,11 +2454,11 @@ class CFuncTankAPCRocket : public CFuncTank
 public:
 	DECLARE_CLASS( CFuncTankAPCRocket, CFuncTank );
 
-	void Precache( void );
-	virtual void Spawn();
-	virtual void UpdateOnRemove();
+	void Precache_Impl( void );
+	void Spawn_Impl();
+	void UpdateOnRemove_Impl();
 	void Fire( int bulletCount, const Vector &barrelEnd, const Vector &forward, CBaseEntity *pAttacker );
-	virtual void Think();
+	void Think_Impl();
 	virtual float GetShotSpeed() { return m_flRocketSpeed; }
 
 protected:
@@ -2482,18 +2479,18 @@ IMPLEMENT_REFLECT_DATAMAP( CFuncTankAPCRocket )
 
 LINK_ENTITY_TO_CLASS( func_tankapcrocket, CFuncTankAPCRocket );
 
-void CFuncTankAPCRocket::Precache( void )
+void CFuncTankAPCRocket::Precache_Impl( void )
 {
 	UTIL_PrecacheOther( "apc_missile" );
 
 	PrecacheScriptSound( "PropAPC.FireCannon" );
 
-	CFuncTank::Precache();
+	CFuncTank::Precache_Impl();
 }
 
-void CFuncTankAPCRocket::Spawn( void )
+void CFuncTankAPCRocket::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	AddEffects( EF_NODRAW );
 	m_nSide = 0;
 	m_bDying = false;
@@ -2502,14 +2499,14 @@ void CFuncTankAPCRocket::Spawn( void )
 	SetLocalVelocity( vec3_origin );
 }
 
-void CFuncTankAPCRocket::UpdateOnRemove( void )
+void CFuncTankAPCRocket::UpdateOnRemove_Impl( void )
 {
 	if ( m_hLaserDot )
 	{
 		UTIL_Remove( m_hLaserDot );
 		m_hLaserDot = nullptr;
 	}
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 void CFuncTankAPCRocket::FireDying( const Vector &barrelEnd )
@@ -2520,7 +2517,7 @@ void CFuncTankAPCRocket::Fire( int bulletCount, const Vector &barrelEnd, const V
 {
 }
 
-void CFuncTankAPCRocket::Think()
+void CFuncTankAPCRocket::Think_Impl()
 {
 	// Inert if we're carried...
 	if ( GetMoveParent() && GetMoveParent()->GetMoveParent() )
@@ -2529,7 +2526,7 @@ void CFuncTankAPCRocket::Think()
 		return;
 	}
 
-	BaseClass::Think();
+	BaseClass::Think_Impl();
 	if ( m_bDying )
 	{
 		FireDying( WorldBarrelPosition() );

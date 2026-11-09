@@ -22,9 +22,6 @@ import ks.vstdlib;
 #include "datacache/imdlcache.h"
 #include "vphysics_interface.h"
 #include "filesystem_init.h"
-#include "avi/iavi.h"
-#include "avi/ibik.h"
-#include "avi/iquicktime.h"
 #include "tier2/tier2.h"
 #include "tier3/tier3.h"
 #include "inputsystem/iinputsystem.h"
@@ -47,6 +44,8 @@ inline constexpr const char *DEFAULT_HL2_GAMEDIR = "csgo";
 // A logging channel used during engine initialization
 LoggingChannelID_t LOG_EngineInitialization = LoggingSystem_RegisterLoggingChannel( "EngineInitialization", nullptr );;
 extern void* CreateSDLMgr();
+void Cvar_InstallEngineHooks( ICvar *pCVar );
+void Cvar_RemoveEngineHooks();
 
 
 extern bool DoesFileExistIn( const char *pDirectoryName, const char *pFilename );
@@ -98,7 +97,9 @@ public:
 class CLauncherLoggingListener : public ILoggingListener
 {
 public:
-	virtual void Log( const LoggingContext_t *pContext, const tchar *pMessage )
+	CLauncherLoggingListener() : ILoggingListener( [this]( const LoggingContext_t *pContext, const tchar *pMessage ) { Log( pContext, pMessage ); } ) {}
+
+	void Log( const LoggingContext_t *pContext, const tchar *pMessage )
 	{
 		if ( pContext->m_Severity == LS_WARNING && pContext->m_ChannelID == LOG_EngineInitialization )
 		{
@@ -380,11 +381,11 @@ class CSourceAppSystemGroup : public CFSAppSystemGroup
 {
 public:
 	// Methods of IApplication
-	virtual bool Create();
-	virtual bool PreInit();
-	virtual int Main();
-	virtual void PostShutdown();
-	virtual void Destroy();
+	bool Create();
+	bool PreInit();
+	int Main();
+	void PostShutdown();
+	void Destroy();
 
 private:
 	const char *DetermineDefaultMod();
@@ -413,9 +414,11 @@ bool CSourceAppSystemGroup::Create()
 	pFileSystem->InstallDirtyDiskReportFunc( ReportDirtyDiskNoMaterialSystem );
 
 
+	// Install the engine's ConVar linkage rules before any other system is added
+	Cvar_InstallEngineHooks( static_cast<ICvar *>( FindSystem( CVAR_INTERFACE_VERSION ) ) );
+
 	static const char * const pBuiltinSystems[] =
 	{
-		CVAR_QUERY_INTERFACE_VERSION,			// NOTE: This one must be first!!
 		INPUTSYSTEM_INTERFACE_VERSION,
 		INPUTSTACKSYSTEM_INTERFACE_VERSION,
 		LOCALIZE_INTERFACE_VERSION,
@@ -431,7 +434,7 @@ bool CSourceAppSystemGroup::Create()
 		ROCKETUI_INTERFACE_VERSION,
 	};
 
-    AddSystem( (IAppSystem *)CreateSDLMgr(),	SDLMGR_INTERFACE_VERSION );
+    AddSystem( (ILauncherMgr *)CreateSDLMgr(),	SDLMGR_INTERFACE_VERSION );
 
 	SetAssertDialogHandler( []( const char *pszTitle, const char *pszText, const char *const *pLabels, int nLabels, int nDefault, int nEscape )
 	{
@@ -460,18 +463,9 @@ bool CSourceAppSystemGroup::Create()
 
 	g_pEngineAPI = (IEngineAPI*)FindSystem( VENGINE_LAUNCHER_API_VERSION );
 
-	// Load up the appropriate shader DLL
+	// The shader API is linked into this executable; this only selects it by name.
 	// This has to be done before connection.
 	char const *pDLLName = "shaderapidx9.so";
-	const char* pArg = nullptr;
-	if ( CommandLine()->FindParm( "-noshaderapi" ) )
-	{
-		pDLLName = "shaderapiempty.so";
-	}
-	if ( CommandLine()->CheckParm( "-shaderapi", &pArg ))
-	{
-		pDLLName = pArg;
-	}
 	pMaterialSystem->SetShaderAPI( pDLLName );
 
 	elapsed = Plat_FloatTime() - start;
@@ -545,6 +539,8 @@ int CSourceAppSystemGroup::Main()
 
 void CSourceAppSystemGroup::PostShutdown()
 {
+	Cvar_RemoveEngineHooks();
+
 	// FIXME: Logfiles is mod-specific, needs to move into the engine.
 	g_LogFiles.Shutdown();
 

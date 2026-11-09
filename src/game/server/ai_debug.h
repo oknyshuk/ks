@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
 #include "ai_debug_shared.h"
-import std;
 #include "gametrace.h"
 #include "engine/IEngineTrace.h"
 
@@ -29,6 +27,7 @@ enum AIMsgFlags
 	AIMF_IGNORE_SELECTED = 0x01
 };
 
+using ::DevMsg;
 void DevMsg( CAI_BaseNPC *pAI, unsigned flags, const char *pszFormat, ... ) [[gnu::format(printf, 3, 4)]];
 void DevMsg( CAI_BaseNPC *pAI, const char *pszFormat, ... ) [[gnu::format(printf, 2, 3)]];
 

@@ -28,10 +28,10 @@ public:
 	CBaseMultiplayerPlayer();
 	~CBaseMultiplayerPlayer();
 
-	virtual void		Spawn( void );
+	void		Spawn_Impl( void );
 
-	virtual void		PostConstructor( const char *szClassname );
-	virtual void		ModifyOrAppendCriteria( AI_CriteriaSet& criteriaSet );
+	void		PostConstructor_Impl( const char *szClassname );
+	void		ModifyOrAppendCriteria_Impl( AI_CriteriaSet& criteriaSet );
 
 	virtual bool		SpeakIfAllowed( AIConcept_t conc, SpeechPriorityType priority, const char *modifiers = nullptr, char *pszOutResponseChosen = nullptr, std::size_t bufsize = 0, IRecipientFilter *filter = nullptr );
 	void				SpeakConcept( AI_Response &outresponse, int iConcept );
@@ -40,11 +40,11 @@ public:
 	virtual bool		CanHearAndReadChatFrom( CBasePlayer *pPlayer );
 	virtual bool		CanSpeak( void ) { return true; }
 
-	virtual void		Precache( void )
+	void		Precache_Impl( void )
 	{
 		PrecacheParticleSystem( "achieved" );
 
-		BaseClass::Precache();
+		BaseClass::Precache_Impl();
 	}
 
 	virtual bool		ClientCommand( const CCommand &args );

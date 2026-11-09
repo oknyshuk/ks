@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -88,7 +86,7 @@ bool CConveyorMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 C_BaseEntity *CConveyorMaterialProxy::BindArgToEntity( void *pArg )
 {
 	IClientRenderable *pRend = (IClientRenderable *)pArg;
-	return pRend->GetIClientUnknown()->GetBaseEntity();
+	return EntityCast<C_BaseEntity>( pRend->GetIClientUnknown()->GetBaseEntity() );
 }
 
 void CConveyorMaterialProxy::OnBind( void *pC_BaseEntity )

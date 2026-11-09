@@ -1241,16 +1241,13 @@ void ClearDeadOverlays( void )
 //-----------------------------------------------------------------------------
 class CIVDebugOverlay : public IVDebugOverlay, public IVPhysicsDebugOverlay
 {
-private:
+public:
 	char m_text[1024];
-	std::va_list	m_argptr;
 
 public:
-	void AddEntityTextOverlay(int ent_index, int line_offset, float duration, int r, int g, int b, int a, const char *format, ...)
+	void AddEntityTextOverlayV(int ent_index, int line_offset, float duration, int r, int g, int b, int a, const char *format, std::va_list argptr)
 	{
-		__builtin_va_start( m_argptr, format );
-		V_vsnprintf( m_text, sizeof( m_text ), format, m_argptr );
-		__builtin_va_end( m_argptr );
+		V_vsnprintf( m_text, sizeof( m_text ), format, argptr );
 
 		CDebugOverlay::AddEntityTextOverlay(ent_index, line_offset, duration, r, g, b, a, m_text);
 	}
@@ -1290,38 +1287,30 @@ public:
 		CDebugOverlay::AddTriangleOverlay(p1, p2, p3, r, g, b, a, noDepthTest, duration);
 	}
 
-	void AddTextOverlay(const Vector& origin, float duration, const char *format, ...)
+	void AddTextOverlayV(const Vector& origin, float duration, const char *format, std::va_list argptr)
 	{
-		__builtin_va_start( m_argptr, format );
-		V_vsnprintf( m_text, sizeof( m_text ), format, m_argptr );
-		__builtin_va_end( m_argptr );
+		V_vsnprintf( m_text, sizeof( m_text ), format, argptr );
 
 		CDebugOverlay::AddTextOverlay(origin, duration, m_text);
 	}
 
-	void AddTextOverlay(const Vector& origin, int line_offset, float duration, const char *format, ...)
+	void AddTextOverlayV(const Vector& origin, int line_offset, float duration, const char *format, std::va_list argptr)
 	{
-		__builtin_va_start( m_argptr, format );
-		V_vsnprintf( m_text, sizeof( m_text ), format, m_argptr );
-		__builtin_va_end( m_argptr );
+		V_vsnprintf( m_text, sizeof( m_text ), format, argptr );
 
 		CDebugOverlay::AddTextOverlay(origin, line_offset, duration, m_text);
 	}
 
-	void AddTextOverlayRGB(const Vector& origin, int line_offset, float duration, float r, float g, float b, float alpha, const char *format, ...)
+	void AddTextOverlayRGBV(const Vector& origin, int line_offset, float duration, float r, float g, float b, float alpha, const char *format, std::va_list argptr)
 	{
-		__builtin_va_start( m_argptr, format );
-		V_vsnprintf( m_text, sizeof( m_text ), format, m_argptr );
-		__builtin_va_end( m_argptr );
+		V_vsnprintf( m_text, sizeof( m_text ), format, argptr );
 
 		CDebugOverlay::AddTextOverlay(origin, line_offset, duration, r, g, b, alpha, m_text);
 	}
 
-	void AddTextOverlayRGB(const Vector& origin, int line_offset, float flDuration, int r, int g, int b, int alpha, const char *format, ...)
+	void AddTextOverlayRGBV(const Vector& origin, int line_offset, float flDuration, int r, int g, int b, int alpha, const char *format, std::va_list argptr)
 	{
-		__builtin_va_start( m_argptr, format );
-		V_vsnprintf( m_text, sizeof( m_text ), format, m_argptr );
-		__builtin_va_end( m_argptr );
+		V_vsnprintf( m_text, sizeof( m_text ), format, argptr );
 
 		CDebugOverlay::AddTextOverlay( origin, line_offset, flDuration, r * 1.0f/255.0f, g * 1.0f/255.0f, b * 1.0f/255.0f, alpha * 1.0f/255.0f, m_text );
 	}
@@ -1351,22 +1340,22 @@ public:
 		return CDebugOverlay::ScreenPosition( flXPos, flYPos, screen );
 	}
 
-	virtual OverlayText_t *GetFirst( void )
+	OverlayText_t *GetFirst( void )
 	{
 		return CDebugOverlay::s_pOverlayText;
 	}
 
-	virtual OverlayText_t *GetNext( OverlayText_t *current )
+	OverlayText_t *GetNext( OverlayText_t *current )
 	{
 		return current->nextOverlayText;
 	}
 
-	virtual void ClearDeadOverlays( void )
+	void ClearDeadOverlays( void )
 	{
 		CDebugOverlay::ClearDeadOverlays();
 	}
 
-	virtual void ClearAllOverlays()
+	void ClearAllOverlays()
 	{
 		CDebugOverlay::ClearAllOverlays();
 	}
@@ -1391,6 +1380,9 @@ public:
 		CDebugOverlay::AddCapsuleOverlay( vStart, vEnd, flRadius, r, g, b, a, flDuration );
 	}
 };
+
+#include "facade/ivdebugoverlay.inl"
+
 
 static CIVDebugOverlay g_DebugOverlay;
 

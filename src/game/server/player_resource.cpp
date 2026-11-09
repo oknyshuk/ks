@@ -14,7 +14,6 @@
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "baseentity_shared.h"
 #include "basetoggle.h"
@@ -31,8 +30,6 @@
 #include "player.h"
 #include "player_resource.h"
 #include <coordsize.h>
-import std;
-import ks.tier1;
 
 // Datatable
 IMPLEMENT_REFLECT_SERVERCLASS( CPlayerResource, DT_PlayerResource )
@@ -45,7 +42,7 @@ CPlayerResource *g_pPlayerResource;
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPlayerResource::Spawn( void )
+void CPlayerResource::Spawn_Impl( void )
 {
 	for ( int i=0; i < MAX_PLAYERS+1; i++ )
 	{
@@ -68,7 +65,7 @@ void CPlayerResource::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: The Player resource is always transmitted to clients
 //-----------------------------------------------------------------------------
-int CPlayerResource::UpdateTransmitState()
+int CPlayerResource::UpdateTransmitState_Impl()
 {
 	// ALWAYS transmit to all clients.
 	return SetTransmitState( FL_EDICT_ALWAYS );

@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import ks.tier1;
 #include "mathlib/softbodyenvironment.h"
 #include "igamesystem.h"
-import std;
 
 #ifndef CLIENT_DLL
 #error Softbodies should only be used on client

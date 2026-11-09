@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
 #include "materialsystem/imaterial.h"
 #include "sun_shared.h"
 #include "c_pixel_visibility.h"
-import std;
 
 extern float g_flOverlayRange;
 

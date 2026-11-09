@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 
 // Uncomment this for client-side simulation
 //#define CLIENT_SIDE_SIMULATION 1
@@ -12,8 +10,6 @@ import ks.tier1;
 // Simulates a sheet
 //-----------------------------------------------------------------------------
 
-class CGameTrace;
-typedef CGameTrace trace_t;
 //struct trace_t;
 typedef void (*TraceLineFunc_t)(const Vector &vecStart, const Vector &vecEnd, 
 								unsigned int mask, int collisionGroup, trace_t *ptr);

@@ -15,8 +15,8 @@ class CTier3FSApp : public CTier2FSApp
 	typedef CTier2FSApp BaseClass;
 
 public:
-	// Methods of IApplication
-	virtual bool PreInit()
+	// Application hooks
+	bool PreInit()
 	{
 		if ( !BaseClass::PreInit() )
 			return false;
@@ -26,7 +26,7 @@ public:
 		return true;			
 	}
 
-	virtual void PostShutdown()
+	void PostShutdown()
 	{
 		DisconnectTier3Libraries();
 		BaseClass::PostShutdown();
@@ -42,8 +42,8 @@ class CTier3DmFSApp : public CTier2DmFSApp
 	typedef CTier2DmFSApp BaseClass;
 
 public:
-	// Methods of IApplication
-	virtual bool PreInit()
+	// Application hooks
+	bool PreInit()
 	{
 		if ( !BaseClass::PreInit() )
 			return false;
@@ -53,7 +53,7 @@ public:
 		return true;			
 	}
 
-	virtual void PostShutdown()
+	void PostShutdown()
 	{
 		DisconnectTier3Libraries();
 		BaseClass::PostShutdown();

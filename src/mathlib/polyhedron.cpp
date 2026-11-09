@@ -30,9 +30,12 @@ CPolyhedron *ConvertLinkedGeometryToPolyhedron( GeneratePolyhedronFromPlanes_Uno
 
 
 
-void CPolyhedron_AllocByNew::Release( void )
+void CPolyhedron::Release( void )
 {
-	delete this;
+	if ( m_bTemporary )
+		return;
+
+	delete static_cast< CPolyhedron_AllocByNew * >( this );
 }
 
 CPolyhedron_AllocByNew *CPolyhedron_AllocByNew::Allocate( unsigned short iVertices, unsigned short iLines, unsigned short iIndices, unsigned short iPolygons ) //creates the polyhedron along with enough memory to hold all it's data in a single allocation
@@ -62,12 +65,10 @@ class CPolyhedron_TempMemory : public CPolyhedron
 {
 public:
 
-	virtual void Release( void )
-	{
-	}
-
 	CPolyhedron_TempMemory( void )
-	{ };
+	{
+		m_bTemporary = true;
+	};
 };
 
 

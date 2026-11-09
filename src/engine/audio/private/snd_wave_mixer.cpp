@@ -21,6 +21,7 @@ import ks.tier1;
 #include "snd_wave_data.h"
 #include "snd_wave_mixer_private.h"
 #include "snd_wave_mixer_adpcm.h"
+#include "snd_sentence_mixer.h"
 
 #include "audio/private/posix_stubs.h"
 
@@ -34,62 +35,25 @@ extern bool FUseHighQualityPitch( channel_t *pChannel );
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-// Purpose: maps mixing to 8-bit mono mixer
+// Purpose: maps mixing to the 8/16-bit mono/stereo mixer of the device
 //-----------------------------------------------------------------------------
-class CAudioMixerWave8Mono : public CAudioMixerWave
+void CAudioMixerWavePCM::Mix( channel_t *pChannel, void *pData, int outputOffset, int inputOffset, fixedint fracRate, int outCount, int timecompress )
 {
-public:
-	CAudioMixerWave8Mono( IWaveData *data ) : CAudioMixerWave( data ) {}
-	virtual int GetMixSampleSize() { return CalcSampleSize(8, 1); }
-	virtual void Mix( channel_t *pChannel, void *pData, int outputOffset, int inputOffset, fixedint fracRate, int outCount, int timecompress )
+	if ( m_nChannels > 1 )
 	{
-		Device_Mix8Mono( pChannel, (char *)pData, outputOffset, inputOffset, fracRate, outCount, timecompress );
+		if ( m_nBits == 8 )
+			Device_Mix8Stereo( pChannel, (char *)pData, outputOffset, inputOffset, fracRate, outCount, timecompress );
+		else
+			Device_Mix16Stereo( pChannel, (short *)pData, outputOffset, inputOffset, fracRate, outCount, timecompress );
 	}
-};
-
-//-----------------------------------------------------------------------------
-// Purpose: maps mixing to 8-bit stereo mixer
-//-----------------------------------------------------------------------------
-class CAudioMixerWave8Stereo : public CAudioMixerWave
-{
-public:
-	CAudioMixerWave8Stereo( IWaveData *data ) : CAudioMixerWave( data ) {}
-	virtual int GetMixSampleSize( ) { return CalcSampleSize(8, 2); }
-	virtual void Mix( channel_t *pChannel, void *pData, int outputOffset, int inputOffset, fixedint fracRate, int outCount, int timecompress )
+	else
 	{
-		Device_Mix8Stereo( pChannel, (char *)pData, outputOffset, inputOffset, fracRate, outCount, timecompress );
+		if ( m_nBits == 8 )
+			Device_Mix8Mono( pChannel, (char *)pData, outputOffset, inputOffset, fracRate, outCount, timecompress );
+		else
+			Device_Mix16Mono( pChannel, (short *)pData, outputOffset, inputOffset, fracRate, outCount, timecompress );
 	}
-};
-
-//-----------------------------------------------------------------------------
-// Purpose: maps mixing to 16-bit mono mixer
-//-----------------------------------------------------------------------------
-class CAudioMixerWave16Mono : public CAudioMixerWave
-{
-public:
-	CAudioMixerWave16Mono( IWaveData *data ) : CAudioMixerWave( data ) {}
-	virtual int GetMixSampleSize() { return CalcSampleSize(16, 1); }
-	virtual void Mix( channel_t *pChannel, void *pData, int outputOffset, int inputOffset, fixedint fracRate, int outCount, int timecompress )
-	{
-		Device_Mix16Mono( pChannel, (short *)pData, outputOffset, inputOffset, fracRate, outCount, timecompress );
-	}
-};
-
-
-//-----------------------------------------------------------------------------
-// Purpose: maps mixing to 16-bit stereo mixer
-//-----------------------------------------------------------------------------
-class CAudioMixerWave16Stereo : public CAudioMixerWave
-{
-public:
-	CAudioMixerWave16Stereo( IWaveData *data ) : CAudioMixerWave( data ) {}
-	virtual int GetMixSampleSize() { return CalcSampleSize(16, 2); }
-	virtual void Mix( channel_t *pChannel, void *pData, int outputOffset, int inputOffset, fixedint fracRate, int outCount, int timecompress )
-	{
-		Device_Mix16Stereo( pChannel, (short *)pData, outputOffset, inputOffset, fracRate, outCount, timecompress );
-	}
-};
-
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: Create an appropriate mixer type given the data format
@@ -106,21 +70,7 @@ CAudioMixer *CreateWaveMixer( IWaveData *data, int format, int channels, int bit
 	case WAVE_FORMAT_PCM:
 		{
 			contract_assert( (initialStreamPosition == 0 ) && (skipInitialSamples == 0 ) );		// Not supported, so make sure the caller did not expect anything.
-			CAudioMixer *pMixer;
-			if ( channels > 1 )
-			{
-				if ( bits == 8 )
-					pMixer = new CAudioMixerWave8Stereo( data );
-				else
-					pMixer = new CAudioMixerWave16Stereo( data );
-			}
-			else
-			{
-				if ( bits == 8 )
-					pMixer = new CAudioMixerWave8Mono( data );
-				else
-					pMixer = new CAudioMixerWave16Mono( data );
-			}
+			CAudioMixer *pMixer = new CAudioMixerWavePCM( data, ( channels > 1 ) ? 2 : 1, ( bits == 8 ) ? 8 : 16 );
 			contract_assert( CalcSampleSize(bits, channels) == pMixer->GetMixSampleSize() );
 			return pMixer;
 		}
@@ -142,7 +92,7 @@ CAudioMixer *CreateWaveMixer( IWaveData *data, int format, int channels, int bit
 // Purpose: Init the base WAVE mixer.
 // Input  : *data - data access object
 //-----------------------------------------------------------------------------
-CAudioMixerWave::CAudioMixerWave( IWaveData *data ) : m_pData(data)
+CAudioMixerWave::CAudioMixerWave( AudioMixerKind kind, IWaveData *data ) : CAudioMixer( kind ), m_pData(data)
 {
 	m_fsample_index = 0;
 	m_sample_max_loaded = 0;
@@ -163,7 +113,7 @@ CAudioMixerWave::~CAudioMixerWave( void )
 	{
 		pSource->ReferenceRemove( this );
 	}
-	delete m_pData;
+	IWaveData::Delete( m_pData );
 }
 
 bool CAudioMixerWave::IsReadyToMix()
@@ -180,7 +130,7 @@ bool CAudioMixerWave::IsReadyToMix()
 //			sampleCount - number of samples needed
 // Output : number of samples available in this batch
 //-----------------------------------------------------------------------------
-int	CAudioMixerWave::GetOutputData( void **pData, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] )
+int	CAudioMixerWave::GetOutputDataFromSource( void **pData, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] )
 {
 	int samples_loaded;
 
@@ -273,9 +223,9 @@ int CAudioMixerWave::SkipSamples( channel_t *pChannel, int sampleCount, int outp
 {
 	if ( GetSource()->GetType() == CAudioSource::AUDIO_SOURCE_WAV )
 
-	if ( IsSetSampleStartSupported() )
+	if ( Mixer().IsSetSampleStartSupported() )
 	{
-		SetSampleStart( sampleCount );
+		Mixer().SetSampleStart( sampleCount );
 		return sampleCount;
 	}
 
@@ -803,4 +753,139 @@ float CAudioMixerWave::ModifyPitch( float pitch )
 float CAudioMixerWave::GetVolumeScale( void )
 {
 	return 1.0f;
+}
+
+
+//-----------------------------------------------------------------------------
+// CAudioMixer dispatch: the mixers are a closed set (AudioMixerKind), so the interface switches on
+// the kind and calls the member of the same name of the mixer's class. A class that does not define
+// one inherits CAudioMixerWave's.
+//-----------------------------------------------------------------------------
+#define KS_AUDIO_MIXER_DISPATCH( call ) \
+	switch ( m_Kind ) \
+	{ \
+	case AudioMixerKind::WavePCM: return static_cast< CAudioMixerWavePCM * >( this )->call; \
+	case AudioMixerKind::WaveADPCM: return static_cast< CAudioMixerWaveADPCM * >( this )->call; \
+	case AudioMixerKind::Sentence: return static_cast< CSentenceMixer * >( this )->call; \
+	} \
+	std::unreachable()
+
+#define KS_AUDIO_MIXER_DISPATCH_CONST( call ) \
+	switch ( m_Kind ) \
+	{ \
+	case AudioMixerKind::WavePCM: return static_cast< const CAudioMixerWavePCM * >( this )->call; \
+	case AudioMixerKind::WaveADPCM: return static_cast< const CAudioMixerWaveADPCM * >( this )->call; \
+	case AudioMixerKind::Sentence: return static_cast< const CSentenceMixer * >( this )->call; \
+	} \
+	std::unreachable()
+
+void CAudioMixer::Delete( CAudioMixer *pMixer )
+{
+	if ( !pMixer )
+		return;
+	switch ( pMixer->m_Kind )
+	{
+	case AudioMixerKind::WavePCM: delete static_cast< CAudioMixerWavePCM * >( pMixer ); return;
+	case AudioMixerKind::WaveADPCM: delete static_cast< CAudioMixerWaveADPCM * >( pMixer ); return;
+	case AudioMixerKind::Sentence: delete static_cast< CSentenceMixer * >( pMixer ); return;
+	}
+	std::unreachable();
+}
+
+int CAudioMixer::MixDataToDevice( channel_t *pChannel, int sampleCount, int outputRate, int outputOffset )
+{
+	KS_AUDIO_MIXER_DISPATCH( MixDataToDevice( pChannel, sampleCount, outputRate, outputOffset ) );
+}
+
+int CAudioMixer::SkipSamples( channel_t *pChannel, int sampleCount, int outputRate, int outputOffset )
+{
+	KS_AUDIO_MIXER_DISPATCH( SkipSamples( pChannel, sampleCount, outputRate, outputOffset ) );
+}
+
+bool CAudioMixer::ShouldContinueMixing( void )
+{
+	KS_AUDIO_MIXER_DISPATCH( ShouldContinueMixing() );
+}
+
+CAudioSource *CAudioMixer::GetSource( void )
+{
+	KS_AUDIO_MIXER_DISPATCH( GetSource() );
+}
+
+int CAudioMixer::GetSamplePosition( void )
+{
+	KS_AUDIO_MIXER_DISPATCH( GetSamplePosition() );
+}
+
+float CAudioMixer::ModifyPitch( float pitch )
+{
+	KS_AUDIO_MIXER_DISPATCH( ModifyPitch( pitch ) );
+}
+
+float CAudioMixer::GetVolumeScale( void )
+{
+	KS_AUDIO_MIXER_DISPATCH( GetVolumeScale() );
+}
+
+bool CAudioMixer::IsSetSampleStartSupported() const
+{
+	KS_AUDIO_MIXER_DISPATCH_CONST( IsSetSampleStartSupported() );
+}
+
+void CAudioMixer::SetSampleStart( int newPosition )
+{
+	KS_AUDIO_MIXER_DISPATCH( SetSampleStart( newPosition ) );
+}
+
+void CAudioMixer::SetSampleEnd( int newEndPosition )
+{
+	KS_AUDIO_MIXER_DISPATCH( SetSampleEnd( newEndPosition ) );
+}
+
+void CAudioMixer::SetStartupDelaySamples( int delaySamples )
+{
+	KS_AUDIO_MIXER_DISPATCH( SetStartupDelaySamples( delaySamples ) );
+}
+
+int CAudioMixer::GetMixSampleSize()
+{
+	KS_AUDIO_MIXER_DISPATCH( GetMixSampleSize() );
+}
+
+bool CAudioMixer::IsReadyToMix()
+{
+	KS_AUDIO_MIXER_DISPATCH( IsReadyToMix() );
+}
+
+int CAudioMixer::GetPositionForSave()
+{
+	KS_AUDIO_MIXER_DISPATCH( GetPositionForSave() );
+}
+
+void CAudioMixer::SetPositionFromSaved( int savedPosition )
+{
+	KS_AUDIO_MIXER_DISPATCH( SetPositionFromSaved( savedPosition ) );
+}
+
+// the two functions of CAudioMixerWave that differ by kind
+void CAudioMixerWave::Mix( channel_t *pChannel, void *pData, int outputOffset, int inputOffset, fixedint fracRate, int outCount, int timecompress )
+{
+	switch ( m_Kind )
+	{
+	case AudioMixerKind::WavePCM: static_cast< CAudioMixerWavePCM * >( this )->Mix( pChannel, pData, outputOffset, inputOffset, fracRate, outCount, timecompress ); return;
+	case AudioMixerKind::WaveADPCM: static_cast< CAudioMixerWaveADPCM * >( this )->Mix( pChannel, pData, outputOffset, inputOffset, fracRate, outCount, timecompress ); return;
+	case AudioMixerKind::Sentence: break;	// not a wave mixer
+	}
+	std::unreachable();
+}
+
+int CAudioMixerWave::GetOutputData( void **pData, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] )
+{
+	switch ( m_Kind )
+	{
+	case AudioMixerKind::WavePCM: return static_cast< CAudioMixerWavePCM * >( this )->GetOutputData( pData, sampleCount, copyBuf );
+	case AudioMixerKind::WaveADPCM: return static_cast< CAudioMixerWaveADPCM * >( this )->GetOutputData( pData, sampleCount, copyBuf );
+	case AudioMixerKind::Sentence: break;	// not a wave mixer
+	}
+	std::unreachable();
 }

@@ -17,6 +17,7 @@ import ks.tier1;
 #include "net_ws_headers.h"									// need SOCKET
 #include "net_ws_queued_packet_sender.h"
 #include "filesystem_init.h"
+#include "facade/inetchannel.inl"
 
 static constexpr auto kMaxRoutablePayload = ks::IntToString<MAX_ROUTABLE_PAYLOAD>();
 
@@ -2325,7 +2326,7 @@ bool CNetChan::_ProcessMessages( bf_read &buf, bool wasReliable  )
 				// This means we were deleted during the processing of that message.
 				if ( m_bShouldDelete )
 				{
-					delete netmsg;
+					netmsg->DeleteThis();
 					delete this;
 					return false;
 				}
@@ -2333,7 +2334,7 @@ bool CNetChan::_ProcessMessages( bf_read &buf, bool wasReliable  )
 				// This means our message buffer was freed or invalidated during the processing of that message.
 				if ( m_bStopProcessing )
 				{
-					delete netmsg;
+					netmsg->DeleteThis();
 					return false;
 				}
 
@@ -2341,13 +2342,13 @@ bool CNetChan::_ProcessMessages( bf_read &buf, bool wasReliable  )
 				{
 					ConDMsg( "Netchannel: failed processing message %s.\n", netmsg->GetName() );
 					contract_assert( 0 );
-					delete netmsg;
+					netmsg->DeleteThis();
 					return false;
 				}
 
 				if ( IsOverflowed() )
 				{
-					delete netmsg;
+					netmsg->DeleteThis();
 					return false;
 				}
 
@@ -2355,7 +2356,7 @@ bool CNetChan::_ProcessMessages( bf_read &buf, bool wasReliable  )
 				pMsgBind = ( ( CNetChan * )m_pActiveChannel )->FindMessageBinder( cmd, iMsgHandler++ );
 			} while( pMsgBind );
 
-			delete netmsg;
+			netmsg->DeleteThis();
 		}
 		else
 		{

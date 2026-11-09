@@ -3,8 +3,6 @@
 
 // Purpose: Simple entity to switch the map's 2D skybox texture when triggered.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -49,8 +46,8 @@ class CSkyboxSwapper : public CServerOnlyPointEntity
 public:
 	DECLARE_DATADESC();
 
-	virtual void Spawn( void );
-	virtual void Precache( void );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
 
 	[[= ks::reflect::Input{ .name = "Trigger", .type = FIELD_VOID } ]] void InputTrigger( inputdata_t &inputdata );
 
@@ -66,7 +63,7 @@ IMPLEMENT_REFLECT_DATAMAP( CSkyboxSwapper )
 //-----------------------------------------------------------------------------
 // Purpose: not much
 //-----------------------------------------------------------------------------
-void CSkyboxSwapper::Spawn( void )
+void CSkyboxSwapper::Spawn_Impl( void )
 {
 	Precache();
 }
@@ -74,7 +71,7 @@ void CSkyboxSwapper::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: Precache the skybox materials.
 //-----------------------------------------------------------------------------
-void CSkyboxSwapper::Precache( void )
+void CSkyboxSwapper::Precache_Impl( void )
 {
 	if ( V_strlen( m_iszSkyboxName.ToCStr() ) == 0 )
 	{

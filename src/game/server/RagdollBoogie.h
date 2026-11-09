@@ -23,8 +23,8 @@ public:
 	static void IncrementSuppressionCount( CBaseEntity *pTarget );
 	static void DecrementSuppressionCount( CBaseEntity *pTarget );
 
-	virtual void Precache();
-	void Spawn();
+	void Precache_Impl();
+	void Spawn_Impl();
 
 private:
 	void	AttachToEntity( CBaseEntity *pTarget );

@@ -6,7 +6,6 @@
 
 #include "dt_recv.h"
 
-class CRecvProxyData;
 
 
 // This converts the int stored in pData to an EHANDLE in pOut.

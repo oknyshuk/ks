@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -17,7 +15,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -89,7 +86,7 @@ void W_Precache(void)
 //-----------------------------------------------------------------------------
 // Purpose: Transmit weapon data
 //-----------------------------------------------------------------------------
-int CBaseCombatWeapon::UpdateTransmitState( void)
+int CBaseCombatWeapon::UpdateTransmitState_Impl( void)
 {
 	// If the weapon is being carried by a CBaseCombatCharacter, let the combat character do the logic
 	// about whether or not to transmit it.
@@ -100,7 +97,7 @@ int CBaseCombatWeapon::UpdateTransmitState( void)
 	else
 	{
 		// If it's just lying around, then use CBaseEntity's visibility test to see if it should be sent.
-		return BaseClass::UpdateTransmitState();
+		return BaseClass::UpdateTransmitState_Impl();
 	}
 }
 
@@ -192,7 +189,7 @@ void CBaseCombatWeapon::HandleAnimEvent( animevent_t *pEvent )
 //-----------------------------------------------------------------------------
 // Purpose: Make the weapon visible and tangible
 //-----------------------------------------------------------------------------
-CBaseEntity* CBaseCombatWeapon::Respawn( void )
+CBaseEntity* CBaseCombatWeapon::Respawn_Impl( void )
 {
 	// make a copy of this weapon that is invisible and inaccessible to players (no touch function). The weapon spawn/respawn code
 	// will decide when to make the weapon visible and touchable.
@@ -589,9 +586,9 @@ void CBaseCombatWeapon::CheckRespawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int	CBaseCombatWeapon::ObjectCaps( void )
+int	CBaseCombatWeapon::ObjectCaps_Impl( void )
 { 
-	int caps = BaseClass::ObjectCaps();
+	int caps = BaseClass::ObjectCaps_Impl();
 	if ( !IsFollowingEntity() && !HasSpawnFlags(SF_WEAPON_NO_PLAYER_PICKUP) )
 	{
 		caps |= FCAP_IMPULSE_USE;
@@ -604,7 +601,7 @@ int	CBaseCombatWeapon::ObjectCaps( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseCombatWeapon::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CBaseCombatWeapon::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	CBasePlayer *pPlayer = ToBasePlayer( pActivator );
 	

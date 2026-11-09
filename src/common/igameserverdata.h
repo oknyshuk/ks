@@ -14,20 +14,20 @@ const ra_listener_id INVALID_LISTENER_ID = 0xffffffff;
 //			designed to be a simple data parsing interface so that the implementation
 //			can be as similar to remote administration as possible
 //-----------------------------------------------------------------------------
-class IGameServerData : public IBaseInterface
+class IGameServerData
 {
 public:
 	// writes out a request
-	virtual void WriteDataRequest( ra_listener_id listener, const void *buffer, int bufferSize) = 0;
+	void WriteDataRequest( ra_listener_id listener, const void *buffer, int bufferSize);
 
 	// returns the number of bytes read
-	virtual int ReadDataResponse( ra_listener_id listener, void *buffer, int bufferSize) = 0;
+	int ReadDataResponse( ra_listener_id listener, void *buffer, int bufferSize);
 
 	// get a handle to refer to this connection to the gameserver data interface
 	// is authConnection is true the SERVERDATA_AUTH command needs to succeed before other commands
-	virtual ra_listener_id GetNextListenerID( bool authConnection = true, const netadr_t *adr = nullptr ) = 0;
+	ra_listener_id GetNextListenerID( bool authConnection = true, const netadr_t *adr = nullptr );
 	// tell the remote access class that this ID is the special dedicated server UI callback (and not an rcon one)
-	virtual void RegisterAdminUIID( ra_listener_id listener ) = 0;
+	void RegisterAdminUIID( ra_listener_id listener );
 };
 
 // enumerations for writing out the requests

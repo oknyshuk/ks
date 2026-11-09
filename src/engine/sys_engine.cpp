@@ -18,8 +18,6 @@ import std;
 #include "vprof_engine.h"
 #include "server.h"
 #include "cl_demo.h"
-#include "toolframework/itoolframework.h"
-#include "toolframework/itoolsystem.h"
 #include "inputsystem/iinputsystem.h"
 #include "gl_cvars.h"
 #include "filesystem_engine.h"
@@ -87,13 +85,13 @@ class CEngine : public IEngine
 {
 public:
 					CEngine( void );
-	virtual			~CEngine( void );
+	~CEngine( void );
 
 	bool			Load( bool dedicated, const char *basedir );
 
-	virtual void	Unload( void );
-	virtual EngineState_t GetState( void );
-	virtual void	SetNextState( EngineState_t iNextState );
+	void	Unload( void );
+	EngineState_t GetState( void );
+	void	SetNextState( EngineState_t iNextState );
 
 	void			Frame( void );
 
@@ -110,7 +108,7 @@ public:
 	int				GetQuitting( void );
 	void			SetQuitting( int quittype );
 
-private:
+public:
 	bool			FilterTime( float t );
 
 	int				m_nQuitting;
@@ -125,6 +123,9 @@ private:
 	float			m_flMinFrameTime; // Expected duration of a frame, or zero if it is unlimited.
 
 };
+
+#include "facade/iengine.inl"
+
 
 static CEngine g_Engine;
 

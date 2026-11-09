@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -22,7 +19,6 @@ import ks.tier1;
 #include "cdll_client_int.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -101,7 +97,7 @@ Vector head_hull_maxs( 16, 16, 18 );
 			CBasePlayer *pPlayer = ToBasePlayer( pWeapon->GetOwner() );
 			if ( pPlayer /*&& pPlayer->GetActiveWeapon() == pWeapon*/ )
 			{
-				pRecipients->SetOnly( pPlayer->GetClientIndex() );
+				SendProxyRecipients_SetOnly( pRecipients,  pPlayer->GetClientIndex() );
 				return (void*)pVarData;
 			}
 		}
@@ -128,7 +124,7 @@ Vector head_hull_maxs( 16, 16, 18 );
 			CBasePlayer *pPlayer = ToBasePlayer( pWeapon->GetOwner() );
 			if ( pPlayer /*&& pPlayer->GetActiveWeapon() == pWeapon*/ )
 			{
-				pRecipients->SetOnly( pPlayer->GetClientIndex() );
+				SendProxyRecipients_SetOnly( pRecipients,  pPlayer->GetClientIndex() );
 				return (void*)pVarData;
 			}
 		}
@@ -182,9 +178,9 @@ bool CKnife::CanBeSelected()
 	return true;
 }
 
-void CKnife::Precache()
+void CKnife::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	PrecacheScriptSound( "Weapon_Knife.Deploy" );
 	PrecacheScriptSound( "Weapon_Knife.Slash" );
@@ -193,10 +189,10 @@ void CKnife::Precache()
 	PrecacheEffect( "KnifeSlash" );
 }
 
-void CKnife::Spawn()
+void CKnife::Spawn_Impl()
 {
 	m_iClip1 = -1;
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 

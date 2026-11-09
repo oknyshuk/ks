@@ -4,8 +4,6 @@
 // Purpose: Fast path model rendering
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -318,7 +316,7 @@ uint CModelRenderSystem::AddModelToLists( int &nModelTypeCountInOut, ModelListBy
 		j = nModelTypeCount++;
 	}
 
-	C_BaseEntity *pEntity = data.m_pRenderable->GetIClientUnknown()->GetBaseEntity();
+	C_BaseEntity *pEntity = EntityCast<C_BaseEntity>( data.m_pRenderable->GetIClientUnknown()->GetBaseEntity() );
 	uint nParentDepth = ComputeParentDepth( pEntity );
 
 	ModelListByType_t &list = pModelList[ j ]; 
@@ -807,7 +805,7 @@ void CModelRenderSystem::ComputeLightingOrigin( ModelListByType_t &list, Lightin
 		RenderModelInfo_t *pModel = &list.m_pRenderModels[j];
 		const matrix3x4_t &renderToWorld = pModel->m_Entry.m_pRenderable->RenderableToWorldTransform();
 		
-		C_BaseEntity *pEnt = pModel->m_Entry.m_pRenderable->GetIClientUnknown()->GetBaseEntity();
+		C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( pModel->m_Entry.m_pRenderable->GetIClientUnknown()->GetBaseEntity() );
 		pEnt->ComputeLightingOrigin( nAttachmentIndex, vecIllumPosition, renderToWorld, pLightingQuery->m_LightingOrigin );
 
 		//VectorTransform( vecIllumPosition, renderToWorld, pLightingQuery->m_LightingOrigin );
@@ -1304,7 +1302,7 @@ void CModelRenderSystem::RenderVCollideDebugOverlay( int nModelTypeCount, ModelL
 					static color32 debugColor = {0,255,255,0};
 					engine->DebugDrawPhysCollide( pCollide->solids[0], nullptr, pCollideable->CollisionToWorldTransform(), debugColor );
 
-					C_BaseEntity *pEntity = pRenderable->GetIClientUnknown()->GetBaseEntity();
+					C_BaseEntity *pEntity = EntityCast<C_BaseEntity>( pRenderable->GetIClientUnknown()->GetBaseEntity() );
 					if ( pEntity && pEntity->VPhysicsGetObject() )
 					{
 						static color32 debugColorPhys = {255,0,0,0};
@@ -1340,7 +1338,7 @@ void CModelRenderSystem::RenderBBoxDebugOverlay( int nModelTypeCount, ModelListB
 			IClientRenderable *pRenderable = list.m_pRenderModels[j].m_Entry.m_pRenderable;
 			if ( !pRenderable->GetIClientUnknown() )
 				continue;
-			C_BaseEntity *pEntity = pRenderable->GetIClientUnknown()->GetBaseEntity();
+			C_BaseEntity *pEntity = EntityCast<C_BaseEntity>( pRenderable->GetIClientUnknown()->GetBaseEntity() );
 			if ( !pEntity )
 				continue;
 

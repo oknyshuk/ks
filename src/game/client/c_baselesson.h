@@ -4,10 +4,8 @@
 
 // Purpose: Client handler for instruction players how to play
 
-import ks.tier1;
 #include "GameEventListener.h"
 #include "hud_locator_target.h"
-import std;
 #include "ehandle.h"
 #include "cdll_client_int.h"
 #include "datamap.h"
@@ -395,7 +393,7 @@ public:
 
 	virtual void SwapOutPlayers( int iOldUserID, int iNewUserID );
 
-	virtual void FireGameEvent( IGameEvent *event );
+	void FireGameEvent( IGameEvent *event );
 	virtual void ProcessOpenGameEvents( const CScriptedIconLesson *pRootLesson, const char *name, IGameEvent *event );
 	virtual void ProcessCloseGameEvents( const CScriptedIconLesson *pRootLesson, const char *name, IGameEvent *event );
 	virtual void ProcessSuccessGameEvents( const CScriptedIconLesson *pRootLesson, const char *name, IGameEvent *event );

@@ -4,8 +4,6 @@
 // Purpose: Draws grasses and other small objects
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -43,7 +41,6 @@ inline constexpr const char *DETAIL_SPRITE_MATERIAL = "detail/detailsprites";
 //-----------------------------------------------------------------------------
 // forward declarations
 //-----------------------------------------------------------------------------
-struct model_t;
 
 
 ConVar cl_detail_max_sway( "cl_detail_max_sway", "0", FCVAR_ARCHIVE, "Amplitude of the detail prop sway" );
@@ -545,7 +542,7 @@ static CDetailObjectSystem s_DetailObjectSystem;
 IDetailObjectSystem *g_pDetailObjectSystem = &s_DetailObjectSystem;
 
 
-static void DetailFadeCallback( IConVar *var, const char *pOldValue, float flOldValue )
+static void DetailFadeCallback( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	s_DetailObjectSystem.UpdateDetailFadeValues();
 }

@@ -16,10 +16,9 @@ const char *NET_ErrorString( ks::platform::socket_error error )
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
-CSocketCreator::CSocketCreator( ISocketCreatorListener *pListener )
+CSocketCreator::CSocketCreator()
 {
 	m_hListenSocket = nullptr;
-	m_pListener = pListener;
 }
 
 
@@ -126,7 +125,7 @@ void CSocketCreator::ProcessAccept()
 
 	netadr_t adr;
 	adr.SetFromAddress( peer );
-	if ( m_pListener && !m_pListener->ShouldAcceptSocket( newSocket, adr ) )
+	if ( m_fnShouldAcceptSocket && !m_fnShouldAcceptSocket( newSocket, adr ) )
 	{
 		ks::platform::close_socket( newSocket );
 		return;
@@ -140,9 +139,9 @@ void CSocketCreator::ProcessAccept()
 	pNewEntry->m_pData = nullptr;
 
 	void* pData = nullptr;
-	if ( m_pListener )
+	if ( m_fnOnSocketAccepted )
 	{
-		m_pListener->OnSocketAccepted( newSocket, adr, &pData );
+		m_fnOnSocketAccepted( newSocket, adr, &pData );
 	}
 	pNewEntry->m_pData = pData;
 }
@@ -193,7 +192,7 @@ int CSocketCreator::ConnectSocket( const netadr_t &netAdr, bool bSingleSocket )
 		}
 	}
 
-	if ( m_pListener && !m_pListener->ShouldAcceptSocket( hSocket, netAdr ) )
+	if ( m_fnShouldAcceptSocket && !m_fnShouldAcceptSocket( hSocket, netAdr ) )
 	{
 		ks::platform::close_socket( hSocket );
 		return -1;
@@ -207,9 +206,9 @@ int CSocketCreator::ConnectSocket( const netadr_t &netAdr, bool bSingleSocket )
 	pNewEntry->m_Address = netAdr;
 	pNewEntry->m_pData = nullptr;
 
-	if ( m_pListener )
+	if ( m_fnOnSocketAccepted )
 	{
-		m_pListener->OnSocketAccepted( hSocket, netAdr, &pData );
+		m_fnOnSocketAccepted( hSocket, netAdr, &pData );
 	}
 
 	pNewEntry->m_pData = pData;
@@ -235,9 +234,9 @@ void CSocketCreator::CloseAcceptedSocket( int nIndex )
 		return;
 
 	AcceptedSocket_t& connected = m_hAcceptedSockets[nIndex];
-	if ( m_pListener )
+	if ( m_fnOnSocketClosed )
 	{
-		m_pListener->OnSocketClosed( connected.m_hSocket, connected.m_Address, connected.m_pData );
+		m_fnOnSocketClosed( connected.m_hSocket, connected.m_Address, connected.m_pData );
 	}
 	ks::platform::close_socket( connected.m_hSocket );
 	m_hAcceptedSockets.erase( m_hAcceptedSockets.begin() + nIndex );
@@ -249,9 +248,9 @@ void CSocketCreator::CloseAllAcceptedSockets()
 	for ( int i = 0; i < nCount; ++i )
 	{
 		AcceptedSocket_t& connected = m_hAcceptedSockets[i];
-		if ( m_pListener )
+		if ( m_fnOnSocketClosed )
 		{
-			m_pListener->OnSocketClosed( connected.m_hSocket, connected.m_Address, connected.m_pData );
+			m_fnOnSocketClosed( connected.m_hSocket, connected.m_Address, connected.m_pData );
 		}
 		ks::platform::close_socket( connected.m_hSocket );
 	}

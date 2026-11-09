@@ -33,7 +33,6 @@ struct envelopeDescription_t
 	int				nNumPoints;
 };
 
-class IRecipientFilter;
 
 class CSoundEnvelopeController
 {

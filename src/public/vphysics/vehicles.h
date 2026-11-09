@@ -67,28 +67,27 @@ struct vehicleparams_t;
 class IPhysicsVehicleController
 {
 public:
-	virtual ~IPhysicsVehicleController() {}
 	// call this from the game code with the control parameters
-	virtual void Update( float dt, vehicle_controlparams_t &controls ) = 0;
-	virtual const vehicle_operatingparams_t &GetOperatingParams() = 0;
-	virtual const vehicleparams_t &GetVehicleParams() = 0;
-	virtual vehicleparams_t &GetVehicleParamsForChange() = 0;
-	virtual float UpdateBooster(float dt) = 0;
-	virtual int GetWheelCount(void) = 0;
-	virtual IPhysicsObject *GetWheel(int index) = 0;
-	virtual bool GetWheelContactPoint( int index, Vector *pContactPoint, int *pSurfaceProps ) = 0;
-	virtual void SetSpringLength(int wheelIndex, float length) = 0;
-	virtual void SetWheelFriction(int wheelIndex, float friction) = 0;
+	void Update( float dt, vehicle_controlparams_t &controls );
+	const vehicle_operatingparams_t &GetOperatingParams();
+	const vehicleparams_t &GetVehicleParams();
+	vehicleparams_t &GetVehicleParamsForChange();
+	float UpdateBooster(float dt);
+	int GetWheelCount(void);
+	IPhysicsObject *GetWheel(int index);
+	bool GetWheelContactPoint( int index, Vector *pContactPoint, int *pSurfaceProps );
+	void SetSpringLength(int wheelIndex, float length);
+	void SetWheelFriction(int wheelIndex, float friction);
 
-	virtual void OnVehicleEnter( void ) = 0;
-	virtual void OnVehicleExit( void ) = 0;
+	void OnVehicleEnter( void );
+	void OnVehicleExit( void );
 
-	virtual void SetEngineDisabled( bool bDisable ) = 0;
-	virtual bool IsEngineDisabled( void ) = 0;
+	void SetEngineDisabled( bool bDisable );
+	bool IsEngineDisabled( void );
 
 	// Debug
-	virtual void GetCarSystemDebugData( vehicle_debugcarsystem_t &debugCarSystem ) = 0;
-	virtual void VehicleDataReload() = 0;
+	void GetCarSystemDebugData( vehicle_debugcarsystem_t &debugCarSystem );
+	void VehicleDataReload();
 };
 
 
@@ -219,8 +218,6 @@ struct vehicleparams_t
 };
 
 // Iterator for queries
-class CPassengerSeatTransition;
-typedef std::vector< CPassengerSeatTransition > PassengerSeatAnims_t;
 
 // Seat query types
 enum VehicleSeatQuery_e

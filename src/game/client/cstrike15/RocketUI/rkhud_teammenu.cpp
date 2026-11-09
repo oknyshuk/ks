@@ -20,8 +20,6 @@
 #include "cdll_client_int.h" // extern globals to interfaces like engineclient
 
 #include <rocketui/rmlui.h>
-import ks.tier1;
-import std;
 
 Rml::ElementDocument *RocketTeamMenuDocument::m_pInstance = nullptr;
 bool RocketTeamMenuDocument::m_bVisible = false;

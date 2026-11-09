@@ -16,16 +16,8 @@ class CGameTrace : public CBaseTrace
 {
 public:
 
-	// Returns true if hEnt points at the world entity.
-	// If this returns true, then you can't use GetHitBoxIndex().
-	bool DidHitWorld() const;
-	
-	// Returns true if we hit something and it wasn't the world.
-	bool DidHitNonWorldEntity() const;
-
-	// Gets the entity's network index if the trace has hit an entity.
-	// If not, returns -1.
-	int GetEntityIndex() const;
+	// What the trace hit depends on the game's entity list: TraceDidHitWorld() and friends
+	// (util_shared.h) answer it.
 
 	// Returns true if there was any kind of impact at all
 	bool DidHit() const;

@@ -3,8 +3,6 @@
 
 // Purpose: Plays a movie and reports on finish
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -52,8 +49,8 @@ public:
 	CLogicPlayMovie( void ) { }
 	~CLogicPlayMovie( void ) { }
 
-	virtual void Precache( void );
-	virtual void Spawn( void );
+	void Precache_Impl( void );
+	void Spawn_Impl( void );
 	
 private:
 
@@ -78,14 +75,14 @@ IMPLEMENT_REFLECT_DATAMAP( CLogicPlayMovie )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CLogicPlayMovie::Precache( void )
+void CLogicPlayMovie::Precache_Impl( void )
 {
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CLogicPlayMovie::Spawn( void )
+void CLogicPlayMovie::Spawn_Impl( void )
 {
 }
 

@@ -6,9 +6,7 @@
 
 #include "bitstring.h"
 
-import std;
 
-class	CStringRegistry;
 class   CAI_ClassScheduleIdSpace;
 class	CAI_GlobalScheduleNamespace;
 class	CAI_BaseNPC;
@@ -96,7 +94,6 @@ private:
 };
 
 extern CAI_SchedulesManager g_AI_SchedulesManager;
-extern CAI_SchedulesManager g_AI_AgentSchedulesManager;
 
 class CAI_Schedule
 {
@@ -168,7 +165,6 @@ private:
 #define AI_LOAD_SCHEDULE( classname, name ) \
 	do \
 	{ \
-		extern const char * g_psz##name; \
 		if ( classname::gm_SchedLoadStatus.fValid ) \
 		{ \
 		classname::gm_SchedLoadStatus.fValid = g_AI_SchedulesManager.LoadSchedulesFromBuffer( #classname,(char *)g_psz##name,&classname::gm_ClassScheduleIdSpace, classname::GetSchedulingSymbols() ); \
@@ -180,7 +176,6 @@ private:
 #define AI_LOAD_DEF_SCHEDULE( classname, name ) \
 	do \
 	{ \
-		extern const char * g_psz##name; \
 		if (!g_AI_SchedulesManager.LoadSchedulesFromBuffer( #classname,(char *)g_psz##name,&classname::gm_ClassScheduleIdSpace, classname::GetSchedulingSymbols() )) \
 			return false; \
 	} while (false)

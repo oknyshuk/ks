@@ -5,8 +5,6 @@
 // Purpose: Defines the player specific data that is sent only to the player
 //			to whom it belongs.
 
-import std;
-import ks.tier1;
 #include "playernet_vars.h"
 #include "reflect_annotations.h"
 #include "dt_recv.h"

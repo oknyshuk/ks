@@ -3603,7 +3603,7 @@ bool KeyValues::IsEqual( KeyValues *pRHS )
 //
 // KeyValues dumping implementation
 //
-bool KeyValues::Dump( IKeyValuesDumpContext *pDump, int nIndentLevel /* = 0 */ )
+bool KeyValues::Dump( CKeyValuesDumpContext *pDump, int nIndentLevel /* = 0 */ )
 {
 	if ( !pDump->KvBeginKey( this, nIndentLevel ) )
 		return false;
@@ -3625,8 +3625,16 @@ bool KeyValues::Dump( IKeyValuesDumpContext *pDump, int nIndentLevel /* = 0 */ )
 	return pDump->KvEndKey( this, nIndentLevel );
 }
 
-bool IKeyValuesDumpContextAsText::KvBeginKey( KeyValues *pKey, int nIndentLevel )
+bool CKeyValuesDumpContext::KvBeginKey( KeyValues *pKey, int nIndentLevel )
 {
+	if ( m_nMinDeveloperLevel >= 0 )
+	{
+		static ConVarRef r_developer( "developer" );
+		if ( r_developer.IsValid() && r_developer.GetInt() < m_nMinDeveloperLevel )
+			// If "developer" is not the correct level, then avoid evaluating KeyValues tree early
+			return false;
+	}
+
 	if ( pKey )
 	{
 		return
@@ -3642,7 +3650,7 @@ bool IKeyValuesDumpContextAsText::KvBeginKey( KeyValues *pKey, int nIndentLevel 
 	}
 }
 
-bool IKeyValuesDumpContextAsText::KvWriteValue( KeyValues *val, int nIndentLevel )
+bool CKeyValuesDumpContext::KvWriteValue( KeyValues *val, int nIndentLevel )
 {
 	ks::ScratchArena<> scratch;
 	if ( !val )
@@ -3729,7 +3737,7 @@ bool IKeyValuesDumpContextAsText::KvWriteValue( KeyValues *val, int nIndentLevel
 	return KvWriteText( "\n" );
 }
 
-bool IKeyValuesDumpContextAsText::KvEndKey( KeyValues *pKey, int nIndentLevel )
+bool CKeyValuesDumpContext::KvEndKey( KeyValues *pKey, int nIndentLevel )
 {
 	if ( pKey )
 	{
@@ -3743,7 +3751,7 @@ bool IKeyValuesDumpContextAsText::KvEndKey( KeyValues *pKey, int nIndentLevel )
 	}
 }
 
-bool IKeyValuesDumpContextAsText::KvWriteIndent( int nIndentLevel )
+bool CKeyValuesDumpContext::KvWriteIndent( int nIndentLevel )
 {
 	ks::ScratchArena<> scratch;
 	int numIndentBytes = ( nIndentLevel * 2 + 1 );
@@ -3754,25 +3762,3 @@ bool IKeyValuesDumpContextAsText::KvWriteIndent( int nIndentLevel )
 }
 
 
-bool CKeyValuesDumpContextAsDevMsg::KvBeginKey( KeyValues *pKey, int nIndentLevel )
-{
-	static ConVarRef r_developer( "developer" );
-	if ( r_developer.IsValid() && r_developer.GetInt() < m_nDeveloperLevel )
-		// If "developer" is not the correct level, then avoid evaluating KeyValues tree early
-		return false;
-	else
-		return IKeyValuesDumpContextAsText::KvBeginKey( pKey, nIndentLevel );
-}
-
-bool CKeyValuesDumpContextAsDevMsg::KvWriteText( char const *szText )
-{
-	if ( m_nDeveloperLevel > 0 )
-	{
-		DevMsg( "%s", szText );
-	}
-	else
-	{
-		Msg( "%s", szText );
-	}
-	return true;
-}

@@ -22,7 +22,7 @@ CRConClient & RCONClient()
 	return g_RCONClient;
 }
 
-static void RconAddressChanged_f( IConVar *pConVar, const char *pOldString, float flOldValue )
+static void RconAddressChanged_f( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 #ifndef DEDICATED
 	ConVarRef var( pConVar );
@@ -226,7 +226,7 @@ void CRConClient::SetAddress( const netadr_t &netAdr )
 
 
 //-----------------------------------------------------------------------------
-// Inherited from ISocketCreatorListener
+// Socket listener methods (bound by CSocketCreator)
 //-----------------------------------------------------------------------------
 bool CRConClient::ShouldAcceptSocket( SocketHandle_t hSocket, const netadr_t & netAdr )
 {

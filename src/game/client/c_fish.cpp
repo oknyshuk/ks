@@ -6,8 +6,6 @@
 // Author: Michael S. Booth, April 2005
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "const.h"
 #include "predictable_entity.h"
 #include "util_shared.h"

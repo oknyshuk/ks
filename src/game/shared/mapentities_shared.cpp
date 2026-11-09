@@ -3,13 +3,9 @@
 
 // Purpose: Controls the loading, parsing and creation of the entities from the BSP.
 
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "cdll_util.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "shareddefs.h"
 #include "util.h"
 #endif

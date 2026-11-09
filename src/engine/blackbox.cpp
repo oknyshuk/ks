@@ -48,14 +48,14 @@ public:
 	CBlackBox();
 	~CBlackBox();
 
-	virtual void Record(int type, const char *msg);
-	virtual void SetLimit(int type, unsigned int count);
-	virtual const char *Get(int type, unsigned int index);
-	virtual int Count(int type);
-	virtual void Flush(int type);
+	void Record(int type, const char *msg);
+	void SetLimit(int type, unsigned int count);
+	const char *Get(int type, unsigned int index);
+	int Count(int type);
+	void Flush(int type);
 
-	virtual const char *GetTypeName(int type);
-	virtual int GetTypeCount();
+	const char *GetTypeName(int type);
+	int GetTypeCount();
 
 	enum Types {
 		VCD,
@@ -64,12 +64,15 @@ public:
 		TYPE_COUNT
 	};
 
-private:
+public:
 	bool ValidType(int type) { return (type >= 0 && type < TYPE_COUNT); };
 
 	std::deque< CBlackBoxRecord > m_records[TYPE_COUNT];	// oldest first
 	uint m_record_limits[TYPE_COUNT];
 };
+
+#include "facade/iblackbox.inl"
+
 
 CBlackBox gCBlackBox;
 IBlackBox *gBlackBox = &gCBlackBox;

@@ -110,3 +110,6 @@ void JoltCollisionQuery::SetTriangleMaterialIndex( int convexIndex, int triangle
 }
 
 //-------------------------------------------------------------------------------------------------
+
+//-------------------------------------------------------------------------------------------------
+#include "facade/icollisionquery.inl"

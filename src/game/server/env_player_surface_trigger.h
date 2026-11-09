@@ -17,8 +17,8 @@ public:
 	DECLARE_DATADESC();
 
 	~CEnvPlayerSurfaceTrigger( void );
-	void	Spawn( void );
-	void	OnRestore( void );
+	void	Spawn_Impl( void );
+	void	OnRestore_Impl( void );
 
 	// Main interface to all surface triggers
 	static void	SetPlayerSurface( CBasePlayer *pPlayer, char gameMaterial );

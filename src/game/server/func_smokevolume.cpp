@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "edict.h"
 #include "eiface.h"
 #include "iserverentity.h"
@@ -43,8 +41,8 @@ public:
 	DECLARE_DATADESC();
 
 	CFuncSmokeVolume();
-	void Spawn();
-	void Activate( void );
+	void Spawn_Impl();
+	void Activate_Impl( void );
 
 	// Set the times it fades out at.
 	void SetDensity( float density );
@@ -83,18 +81,18 @@ void CFuncSmokeVolume::SetDensity( float density )
 	m_Density = density;
 }
 
-void CFuncSmokeVolume::Spawn()
+void CFuncSmokeVolume::Spawn_Impl()
 {
 	std::memset( m_MaterialName.GetForModify(), 0, sizeof( m_MaterialName ) );
 
 	// Bind to our bmodel.
 	SetModel( STRING( GetModelName() ) );
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
-void CFuncSmokeVolume::Activate( void )
+void CFuncSmokeVolume::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	V_strncpy( m_MaterialName.GetForModify(), STRING( m_String_tMaterialName ), 255 );
 }

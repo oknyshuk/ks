@@ -63,7 +63,6 @@ inline CGlobalVars::CGlobalVars( bool bIsClient ) :
 }
 
 
-class CPlayerState;
 class IServerNetworkable;
 class IServerEntity;
 

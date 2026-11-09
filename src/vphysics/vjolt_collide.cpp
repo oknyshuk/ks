@@ -828,7 +828,7 @@ ICollisionQuery *JoltPhysicsCollision::CreateQueryModel( CPhysCollide *pCollide 
 
 void JoltPhysicsCollision::DestroyQueryModel( ICollisionQuery *pQuery )
 {
-	delete pQuery;
+	delete static_cast< JoltCollisionQuery * >( pQuery );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1006,3 +1006,6 @@ const JPH::Shape *CreateCOMOverrideShape( const JPH::Shape* pShape, JPH::Vec3Arg
 	JPH::OffsetCenterOfMassShapeSettings settings( comOffset, pShape );
 	return ShapeSettingsToShape< JPH::OffsetCenterOfMassShape >( settings );
 }
+
+//-------------------------------------------------------------------------------------------------
+#include "facade/iphysicscollision.inl"

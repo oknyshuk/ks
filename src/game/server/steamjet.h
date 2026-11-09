@@ -26,8 +26,8 @@ public:
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 
-	virtual void	Spawn( void );
-	virtual void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 
 protected:
 
@@ -52,5 +52,5 @@ public:
 	CNetworkVar( int, m_nType, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "Type" } ]] );		// Type of steam (normal, heatwave)
 	CNetworkVar( float, m_flRollSpeed, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] [[= ks::reflect::Key{ .name = "RollSpeed" } ]] );
 
-	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 };

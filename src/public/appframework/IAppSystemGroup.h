@@ -12,8 +12,25 @@ import std;
 // forward declarations
 //-----------------------------------------------------------------------------
 class IAppSystem;
+class ICvar;
+class ILauncherMgr;
+class IMaterialSystem;
 class CSysModule;
 class IFileSystem;
+class IDataCache;
+class IMDLCache;
+class IStudioDataCache;
+class IPrecacheSystem;
+class IResourceAccessControl;
+class IInputSystem;
+class IInputStackSystem;
+class ILocalize;
+class ISoundEmitterSystemBase;
+class ISceneFileCache;
+class IStudioRender;
+class IScriptManager;
+class IPhysics;
+class IMatchFramework;
 
 //-----------------------------------------------------------------------------
 // Handle to a DLL
@@ -27,47 +44,39 @@ enum
 
 
 //-----------------------------------------------------------------------------
-// NOTE: The following methods must be implemented in your application
-// although they can be empty implementations if you like...
+// A system owned by a group, held by kind and driven through std::visit. ICvar and
+// ILauncherMgr, IMaterialSystem, IFileSystem, IDataCache, ... are concrete app systems without an
+// IAppSystem base; any other system is reached through IAppSystem.
 //-----------------------------------------------------------------------------
-class IAppSystemGroup
-{
-public:
-	// An installed application creation function, you should tell the group
-	// the DLLs and the singleton interfaces you want to instantiate.
-	// Return false if there's any problems and the app will abort
-	virtual bool Create( ) = 0;
+using AppSystemRef = std::variant< IAppSystem *, ICvar *, ILauncherMgr *, IMaterialSystem *, IFileSystem *,
+	IDataCache *, IMDLCache *, IStudioDataCache *, IPrecacheSystem *, IResourceAccessControl *,
+	IInputSystem *, IInputStackSystem *, ILocalize *, ISoundEmitterSystemBase *, ISceneFileCache *, IStudioRender *, IScriptManager *, IPhysics *, IMatchFramework * >;
 
-	// Allow the application to do some work after AppSystems are connected but 
-	// they are all Initialized.
-	// Return false if there's any problems and the app will abort
-	virtual bool PreInit() = 0;
 
-	// Allow the application to do some work after AppSystems are initialized but 
-	// before main is run
-	// Return false if there's any problems and the app will abort
-	virtual bool PostInit() = 0;
-
-	// Main loop implemented by the application
-	virtual int Main( ) = 0;
-
-	// Allow the application to do some work after all AppSystems are shut down
-	virtual void PreShutdown() = 0;
-
-	// Allow the application to do some work after all AppSystems are shut down
-	virtual void PostShutdown() = 0;
-
-	// Call an installed application destroy function, occurring after all modules
-	// are unloaded
-	virtual void Destroy() = 0;
-};
+//-----------------------------------------------------------------------------
+// The application hooks. There is no abstract base: Run() is a template deduced on the
+// most-derived group type, so these resolve statically. A group type must provide:
+//
+//   bool Create();         Tell the group the DLLs and singleton interfaces you want to
+//                          instantiate. Return false if there's any problems and the app will abort
+//   bool PreInit();        Work after AppSystems are connected but before they are initialized.
+//                          Return false if there's any problems and the app will abort
+//   int  Main();           Main loop implemented by the application
+//   void PostShutdown();   Work after all AppSystems are shut down
+//   void Destroy();        Called after all modules are unloaded
+//
+// and may hide the defaults inherited from CAppSystemGroup:
+//
+//   bool PostInit();       Work after AppSystems are initialized but before main is run
+//   void PreShutdown();    Work before the AppSystems are shut down
+//-----------------------------------------------------------------------------
 
 
 //-----------------------------------------------------------------------------
 // This class represents a group of app systems that all have the same lifetime
 // that need to be connected/initialized, etc. in a well-defined order
 //-----------------------------------------------------------------------------
-class CAppSystemGroup : public IAppSystemGroup
+class CAppSystemGroup
 {
 public:
 	// Used to determine where we exited out from the system
@@ -98,16 +107,33 @@ public:
 	// First, modules are loaded, next they are connected, followed by initialization
 	// Then Main() is run
 	// Then modules are shut down, disconnected, and unloaded
-	int Run( );
+	template< class SELF >
+	int Run( this SELF &self )
+	{
+		// The factory now uses this app system group
+		self.SetCurrentGroup( &self );
 
-	// Use this version in cases where you can't control the main loop and
-	// expect to be ticked
-	virtual int Startup();
-	virtual void Shutdown();
+		// Load, connect, init
+		int nRetVal = self.OnStartup( self );
+
+		if ( self.m_nCurrentStage == RUNNING )
+		{
+			// Main loop implemented by the application
+			nRetVal = self.Main();
+		}
+
+		// Shutdown, disconnect, unload
+		self.OnShutdown( self );
+
+		// The factory now uses the parent's app system group
+		self.SetCurrentGroup( self.GetParent() );
+
+		return nRetVal;
+	}
 
 	// Default implementations...
-	virtual bool PostInit() { return true; }
-	virtual void PreShutdown() { }
+	bool PostInit() { return true; }
+	void PreShutdown() { }
 
 	// Returns the stage at which the app system group ran into an error
 	AppSystemGroupStage_t GetCurrentStage() const;
@@ -122,8 +148,12 @@ protected:
 	AppModule_t LoadModule( CreateInterfaceFn factory );
 
 	// Method to add various global singleton systems 
-	IAppSystem *AddSystem( AppModule_t module, const char *pInterfaceName );
+	// Returns the system (as the interface pointer the factory gave out), or nullptr.
+	void *AddSystem( AppModule_t module, const char *pInterfaceName );
 	void AddSystem( IAppSystem *pAppSystem, const char *pInterfaceName );
+	void AddSystem( ILauncherMgr *pLauncherMgr, const char *pInterfaceName );
+	void AddSystem( IFileSystem *pFileSystem, const char *pInterfaceName );
+	void AddSystem( IMatchFramework *pMatchFramework, const char *pInterfaceName );
 
 	// Simpler method of doing the LoadModule/AddSystem thing.
 	// Make sure the last AppSystemInfo has a NULL module name
@@ -142,7 +172,7 @@ protected:
 	void *FindSystem( const char *pInterfaceName );
 
 	// Creates the app window (windowed app only)
-	virtual void *CreateAppWindow( void *hInstance, const char *pTitle, bool bWindowed, int w, int h, bool bResizing );
+	void *CreateAppWindow( void *hInstance, const char *pTitle, bool bWindowed, int w, int h, bool bResizing );
 	void SetAppWindowTitle( void* hWnd, const char *pTitle );
 
 	// Gets at a class factory for the topmost appsystem group in an appsystem stack
@@ -192,8 +222,102 @@ private:
 		}
 	};
 
-	int OnStartup();
-	void OnShutdown();
+	// Startup/shutdown sequences; the hooks are called on the most-derived group (self)
+	template< class SELF >
+	int OnStartup( SELF &self )
+	{
+		// The factory now uses this app system group
+		SetCurrentGroup( this );
+
+		// Call an installed application creation function
+		m_nCurrentStage = CREATION;
+		if ( !self.Create() )
+			return -1;
+
+		// Load dependent libraries
+		m_nCurrentStage = DEPENDENCIES;
+		if ( !LoadDependentSystems() )
+			return -1;
+
+		// Let all systems know about each other
+		m_nCurrentStage = CONNECTION;
+		if ( !ConnectSystems() )
+			return -1;
+
+		// Allow the application to do some work before init
+		m_nCurrentStage = PREINITIALIZATION;
+		if ( !self.PreInit() )
+			return -1;
+
+		// Call Init on all App Systems
+		m_nCurrentStage = INITIALIZATION;
+		int nRetVal = InitSystems();
+		if ( nRetVal != INIT_OK )
+			return -1;
+
+		m_nCurrentStage = POSTINITIALIZATION;
+		if ( !self.PostInit() )
+			return -1;
+
+		m_nCurrentStage = RUNNING;
+		return nRetVal;
+	}
+
+	template< class SELF >
+	void OnShutdown( SELF &self )
+	{
+		// The factory now uses this app system group
+		SetCurrentGroup( this );
+
+		switch( m_nCurrentStage )
+		{
+		case RUNNING:
+		case POSTINITIALIZATION:
+			break;
+
+		case PREINITIALIZATION:
+		case INITIALIZATION:
+			goto disconnect;
+
+		case CREATION:
+		case DEPENDENCIES:
+		case CONNECTION:
+			goto destroy;
+
+		default:
+			break;
+		}
+
+		// Allow the application to do some work before shutdown
+		m_nCurrentStage = PRESHUTDOWN;
+		self.PreShutdown();
+
+		// Cal Shutdown on all App Systems
+		m_nCurrentStage = SHUTDOWN;
+		ShutdownSystems();
+
+		// Allow the application to do some work after shutdown
+		m_nCurrentStage = POSTSHUTDOWN;
+		self.PostShutdown();
+
+	disconnect:
+		// Systems should disconnect from each other
+		m_nCurrentStage = DISCONNECTION;
+		DisconnectSystems();
+
+	destroy:
+		// Unload all DLLs loaded in the AppCreate block
+		m_nCurrentStage = DESTRUCTION;
+		UnloadSystemsAndModules();
+
+		// Call an installed application destroy function
+		self.Destroy();
+	}
+
+	// Removes the systems, restores the default logging state and unloads the modules
+	void UnloadSystemsAndModules();
+
+	static void SetCurrentGroup( CAppSystemGroup *pGroup );
 
 	void UnloadAllModules( );
 	void RemoveAllSystems();
@@ -213,7 +337,7 @@ private:
 	CAppSystemGroup *GetParent();
 
 	// Loads a module the standard way
-	virtual CSysModule *LoadModuleDLL( const char *pDLLName );
+	CSysModule *LoadModuleDLL( const char *pDLLName );
 
 	void	ComputeDependencies( LibraryDependencies_t &depend );
 	void	SortDependentLibraries( LibraryDependencies_t &depend );
@@ -221,13 +345,15 @@ private:
 	static bool	SortLessFunc( const int &left, const int &right );
 
 	void	ReportStartupFailure( int nErrorStage, int nSysIndex );
+	void	AppendSystem( AppSystemRef system, const char *pInterfaceName );
 
 	std::vector< Module_t > m_Modules;
-	std::vector< IAppSystem* > m_Systems;
+	std::vector< AppSystemRef > m_Systems;
 	std::vector< CreateInterfaceFn > m_NonAppSystemFactories;
 	std::map<std::string, int> m_SystemDict;
 	CAppSystemGroup *m_pParentAppSystem;
 	AppSystemGroupStage_t m_nCurrentStage;
+	bool m_bLoadThroughFileSystem;	// set by CFSAppSystemGroup: its modules load through the file system
 
 	static LibraryDependencies_t *sm_pSortDependencies;
 	friend void *AppSystemCreateInterfaceFn(const char *pName, int *pReturnCode);
@@ -240,6 +366,8 @@ private:
 //-----------------------------------------------------------------------------
 class CFSAppSystemGroup : public CAppSystemGroup
 {
+	friend class CAppSystemGroup;
+
 public:
 	CFSAppSystemGroup( IFileSystem *pFileSystem = nullptr, CAppSystemGroup *pParentAppSystem = nullptr );
 
@@ -254,26 +382,11 @@ protected:
 	const char *GetGameInfoPath() const;
 
 private:
-	virtual CSysModule *LoadModuleDLL( const char *pDLLName );
+	// Loads a module through the file system (CAppSystemGroup::LoadModuleDLL dispatches here by kind)
+	CSysModule *LoadModuleDLLViaFileSystem( const char *pDLLName );
 
 	IFileSystem *m_pFileSystem;
 	char m_pGameInfoPath[ MAX_PATH ];
-};
-
-
-//-----------------------------------------------------------------------------
-// Helper empty decorator implementation of an IAppSystemGroup
-//-----------------------------------------------------------------------------
-template< class CBaseClass > 
-class CDefaultAppSystemGroup : public CBaseClass
-{
-public:
-	virtual bool Create( ) { return true; }
-	virtual bool PreInit() { return true; }
-	virtual bool PostInit() { return true; }
-	virtual void PreShutdown() { }
-	virtual void PostShutdown() {}
-	virtual void Destroy() {}
 };
 
 

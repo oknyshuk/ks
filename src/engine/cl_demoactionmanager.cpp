@@ -46,34 +46,34 @@ public:
 // Public interface
 public:
 
-	virtual void		Init( void );
-	virtual void		Shutdown( void );
+	void		Init( void );
+	void		Shutdown( void );
 
-	virtual void		StartPlaying( char const *demfilename );
-	virtual void		StopPlaying();
+	void		StartPlaying( char const *demfilename );
+	void		StopPlaying();
 
-	virtual void		Update( bool newframe, int demotick, float demotime );
+	void		Update( bool newframe, int demotick, float demotime );
 
-	virtual void		SaveToBuffer( ks::text_writer& buf );
-	virtual void		SaveToFile( void );
+	void		SaveToBuffer( ks::text_writer& buf );
+	void		SaveToFile( void );
 
-	virtual char const	*GetCurrentDemoFile( void );
+	char const	*GetCurrentDemoFile( void );
 
-	virtual int			GetActionCount( void );
-	virtual CBaseDemoAction *GetAction( int index );
-	virtual void		AddAction( CBaseDemoAction *action );
-	virtual void		RemoveAction( CBaseDemoAction *action );
+	int			GetActionCount( void );
+	CBaseDemoAction *GetAction( int index );
+	void		AddAction( CBaseDemoAction *action );
+	void		RemoveAction( CBaseDemoAction *action );
 
-	virtual bool		IsDirty( void ) const;
-	virtual void		SetDirty( bool dirty );
+	bool		IsDirty( void ) const;
+	void		SetDirty( bool dirty );
 
-	virtual void		ReloadFromDisk( void );
+	void		ReloadFromDisk( void );
 
-	virtual void		DispatchEvents();
-	virtual void		InsertFireEvent( CBaseDemoAction *action );
+	void		DispatchEvents();
+	void		InsertFireEvent( CBaseDemoAction *action );
 
-	virtual bool		OverrideView( democmdinfo_t& info, int tick );
-private:
+	bool		OverrideView( democmdinfo_t& info, int tick );
+public:
 	void				OnVDMLoaded( char const *demfilename );
 	void				ClearAll();
 
@@ -89,6 +89,9 @@ private:
 	char				m_szCurrentFile[ MAX_OSPATH ];
 	long				m_lFileTime;
 };
+
+#include "facade/idemoactionmanager.inl"
+
 
 static CDemoActionManager g_DemoActionManager;
 IDemoActionManager *demoaction = ( IDemoActionManager * )&g_DemoActionManager;
@@ -173,7 +176,7 @@ void CDemoActionManager::ReloadFromDisk( void )
 					{
 						if ( !action->Init( pIter ) )
 						{
-							delete action;
+							action->DeleteThis();
 						}
 						else
 						{
@@ -247,7 +250,7 @@ void CDemoActionManager::ClearAll()
 	while ( !m_ActionStack.empty() )
 	{
 		CBaseDemoAction *a = m_ActionStack[ 0 ];
-		delete a;
+		a->DeleteThis();
 		m_ActionStack.erase( m_ActionStack.begin() + 0 );
 	}
 }
@@ -426,7 +429,7 @@ void CDemoActionManager::RemoveAction( CBaseDemoAction *action )
 	m_bDirty = true;
 
 	ks::erase_first( m_ActionStack, action );
-	delete action;
+	action->DeleteThis();
 }
 
 //-----------------------------------------------------------------------------

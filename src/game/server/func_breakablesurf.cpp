@@ -5,8 +5,6 @@
 //			as it takes damage. Undamaged pieces remain attached to the world
 //			until they are damaged. Used for window panes.
 
-import std;
-import ks.math;
 #include "edict.h"
 #include "iserverentity.h"
 #include "shareddefs.h"
@@ -73,7 +71,7 @@ LINK_ENTITY_TO_CLASS( window_pane, CWindowPane );
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
-void CWindowPane::Spawn( void )
+void CWindowPane::Spawn_Impl( void )
 {
     Precache( );    
   
@@ -86,7 +84,7 @@ void CWindowPane::Spawn( void )
 	SetModel( "models/brokenglass_piece.mdl" );//set size and link into world.
 }
 
-void CWindowPane::Precache( void )
+void CWindowPane::Precache_Impl( void )
 {
 	PrecacheModel( "models/brokenglass_piece.mdl" );
 }
@@ -164,7 +162,7 @@ IMPLEMENT_REFLECT_SERVERCLASS( CBreakableSurface, DT_BreakableSurface )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBreakableSurface::Precache(void)
+void CBreakableSurface::Precache_Impl(void)
 {
 	UTIL_PrecacheOther( "window_pane" );
 
@@ -206,7 +204,7 @@ void CBreakableSurface::Precache(void)
 	PrecacheEffect( "GlassImpact" );
 	PrecacheEffect( "Impact" );
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 
@@ -289,7 +287,7 @@ void CBreakableSurface::SurfaceTouch( CBaseEntity *pOther )
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
-int CBreakableSurface::OnTakeDamage( const CTakeDamageInfo &info )
+int CBreakableSurface::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	if ( !m_bIsBroken && info.GetDamageType() == DMG_CRUSH )
 	{
@@ -321,7 +319,7 @@ int CBreakableSurface::OnTakeDamage( const CTakeDamageInfo &info )
 //------------------------------------------------------------------------------
 // Purpose: Accepts damage and breaks if health drops below zero.
 //------------------------------------------------------------------------------
-void CBreakableSurface::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
+void CBreakableSurface::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
 	// [dwenger] Window break stat tracking
 	// Make sure this pane has not already been shattered
@@ -1126,9 +1124,9 @@ bool CBreakableSurface::ShatterPane(int nWidth, int nHeight, const Vector &vForc
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
-void CBreakableSurface::Spawn(void)
+void CBreakableSurface::Spawn_Impl(void)
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	SetCollisionGroup( COLLISION_GROUP_BREAKABLE_GLASS ); 
 	m_bIsBroken = false;
 
@@ -1177,7 +1175,7 @@ void CBreakableSurface::Spawn(void)
 	}
 }
 
-void CBreakableSurface::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
+void CBreakableSurface::VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent )
 {
 	if ( !m_bIsBroken )
 	{
@@ -1237,5 +1235,5 @@ void CBreakableSurface::VPhysicsCollision( int index, gamevcollisionevent_t *pEv
 			}
 		}
 	}
-	BaseClass::VPhysicsCollision( index, pEvent );
+	BaseClass::VPhysicsCollision_Impl( index, pEvent );
 }

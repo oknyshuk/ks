@@ -4,8 +4,6 @@
 // Purpose: A camera entity that's used by the -makedevshots system to take
 //			dev screenshots everytime the map is checked into source control.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -23,7 +21,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -53,13 +50,13 @@ class CPointDevShotCamera : public CBaseEntity
 public:
 	DECLARE_DATADESC();
 
-	void Spawn( void );
+	void Spawn_Impl( void );
 	void DevShotThink_Setup( void );
 	void DevShotThink_TakeShot( void );
 	void DevShotThink_PostShot( void );
 
 	// Always transmit to clients so they know where to move the view to
-	virtual int UpdateTransmitState();
+	int UpdateTransmitState_Impl();
 
 private:
 	[[= ks::reflect::Key{ .name = "cameraname" } ]] string_t	m_iszCameraName;
@@ -73,9 +70,9 @@ LINK_ENTITY_TO_CLASS( point_devshot_camera, CPointDevShotCamera );
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPointDevShotCamera::Spawn( void )
+void CPointDevShotCamera::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	// Remove this entity immediately if we're not making devshots
 	if ( !CommandLine()->FindParm("-makedevshots") )
@@ -94,7 +91,7 @@ void CPointDevShotCamera::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CPointDevShotCamera::UpdateTransmitState()
+int CPointDevShotCamera::UpdateTransmitState_Impl()
 {
 	// always transmit if currently used by a monitor
 	return SetTransmitState( FL_EDICT_ALWAYS );

@@ -14,6 +14,7 @@ import std;
 import ks.core;
 #include "vphysics_interface.h"
 #include "vphysics/collision_set.h"
+#include "appframework/apptiers.h"
 namespace JPH { class TempAllocator; class JobSystem; }
 
 //-------------------------------------------------------------------------------------------------
@@ -31,19 +32,19 @@ class JoltPhysicsCollisionSet final : public IPhysicsCollisionSet
 {
 public:
 
-	void EnableCollisions( int index0, int index1 ) override
+	void EnableCollisions( int index0, int index1 )
 	{
 		m_Bits[ index0 ] |= 1u << index1;
 		m_Bits[ index1 ] |= 1u << index0;
 	}
 
-	void DisableCollisions( int index0, int index1 ) override
+	void DisableCollisions( int index0, int index1 )
 	{
 		m_Bits[ index0 ] &= ~( 1u << index1 );
 		m_Bits[ index1 ] &= ~( 1u << index0 );
 	}
 
-	bool ShouldCollide( int index0, int index1 ) override
+	bool ShouldCollide( int index0, int index1 )
 	{
 		return !!( m_Bits[ index0 ] & ( 1u << index1 ) );
 	}
@@ -56,26 +57,26 @@ private:
 
 //-------------------------------------------------------------------------------------------------
 
-class JoltPhysicsInterface final : public CTier1AppSystem<IPhysics>
+class JoltPhysicsInterface final : public IPhysics
 {
-private:
-	using BaseClass = CTier1AppSystem<IPhysics>;
-
 public:
-	InitReturnVal_t Init() override;
-	void Shutdown() override;
-	void *QueryInterface( const char *pInterfaceName ) override;
+	// App system protocol (a tier 1 system)
+	bool Connect( CreateInterfaceFn factory ) { return AppSystemTier1Connect( factory ); }
+	void Disconnect() { AppSystemTier1Disconnect(); }
+	InitReturnVal_t Init();
+	void Shutdown();
+	void *QueryInterface( const char *pInterfaceName );
 
-	IPhysicsEnvironment *CreateEnvironment() override;
-	void DestroyEnvironment( IPhysicsEnvironment *pEnvironment ) override;
-	IPhysicsEnvironment *GetActiveEnvironmentByIndex( int index ) override;
+	IPhysicsEnvironment *CreateEnvironment();
+	void DestroyEnvironment( IPhysicsEnvironment *pEnvironment );
+	IPhysicsEnvironment *GetActiveEnvironmentByIndex( int index );
 
-	IPhysicsObjectPairHash *CreateObjectPairHash() override;
-	void DestroyObjectPairHash( IPhysicsObjectPairHash *pHash ) override;
+	IPhysicsObjectPairHash *CreateObjectPairHash();
+	void DestroyObjectPairHash( IPhysicsObjectPairHash *pHash );
 
-	IPhysicsCollisionSet *FindOrCreateCollisionSet( uintptr_t id, int maxElementCount ) override;
-	IPhysicsCollisionSet *FindCollisionSet( uintptr_t id ) override;
-	void DestroyAllCollisionSets() override;
+	IPhysicsCollisionSet *FindOrCreateCollisionSet( uintptr_t id, int maxElementCount );
+	IPhysicsCollisionSet *FindCollisionSet( uintptr_t id );
+	void DestroyAllCollisionSets();
 
 public:
 	static JoltPhysicsInterface &GetInstance() { return s_PhysicsInterface; }

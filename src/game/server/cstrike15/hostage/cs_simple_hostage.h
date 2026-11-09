@@ -73,18 +73,19 @@ public:
 
 
 public:
-	virtual void Spawn( void );
-	virtual void Precache();
-	int ObjectCaps( void ) { return (BaseClass::ObjectCaps() | FCAP_IMPULSE_USE); }	// make hostage "useable"
-	virtual bool KeyValue( const char *szKeyName, const char *szValue );
+	void Spawn_Impl( void );
+	void Precache_Impl();
+	int ObjectCaps_Impl( void ) { return (BaseClass::ObjectCaps_Impl() | FCAP_IMPULSE_USE); }	// make hostage "useable"
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
 
-	virtual void PhysicsSimulate( void );
+	void PhysicsSimulate_Impl( void );
 
 	virtual int OnTakeDamage_Alive( const CTakeDamageInfo &info );
-	virtual void TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
+	void TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
 
-	virtual void Event_Killed( const CTakeDamageInfo &info );
-	virtual void Touch( CBaseEntity *other );				// in contact with "other"
+	void Event_Killed_Impl( const CTakeDamageInfo &info );
+	void Touch_Impl( CBaseEntity *other );				// in contact with "other"
 	
 	[[= ks::reflect::Input{ .name = "OnRescueZoneTouch", .type = FIELD_VOID } ]] void HostageRescueZoneTouch( inputdata_t &inputdata );	// invoked when hostage touches a rescue zone
 
@@ -114,44 +115,44 @@ public:
 	void FaceTowards( const Vector &target, float deltaT );	// rotate body to face towards "target"
 	void ApplyForce( const Vector &force )		{ m_accel += force; }	// apply a force to the hostage
 
-	unsigned int PhysicsSolidMaskForEntity() const;
-	Class_T Classify ( void ) { return CLASS_PLAYER_ALLY; }
+	unsigned int PhysicsSolidMaskForEntity_Impl() const;
+	Class_T Classify_Impl ( void ) { return CLASS_PLAYER_ALLY; }
 
 public:
 	// begin CImprovLocomotor -----------------------------------------------------------------------------------------------------------------
-	virtual const Vector &GetCentroid( void ) const;
-	virtual const Vector &GetFeet( void ) const;			// return position of "feet" - point below centroid of improv at feet level
-	virtual const Vector &GetEyes( void ) const;
-	virtual float GetMoveAngle( void ) const;				// return direction of movement
+	const Vector &GetCentroid( void ) const;
+	const Vector &GetFeet( void ) const;			// return position of "feet" - point below centroid of improv at feet level
+	const Vector &GetEyes( void ) const;
+	float GetMoveAngle( void ) const;				// return direction of movement
 
-	virtual CNavArea *GetLastKnownArea( void ) const;
-	virtual bool GetSimpleGroundHeightWithFloor( const Vector &pos, float *height, Vector *normal = nullptr );	// find "simple" ground height, treating current nav area as part of the floor
+	CNavArea *GetLastKnownArea( void ) const;
+	bool GetSimpleGroundHeightWithFloor( const Vector &pos, float *height, Vector *normal = nullptr );	// find "simple" ground height, treating current nav area as part of the floor
 
-	virtual void Crouch( void );
-	virtual void StandUp( void );							// "un-crouch"
-	virtual bool IsCrouching( void ) const;
+	void Crouch( void );
+	void StandUp( void );							// "un-crouch"
+	bool IsCrouching( void ) const;
 
-	virtual void Jump( void );								// initiate a jump
-	virtual bool IsJumping( void ) const;
+	void Jump( void );								// initiate a jump
+	bool IsJumping( void ) const;
 
-	virtual void Run( void );								// set movement speed to running
-	virtual void Walk( void );								// set movement speed to walking
-	virtual bool IsRunning( void ) const;
+	void Run( void );								// set movement speed to running
+	void Walk( void );								// set movement speed to walking
+	bool IsRunning( void ) const;
 
-	virtual void StartLadder( const CNavLadder *ladder, NavTraverseType how, const Vector &approachPos, const Vector &departPos );	// invoked when a ladder is encountered while following a path
-	virtual bool TraverseLadder( const CNavLadder *ladder, NavTraverseType how, const Vector &approachPos, const Vector &departPos, float deltaT );	// traverse given ladder
-	virtual bool IsUsingLadder( void ) const;
+	void StartLadder( const CNavLadder *ladder, NavTraverseType how, const Vector &approachPos, const Vector &departPos );	// invoked when a ladder is encountered while following a path
+	bool TraverseLadder( const CNavLadder *ladder, NavTraverseType how, const Vector &approachPos, const Vector &departPos, float deltaT );	// traverse given ladder
+	bool IsUsingLadder( void ) const;
 
-	virtual void TrackPath( const Vector &pathGoal, float deltaT );		// move along path by following "pathGoal"
-	virtual void OnMoveToSuccess( const Vector &goal );					// invoked when an improv reaches its MoveTo goal
-	virtual void OnMoveToFailure( const Vector &goal, MoveToFailureType reason );	// invoked when an improv fails to reach a MoveTo goal
+	void TrackPath( const Vector &pathGoal, float deltaT );		// move along path by following "pathGoal"
+	void OnMoveToSuccess( const Vector &goal );					// invoked when an improv reaches its MoveTo goal
+	void OnMoveToFailure( const Vector &goal, MoveToFailureType reason );	// invoked when an improv fails to reach a MoveTo goal
 	// end CImprovLocomotor -------------------------------------------------------------------------------------------------------------------
 
 public:
 	virtual CWeaponCSBase* CSAnim_GetActiveWeapon();
 	virtual bool CSAnim_CanMove();
 
-	virtual void ModifyOrAppendCriteria( AI_CriteriaSet& set );
+	void ModifyOrAppendCriteria_Impl( AI_CriteriaSet& set );
 
 	int GetHostageState( void ) { return m_nHostageState; }
 
@@ -165,7 +166,7 @@ public:
 
 protected:
 	virtual CAI_Expresser *CreateExpresser( void );
-	virtual void HostageUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void HostageUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void SetHostageStartFollowingPlayer( CCSPlayer *pPlayer );
 	void SmoothlyDropHostageToGround( Vector vecPosition );
 

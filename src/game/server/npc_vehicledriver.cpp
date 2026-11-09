@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -19,7 +17,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -85,11 +82,11 @@ CNPC_VehicleDriver::~CNPC_VehicleDriver( void )
 //------------------------------------------------------------------------------
 // Purpose :
 //------------------------------------------------------------------------------
-void CNPC_VehicleDriver::Spawn( void )
+void CNPC_VehicleDriver::Spawn_Impl( void )
 {
 	Precache( );
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	CapabilitiesClear();
 	CapabilitiesAdd( bits_CAP_MOVE_GROUND );
@@ -135,7 +132,7 @@ void CNPC_VehicleDriver::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CNPC_VehicleDriver::Precache( void )
+void CNPC_VehicleDriver::Precache_Impl( void )
 {
 	PrecacheModel( "models/roller_vehicledriver.mdl" );
 }
@@ -143,9 +140,9 @@ void CNPC_VehicleDriver::Precache( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CNPC_VehicleDriver::Activate( void )
+void CNPC_VehicleDriver::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	// Restore doesn't need to do this
 	if ( m_hVehicleEntity )
@@ -187,9 +184,9 @@ void CNPC_VehicleDriver::Activate( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CNPC_VehicleDriver::OnRestore( void )
+void CNPC_VehicleDriver::OnRestore_Impl( void )
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 	if ( m_hVehicleEntity )
 	{
 		m_pVehicleInterface = m_hVehicleEntity->GetServerVehicle();
@@ -199,7 +196,7 @@ void CNPC_VehicleDriver::OnRestore( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CNPC_VehicleDriver::UpdateOnRemove( void )
+void CNPC_VehicleDriver::UpdateOnRemove_Impl( void )
 {
 	// Leave our vehicle
 	if ( m_pVehicleInterface )
@@ -207,7 +204,7 @@ void CNPC_VehicleDriver::UpdateOnRemove( void )
 		m_pVehicleInterface->NPC_SetDriver( nullptr );
 	}
 
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 //-----------------------------------------------------------------------------

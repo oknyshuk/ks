@@ -4,8 +4,6 @@
 
 // Purpose: Contains the set of functions for manipulating entity hierarchies.
 
-import std;
-import ks.tier1;
 
 class CBaseEntity;
 

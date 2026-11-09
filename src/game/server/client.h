@@ -5,8 +5,6 @@
 #include "reflect_annotations.h"
 #include "edict.h"
 
-class CCommand;
-class CUserCmd;
 class CBasePlayer;
 
 

@@ -3,8 +3,6 @@
 
 // Purpose: Used to create a path that can be followed by NPCs and trains.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -49,10 +46,10 @@ class CPathCorner : public CPointEntity
 	DECLARE_CLASS( CPathCorner, CPointEntity );
 public:
 
-	void	Spawn( );
-	float	GetDelay( void ) { return m_flWait; }
-	int		DrawDebugTextOverlays(void);
-	void	DrawDebugGeometryOverlays(void);
+	void	Spawn_Impl( );
+	float	GetDelay_Impl( void ) { return m_flWait; }
+	int		DrawDebugTextOverlays_Impl(void);
+	void	DrawDebugGeometryOverlays_Impl(void);
 
 	// Input handlers	
 	[[= ks::reflect::Input{ .name = "SetNextPathCorner", .type = FIELD_STRING } ]] void InputSetNextPathCorner( inputdata_t &inputdata );
@@ -82,7 +79,7 @@ IMPLEMENT_REFLECT_DATAMAP( CPathCorner )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPathCorner::Spawn( void )
+void CPathCorner::Spawn_Impl( void )
 {
 	ASSERTSZ(GetEntityName() != NULL_STRING, "path_corner without a targetname");
 }
@@ -111,9 +108,9 @@ void CPathCorner::InputInPass( inputdata_t &inputdata )
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CPathCorner::DrawDebugTextOverlays(void) 
+int CPathCorner::DrawDebugTextOverlays_Impl(void) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -139,7 +136,7 @@ int CPathCorner::DrawDebugTextOverlays(void)
 //-----------------------------------------------------------------------------
 // Purpose: Override base class to add display of paths
 //-----------------------------------------------------------------------------
-void CPathCorner::DrawDebugGeometryOverlays(void) 
+void CPathCorner::DrawDebugGeometryOverlays_Impl(void) 
 {
 	// ----------------------------------------------
 	// Draw line to next target is bbox is selected
@@ -157,5 +154,5 @@ void CPathCorner::DrawDebugGeometryOverlays(void)
 			}
 		}
 	}
-	BaseClass::DrawDebugGeometryOverlays();
+	BaseClass::DrawDebugGeometryOverlays_Impl();
 }

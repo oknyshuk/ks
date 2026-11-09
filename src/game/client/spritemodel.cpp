@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "cdll_client_int.h"
 #include "enginesprite.h"
 #include "hud.h"
@@ -214,44 +212,8 @@ static unsigned int spriteOriginCache = 0;
 static unsigned int spriteOrientationCache = 0;
 bool CEngineSprite::Init( const char *pName )
 {
-	m_hAVIMaterial = AVIMATERIAL_INVALID;
-	m_hBIKMaterial = BIKMATERIAL_INVALID;
 	m_width = m_height = m_numFrames = 1;
 
-	const char *pExt = V_GetFileExtension( pName );
-	bool bIsAVI = pExt && !V_stricmp( pExt, "avi" );
-	bool bIsBIK = pExt && !V_stricmp( pExt, "bik" );
-	if ( bIsAVI )
-	{
-		m_hAVIMaterial = avi->CreateAVIMaterial( pName, pName, "GAME" );
-		if ( m_hAVIMaterial == AVIMATERIAL_INVALID )
-			return false;
-
-		IMaterial *pMaterial = avi->GetMaterial( m_hAVIMaterial );
-		avi->GetFrameSize( m_hAVIMaterial, &m_width, &m_height );
-		m_numFrames = avi->GetFrameCount( m_hAVIMaterial );
-		for ( int i = 0; i < kRenderModeCount; ++i )
-		{
-			m_material[i] = pMaterial;
-			pMaterial->IncrementReferenceCount();
-		}
-	}
-	else if ( bIsBIK )
-	{
-		m_hBIKMaterial = bik->CreateMaterial( pName, pName, "GAME" );
-		if ( m_hBIKMaterial == BIKMATERIAL_INVALID )
-			return false;
-
-		IMaterial *pMaterial = bik->GetMaterial( m_hBIKMaterial );
-		bik->GetFrameSize( m_hBIKMaterial, &m_width, &m_height );
-		m_numFrames = bik->GetFrameCount( m_hBIKMaterial );
-		for ( int i = 0; i < kRenderModeCount; ++i )
-		{
-			m_material[i] = pMaterial;
-			pMaterial->IncrementReferenceCount();
-		}
-	}
-	else
 	{
 		char pTemp[MAX_PATH];
 		char pMaterialName[MAX_PATH];
@@ -348,36 +310,7 @@ bool CEngineSprite::Init( const char *pName )
 //-----------------------------------------------------------------------------
 void CEngineSprite::Shutdown( void )
 {
-	if ( m_hAVIMaterial != AVIMATERIAL_INVALID )
-	{
-		avi->DestroyAVIMaterial( m_hAVIMaterial );
-		m_hAVIMaterial = AVIMATERIAL_INVALID;
-	}
-
-	if ( m_hBIKMaterial != BIKMATERIAL_INVALID )
-	{
-		bik->DestroyMaterial( m_hBIKMaterial );
-		m_hBIKMaterial = BIKMATERIAL_INVALID;
-	}
-
 	UnloadMaterial();
-}
-
-
-//-----------------------------------------------------------------------------
-// Is the sprite an AVI?
-//-----------------------------------------------------------------------------
-bool CEngineSprite::IsAVI()
-{
-	return ( m_hAVIMaterial != AVIMATERIAL_INVALID );
-}
-
-//-----------------------------------------------------------------------------
-// Is the sprite an BIK?
-//-----------------------------------------------------------------------------
-bool CEngineSprite::IsBIK()
-{
-	return ( m_hBIKMaterial != BIKMATERIAL_INVALID );
 }
 
 
@@ -388,14 +321,6 @@ void CEngineSprite::GetTexCoordRange( float *pMinU, float *pMinV, float *pMaxU, 
 {
 	*pMaxU = 1.0f; 
 	*pMaxV = 1.0f;
-	if ( IsAVI() )
-	{
-		avi->GetTexCoordRange( m_hAVIMaterial, pMaxU, pMaxV );
-	}
-	if ( IsBIK() )
-	{
-		bik->GetTexCoordRange( m_hBIKMaterial, pMaxU, pMaxV );
-	}
 	float flOOWidth = ( m_width != 0 ) ? 1.0f / m_width : 1.0f;
 	float flOOHeight = ( m_height!= 0 ) ? 1.0f / m_height : 1.0f;
 
@@ -437,18 +362,6 @@ IMaterial *CEngineSprite::GetMaterial( RenderMode_t nRenderMode, int nFrame )
 	if ( nRenderMode == kRenderNone || nRenderMode == kRenderEnvironmental )
 		return nullptr;
 
-	if ( IsAVI() )
-	{
-		avi->SetFrame( m_hAVIMaterial, nFrame );
-		return m_material[ 0 ];	// render mode is ignored for avi
-	}
-
-	if ( IsBIK() )
-	{
-		bik->SetFrame( m_hBIKMaterial, nFrame );
-		return m_material[ 0 ]; // render mode is ignored for bink
-	}
-	
 	IMaterial *pMaterial = m_material[nRenderMode];
 	contract_assert( pMaterial );
 	if ( pMaterial == nullptr )
@@ -465,18 +378,6 @@ IMaterial *CEngineSprite::GetMaterial( RenderMode_t nRenderMode, int nFrame )
 
 void CEngineSprite::SetFrame( RenderMode_t nRenderMode, int nFrame )
 {
-	if ( IsAVI() )
-	{
-		avi->SetFrame( m_hAVIMaterial, nFrame );
-		return;
-	}
-
-	if ( IsBIK() )
-	{
-		bik->SetFrame( m_hBIKMaterial, nFrame );
-		return;
-	}
-
 	IMaterial *pMaterial = m_material[nRenderMode];
 	if ( !pMaterial )
 		return;

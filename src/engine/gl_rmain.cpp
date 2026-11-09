@@ -280,29 +280,29 @@ public:
 	const VMatrix &WorldToScreenMatrix( void );
 
 	float	GetFramerate( void ) { return m_framerate; }
-	virtual float	GetZNear( void ) { return m_zNear; }
-	virtual float	GetZFar( void ) { return m_zFar; }
+	float	GetZNear( void ) { return m_zNear; }
+	float	GetZFar( void ) { return m_zFar; }
 
 	// Query current fov and view model fov
 	float	GetFov( void ) { return CurrentView().fov; };
 	float	GetFovY( void ) { return m_yFOV; };
 	float	GetFovViewmodel( void ) { return CurrentView().fovViewmodel; };
 
-	virtual bool	ClipTransform( const Vector& point, Vector* pClip );
-	virtual bool	ScreenTransform( const Vector& point, Vector* pScreen );
+	bool	ClipTransform( const Vector& point, Vector* pClip );
+	bool	ScreenTransform( const Vector& point, Vector* pScreen );
 
-	virtual void Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes );
-	virtual void Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes, ITexture* pDepthTexture );
-	virtual void Push2DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes );
-	virtual void PopView( IMatRenderContext *pRenderContext, Frustum frustumPlanes );
-	virtual void SetMainView( const Vector &vecOrigin, const QAngle &angles );
+	void Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes );
+	void Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes, ITexture* pDepthTexture );
+	void Push2DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes );
+	void PopView( IMatRenderContext *pRenderContext, Frustum frustumPlanes );
+	void SetMainView( const Vector &vecOrigin, const QAngle &angles );
 
-	virtual void UpdateBrushModelLightmap( model_t *model, IClientRenderable *Renderable );
-	virtual void BeginUpdateLightmaps( void );
-	virtual void EndUpdateLightmaps( void );
-	virtual bool InLightmapUpdate( void ) const;
+	void UpdateBrushModelLightmap( model_t *model, IClientRenderable *Renderable );
+	void BeginUpdateLightmaps( void );
+	void EndUpdateLightmaps( void );
+	bool InLightmapUpdate( void ) const;
 
-private:
+public:
 	// Called when a particular view becomes active
 	void OnViewActive( Frustum frustumPlanes );
 
@@ -344,6 +344,9 @@ private:
 	std::vector< ViewStack_t > m_ViewStack;
 	int m_iLightmapUpdateDepth;
 };
+
+#include "facade/irender.inl"
+
 
 
 //-----------------------------------------------------------------------------

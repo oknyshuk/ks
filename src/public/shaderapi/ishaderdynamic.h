@@ -131,165 +131,165 @@ class IShaderDynamicAPI
 {
 public:
 
-	virtual void BeginPerfEEvent( const wchar* name ) {}
-	virtual void EndPerfEvent() {}
-	virtual void SetVertexShaderViewProj() = 0;
-	virtual void UpdateVertexShaderMatrix( int m ) = 0;
-	virtual void SetVertexShaderModelViewProjAndModelView() = 0;
-	virtual void SetVertexShaderCameraPos() = 0;
-	virtual bool SetSkinningMatrices( const MeshInstanceData_t &instance ) = 0;
-	virtual void BindTexture( Sampler_t sampler, TextureBindFlags_t nBindFlags, ShaderAPITextureHandle_t textureHandle ) = 0;
+	void BeginPerfEEvent( const wchar* name ) {}
+	void EndPerfEvent() {}
+	void SetVertexShaderViewProj();
+	void UpdateVertexShaderMatrix( int m );
+	void SetVertexShaderModelViewProjAndModelView();
+	void SetVertexShaderCameraPos();
+	bool SetSkinningMatrices( const MeshInstanceData_t &instance );
+	void BindTexture( Sampler_t sampler, TextureBindFlags_t nBindFlags, ShaderAPITextureHandle_t textureHandle );
 
 	// returns the current time in seconds....
-	virtual double CurrentTime() const = 0;
+	double CurrentTime() const;
 
 	// Gets the lightmap dimensions
-	virtual void GetLightmapDimensions( int *w, int *h ) = 0;
+	void GetLightmapDimensions( int *w, int *h );
 
 	// Scene fog state.
 	// This is used by the shaders for picking the proper vertex shader for fogging based on dynamic state.
-	virtual MaterialFogMode_t GetSceneFogMode( ) = 0;
-	virtual void GetSceneFogColor( unsigned char *rgb ) = 0;
+	MaterialFogMode_t GetSceneFogMode( );
+	void GetSceneFogColor( unsigned char *rgb );
 
 	// Sets the constant register for vertex and pixel shaders
-	virtual void SetVertexShaderConstant( int var, float const* pVec, int numConst = 1, bool bForce = false ) = 0;
-	virtual void SetPixelShaderConstant( int var, float const* pVec, int numConst = 1, bool bForce = false ) = 0;
+	void SetVertexShaderConstant( int var, float const* pVec, int numConst = 1, bool bForce = false );
+	void SetPixelShaderConstant( int var, float const* pVec, int numConst = 1, bool bForce = false );
 
 	// Sets the default *dynamic* state
-	virtual void SetDefaultState() = 0;
+	void SetDefaultState();
 
 	// Get the current camera position in world space.
-	virtual void GetWorldSpaceCameraPosition( float* pPos ) const = 0;
-	virtual void GetWorldSpaceCameraDirection( float* pDir ) const = 0;
+	void GetWorldSpaceCameraPosition( float* pPos ) const;
+	void GetWorldSpaceCameraDirection( float* pDir ) const;
 
-	virtual int GetCurrentNumBones( void ) const = 0;
+	int GetCurrentNumBones( void ) const;
 
-	virtual MaterialFogMode_t GetCurrentFogType( void ) const = 0;
+	MaterialFogMode_t GetCurrentFogType( void ) const;
 
 	// Sets the vertex and pixel shaders
-	virtual void SetVertexShaderIndex( int vshIndex = -1 ) = 0;
-	virtual void SetPixelShaderIndex( int pshIndex = 0 ) = 0;
+	void SetVertexShaderIndex( int vshIndex = -1 );
+	void SetPixelShaderIndex( int pshIndex = 0 );
 
 	// Get the dimensions of the back buffer.
-	virtual void GetBackBufferDimensions( int& width, int& height ) const = 0;
+	void GetBackBufferDimensions( int& width, int& height ) const;
 
 	// Get information about the physical and pixel aspect ratios of the backbuffer.
-	virtual const AspectRatioInfo_t &GetAspectRatioInfo( void ) const = 0;
+	const AspectRatioInfo_t &GetAspectRatioInfo( void ) const;
 
 	// Get the dimensions of the current render target
-	virtual void GetCurrentRenderTargetDimensions( int& nWidth, int& nHeight ) const = 0;
+	void GetCurrentRenderTargetDimensions( int& nWidth, int& nHeight ) const;
 
 	// Get the current viewport
-	virtual void GetCurrentViewport( int& nX, int& nY, int& nWidth, int& nHeight ) const = 0;
+	void GetCurrentViewport( int& nX, int& nY, int& nWidth, int& nHeight ) const;
 
 	// FIXME: The following 6 methods used to live in IShaderAPI
 	// and were moved for stdshader_dx8. Let's try to move them back!
 
-	virtual void SetPixelShaderFogParams( int reg ) = 0;
+	void SetPixelShaderFogParams( int reg );
 
 	// Use this to get the mesh builder that allows us to modify vertex data
-	virtual bool InFlashlightMode() const = 0;
-	virtual const FlashlightState_t &GetFlashlightState( VMatrix &worldToTexture ) const = 0;
-	virtual bool InEditorMode() const = 0;
+	bool InFlashlightMode() const;
+	const FlashlightState_t &GetFlashlightState( VMatrix &worldToTexture ) const;
+	bool InEditorMode() const;
 
-	virtual bool IsCascadedShadowMapping() const = 0;
-	virtual const CascadedShadowMappingState_t &GetCascadedShadowMappingState( ITexture **pDepthTextureAtlas, bool bLightMapScale = false ) const = 0;
+	bool IsCascadedShadowMapping() const;
+	const CascadedShadowMappingState_t &GetCascadedShadowMappingState( ITexture **pDepthTextureAtlas, bool bLightMapScale = false ) const;
 
 	// Binds a standard texture
-	virtual void BindStandardTexture( Sampler_t sampler, TextureBindFlags_t nBindFlags, StandardTextureId_t id ) = 0;
+	void BindStandardTexture( Sampler_t sampler, TextureBindFlags_t nBindFlags, StandardTextureId_t id );
 
-	virtual ITexture *GetRenderTargetEx( int nRenderTargetID ) const = 0;
+	ITexture *GetRenderTargetEx( int nRenderTargetID ) const;
 
-	virtual void SetToneMappingScaleLinear( const Vector &scale ) = 0;
-	virtual const Vector &GetToneMappingScaleLinear( void ) const = 0;
-	virtual void SetFloatRenderingParameter(int parm_number, float value) = 0;
+	void SetToneMappingScaleLinear( const Vector &scale );
+	const Vector &GetToneMappingScaleLinear( void ) const;
+	void SetFloatRenderingParameter(int parm_number, float value);
 
-	virtual void SetIntRenderingParameter(int parm_number, int value) = 0 ;
-	virtual void SetVectorRenderingParameter(int parm_number, Vector const &value) = 0 ;
+	void SetIntRenderingParameter(int parm_number, int value);
+	void SetVectorRenderingParameter(int parm_number, Vector const &value);
 
-	virtual float GetFloatRenderingParameter(int parm_number) const = 0 ;
+	float GetFloatRenderingParameter(int parm_number) const;
 
-	virtual int GetIntRenderingParameter(int parm_number) const = 0 ;
+	int GetIntRenderingParameter(int parm_number) const;
 
-	virtual Vector GetVectorRenderingParameter(int parm_number) const = 0 ;
+	Vector GetVectorRenderingParameter(int parm_number) const;
 
-	virtual const FlashlightState_t &GetFlashlightStateEx( VMatrix &worldToTexture, ITexture **pFlashlightDepthTexture ) const = 0;
+	const FlashlightState_t &GetFlashlightStateEx( VMatrix &worldToTexture, ITexture **pFlashlightDepthTexture ) const;
 
-	virtual void GetDX9LightState( LightState_t *state ) const = 0;
-	virtual int GetPixelFogCombo( ) = 0; //0 is either range fog, or no fog simulated with rigged range fog values. 1 is height fog
+	void GetDX9LightState( LightState_t *state ) const;
+	int GetPixelFogCombo( ); //0 is either range fog, or no fog simulated with rigged range fog values. 1 is height fog
 
-	virtual void BindStandardVertexTexture( VertexTextureSampler_t sampler, StandardTextureId_t id ) = 0;
+	void BindStandardVertexTexture( VertexTextureSampler_t sampler, StandardTextureId_t id );
 
 	// Is hardware morphing enabled?
-	virtual bool IsHWMorphingEnabled( ) const = 0;
+	bool IsHWMorphingEnabled( ) const;
 
-	virtual void GetStandardTextureDimensions( int *pWidth, int *pHeight, StandardTextureId_t id ) = 0;
+	void GetStandardTextureDimensions( int *pWidth, int *pHeight, StandardTextureId_t id );
 
-	virtual void SetBooleanVertexShaderConstant( int var, BOOL const* pVec, int numBools = 1, bool bForce = false ) = 0;
-	virtual void SetIntegerVertexShaderConstant( int var, int const* pVec, int numIntVecs = 1, bool bForce = false ) = 0;
-	virtual void SetBooleanPixelShaderConstant( int var, BOOL const* pVec, int numBools = 1, bool bForce = false ) = 0;
-	virtual void SetIntegerPixelShaderConstant( int var, int const* pVec, int numIntVecs = 1, bool bForce = false ) = 0;
+	void SetBooleanVertexShaderConstant( int var, BOOL const* pVec, int numBools = 1, bool bForce = false );
+	void SetIntegerVertexShaderConstant( int var, int const* pVec, int numIntVecs = 1, bool bForce = false );
+	void SetBooleanPixelShaderConstant( int var, BOOL const* pVec, int numBools = 1, bool bForce = false );
+	void SetIntegerPixelShaderConstant( int var, int const* pVec, int numIntVecs = 1, bool bForce = false );
 
 	//Are we in a configuration that needs access to depth data through the alpha channel later?
-	virtual bool ShouldWriteDepthToDestAlpha( void ) const = 0;
+	bool ShouldWriteDepthToDestAlpha( void ) const;
 
 	// Returns current matrices
-	virtual void GetMatrix( MaterialMatrixMode_t matrixMode, float *dst ) = 0;
+	void GetMatrix( MaterialMatrixMode_t matrixMode, float *dst );
 
 	// deformations
-	virtual void PushDeformation( DeformationBase_t const *Deformation ) = 0;
-	virtual void PopDeformation( ) = 0;
-	virtual int GetNumActiveDeformations() const =0;
+	void PushDeformation( DeformationBase_t const *Deformation );
+	void PopDeformation( );
+	int GetNumActiveDeformations() const;
 
 
 	// for shaders to set vertex shader constants. returns a packed state which can be used to set
 	// the dynamic combo. returns # of active deformations
-	virtual int GetPackedDeformationInformation( int nMaskOfUnderstoodDeformations,
+	int GetPackedDeformationInformation( int nMaskOfUnderstoodDeformations,
 		float *pConstantValuesOut,
 		int nBufferSize,
 		int nMaximumDeformations,
-		int *pNumDefsOut ) const = 0;
+		int *pNumDefsOut ) const;
 
 	// This lets the lower level system that certain vertex fields requested 
 	// in the shadow state aren't actually being read given particular state
 	// known only at dynamic state time. It's here only to silence warnings.
-	virtual void MarkUnusedVertexFields( unsigned int nFlags, int nTexCoordCount, bool *pUnusedTexCoords ) = 0;
+	void MarkUnusedVertexFields( unsigned int nFlags, int nTexCoordCount, bool *pUnusedTexCoords );
 
 
-	virtual void ExecuteCommandBuffer( uint8 *pCmdBuffer ) =0;
+	void ExecuteCommandBuffer( uint8 *pCmdBuffer );
 
 	// Interface for mat system to tell shaderapi about color correction
-	virtual void GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* pInfo ) = 0;
+	void GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* pInfo );
 
-	virtual ITexture *GetTextureRenderingParameter(int parm_number) const = 0;
+	ITexture *GetTextureRenderingParameter(int parm_number) const;
 
-	virtual void SetScreenSizeForVPOS( int pshReg = 32 ) = 0;
-	virtual void SetVSNearAndFarZ( int vshReg ) = 0;
-	virtual float GetFarZ() = 0;
+	void SetScreenSizeForVPOS( int pshReg = 32 );
+	void SetVSNearAndFarZ( int vshReg );
+	float GetFarZ();
 
-	virtual bool SinglePassFlashlightModeEnabled( void ) = 0;
+	bool SinglePassFlashlightModeEnabled( void );
 
-	virtual void GetActualProjectionMatrix( float *pMatrix ) = 0;
+	void GetActualProjectionMatrix( float *pMatrix );
 
-	virtual void SetDepthFeatheringShaderConstants( int iConstant, float fDepthBlendScale ) = 0;
+	void SetDepthFeatheringShaderConstants( int iConstant, float fDepthBlendScale );
 
-	virtual void GetFlashlightShaderInfo( bool *pShadowsEnabled, bool *pUberLight ) const = 0;
+	void GetFlashlightShaderInfo( bool *pShadowsEnabled, bool *pUberLight ) const;
 
-	virtual float GetFlashlightAmbientOcclusion( ) const = 0;
+	float GetFlashlightAmbientOcclusion( ) const;
 
 	// allows overriding texture filtering mode on an already bound texture.
-	virtual void SetTextureFilterMode( Sampler_t sampler, TextureFilterMode_t nMode ) = 0;
+	void SetTextureFilterMode( Sampler_t sampler, TextureFilterMode_t nMode );
 
-	virtual TessellationMode_t GetTessellationMode() const = 0;
+	TessellationMode_t GetTessellationMode() const;
 
-	virtual float GetSubDHeight() = 0;
+	float GetSubDHeight();
 
 
-	virtual bool IsRenderingPaint() const = 0;
+	bool IsRenderingPaint() const;
 
-	virtual bool IsStereoActiveThisFrame() const = 0;
+	bool IsStereoActiveThisFrame() const;
 
-	virtual bool IsStandardTextureHandleValid( StandardTextureId_t textureId ) = 0;
+	bool IsStandardTextureHandleValid( StandardTextureId_t textureId );
 };
 
 // end class IShaderDynamicAPI

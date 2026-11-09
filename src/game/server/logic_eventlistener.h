@@ -17,8 +17,8 @@ class CLogicEventListener : public CLogicalEntity, public CGameEventListener
 public:
 	// FIXME: Subclass
 
-	virtual void Spawn( void );
-	virtual void FireGameEvent( IGameEvent *event );
+	void Spawn_Impl( void );
+	void FireGameEvent( IGameEvent *event );
 	
 	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void	InputEnable( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void	InputDisable( inputdata_t &inputdata );
@@ -43,8 +43,10 @@ class CLogicEventListenerItemEquip : public CLogicEventListener
 	DECLARE_DATADESC();
 
 public:
-	virtual void Spawn( void );
-	virtual void FireGameEvent( IGameEvent *event );
+	CLogicEventListenerItemEquip() { SetGameEventHandler( this ); }
+
+	void Spawn_Impl( void );
+	void FireGameEvent( IGameEvent *event );
 
 	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void	InputEnable( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void	InputDisable( inputdata_t &inputdata );

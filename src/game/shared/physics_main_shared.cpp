@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
 #if defined(CLIENT_DLL)
 #include "predictable_entity.h"
 #include "cdll_util.h"
@@ -15,7 +14,6 @@ import std;
 #include "cdll_client_int.h"
 #include "engine/ivmodelinfo.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -26,7 +24,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "baseentity_shared.h"
 #include "basetoggle.h"
@@ -38,7 +35,6 @@ import ks.math;
 #include "physics.h"
 #include "ndebugoverlay.h"
 #endif
-import ks.vstdlib;
 #include "engine/IEngineSound.h"
 #include "movevars_shared.h"
 #include "entitydatainstantiator.h"
@@ -1109,7 +1105,7 @@ void CBaseEntity::PhysicsImpact( CBaseEntity *other, trace_t &trace )
 // Purpose: Returns the mask of what is solid for the given entity
 // Output : unsigned int
 //-----------------------------------------------------------------------------
-unsigned int CBaseEntity::PhysicsSolidMaskForEntity( void ) const
+unsigned int CBaseEntity::PhysicsSolidMaskForEntity_Impl( void ) const
 {
 	return MASK_SOLID;
 }
@@ -1454,7 +1450,7 @@ void CBaseEntity::ResolveFlyCollisionSlide( trace_t &trace, Vector &vecVelocity 
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CBaseEntity::ResolveFlyCollisionCustom( trace_t &trace, Vector &vecVelocity )
+void CBaseEntity::ResolveFlyCollisionCustom_Impl( trace_t &trace, Vector &vecVelocity )
 {
 	// Stop if on ground.
 	if ( trace.plane.normal.z > 0.7 )			// Floor
@@ -1748,7 +1744,7 @@ void CBaseEntity::UpdateBaseVelocity( void )
 // Purpose: Runs a frame of physics for a specific edict (and all it's children)
 // Input  : *ent - the thinking edict
 //-----------------------------------------------------------------------------
-void CBaseEntity::PhysicsSimulate( void )
+void CBaseEntity::PhysicsSimulate_Impl( void )
 {
 	CVProfScope _( "CBaseEntity::PhysicsSimulate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	// NOTE:  Players override PhysicsSimulate and drive through their CUserCmds at that point instead of

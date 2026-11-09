@@ -192,22 +192,22 @@ public:
 	~COverlayMgr();
 
 	// Implementation of IOverlayMgr interface
-	virtual bool	LoadOverlays( );
-	virtual void	UnloadOverlays( );
+	bool	LoadOverlays( );
+	void	UnloadOverlays( );
 
-	virtual void	CreateFragments( void );
-	virtual void	ReSortMaterials( void );
-	virtual void	ClearRenderLists();
-	virtual void	ClearRenderLists( int nSortGroup );
-	virtual void	AddFragmentListToRenderList( int nSortGroup, OverlayFragmentHandle_t iFragment, bool bDisp );
-	virtual void	RenderOverlays( IMatRenderContext *pRenderContext, int nSortGroup );
-	virtual void	RenderAllUnlitOverlays( IMatRenderContext *pRenderContext, int nSortGroup );
+	void	CreateFragments( void );
+	void	ReSortMaterials( void );
+	void	ClearRenderLists();
+	void	ClearRenderLists( int nSortGroup );
+	void	AddFragmentListToRenderList( int nSortGroup, OverlayFragmentHandle_t iFragment, bool bDisp );
+	void	RenderOverlays( IMatRenderContext *pRenderContext, int nSortGroup );
+	void	RenderAllUnlitOverlays( IMatRenderContext *pRenderContext, int nSortGroup );
 
-	virtual void	SetOverlayBindProxy( int iOverlayID, void *pBindProxy );
+	void	SetOverlayBindProxy( int iOverlayID, void *pBindProxy );
 
-	virtual void	UpdateOverlayRenderLevels( int nCPULevel, int nGPULevel );
+	void	UpdateOverlayRenderLevels( int nCPULevel, int nGPULevel );
 
-private:
+public:
 
 	void				RenderOverlaysBatch( IMatRenderContext *pRenderContext, int nSortGroup );
 
@@ -255,7 +255,7 @@ private:
 	void				DrawBatches( IMatRenderContext *pRenderContext, IMesh* pIndices, bool bWireframe );
 	void				DrawFadedFragments( IMatRenderContext *pRenderContext, int nSortGroup, bool bWireframe );
 
-private:
+public:
 	enum
 	{
 		RENDER_QUEUE_INVALID = 0xFFFF
@@ -334,6 +334,9 @@ private:
 	int	  m_nCPULevel;
 	int	  m_nGPULevel;
 };
+
+#include "facade/ioverlaymgr.inl"
+
 
 
 //-----------------------------------------------------------------------------

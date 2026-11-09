@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
 #include "ehandle.h"
 #include "string_t.h"
 #include "datamap.h"
-import std;
 
 class CBaseEntity;
 

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -50,7 +48,6 @@ import ks.tier1;
 #include "dt_utlvector_send.h"
 #include "ichoreoeventcallback.h"
 #include "scenefilecache/ISceneFileCache.h"
-#include "SceneCache.h"
 #include "scripted.h"
 #include "basemultiplayerplayer.h"
 #include "env_debughistory.h"
@@ -113,7 +110,7 @@ class CSceneListManager : public CLogicalEntity
 public:
 	DECLARE_DATADESC();
 
-	virtual void Activate( void );
+	void Activate_Impl( void );
 
 	void		 ShutdownList( void );
 	void		 SceneStarted( CBaseEntity *pSceneOrManager );
@@ -137,15 +134,15 @@ class CSceneManager : public CBaseEntity
 	DECLARE_CLASS( CSceneManager, CBaseEntity );
 
 public:
-	virtual void			Spawn()
+	void			Spawn_Impl()
 	{
-		BaseClass::Spawn();
+		BaseClass::Spawn_Impl();
 		SetNextThink( gpGlobals->curtime );
 	}
 
-	virtual int				ObjectCaps( void ) { return BaseClass::ObjectCaps() | FCAP_DONT_SAVE; }
+	int				ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() | FCAP_DONT_SAVE; }
 
-	virtual void			Think();
+	void			Think_Impl();
 
 			void			ClearAllScenes();
 
@@ -359,21 +356,21 @@ public:
 	virtual bool			CheckEvent( float currenttime, CChoreoScene *scene, CChoreoEvent *event );
 
 
-	virtual int				UpdateTransmitState();
-	virtual int				ShouldTransmit( const CCheckTransmitInfo *pInfo );
+	int				UpdateTransmitState_Impl();
+	int				ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo );
 
 	void					SetRecipientFilter( IRecipientFilter *filter );
 
-	virtual void			Activate();
+	void			Activate_Impl();
 
-	virtual	void			Precache( void );
-	virtual void			Spawn( void );
-	virtual void			UpdateOnRemove( void );
+	void			Precache_Impl( void );
+	void			Spawn_Impl( void );
+	void			UpdateOnRemove_Impl( void );
 
-	virtual void			OnRestore();
+	void			OnRestore_Impl();
 	virtual void			OnLoaded();
 
-	virtual int				DrawDebugTextOverlays();
+	int				DrawDebugTextOverlays_Impl();
 
 	DECLARE_DATADESC();
 
@@ -585,7 +582,8 @@ private:
 	inline void				SetRestoring( bool bRestoring );
 
 	// Prevent derived classed from using this!
-	virtual void			Think( void ) {};
+	public: void			Think_Impl( void ) {}
+	private:;
 
 
 	void					ClearSceneEvents( CChoreoScene *scene, bool canceled );
@@ -667,7 +665,7 @@ public:
 };
 
 LINK_ENTITY_TO_CLASS( logic_choreographed_scene, CSceneEntity );
-LINK_ENTITY_TO_CLASS( scripted_scene, CSceneEntity );
+LINK_ENTITY_TO_CLASS_ALIAS( scripted_scene, CSceneEntity );
 
 IMPLEMENT_REFLECT_SERVERCLASS( CSceneEntity, DT_SceneEntity )
 
@@ -744,10 +742,10 @@ void CSceneEntity::SetCurrentTime( float t, bool bForceClientSync )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CSceneEntity::UpdateOnRemove( void )
+void CSceneEntity::UpdateOnRemove_Impl( void )
 {
 	UnloadScene();
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 
 	if ( GetSceneManager() )
 	{
@@ -830,7 +828,7 @@ CChoreoScene *CSceneEntity::GenerateSceneForSound( CBaseFlex *pFlexActor, const 
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CSceneEntity::Activate()
+void CSceneEntity::Activate_Impl()
 {
 	if ( m_bGenerated && !m_pScene )
 	{
@@ -841,7 +839,7 @@ void CSceneEntity::Activate()
 		}
 	}
 
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( GetSceneManager() )
 	{
@@ -920,7 +918,7 @@ void CSceneEntity::PrecacheScene( CChoreoScene *scene )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CSceneEntity::Precache( void )
+void CSceneEntity::Precache_Impl( void )
 {
 	if ( m_bGenerated )
 		return;
@@ -1003,9 +1001,9 @@ bool CSceneEntity::IsBackground( void )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CSceneEntity::OnRestore()
+void CSceneEntity::OnRestore_Impl()
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	// Fix saved games that have their pitch set to zero
 	if ( m_fPitch < SCENE_MIN_PITCH || m_fPitch > SCENE_MAX_PITCH )
@@ -1110,7 +1108,7 @@ void CSceneEntity::SetRestoring( bool bRestoring )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CSceneEntity::Spawn( void )
+void CSceneEntity::Spawn_Impl( void )
 {
 	Precache();
 }
@@ -4477,7 +4475,7 @@ void CSceneEntity::OnSceneFinished( bool canceled, bool fireoutput )
 //-----------------------------------------------------------------------------
 // Should we transmit it to the client?
 //-----------------------------------------------------------------------------
-int CSceneEntity::UpdateTransmitState()
+int CSceneEntity::UpdateTransmitState_Impl()
 {
 	if ( !ShouldNetwork() )
 	{
@@ -4495,9 +4493,9 @@ int CSceneEntity::UpdateTransmitState()
 //-----------------------------------------------------------------------------
 // Purpose: Which clients should we be transmitting to?
 //-----------------------------------------------------------------------------
-int CSceneEntity::ShouldTransmit( const CCheckTransmitInfo *pInfo )
+int CSceneEntity::ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo )
 {
-	int result = BaseClass::ShouldTransmit( pInfo );
+	int result = BaseClass::ShouldTransmit_Impl( pInfo );
 
 	// if we have excluded them via our recipient filter, don't send
 	if ( m_pRecipientFilter && result != FL_EDICT_DONTSEND )
@@ -4542,9 +4540,9 @@ void CSceneEntity::SetRecipientFilter( IRecipientFilter *filter )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-int CSceneEntity::DrawDebugTextOverlays()
+int CSceneEntity::DrawDebugTextOverlays_Impl()
 {
-	int nOffset = BaseClass::DrawDebugTextOverlays();
+	int nOffset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT)
 	{
@@ -4650,7 +4648,7 @@ public:
 	virtual void			DispatchEndSequence( CChoreoScene *scene, CBaseFlex *actor, CChoreoEvent *event ) { /* suppress */ };
 	virtual void			DispatchPauseScene( CChoreoScene *scene, const char *parameters ) { /* suppress */ };
 
-	void OnRestore();
+	void OnRestore_Impl();
 
 	virtual float			EstimateLength( void );
 
@@ -5126,7 +5124,7 @@ bool CInstancedSceneEntity::PassThrough( CBaseFlex *actor )
 
 
 //-----------------------------------------------------------------------------
-void CInstancedSceneEntity::OnRestore()
+void CInstancedSceneEntity::OnRestore_Impl()
 {
 	if ( m_bHadOwner && !m_hOwner )
 	{
@@ -5139,7 +5137,7 @@ void CInstancedSceneEntity::OnRestore()
 	{
 		m_pScene->SetBackground( m_bIsBackground );
 	}
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 }
 
 //-----------------------------------------------------------------------------
@@ -5164,7 +5162,7 @@ LINK_ENTITY_TO_CLASS( scene_manager, CSceneManager );
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CSceneManager::Think()
+void CSceneManager::Think_Impl()
 {
 	// Latch this only once per frame...
 	g_bClientFlex = scene_clientflex.GetBool();
@@ -5685,9 +5683,9 @@ IMPLEMENT_REFLECT_DATAMAP( CSceneListManager )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CSceneListManager::Activate( void )
+void CSceneListManager::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	// Hook up scenes, but not after loading a game because they're saved.
 	if ( gpGlobals->eLoadType != MapLoad_LoadGame )

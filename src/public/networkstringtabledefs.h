@@ -24,29 +24,28 @@ class INetworkStringTable
 {
 public:
 
-	virtual					~INetworkStringTable( void ) {};
 		
 	// Table Info
-	virtual const char		*GetTableName( void ) const = 0;
-	virtual TABLEID			GetTableId( void ) const = 0;
-	virtual int				GetNumStrings( void ) const = 0;
-	virtual int				GetMaxStrings( void ) const = 0;
-	virtual int				GetEntryBits( void ) const = 0;
+	const char		*GetTableName( void ) const;
+	TABLEID			GetTableId( void ) const;
+	int				GetNumStrings( void ) const;
+	int				GetMaxStrings( void ) const;
+	int				GetEntryBits( void ) const;
 
 	// Networking
-	virtual void			SetTick( int tick ) = 0;
-	virtual bool			ChangedSinceTick( int tick ) const = 0;
+	void			SetTick( int tick );
+	bool			ChangedSinceTick( int tick ) const;
 
 	// Accessors (length -1 means don't change user data if string already exits)
-	virtual int				AddString( bool bIsServer, const char *value, int length = -1, const void *userdata = 0 ) = 0; 
+	int				AddString( bool bIsServer, const char *value, int length = -1, const void *userdata = 0 ); 
 
-	virtual const char		*GetString( int stringNumber ) const = 0;
-	virtual void			SetStringUserData( int stringNumber, int length, const void *userdata ) = 0;
-	virtual const void		*GetStringUserData( int stringNumber, int *length ) const = 0;
-	virtual int				FindStringIndex( char const *string ) = 0; // returns INVALID_STRING_INDEX if not found
+	const char		*GetString( int stringNumber ) const;
+	void			SetStringUserData( int stringNumber, int length, const void *userdata );
+	const void		*GetStringUserData( int stringNumber, int *length ) const;
+	int				FindStringIndex( char const *string ); // returns INVALID_STRING_INDEX if not found
 
 	// Callbacks
-	virtual void			SetStringChangedCallback( void *object, pfnStringChanged changeFunc ) = 0;
+	void			SetStringChangedCallback( void *object, pfnStringChanged changeFunc );
 };
 
 enum ENetworkStringtableFlags
@@ -59,18 +58,17 @@ class INetworkStringTableContainer
 {
 public:
 	
-	virtual					~INetworkStringTableContainer( void ) {};
 	
 	// table creation/destruction
-	virtual INetworkStringTable	*CreateStringTable( const char *tableName, int maxentries, int userdatafixedsize = 0, int userdatanetworkbits = 0, int flags = NSF_NONE ) = 0;
-	virtual void				RemoveAllTables( void ) = 0;
+	INetworkStringTable	*CreateStringTable( const char *tableName, int maxentries, int userdatafixedsize = 0, int userdatanetworkbits = 0, int flags = NSF_NONE );
+	void				RemoveAllTables( void );
 	
 	// table infos
-	virtual INetworkStringTable	*FindTable( const char *tableName ) const = 0;
-	virtual INetworkStringTable	*GetTable( TABLEID stringTable ) const = 0;
-	virtual int					GetNumTables( void ) const = 0;
+	INetworkStringTable	*FindTable( const char *tableName ) const;
+	INetworkStringTable	*GetTable( TABLEID stringTable ) const;
+	int					GetNumTables( void ) const;
 
-	virtual void				SetAllowClientSideAddString( INetworkStringTable *table, bool bAllowClientSideAddString ) = 0;
+	void				SetAllowClientSideAddString( INetworkStringTable *table, bool bAllowClientSideAddString );
 
-	virtual void				CreateDictionary( char const *pchMapName ) = 0;
+	void				CreateDictionary( char const *pchMapName );
 };

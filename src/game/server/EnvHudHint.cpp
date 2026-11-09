@@ -3,8 +3,6 @@
 
 // Purpose: Implements visual effects entities: sprites, beams, bubbles, etc.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -21,7 +19,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -50,8 +47,8 @@ class CEnvHudHint : public CPointEntity
 public:
 	DECLARE_CLASS( CEnvHudHint, CPointEntity );
 
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 
 private:
 	[[= ks::reflect::Input{ .name = "ShowHudHint", .type = FIELD_VOID } ]] void InputShowHudHint( inputdata_t &inputdata );
@@ -69,7 +66,7 @@ IMPLEMENT_REFLECT_DATAMAP( CEnvHudHint )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvHudHint::Spawn( void )
+void CEnvHudHint::Spawn_Impl( void )
 {
 	Precache();
 
@@ -81,7 +78,7 @@ void CEnvHudHint::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvHudHint::Precache( void )
+void CEnvHudHint::Precache_Impl( void )
 {
 }
 

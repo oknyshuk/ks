@@ -120,73 +120,73 @@ class IShaderShadow
 {
 public:
 	// Sets the default *shadow* state
-	virtual void SetDefaultState() = 0;
+	void SetDefaultState();
 
 	// Methods related to depth buffering
-	virtual void DepthFunc( ShaderDepthFunc_t depthFunc ) = 0;
-	virtual void EnableDepthWrites( bool bEnable ) = 0;
-	virtual void EnableDepthTest( bool bEnable ) = 0;
-	virtual void EnablePolyOffset( PolygonOffsetMode_t nOffsetMode ) = 0;
+	void DepthFunc( ShaderDepthFunc_t depthFunc );
+	void EnableDepthWrites( bool bEnable );
+	void EnableDepthTest( bool bEnable );
+	void EnablePolyOffset( PolygonOffsetMode_t nOffsetMode );
 
 	// Suppresses/activates color writing 
-	virtual void EnableColorWrites( bool bEnable ) = 0;
-	virtual void EnableAlphaWrites( bool bEnable ) = 0;
+	void EnableColorWrites( bool bEnable );
+	void EnableAlphaWrites( bool bEnable );
 
 	// Methods related to alpha blending
-	virtual void EnableBlending( bool bEnable ) = 0;
-	virtual void EnableBlendingForceOpaque( bool bEnable ) = 0; // enables alpha blending on a batch but does not force it to render with translucents
-	virtual void BlendFunc( ShaderBlendFactor_t srcFactor, ShaderBlendFactor_t dstFactor ) = 0;
-	virtual void EnableBlendingSeparateAlpha( bool bEnable ) = 0;
-	virtual void BlendFuncSeparateAlpha( ShaderBlendFactor_t srcFactor, ShaderBlendFactor_t dstFactor ) = 0;
+	void EnableBlending( bool bEnable );
+	void EnableBlendingForceOpaque( bool bEnable ); // enables alpha blending on a batch but does not force it to render with translucents
+	void BlendFunc( ShaderBlendFactor_t srcFactor, ShaderBlendFactor_t dstFactor );
+	void EnableBlendingSeparateAlpha( bool bEnable );
+	void BlendFuncSeparateAlpha( ShaderBlendFactor_t srcFactor, ShaderBlendFactor_t dstFactor );
 	// More below...
 
 	// Alpha testing
-	virtual void EnableAlphaTest( bool bEnable ) = 0;
-	virtual void AlphaFunc( ShaderAlphaFunc_t alphaFunc, float alphaRef /* [0-1] */ ) = 0;
+	void EnableAlphaTest( bool bEnable );
+	void AlphaFunc( ShaderAlphaFunc_t alphaFunc, float alphaRef /* [0-1] */ );
 
 	// Wireframe/filled polygons
-	virtual void PolyMode( ShaderPolyModeFace_t face, ShaderPolyMode_t polyMode ) = 0;
+	void PolyMode( ShaderPolyModeFace_t face, ShaderPolyMode_t polyMode );
 
 	// Back face culling
-	virtual void EnableCulling( bool bEnable ) = 0;
+	void EnableCulling( bool bEnable );
 
 	// Indicates the vertex format for use with a vertex shader
 	// The flags to pass in here come from the VertexFormatFlags_t enum
 	// If pTexCoordDimensions is *not* specified, we assume all coordinates
 	// are 2-dimensional
-	virtual void VertexShaderVertexFormat( unsigned int nFlags, 
-			int nTexCoordCount, int* pTexCoordDimensions, int nUserDataSize ) = 0;
+	void VertexShaderVertexFormat( unsigned int nFlags, 
+			int nTexCoordCount, int* pTexCoordDimensions, int nUserDataSize );
 
 	// Pixel and vertex shader methods
-	virtual void SetVertexShader( const char* pFileName, int nStaticVshIndex ) = 0;
-	virtual	void SetPixelShader( const char* pFileName, int nStaticPshIndex = 0 ) = 0;
+	void SetVertexShader( const char* pFileName, int nStaticVshIndex );
+	void SetPixelShader( const char* pFileName, int nStaticPshIndex = 0 );
 
 	// Convert from linear to gamma color space on writes to frame buffer.
-	virtual void EnableSRGBWrite( bool bEnable ) = 0;
+	void EnableSRGBWrite( bool bEnable );
 
 	// Convert from gamma to linear on texture fetch.
-	virtual void EnableSRGBRead( Sampler_t sampler, bool bEnable ) = 0;
+	void EnableSRGBRead( Sampler_t sampler, bool bEnable );
 
 	// Per texture unit stuff
-	virtual void EnableTexture( Sampler_t sampler, bool bEnable ) = 0;
+	void EnableTexture( Sampler_t sampler, bool bEnable );
 
-	virtual void FogMode( ShaderFogMode_t fogMode, bool bVertexFog ) = 0;
+	void FogMode( ShaderFogMode_t fogMode, bool bVertexFog );
 
-	virtual void DisableFogGammaCorrection( bool bDisable ) = 0; //some blending modes won't work properly with corrected fog
+	void DisableFogGammaCorrection( bool bDisable ); //some blending modes won't work properly with corrected fog
 
 	// Alpha to coverage
-	virtual void EnableAlphaToCoverage( bool bEnable ) = 0;
+	void EnableAlphaToCoverage( bool bEnable );
 
 	// Shadow map filtering
 	//virtual void SetShadowDepthFiltering( Sampler_t stage ) = 0;
 
 	// Per vertex texture unit stuff
-	virtual void EnableVertexTexture( VertexTextureSampler_t sampler, bool bEnable ) = 0;
+	void EnableVertexTexture( VertexTextureSampler_t sampler, bool bEnable );
 	
 	// More alpha blending state
-	virtual void BlendOp( ShaderBlendOp_t blendOp ) = 0;
-	virtual void BlendOpSeparateAlpha( ShaderBlendOp_t blendOp ) = 0;
+	void BlendOp( ShaderBlendOp_t blendOp );
+	void BlendOpSeparateAlpha( ShaderBlendOp_t blendOp );
 
-	virtual float GetLightMapScaleFactor( void ) const = 0;
+	float GetLightMapScaleFactor( void ) const;
 };
 // end class IShaderShadow

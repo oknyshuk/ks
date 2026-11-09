@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -89,13 +87,6 @@ bool CPerfVisualBenchmark::Init()
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "decals";
-	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.push_back( runInfo );
-
-	runInfo.m_pVarName = "mat_stub";
-	runInfo.m_pOnVal = "1";
-	runInfo.m_pOffVal = "0";
-	runInfo.m_pDescription = "material system and below";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
 	m_RunInfo.push_back( runInfo );
 

@@ -3,6 +3,7 @@
 
 #include "inputsystem/iinputstacksystem.h"
 #include "tier2/tier2.h"
+#include "appframework/apptiers.h"
 import std;
 
 //-----------------------------------------------------------------------------
@@ -20,25 +21,27 @@ struct InputContext_t
 //-----------------------------------------------------------------------------
 // Stack system implementation
 //-----------------------------------------------------------------------------
-class CInputStackSystem : public CTier2AppSystem< IInputStackSystem >
+class CInputStackSystem : public IInputStackSystem
 {
-	typedef CTier2AppSystem< IInputStackSystem > BaseClass;
-
-	// Methods of IAppSystem
+	// App system protocol (a tier 2 system)
 public:
-	virtual const AppSystemInfo_t* GetDependencies();
-	virtual void Shutdown();
+	bool Connect( CreateInterfaceFn factory ) { return AppSystemTier2Connect( factory ); }
+	void Disconnect() { AppSystemTier2Disconnect(); }
+	void *QueryInterface( const char *pInterfaceName ) { return nullptr; }
+	InitReturnVal_t Init() { return AppSystemTier1Init(); }
+	const AppSystemInfo_t* GetDependencies();
+	void Shutdown();
 
 	// Methods of IInputStackSystem
 public:
-	virtual InputContextHandle_t PushInputContext();
-	virtual void PopInputContext( );
-	virtual void EnableInputContext( InputContextHandle_t hContext, bool bEnable );
-	virtual void SetCursorVisible( InputContextHandle_t hContext, bool bVisible );
-	virtual void SetCursorIcon( InputContextHandle_t hContext, InputCursorHandle_t hCursor );
-	virtual void SetMouseCapture( InputContextHandle_t hContext, bool bEnable );
-	virtual void SetCursorPosition( InputContextHandle_t hContext, int x, int y );
-	virtual bool IsTopmostEnabledContext( InputContextHandle_t hContext ) const;
+	InputContextHandle_t PushInputContext();
+	void PopInputContext( );
+	void EnableInputContext( InputContextHandle_t hContext, bool bEnable );
+	void SetCursorVisible( InputContextHandle_t hContext, bool bVisible );
+	void SetCursorIcon( InputContextHandle_t hContext, InputCursorHandle_t hCursor );
+	void SetMouseCapture( InputContextHandle_t hContext, bool bEnable );
+	void SetCursorPosition( InputContextHandle_t hContext, int x, int y );
+	bool IsTopmostEnabledContext( InputContextHandle_t hContext ) const;
 
 private:
 	// Updates the cursor based on the current state of the input stack
@@ -82,7 +85,7 @@ void CInputStackSystem::Shutdown()
 		m_ContextStack.pop_back();
 	}
 
-	BaseClass::Shutdown();
+	AppSystemTier1Shutdown();
 }
 
 
@@ -275,3 +278,9 @@ void CInputStackSystem::UpdateCursorState()
 		break;
 	}
 }
+
+
+//-----------------------------------------------------------------------------
+// The IInputStackSystem members forward to CInputStackSystem
+//-----------------------------------------------------------------------------
+#include "facade/iinputstacksystem.inl"

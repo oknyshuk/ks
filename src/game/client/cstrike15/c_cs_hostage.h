@@ -4,11 +4,9 @@
 
 // Purpose: Client side CHostage class
 
-import ks.tier1;
 #include "reflect_annotations.h"
 
 #include "c_ai_basenpc.h"
-import std;
 #include "util_shared.h"
 #include "cs_playeranimstate.h"
 #include "c_cs_player.h"

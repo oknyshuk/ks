@@ -7,7 +7,6 @@
 #include "bot_constants.h"
 #include "bot_util.h"
 #include "cs_weapon_parse.h"
-import std;
 
 enum
 {

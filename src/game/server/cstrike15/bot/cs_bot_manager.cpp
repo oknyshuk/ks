@@ -3,8 +3,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "predictable_entity.h"
 #include "igameevents.h"
@@ -58,7 +56,7 @@ inline bool AreBotsAllowed()
 void InstallBotControl( void )
 {
 	if ( TheBots != nullptr )
-		delete TheBots;
+		delete TheCSBots();
 
 	TheBots = new CCSBotManager;
 }
@@ -68,7 +66,7 @@ void InstallBotControl( void )
 void RemoveBotControl( void )
 {
 	if ( TheBots != nullptr )
-		delete TheBots;
+		delete TheCSBots();
 
 	TheBots = nullptr;
 }
@@ -77,7 +75,7 @@ void RemoveBotControl( void )
 //--------------------------------------------------------------------------------------------------------------
 CBasePlayer* ClientPutInServerOverride_Bot( edict_t *pEdict, const char *playername )
 {
-	CBasePlayer *pPlayer = TheBots->AllocateAndBindBotEntity( pEdict );
+	CBasePlayer *pPlayer = TheCSBots()->AllocateAndBindBotEntity( pEdict );
 	if ( pPlayer )
 	{
 		pPlayer->SetPlayerName( playername );
@@ -150,7 +148,7 @@ const CCSBotManager::Zone* Helper_GetZoneForPlaceName( const char* szName )
 void CCSBotManager::RestartRound( void )
 {
 	// extend
-	CBotManager::RestartRound();
+	CBotManager::RestartRoundBase();
 
 	SetLooseBomb( nullptr );
 	m_isBombPlanted = false;
@@ -274,7 +272,7 @@ void CCSBotManager::EnableEventListeners( bool enable )
 	{
 		if ( enable )
 		{
-			gameeventmanager->AddListener( m_commonEventListeners[i], m_commonEventListeners[i]->GetEventName(), true );
+			gameeventmanager->AddListener( m_commonEventListeners[i], m_commonEventListeners[i]->GetCallback(), m_commonEventListeners[i]->GetEventName(), true );
 		}
 		else
 		{
@@ -301,7 +299,7 @@ void CCSBotManager::StartFrame( void )
 	}
 
 	// EXTEND
-	CBotManager::StartFrame();
+	CBotManager::StartFrameBase();
 
 	if ( !CSGameRules()->IsSwitchingTeamsAtRoundReset() )
 	{
@@ -689,7 +687,7 @@ public:
 			return true;
 		}
 
-		CCSBot *bot = dynamic_cast< CCSBot * >(player);
+		CCSBot *bot = ToCSBot( player );
 		if ( !bot || !bot->GetProfile() )
 		{
 			return true;
@@ -933,7 +931,7 @@ static void BotGotoArea( CNavArea *pArea )
 
 		if (player->IsBot())
 		{
-			CCSBot *bot = dynamic_cast<CCSBot *>( player );
+			CCSBot *bot = ToCSBot( player );
 
 			if ( bot )
 			{
@@ -987,6 +985,7 @@ bool CCSBotManager::ClientCommand( CBasePlayer *player, const CCommand &args )
 /**
  * Process the "bot_add" console command
  */
+extern ConVar mp_guardian_special_weapon_needed;
 bool CCSBotManager::BotAddCommand( int team, bool isFromConsole, const char *profileName, CSWeaponType weaponType, BotDifficultyType difficulty )
 {
 	if ( !TheNavMesh->IsLoaded() )
@@ -1094,7 +1093,7 @@ bool CCSBotManager::BotAddCommand( int team, bool isFromConsole, const char *pro
 			int numSniperBots = 0;
 			for ( int i = 1; i <= gpGlobals->maxClients; ++i )
 			{
-				CCSBot *player = dynamic_cast< CCSBot * >( UTIL_PlayerByIndex( i ) );
+				CCSBot *player = ToCSBot( UTIL_PlayerByIndex( i ) );
 				if ( player == nullptr )
 					continue;
 
@@ -1112,7 +1111,6 @@ bool CCSBotManager::BotAddCommand( int team, bool isFromConsole, const char *pro
 			int minNumSniperBots = 1;
 			if ( CSGameRules()->IsPlayingCoopGuardian() )
 			{
-				extern ConVar mp_guardian_special_weapon_needed;
 				char const *szWepShortName = mp_guardian_special_weapon_needed.GetString();
 				if ( szWepShortName && *szWepShortName && V_strcmp( szWepShortName, "any" ) )
 				{
@@ -1195,7 +1193,7 @@ bool CCSBotManager::BotAddCommand( int team, bool isFromConsole, const char *pro
 		std::vector< uint32 > arrConnectedHumans;
 		for ( int i = 1; i <= gpGlobals->maxClients; ++i )
 		{
-			CCSPlayer *pHuman = dynamic_cast<CCSPlayer *>(UTIL_PlayerByIndex( i ));
+			CCSPlayer *pHuman = static_cast<CCSPlayer *>(UTIL_PlayerByIndex( i ));
 			if ( pHuman )
 			{
 				uint32 uiAccountId = pHuman->GetHumanPlayerAccountID();
@@ -1238,7 +1236,7 @@ bool CCSBotManager::BotPlaceCommand( uint nTeamMask )
 	//Count the number of bots in the map.
 	for ( int i = 1; i <= gpGlobals->maxClients; ++i )
 	{
-		CCSBot *bot = dynamic_cast<CCSBot *>(UTIL_PlayerByIndex( i ));
+		CCSBot *bot = ToCSBot( UTIL_PlayerByIndex( i ) );
 		if ( nullptr != bot )
 		{
 			numBots++;
@@ -1257,7 +1255,7 @@ bool CCSBotManager::BotPlaceCommand( uint nTeamMask )
 	CCSPlayer *botToMove = nullptr;
 	for ( int i = 1; i <= gpGlobals->maxClients && botToMove == nullptr; ++i )
 	{
-		CCSBot *bot = dynamic_cast<CCSBot *>(UTIL_PlayerByIndex( i ));
+		CCSBot *bot = ToCSBot( UTIL_PlayerByIndex( i ) );
 		if ( nullptr != bot )
 		{
 			if ( nextBotToPlace == botCount )
@@ -1295,13 +1293,13 @@ bool CCSBotManager::BotPlaceCommand( uint nTeamMask )
 	UTIL_ClearTrace( tr );
 	// trace forward from the eye
 	Vector vEye = localPlayer->GetAbsOrigin() + localPlayer->GetViewOffset(), vTargetEye = vEye + ( forward * PLAYER_USE_RADIUS );
-	UTIL_TraceLine( vEye, vTargetEye, CONTENTS_SOLID, localPlayer->GetRefEHandle().Get(), COLLISION_GROUP_NONE, &tr );
+	UTIL_TraceLine( vEye, vTargetEye, CONTENTS_SOLID, EntityFromHandle( localPlayer->GetRefEHandle() ), COLLISION_GROUP_NONE, &tr );
 	if ( tr.DidHit() )
 		vTargetEye = tr.endpos;
 
 	UTIL_ClearTrace( tr );
 	Vector vTargetOrigin = vTargetEye - localPlayer->GetViewOffset() - Vector( 0, 0, ( 0.03125 ) );
-	UTIL_TraceLine( vTargetEye, vTargetOrigin, CONTENTS_SOLID, localPlayer->GetRefEHandle().Get(), COLLISION_GROUP_NONE, &tr );
+	UTIL_TraceLine( vTargetEye, vTargetOrigin, CONTENTS_SOLID, EntityFromHandle( localPlayer->GetRefEHandle() ), COLLISION_GROUP_NONE, &tr );
 	if ( tr.DidHit() )
 	{
 		vTargetOrigin = tr.endpos;
@@ -1319,7 +1317,7 @@ int UTIL_CSSBotsInGame()
 
 	for (int i = 1; i <= gpGlobals->maxClients; ++i )
 	{
-		CCSBot *player = dynamic_cast<CCSBot *>(UTIL_PlayerByIndex( i ));
+		CCSBot *player = ToCSBot( UTIL_PlayerByIndex( i ) );
 
 		if ( player == nullptr )
 			continue;
@@ -1337,7 +1335,7 @@ bool UTIL_CSSKickBotFromTeam( int kickTeam )
 	// try to kick a dead bot first
 	for ( i = 1; i <= gpGlobals->maxClients; ++i )
 	{
-		CCSBot *player = dynamic_cast<CCSBot *>( UTIL_PlayerByIndex( i ) );
+		CCSBot *player = ToCSBot( UTIL_PlayerByIndex( i ) );
 
 		if (player == nullptr)
 			continue;
@@ -1354,7 +1352,7 @@ bool UTIL_CSSKickBotFromTeam( int kickTeam )
 	// no dead bots, kick any bot on the given team
 	for ( i = 1; i <= gpGlobals->maxClients; ++i )
 	{
-		CCSBot *player = dynamic_cast<CCSBot *>( UTIL_PlayerByIndex( i ) );
+		CCSBot *player = ToCSBot( UTIL_PlayerByIndex( i ) );
 
 		if (player == nullptr)
 			continue;
@@ -2418,7 +2416,7 @@ unsigned int CCSBotManager::GetPlayerPriority( CBasePlayer *player ) const
 	if (!player->IsBot())
 		return 0;
 
-	CCSBot *bot = dynamic_cast<CCSBot *>( player );
+	CCSBot *bot = ToCSBot( player );
 
 	if ( !bot )
 		return 0;

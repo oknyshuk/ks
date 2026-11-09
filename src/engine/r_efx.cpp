@@ -11,6 +11,7 @@
 #include "cl_main.h"
 #include "decal.h"
 #include "client.h"
+#include "facade/ivefx.inl"
 
 // Effects API object.
 static CVEfx efx;

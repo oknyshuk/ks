@@ -10,40 +10,40 @@ import ks.core;
 class CUploadGameStats : public IUploadGameStats
 {
 public:
-	virtual bool UploadGameStats( char const *mapname,
+	bool UploadGameStats( char const *mapname,
 		unsigned int blobversion, unsigned int blobsize, const void *pvBlobData )
 	{
 		return false;
 	}
 
-	virtual void InitConnection( void )
+	void InitConnection( void )
 	{
 	}
 
-	virtual void UpdateConnection( void )
+	void UpdateConnection( void )
 	{
 	}
 
 	// If user has disabled stats tracking, do nothing
-	virtual bool IsGameStatsLoggingEnabled()
+	bool IsGameStatsLoggingEnabled()
 	{
 		return !CommandLine()->FindParm( "-nogamestats" );
 	}
 
 	// Buffer should be 16 bytes
-	virtual void GetPseudoUniqueId( char *buf, std::size_t bufsize )
+	void GetPseudoUniqueId( char *buf, std::size_t bufsize )
 	{
 		V_memset( buf, 0, bufsize );
 		V_strncpy( buf, "unknown", bufsize );
 	}
 
-	virtual bool IsCyberCafeUser( void )
+	bool IsCyberCafeUser( void )
 	{
 		return false;
 	}
 
 	// Only works in single player
-	virtual bool IsHDREnabled( void )
+	bool IsHDREnabled( void )
 	{
 #if defined( DEDICATED )
 		return false;
@@ -52,6 +52,9 @@ public:
 #endif
 	}
 };
+
+#include "facade/iuploadgamestats.inl"
+
 
 static CUploadGameStats g_UploadGameStats;
 IUploadGameStats *g_pUploadGameStats = &g_UploadGameStats;

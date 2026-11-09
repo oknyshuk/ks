@@ -4,26 +4,19 @@
 import std;
 #include "materialsystem/imaterialproxy.h"
 #include "materialproxyfactory.h"
-#include "toolframework/itoolframework.h"
-#include "toolframework/itoolsystem.h"
+#include "materialsystem/facade/imaterialproxyfactory.inl"
 #include "server.h"
 #include "cdll_int.h"
 
 extern IBaseClientDLL *g_ClientDLL;
 #ifndef DEDICATED
-extern CSysModule		*g_ClientDLLModule;
+extern CreateInterfaceFn g_ClientFactory;
 #endif
 
 IMaterialProxy *CMaterialProxyFactory::CreateProxy( const char *proxyName )
 {
 #if !defined(DEDICATED)
 	IMaterialProxy *materialProxy = g_ClientDLL->InstantiateMaterialProxy( proxyName );
-
-	// If the client didn't have it and we're in tool mode, ask the tools...
-	if ( toolframework->InToolMode() && !materialProxy )
-	{
-		materialProxy = toolframework->LookupProxy( proxyName );
-	}
 
 	if( !materialProxy && !sv.IsDedicated() )
 	{
@@ -48,7 +41,7 @@ void CMaterialProxyFactory::DeleteProxy( IMaterialProxy *pProxy )
 CreateInterfaceFn CMaterialProxyFactory::GetFactory()
 {
 #ifndef DEDICATED
-	return Sys_GetFactory( g_ClientDLLModule );
+	return g_ClientFactory;
 #else
 	return nullptr;
 #endif

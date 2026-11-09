@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -62,7 +60,7 @@ CFuncAreaPortalWindow::~CFuncAreaPortalWindow()
 }
 
 
-void CFuncAreaPortalWindow::Spawn()
+void CFuncAreaPortalWindow::Spawn_Impl()
 {
 	Precache();
 
@@ -70,9 +68,9 @@ void CFuncAreaPortalWindow::Spawn()
 }
 
 
-void CFuncAreaPortalWindow::Activate()
+void CFuncAreaPortalWindow::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	
 	// Find our background model.
 	CBaseEntity *pBackground = gEntList.FindEntityByName( nullptr, m_iBackgroundBModelName );

@@ -3,8 +3,6 @@
 
 // Purpose: Implements the big scary boom-boom machine Antlions fear.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -57,14 +55,15 @@ public:
 
 	virtual ~CSlideshowDisplay();
 
-	virtual bool KeyValue( const char *szKeyName, const char *szValue );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
 
-	virtual int  UpdateTransmitState();
-	virtual void SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
+	int  UpdateTransmitState_Impl();
+	void SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways );
 
-	virtual void Spawn( void );
-	virtual void Precache( void );
-	virtual void OnRestore( void );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	void OnRestore_Impl( void );
 
 	void	ScreenVisible( bool bVisible );
 
@@ -135,7 +134,7 @@ CSlideshowDisplay::~CSlideshowDisplay()
 //-----------------------------------------------------------------------------
 // Read in worldcraft data...
 //-----------------------------------------------------------------------------
-bool CSlideshowDisplay::KeyValue( const char *szKeyName, const char *szValue ) 
+bool CSlideshowDisplay::KeyValue_Impl( const char *szKeyName, const char *szValue ) 
 {
 	//!! temp hack, until worldcraft is fixed
 	// strip the # tokens from (duplicate) key names
@@ -165,10 +164,10 @@ bool CSlideshowDisplay::KeyValue( const char *szKeyName, const char *szValue )
 		return true;
 	}
 
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
-int CSlideshowDisplay::UpdateTransmitState()
+int CSlideshowDisplay::UpdateTransmitState_Impl()
 {
 	if ( m_bDoFullTransmit )
 	{
@@ -179,21 +178,21 @@ int CSlideshowDisplay::UpdateTransmitState()
 	return SetTransmitState( FL_EDICT_FULLCHECK );
 }
 
-void CSlideshowDisplay::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
+void CSlideshowDisplay::SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways )
 {
 	// Are we already marked for transmission?
 	if ( (*pInfo->m_pTransmitEdict)[ entindex() ] )
 		return;
 
-	BaseClass::SetTransmit( pInfo, bAlways );
+	BaseClass::SetTransmit_Impl( pInfo, bAlways );
 }
 
-void CSlideshowDisplay::Spawn( void )
+void CSlideshowDisplay::Spawn_Impl( void )
 {
 	V_strcpy( m_szSlideshowDirectory.GetForModify(), m_String_tSlideshowDirectory.ToCStr() );
 	Precache();
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	m_bEnabled = false;
 	
@@ -209,16 +208,16 @@ void CSlideshowDisplay::Spawn( void )
 	m_bDoFullTransmit = true;
 }
 
-void CSlideshowDisplay::Precache( void )
+void CSlideshowDisplay::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	BuildSlideShowImagesList();
 }
 
-void CSlideshowDisplay::OnRestore( void )
+void CSlideshowDisplay::OnRestore_Impl( void )
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	BuildSlideShowImagesList();
 

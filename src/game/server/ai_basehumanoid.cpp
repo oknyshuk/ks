@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -152,7 +150,7 @@ bool CAI_BaseHumanoid::OnMoveBlocked( AIMoveResult_t *pResult )
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 constexpr auto SNEAK_ATTACK_DIST = 360.0f; // 30 feet
-void CAI_BaseHumanoid::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
+void CAI_BaseHumanoid::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
 	bool bSneakAttacked = false;
 
@@ -190,11 +188,11 @@ void CAI_BaseHumanoid::TraceAttack( const CTakeDamageInfo &info, const Vector &v
 		CTakeDamageInfo newInfo = info;
 
 		newInfo.SetDamage( GetHealth() );
-		BaseClass::TraceAttack( newInfo, vecDir, ptr );
+		BaseClass::TraceAttack_Impl( newInfo, vecDir, ptr );
 		return;
 	}
 
-	BaseClass::TraceAttack( info, vecDir, ptr );
+	BaseClass::TraceAttack_Impl( info, vecDir, ptr );
 }
 
 //-----------------------------------------------------------------------------

@@ -219,3 +219,6 @@ KeyValues * CMatchNetworkMsgControllerBase::PackageGameDetailsForReservation( Ke
 
 	return res;
 }
+
+//-----------------------------------------------------------------------------
+#include "facade/imatchnetworkmsgcontroller.inl"

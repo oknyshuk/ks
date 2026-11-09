@@ -36,16 +36,19 @@ ConVar mat_colcorrection_editor( "mat_colcorrection_editor", "0" );
 class CColorCorrectionTools : public IColorCorrectionTools
 {
 public:
-	virtual void		Init( void );
-	virtual void		Shutdown( void );
+	void		Init( void );
+	void		Shutdown( void );
 
-	virtual bool		ShouldPause() const;
+	bool		ShouldPause() const;
 
-	virtual void		GrabPreColorCorrectedFrame( int x, int y, int width, int height );
-	virtual void		UpdateColorCorrection( );
+	void		GrabPreColorCorrectedFrame( int x, int y, int width, int height );
+	void		UpdateColorCorrection( );
 
-	virtual void		SetFinalOperation( IColorOperation *pOp );
+	void		SetFinalOperation( IColorOperation *pOp );
 };
+
+#include "facade/icolorcorrectiontools.inl"
+
 
 static CColorCorrectionTools g_ColorCorrectionTools;
 IColorCorrectionTools *colorcorrectiontools = &g_ColorCorrectionTools;

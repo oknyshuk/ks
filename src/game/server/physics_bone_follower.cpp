@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -277,13 +275,13 @@ bool CBoneFollower::Init( CBaseEntity *pOwner, const char *pModelName, solid_t &
 	return true;
 }
 
-int CBoneFollower::UpdateTransmitState()
+int CBoneFollower::UpdateTransmitState_Impl()
 {
 	// Send to the client for client-side collisions and visualization
 	return SetTransmitState( FL_EDICT_PVSCHECK );
 }
 
-void CBoneFollower::VPhysicsUpdate( IPhysicsObject *pPhysics )
+void CBoneFollower::VPhysicsUpdate_Impl( IPhysicsObject *pPhysics )
 {
 	Vector origin;
 	QAngle angles;
@@ -325,7 +323,7 @@ private:
 };
 
 
-void CBoneFollower::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
+void CBoneFollower::VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent )
 {
 	CBaseEntity *pOwner = GetOwnerEntity();
 	if ( pOwner )
@@ -335,7 +333,7 @@ void CBoneFollower::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent 
 	}
 }
 
-void CBoneFollower::VPhysicsShadowCollision( int index, gamevcollisionevent_t *pEvent )
+void CBoneFollower::VPhysicsShadowCollision_Impl( int index, gamevcollisionevent_t *pEvent )
 {
 	CBaseEntity *pOwner = GetOwnerEntity();
 	if ( pOwner )
@@ -345,7 +343,7 @@ void CBoneFollower::VPhysicsShadowCollision( int index, gamevcollisionevent_t *p
 	}
 }
 
-void CBoneFollower::VPhysicsFriction( IPhysicsObject *pObject, float energy, int surfaceProps, int surfacePropsHit )
+void CBoneFollower::VPhysicsFriction_Impl( IPhysicsObject *pObject, float energy, int surfaceProps, int surfacePropsHit )
 {
 	CBaseEntity *pOwner = GetOwnerEntity();
 	if ( pOwner )
@@ -355,7 +353,7 @@ void CBoneFollower::VPhysicsFriction( IPhysicsObject *pObject, float energy, int
 	}
 }
 
-bool CBoneFollower::TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace )
+bool CBoneFollower::TestCollision_Impl( const Ray_t &ray, unsigned int mask, trace_t& trace )
 {
 	vcollide_t *pCollide = modelinfo->GetVCollide( GetModelIndex() );
 	contract_assert( pCollide && pCollide->solidCount > m_solidIndex );
@@ -399,25 +397,25 @@ CBoneFollower *CBoneFollower::Create( CBaseEntity *pOwner, const char *pModelNam
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CBoneFollower::ObjectCaps() 
+int CBoneFollower::ObjectCaps_Impl() 
 { 
 	CBaseEntity *pOwner = GetOwnerEntity();
 	if ( pOwner )
 	{
 		if( pOwner->m_iGlobalname != NULL_STRING )
 		{
-			int caps = BaseClass::ObjectCaps() | pOwner->ObjectCaps();
+			int caps = BaseClass::ObjectCaps_Impl() | pOwner->ObjectCaps();
 			caps &= ~FCAP_ACROSS_TRANSITION;
 			return caps;
 		}
 	}
 
-	return BaseClass::ObjectCaps();
+	return BaseClass::ObjectCaps_Impl();
 }
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBoneFollower::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CBoneFollower::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	CBaseEntity *pOwner = GetOwnerEntity();
 	if ( pOwner )
@@ -426,13 +424,13 @@ void CBoneFollower::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 		return;
 	}
 
-	BaseClass::Use( pActivator, pCaller, useType, value );
+	BaseClass::Use_Impl( pActivator, pCaller, useType, value );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Pass on Touch calls to the entity we're following
 //-----------------------------------------------------------------------------
-void CBoneFollower::Touch( CBaseEntity *pOther )
+void CBoneFollower::Touch_Impl( CBaseEntity *pOther )
 {
 	CBaseEntity *pOwner = GetOwnerEntity();
 	if ( pOwner )
@@ -442,13 +440,13 @@ void CBoneFollower::Touch( CBaseEntity *pOther )
 		return;
 	}
 
-	BaseClass::Touch( pOther );
+	BaseClass::Touch_Impl( pOther );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Pass on trace attack calls to the entity we're following
 //-----------------------------------------------------------------------------
-void CBoneFollower::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
+void CBoneFollower::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
 	CBaseEntity *pOwner = GetOwnerEntity();
 	if ( pOwner )
@@ -457,7 +455,7 @@ void CBoneFollower::TraceAttack( const CTakeDamageInfo &info, const Vector &vecD
 		return;
 	}
 
-	BaseClass::TraceAttack( info, vecDir, ptr );
+	BaseClass::TraceAttack_Impl( info, vecDir, ptr );
 }
 
 LINK_ENTITY_TO_CLASS( phys_bone_follower, CBoneFollower );

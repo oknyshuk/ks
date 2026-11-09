@@ -8,11 +8,12 @@
 
 
 class IVTFTexture;
+// Non-virtual facade: the only implementation is the material system's CCompositeTexture.
 class ICompositeTexture
 {
 public:
-	virtual bool IsReady() const = 0;
-	virtual bool GenerationComplete() const = 0;
-	virtual IVTFTexture *GetResultVTF() = 0;
-	virtual	const char *GetName() = 0;
+	bool IsReady() const;
+	bool GenerationComplete() const;
+	IVTFTexture *GetResultVTF();
+	const char *GetName();
 };

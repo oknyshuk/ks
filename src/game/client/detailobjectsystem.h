@@ -4,15 +4,11 @@
 
 // Purpose: Deals with singleton
 
-import ks.math;
 #include "igamesystem.h"
 #include "icliententityinternal.h"
 #include "engine/ivmodelrender.h"
-import std;
 #include "ivrenderview.h"
 
-struct model_t;
-struct WorldListLeafData_t;	
 struct DistanceFadeInfo_t;
 
 

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -55,14 +52,14 @@ public:
 
 	CSun();
 
-	virtual void	Activate();
+	void	Activate_Impl();
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "SetColor", .type = FIELD_COLOR32 } ]] void InputSetColor( inputdata_t &inputdata );
 
-	virtual int UpdateTransmitState();
+	int UpdateTransmitState_Impl();
 
 public:
 	CNetworkVector( m_vDirection, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NORMAL, .enc = ks::reflect::WireEnc::Vector } ]] );
@@ -108,9 +105,9 @@ CSun::CSun()
 	m_nOverlaySize = -1;
 }
 
-void CSun::Activate()
+void CSun::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	// Find our target.
 	if ( m_bUseAngles )
@@ -193,7 +190,7 @@ void CSun::InputSetColor( inputdata_t &inputdata )
 	m_clrRender = inputdata.value.Color32();
 }
 
-int CSun::UpdateTransmitState()
+int CSun::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }

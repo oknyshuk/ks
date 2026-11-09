@@ -30,26 +30,26 @@ class IOverlayMgr
 {
 public:
 	// Memory allocation/de-allocation.
-	virtual bool	LoadOverlays( ) = 0;
-	virtual void	UnloadOverlays( ) = 0;
+	bool	LoadOverlays( );
+	void	UnloadOverlays( );
 
-	virtual void	CreateFragments( void ) = 0;
+	void	CreateFragments( void );
 
-	virtual void	ReSortMaterials( void ) = 0;
+	void	ReSortMaterials( void );
 
 	// Drawing
 	// clears all
-	virtual void	ClearRenderLists() = 0;
+	void	ClearRenderLists();
 	// clears a particular sort group
-	virtual void	ClearRenderLists( int nSortGroup ) = 0;
-	virtual void	AddFragmentListToRenderList( int nSortGroup, OverlayFragmentHandle_t iFragment, bool bDisp ) = 0;
-	virtual void	RenderOverlays( IMatRenderContext *pRenderContext, int nSortGroup ) = 0;
+	void	ClearRenderLists( int nSortGroup );
+	void	AddFragmentListToRenderList( int nSortGroup, OverlayFragmentHandle_t iFragment, bool bDisp );
+	void	RenderOverlays( IMatRenderContext *pRenderContext, int nSortGroup );
 
 	// Sets the client renderable for an overlay's material proxy to bind to
-	virtual void	SetOverlayBindProxy( int iOverlayID, void *pBindProxy ) = 0;
+	void	SetOverlayBindProxy( int iOverlayID, void *pBindProxy );
 
-	virtual void	UpdateOverlayRenderLevels( int nCPULevel, int nGPULevel ) = 0;
-	virtual void	RenderAllUnlitOverlays( IMatRenderContext *pRenderContext, int nSortGroup ) = 0;
+	void	UpdateOverlayRenderLevels( int nCPULevel, int nGPULevel );
+	void	RenderAllUnlitOverlays( IMatRenderContext *pRenderContext, int nSortGroup );
 };
 
 

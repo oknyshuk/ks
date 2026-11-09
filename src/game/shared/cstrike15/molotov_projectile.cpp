@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -25,7 +22,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -235,12 +231,12 @@ void CMolotovProjectile::InitializeSpawnFromWorld( inputdata_t &inputdata )
 	m_pWeaponInfo = GetWeaponInfo( WEAPON_MOLOTOV );
 }
 
-void CMolotovProjectile::Spawn( void )
+void CMolotovProjectile::Spawn_Impl( void )
 {
 	m_stillTimer.Invalidate();
 	m_throwDetTimer.Invalidate();
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	if ( this->m_bIsIncGrenade )
 	{
@@ -254,7 +250,7 @@ void CMolotovProjectile::Spawn( void )
 
 }
 
-void CMolotovProjectile::Precache( void )
+void CMolotovProjectile::Precache_Impl( void )
 {
 	PrecacheModel( MOLOTOV_MODEL );
 	PrecacheModel( INCGREN_MODEL );
@@ -265,7 +261,7 @@ void CMolotovProjectile::Precache( void )
 	PrecacheParticleSystem( "weapon_molotov_held" );
 	PrecacheParticleSystem( "incgrenade_thrown_trail" );
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 void CMolotovProjectile::BounceTouch( CBaseEntity *other )
@@ -382,7 +378,7 @@ void CMolotovProjectile::Detonate( void )
 
 	Vector burnPos, splashNormal;
 
-	if ( hitTrace.DidHitWorld() )
+	if ( TraceDidHitWorld( hitTrace ) )
 	{
 		// hit the world, just explode at that position
 		burnPos = hitTrace.endpos;

@@ -13,9 +13,7 @@
 // auto-generate documentation.  Visit www.doxygen.org to download the system for free.
 //
 
-import std;
 
-import ks.tier1;
 #include "filesystem.h"
 #include "GameEventListener.h"
 
@@ -146,14 +144,30 @@ public:
 };
 
 //--------------------------------------------------------------------------------------------------------
+/**
+ * Mixin for entities that can obstruct nav areas (CPhysicsProp, CFuncNavObstruction).
+ * Each method forwards to the concrete class's method of the same name (see nav_entities.cpp).
+ */
 class INavAvoidanceObstacle
 {
 public:
-	virtual bool IsPotentiallyAbleToObstructNavAreas( void ) const = 0;	// could we at some future time obstruct nav?
-	virtual float GetNavObstructionHeight( void ) const = 0;			// height at which to obstruct nav areas
-	virtual bool CanObstructNavAreas( void ) const = 0;					// can we obstruct nav right this instant?
-	virtual CBaseEntity *GetObstructingEntity( void ) = 0;
-	virtual void OnNavMeshLoaded( void ) = 0;
+	enum class Kind
+	{
+		PhysicsProp,			///< CPhysicsProp
+		FuncNavObstruction,		///< CFuncNavObstruction
+	};
+
+	bool IsPotentiallyAbleToObstructNavAreas( void ) const;	// could we at some future time obstruct nav?
+	float GetNavObstructionHeight( void ) const;			// height at which to obstruct nav areas
+	bool CanObstructNavAreas( void ) const;					// can we obstruct nav right this instant?
+	CBaseEntity *GetObstructingEntity( void );
+	void OnNavMeshLoaded( void );
+
+protected:
+	explicit INavAvoidanceObstacle( Kind kind ) : m_obstacleKind( kind ) { }
+
+private:
+	Kind m_obstacleKind;
 };
 
 //--------------------------------------------------------------------------------------------------------
@@ -252,26 +266,27 @@ extern PlaceDirectory placeDirectory;
 //--------------------------------------------------------------------------------------------------------
 /**
  * The CNavMesh is the global interface to the Navigation Mesh.
- * @todo Make this an abstract base class interface, and derive mod-specific implementations.
  */
 class CNavMesh : public CGameEventListener
 {
 public:
 	CNavMesh( void );
-	virtual ~CNavMesh();
+	~CNavMesh();
 	
-	virtual void PreLoadAreas( int nAreas ) {}
-	virtual CNavArea *CreateArea( void ) const;							// CNavArea factory
-	virtual void DestroyArea( CNavArea * ) const;
-	virtual HidingSpot *CreateHidingSpot( void ) const;					// Hiding Spot factory
+	void PreLoadAreas( int nAreas ) {}
+	CNavArea *CreateArea( void ) const;							// CNavArea factory
+	void DestroyArea( CNavArea * ) const;
+	HidingSpot *CreateHidingSpot( void ) const;					// Hiding Spot factory
 
-	virtual void Reset( void );											// destroy Navigation Mesh data and revert to initial state
-	virtual void Update( void );										// invoked on each game frame
+	void Reset( void );											// destroy Navigation Mesh data and revert to initial state
+	void ResetBase( void );
+	void Update( void );										// invoked on each game frame
 
-	virtual void FireGameEvent( IGameEvent *event );					// incoming event processing
+	void FireGameEvent( IGameEvent *event );					// incoming event processing
 
-	virtual NavErrorType Load( void );									// load navigation data from a file
-	virtual NavErrorType PostLoad( unsigned int version );				// (EXTEND) invoked after all areas have been loaded - for pointer binding, etc
+	NavErrorType Load( void );									// load navigation data from a file
+	NavErrorType PostLoad( unsigned int version );				// invoked after all areas have been loaded - for pointer binding, etc
+	NavErrorType PostLoadBase( unsigned int version );
 	bool IsLoaded( void ) const		{ return m_isLoaded; }				// return true if a Navigation Mesh has been loaded
 	bool IsAnalyzed( void ) const	{ return m_isAnalyzed; }			// return true if a Navigation Mesh has been analyzed
 
@@ -279,34 +294,34 @@ public:
 	 * Return true if nav mesh can be trusted for all climbing/jumping decisions because game environment is fairly simple.
 	 * Authoritative meshes mean path followers can skip CPU intensive realtime scanning of unpredictable geometry.
 	 */
-	virtual bool IsAuthoritative( void ) const { return false; }		
+	bool IsAuthoritative( void ) const { return false; }		
 
 	const std::vector< Place > *GetPlacesFromNavFile( bool *hasUnnamedPlaces );	// Reads the used place names from the nav file (can be used to selectively precache before the nav is loaded)
 
-	virtual bool Save( void ) const;									// store Navigation Mesh to a file
+	bool Save( void ) const;									// store Navigation Mesh to a file
 	bool IsOutOfDate( void ) const	{ return m_isOutOfDate; }			// return true if the Navigation Mesh is older than the current map version
 
-	virtual unsigned int GetSubVersionNumber( void ) const;										// returns sub-version number of data format used by derived classes
-	virtual void SaveCustomData( ks::byte_writer &fileBuffer ) const { }								// store custom mesh data for derived classes
-	virtual void LoadCustomData( ks::byte_reader &fileBuffer, unsigned int subVersion ) { }			// load custom mesh data for derived classes
-	virtual void SaveCustomDataPreArea( ks::byte_writer &fileBuffer ) const { }						// store custom mesh data for derived classes that needs to be loaded before areas are read in
-	virtual void LoadCustomDataPreArea( ks::byte_reader &fileBuffer, unsigned int subVersion ) { }	// load custom mesh data for derived classes that needs to be loaded before areas are read in
+	unsigned int GetSubVersionNumber( void ) const;										// returns sub-version number of the game-specific data format
+	void SaveCustomData( ks::byte_writer &fileBuffer ) const { }								// store game-specific mesh data
+	void LoadCustomData( ks::byte_reader &fileBuffer, unsigned int subVersion ) { }			// load game-specific mesh data
+	void SaveCustomDataPreArea( ks::byte_writer &fileBuffer ) const { }						// store game-specific mesh data that needs to be loaded before areas are read in
+	void LoadCustomDataPreArea( ks::byte_reader &fileBuffer, unsigned int subVersion ) { }	// load game-specific mesh data that needs to be loaded before areas are read in
 
 	// events
-	virtual void OnServerActivate( void );								// (EXTEND) invoked when server loads a new map
-	virtual void OnRoundRestart( void );								// invoked when a game round restarts
-	virtual void OnRoundRestartPreEntity( void );						// invoked when a game round restarts, but before entities are deleted and recreated
-	virtual void OnBreakableCreated( CBaseEntity *breakable ) { }		// invoked when a breakable is created
-	virtual void OnBreakableBroken( CBaseEntity *broken ) { }			// invoked when a breakable is broken
-	virtual void OnAreaBlocked( CNavArea *area );						// invoked when the area becomes blocked
-	virtual void OnAreaUnblocked( CNavArea *area );						// invoked when the area becomes un-blocked
-	virtual void OnAvoidanceObstacleEnteredArea( CNavArea *area );					// invoked when the area becomes obstructed
-	virtual void OnAvoidanceObstacleLeftArea( CNavArea *area );					// invoked when the area becomes un-obstructed
+	void OnServerActivate( void );								// invoked when server loads a new map
+	void OnRoundRestart( void );								// invoked when a game round restarts
+	void OnRoundRestartPreEntity( void );						// invoked when a game round restarts, but before entities are deleted and recreated
+	void OnBreakableCreated( CBaseEntity *breakable ) { }		// invoked when a breakable is created
+	void OnBreakableBroken( CBaseEntity *broken ) { }			// invoked when a breakable is broken
+	void OnAreaBlocked( CNavArea *area );						// invoked when the area becomes blocked
+	void OnAreaUnblocked( CNavArea *area );						// invoked when the area becomes un-blocked
+	void OnAvoidanceObstacleEnteredArea( CNavArea *area );					// invoked when the area becomes obstructed
+	void OnAvoidanceObstacleLeftArea( CNavArea *area );					// invoked when the area becomes un-obstructed
 
-	virtual void OnEditCreateNotify( CNavArea *newArea );				// invoked when given area has just been added to the mesh in edit mode
-	virtual void OnEditDestroyNotify( CNavArea *deadArea );				// invoked when given area has just been deleted from the mesh in edit mode
-	virtual void OnEditDestroyNotify( CNavLadder *deadLadder );			// invoked when given ladder has just been deleted from the mesh in edit mode
-	virtual void OnNodeAdded( CNavNode *node ) {};						
+	void OnEditCreateNotify( CNavArea *newArea );				// invoked when given area has just been added to the mesh in edit mode
+	void OnEditDestroyNotify( CNavArea *deadArea );				// invoked when given area has just been deleted from the mesh in edit mode
+	void OnEditDestroyNotify( CNavLadder *deadLadder );			// invoked when given ladder has just been deleted from the mesh in edit mode
+	void OnNodeAdded( CNavNode *node ) {};						
 
 	// Obstructions
 	void RegisterAvoidanceObstacle( INavAvoidanceObstacle *obstruction );
@@ -350,11 +365,11 @@ public:
 	const char *GetPlayerSpawnName( void ) const;						// return name of player spawn entity
 	void SetPlayerSpawnName( const char *name );						// define the name of player spawn entities
 	void AddWalkableSeed( const Vector &pos, const Vector &normal );	// add given walkable position to list of seed positions for map sampling
-	virtual void AddWalkableSeeds( void );								// adds walkable positions for any/all positions a mod specifies
+	void AddWalkableSeeds( void );								// adds walkable positions for any/all positions a mod specifies
 	void ClearWalkableSeeds( void )		{ m_walkableSeeds.clear(); }	// erase all walkable seed positions
 	void MarkStairAreas( void );
 
-	virtual unsigned int GetGenerationTraceMask( void ) const;			// return the mask used by traces when generating the mesh
+	unsigned int GetGenerationTraceMask( void ) const;			// return the mask used by traces when generating the mesh
 
 
 	//-------------------------------------------------------------------------------------
@@ -367,7 +382,7 @@ public:
 	void CommandNavDelete( void );										// delete current area
 	void CommandNavDeleteMarked( void );								// delete current marked area
 
-	virtual void CommandNavFloodSelect( const CCommand &args );			// select current area and all connected areas, recursively
+	void CommandNavFloodSelect( const CCommand &args );			// select current area and all connected areas, recursively
 	void CommandNavToggleSelectedSet( void );							// toggles all areas into/out of the selected set
 	void CommandNavStoreSelectedSet( void );							// stores the current selected set for later
 	void CommandNavRecallSelectedSet( void );							// restores an older selected set
@@ -753,14 +768,14 @@ public:
 	void SimplifySelectedAreas( void );	// Simplifies the selected set by reducing to 1x1 areas and re-merging them up with loosened tolerances
 
 protected:
-	virtual void PostCustomAnalysis( void ) { }					// invoked when custom analysis step is complete
+	void PostCustomAnalysis( void ) { }					// invoked when custom analysis step is complete
 	bool FindActiveNavArea( void );								// Finds the area or ladder the local player is currently pointing at.  Returns true if a surface was hit by the traceline.
-	virtual void RemoveNavArea( CNavArea *area );				// remove an area from the grid
+	void RemoveNavArea( CNavArea *area );				// remove an area from the grid
 	bool FindGroundForNode( Vector *pos, Vector *normal );
 	void GenerateNodes( const Extent &bounds );
 	void RemoveNodes( void );
 
-	virtual bool IsMeshVisibilityGenerated( void ) const	{ return true; }	// allow derived meshes to skip costly mesh visibility computation and storage
+	bool IsMeshVisibilityGenerated( void ) const	{ return false; }	// mesh visibility is not generated (costly to compute and store)
 
 private:
 	friend class CNavArea;
@@ -854,8 +869,8 @@ private:
 	//
 	bool UpdateGeneration( float maxTime = 0.25f );				// process the auto-generation for 'maxTime' seconds. return false if generation is complete.
 
-	virtual void BeginCustomAnalysis( bool bIncremental ) {}
-	virtual void EndCustomAnalysis() {}
+	void BeginCustomAnalysis( bool bIncremental ) {}
+	void EndCustomAnalysis() {}
 
 	CNavNode *m_currentNode;									// the current node we are sampling from
 	NavDirType m_generationDir;
@@ -954,6 +969,28 @@ private:
 
 	void TestAllAreasForBlockedStatus( void );					// Used to update blocked areas after a round restart. Need to delay so the map logic has all fired.
 	CountdownTimer m_updateBlockedAreasTimer;			
+
+	//- Counter-Strike ----------------------------------------------------------------------------------
+public:
+	void ClearPlayerCounts( void );										///< zero player counts in all areas
+
+	void ResetDMSpawns( void );
+
+private:
+	void MaintainChickenPopulation( void );
+	int m_desiredChickenCount;
+	CountdownTimer m_refreshChickenTimer;
+	std::vector< CHandle< CBaseEntity > > m_chickenVector;
+
+	void MaintainDMSpawnPopulation( void );
+	int m_desiredDMSpawns;
+	int m_consecutiveFailedAttempts;
+	CountdownTimer m_refreshDMSpawnTimer;
+	std::vector< CHandle< CBaseEntity > > m_DMSpawnVector;
+
+	bool IsSpawnBlockedByTrigger( Vector pos );
+
+	int AllEdictsAlongRay( CBaseEntity **pList, int listMax, const Ray_t &ray, int flagMask );
 };
 
 // the global singleton interface
@@ -981,7 +1018,8 @@ inline CNavMesh::EditModeType CNavMesh::GetEditMode( void ) const
 //--------------------------------------------------------------------------------------------------------------
 inline unsigned int CNavMesh::GetSubVersionNumber( void ) const
 {
-	return 0;
+	// 1: initial implementation - added ApproachArea data
+	return 1;
 }
 
 

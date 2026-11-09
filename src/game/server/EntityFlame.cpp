@@ -6,8 +6,6 @@
 //			   to ignite a target entity.
 //			2) An entity that can be created at runtime to ignite a target entity.
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -65,7 +63,7 @@ CEntityFlame::CEntityFlame( void )
 	m_hObstacle			= OBSTACLE_INVALID;
 }
 
-void CEntityFlame::UpdateOnRemove()
+void CEntityFlame::UpdateOnRemove_Impl()
 {
 	// Sometimes the entity I'm burning gets destroyed by other means,
 	// which kills me. Make sure to stop the burning sound.
@@ -95,12 +93,12 @@ void CEntityFlame::UpdateOnRemove()
 		m_hObstacle = OBSTACLE_INVALID;
 	}
 
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
-void CEntityFlame::Precache()
+void CEntityFlame::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 
 	PrecacheParticleSystem( "burning_character" );
@@ -111,9 +109,9 @@ void CEntityFlame::Precache()
 	PrecacheScriptSound( "General.BurningObject" );
 }
 
-void CEntityFlame::Spawn()
+void CEntityFlame::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	m_flLifetime = gpGlobals->curtime;
 
 	SetThink( &CEntityFlame::FlameThink );
@@ -127,9 +125,9 @@ void CEntityFlame::Spawn()
 //-----------------------------------------------------------------------------
 // Since we don't save/load danger links, we need to reacquire them here
 //-----------------------------------------------------------------------------
-void CEntityFlame::Activate()
+void CEntityFlame::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 }
 
@@ -325,7 +323,7 @@ public:
 	DECLARE_CLASS( CEnvEntityIgniter, CBaseEntity );
 	DECLARE_DATADESC();
 
-	virtual void Precache();
+	void Precache_Impl();
 
 protected:
 	[[= ks::reflect::Input{ .name = "Ignite", .type = FIELD_VOID } ]] void InputIgnite( inputdata_t &inputdata );
@@ -342,9 +340,9 @@ LINK_ENTITY_TO_CLASS( env_entity_igniter, CEnvEntityIgniter );
 //-----------------------------------------------------------------------------
 // Purpose: Ignites entities
 //-----------------------------------------------------------------------------
-void CEnvEntityIgniter::Precache()
+void CEnvEntityIgniter::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 	UTIL_PrecacheOther( "entityflame" );
 }
 

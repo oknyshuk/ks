@@ -3,8 +3,6 @@
 
 // Purpose: Data for Autobuy and Rebuy
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"

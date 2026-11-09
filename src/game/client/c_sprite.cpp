@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -28,7 +26,6 @@ import std;
 #include "materialsystem/imaterialvar.h"
 #include "view_shared.h"
 #include "viewrender.h"
-#include "toolframework/itoolframework.h"
 #include "toolframework_client.h"
 #include "mapentities_shared.h"
 #include "gamestringpool.h"
@@ -405,7 +402,7 @@ int C_SpriteRenderer::DrawSprite(
 	// Use attachment point
 	if ( attachedto )
 	{
-		C_BaseEntity *ent = attachedto->GetBaseEntity();
+		C_BaseEntity *ent = EntityCast<C_BaseEntity>( attachedto->GetBaseEntity() );
 		if ( ent )
 		{
 			// don't draw viewmodel effects in reflections

@@ -29,20 +29,19 @@ public:
 	};
 
 
-	virtual			~IEngine( void ) { }
 
-	virtual	bool	Load( bool dedicated, const char *rootdir ) = 0;
-	virtual void	Unload( void ) = 0;
-	virtual void	SetNextState( EngineState_t iNextState ) = 0;
-	virtual EngineState_t GetState( void ) = 0;
+	bool	Load( bool dedicated, const char *rootdir );
+	void	Unload( void );
+	void	SetNextState( EngineState_t iNextState );
+	EngineState_t GetState( void );
 
-	virtual void	Frame( void ) = 0;
+	void	Frame( void );
 
-	virtual float	GetFrameTime( void ) = 0;
-	virtual float	GetCurTime( void ) = 0;
+	float	GetFrameTime( void );
+	float	GetCurTime( void );
 
-	virtual int		GetQuitting( void ) = 0;
-	virtual void	SetQuitting( int quittype ) = 0;
+	int		GetQuitting( void );
+	void	SetQuitting( int quittype );
 };
 
 extern IEngine *eng;

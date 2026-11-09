@@ -18,13 +18,14 @@ public:
 	DECLARE_SERVERCLASS();
 
 	CEnvProjectedTexture();
-	bool KeyValue( const char *szKeyName, const char *szValue );
-	virtual bool GetKeyValue( const char *szKeyName, char *szValue, int iMaxLen );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	bool GetKeyValue_Impl( const char *szKeyName, char *szValue, int iMaxLen );
 
 	// Always transmit to clients
-	virtual int UpdateTransmitState();
-	virtual void Activate( void );
-	virtual void Spawn( void );
+	int UpdateTransmitState_Impl();
+	void Activate_Impl( void );
+	void Spawn_Impl( void );
 
 	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );

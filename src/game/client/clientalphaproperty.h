@@ -5,6 +5,12 @@
 #include "iclientalphaproperty.h"
 #include "iclientrenderable.h"
 
+//-----------------------------------------------------------------------------
+// The client's own handle on the alpha property manager, which is the client leaf system (see
+// clientleafsystem.cpp).
+//-----------------------------------------------------------------------------
+IClientAlphaPropertyMgr *ClientAlphaPropertyMgr();
+
 inline constexpr auto CLIENT_ALPHA_DISTANCE_FADE_MODE_BIT_COUNT = 1;
 
 //-----------------------------------------------------------------------------

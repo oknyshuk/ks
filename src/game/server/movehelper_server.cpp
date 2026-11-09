@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -364,9 +362,9 @@ void CMoveHelperServer::PlaybackEventFull( int flags, int clientindex, unsigned 
 	// FIXME, Redo with new event system parameter stuff
 }
 
+extern IPhysicsSurfaceProps *physprops;
 IPhysicsSurfaceProps *CMoveHelperServer::GetSurfaceProps( void )
 {
-	extern IPhysicsSurfaceProps *physprops;
 	return physprops;
 }
 

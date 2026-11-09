@@ -4,8 +4,6 @@
 
 // Purpose: Provides access to cvars that are bounded in the client DLL.
 
-import std;
-import ks.tier1;
 
 extern ConVar_ServerBounded *cl_predict;
 extern ConVar_ServerBounded *cl_interp;

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -63,7 +61,7 @@ CMapInfo::~CMapInfo()
 }
  
 
-bool CMapInfo::KeyValue( const char *szKeyName, const char *szValue )
+bool CMapInfo::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "buying"))
 	{
@@ -79,11 +77,11 @@ bool CMapInfo::KeyValue( const char *szKeyName, const char *szValue )
 		return true;
 	}
 	
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 
-void CMapInfo::Spawn( void )
+void CMapInfo::Spawn_Impl( void )
 { 
 	SetMoveType( MOVETYPE_NONE );
 	SetSolid( SOLID_NONE );

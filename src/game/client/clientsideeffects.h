@@ -1,7 +1,6 @@
 #pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
-import ks.math;
 
 struct	FXQuadData_t;
 struct	FXLineData_t;
@@ -50,11 +49,8 @@ public:
 
 extern IEffectsList *clienteffects;
 
-class IMaterialSystem;
 
 //Actual function references
-void FX_AddCube( const Vector &mins, const Vector &maxs, const Vector &vColor, float life, const char *materialName );
-void FX_AddCenteredCube( const Vector &center, float size, const Vector &vColor, float life, const char *materialName );
 void FX_AddStaticLine( const Vector& start, const Vector& end, float scale, float life, const char *materialName, unsigned char flags );
 void FX_AddDiscreetLine( const Vector& start, const Vector& direction, float velocity, float length, float clipLength, float scale, float life, const char *shader );
 

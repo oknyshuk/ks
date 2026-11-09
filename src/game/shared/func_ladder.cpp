@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "const.h"
 #include "string_t.h"
 #include "predictable_entity.h"
@@ -23,7 +20,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -41,7 +37,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -108,9 +103,9 @@ CFuncLadder *CFuncLadder::GetLadder( int index )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CFuncLadder::Spawn()
+void CFuncLadder::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	// Entity is symbolid
 	SetSolid( SOLID_NONE );
@@ -213,10 +208,10 @@ void CFuncLadder::Spawn()
 //-----------------------------------------------------------------------------
 // Purpose: Called after all entities have spawned or after reload from .sav file
 //-----------------------------------------------------------------------------
-void CFuncLadder::Activate()
+void CFuncLadder::Activate_Impl()
 {
 	// Chain to base class
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 #if !defined( CLIENT_DLL )
 	// Re-hook up ladder dismount points
@@ -304,11 +299,11 @@ void CFuncLadder::SetEndPoints( const Vector& p1, const Vector& p2 )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CFuncLadder::DrawDebugGeometryOverlays()
+void CFuncLadder::DrawDebugGeometryOverlays_Impl()
 {
 #if !defined( CLIENT_DLL )
 
-	BaseClass::DrawDebugGeometryOverlays();
+	BaseClass::DrawDebugGeometryOverlays_Impl();
 
 	Vector playerMins = VEC_HULL_MIN;
 	Vector playerMaxs  = VEC_HULL_MAX;
@@ -501,10 +496,10 @@ IMPLEMENT_REFLECT_DATAMAP( CFuncLadder )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CInfoLadderDismount::DrawDebugGeometryOverlays()
+void CInfoLadderDismount::DrawDebugGeometryOverlays_Impl()
 {
 #if !defined( CLIENT_DLL )
-	BaseClass::DrawDebugGeometryOverlays();
+	BaseClass::DrawDebugGeometryOverlays_Impl();
 
 	if ( developer.GetBool() )
 	{
@@ -514,7 +509,7 @@ void CInfoLadderDismount::DrawDebugGeometryOverlays()
 }
 
 #if defined( GAME_DLL )
-int CFuncLadder::UpdateTransmitState()
+int CFuncLadder::UpdateTransmitState_Impl()
 {
 	// transmit if in PVS for clientside prediction
 	return SetTransmitState( FL_EDICT_PVSCHECK );

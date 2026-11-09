@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -252,16 +250,6 @@ void CFlashlightEffect::UpdateLightTopDown(const Vector &vecPos, const Vector &v
 	// FIXME: This doesn't compile
 //	LightOffOld();
 
-	if ( clienttools->IsInRecordingMode() )
-	{
-		KeyValues *msg = new KeyValues( "FlashlightState" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetInt( "entindex", m_nEntIndex );
-		msg->SetInt( "flashlightHandle", m_FlashlightHandle );
-		msg->SetPtr( "flashlightState", &state );
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
 }
 
 
@@ -315,16 +303,6 @@ void CFlashlightEffect::UpdateLight(	int nEntIdx, const Vector &vecPos, const Ve
 	
 	g_pClientShadowMgr->UpdateProjectedTexture( m_FlashlightHandle, true );
 	
-	if ( clienttools->IsInRecordingMode() )
-	{
-		KeyValues *msg = new KeyValues( "FlashlightState" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetInt( "entindex", m_nEntIndex );
-		msg->SetInt( "flashlightHandle", m_FlashlightHandle );
-		msg->SetPtr( "flashlightState", &state );
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
 }
 
 void CFlashlightEffect::UpdateLight(	int nEntIdx, const Vector &vecPos, const Vector &vecDir, const Vector &vecRight, const Vector &vecUp, 
@@ -375,16 +353,6 @@ void CFlashlightEffect::UpdateLight(	int nEntIdx, const Vector &vecPos, const Ve
 
 	g_pClientShadowMgr->UpdateProjectedTexture( m_FlashlightHandle, true );
 
-	if ( clienttools->IsInRecordingMode() )
-	{
-		KeyValues *msg = new KeyValues( "FlashlightState" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetInt( "entindex", m_nEntIndex );
-		msg->SetInt( "flashlightHandle", m_FlashlightHandle );
-		msg->SetPtr( "flashlightState", &state );
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
 }
 
 bool CFlashlightEffect::UpdateDefaultFlashlightState( FlashlightState_t& state, const Vector &vecPos, const Vector &vecForward,
@@ -659,16 +627,6 @@ bool CFlashlightEffect::ComputeLightPosAndOrientation( const Vector &vecPos, con
 //-----------------------------------------------------------------------------
 void CFlashlightEffect::LightOff()
 {
-	if ( clienttools->IsInRecordingMode() )
-	{
-		KeyValues *msg = new KeyValues( "FlashlightState" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetInt( "entindex", m_nEntIndex );
-		msg->SetInt( "flashlightHandle", m_FlashlightHandle );
-		msg->SetPtr( "flashlightState", nullptr );
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
 
 	// Clear out the light
 	if( m_FlashlightHandle != CLIENTSHADOW_INVALID_HANDLE )

@@ -103,38 +103,38 @@ public:
 	bool ProcessConnectionlessPacket( netpacket_t *packet );
 
 	// IClient interface
-	void	Connect(const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars ) override;
+	void	Connect(const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars );
 	void	Inactivate( void );
 	void	Reconnect( void );
-	void	Disconnect( const char *reason ) override;
+	void	Disconnect( const char *reason );
 	bool	CheckConnect( void );
 	
 	void	SetRate( int nRate, bool bForce );
 	void	SetUpdateRate( float fUpdateRate, bool bForce ); // override;
 	
-	virtual	bool	IsHearingClient( int index ) const;
-	virtual	bool	IsProximityHearingClient( int index ) const;
+	bool	IsHearingClient( int index ) const;
+	bool	IsProximityHearingClient( int index ) const;
 
 	void	Clear( void );
 
 	bool	SendNetMsg( INetMessage &msg, bool bForceReliable = false, bool bVoice = false );
 	bool	ExecuteStringCommand( const char *s );
-	// IGameEventListener
-	void	FireGameEvent( IGameEvent *event ) override;
+	// game event listener (bound to m_GameEventCallback by the constructor)
+	void	FireGameEvent( IGameEvent *event );
 
 public: // IClientMessageHandlers
 	
-	virtual bool CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg ) override;
-	virtual bool CLCMsg_Move( const ks::net::CCLCMsg_Move& msg ) override;
-	virtual bool CLCMsg_VoiceData( const ks::net::CCLCMsg_VoiceData& msg ) override;
+	bool CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg );
+	bool CLCMsg_Move( const ks::net::CCLCMsg_Move& msg );
+	bool CLCMsg_VoiceData( const ks::net::CCLCMsg_VoiceData& msg );
 
-	virtual bool CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg ) override;
-	virtual bool CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg ) override;
-	virtual bool CLCMsg_CmdKeyValues( const ks::net::CCLCMsg_CmdKeyValues& msg ) override;
+	bool CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg );
+	bool CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg );
+	bool CLCMsg_CmdKeyValues( const ks::net::CCLCMsg_CmdKeyValues& msg );
 
-	virtual bool CLCMsg_HltvReplay( const ks::net::CCLCMsg_HltvReplay &msg ) override;
+	bool CLCMsg_HltvReplay( const ks::net::CCLCMsg_HltvReplay &msg );
 
-	virtual bool SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage &msg ) override;
+	bool SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage &msg );
 	
 public:
 
@@ -142,8 +142,8 @@ public:
 	bool	UpdateAcknowledgedFramecount(int tick);
 
 	void	WriteGameSounds( bf_write &buf, int nMaxSounds );
-	virtual bool	ProcessSignonStateMsg(int state, int spawncount);
-	bool	SendSnapshot( CClientFrame *pFrame ) override;
+	bool	ProcessSignonStateMsg(int state, int spawncount);
+	bool	SendSnapshot( CClientFrame *pFrame );
 	bool	SendHltvReplaySnapshot( CClientFrame * pFrame );
 	bool	ShouldSendMessages( void );
 	void	SpawnPlayer( void );
@@ -162,20 +162,20 @@ public:
 	void	GetReplayData( int& ticks, int& entity);
 	bool	IgnoreTempEntity( CEventInfo *event );
 	const CCheckTransmitInfo* GetPrevPackInfo();
-	virtual bool StartHltvReplay( const HltvReplayParams_t &params ) override;
-	virtual bool CanStartHltvReplay() override;
-	virtual void ResetReplayRequestTime() override;
+	bool StartHltvReplay( const HltvReplayParams_t &params );
+	bool CanStartHltvReplay();
+	void ResetReplayRequestTime();
 	void StepHltvReplayStatus( int nServerTick );
-	virtual int GetHltvReplayDelay() override { return m_nHltvReplayDelay; }
-	virtual const char * GetHltvReplayStatus()const override { return m_HltvReplayStats.AsString(); }
-	virtual void StopHltvReplay() override;
+	int GetHltvReplayDelay() { return m_nHltvReplayDelay; }
+	const char * GetHltvReplayStatus()const { return m_HltvReplayStats.AsString(); }
+	void StopHltvReplay();
 	bool	IsHltvReplay() { return m_nHltvReplayDelay > 0; }
 	//CHLTVServer *GetCurrentHltvReplayServerSource() { return IsHltvReplay() ? m_pHltvReplayServer : NULL; }
-	virtual CBaseClient *GetPropCullClient() override;
-protected:
-	virtual void	PerformDisconnection( const char *pReason );
+	CBaseClient *GetPropCullClient();
+public:
+	void	PerformDisconnection( const char *pReason );
 
-private:
+public:
 	bool	IsEngineClientCommand( const CCommand &args ) const;
 	int		FillSoundsMessage( ks::net::CSVCMsg_Sounds &msg, int nMaxSounds );
 			
@@ -216,7 +216,7 @@ public:
 	int					m_nHltvLastSendTick;	// last send tick, don't send ticks twice
 	float				m_flHltvLastReplayRequestTime; // tick at which the last time replay was requested
 
-	std::vector< std::unique_ptr< INetMessage > > m_HltvQueuedMessages; // it'd probably be more optimal, memory-wise, to make a linked list, but a vector is more readable and debuggable
+	std::vector< std::unique_ptr< INetMessage, INetMessageDeleter > > m_HltvQueuedMessages; // it'd probably be more optimal, memory-wise, to make a linked list, but a vector is more readable and debuggable
 
 
 	HltvReplayStats_t	m_HltvReplayStats;

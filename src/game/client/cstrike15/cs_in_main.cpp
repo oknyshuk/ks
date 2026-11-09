@@ -4,8 +4,6 @@
 // Purpose: TF2 specific input handling
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"

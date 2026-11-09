@@ -4,9 +4,7 @@
 
 // Purpose: Point entity used to create templates out of other entities or groups of entities
 
-import ks.math;
 #include "reflect_annotations.h"
-import std;
 #include "vscript/ivscript.h"
 #include "string_t.h"
 #include "baseentity.h"
@@ -38,8 +36,8 @@ class CPointTemplate : public CLogicalEntity
 public:
 	DECLARE_DATADESC();
 
-	virtual void	Spawn( void );
-	virtual void	Precache();
+	void	Spawn_Impl( void );
+	void	Precache_Impl();
 
 	// Template initialization
 	void			StartBuildingTemplates( void );

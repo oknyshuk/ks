@@ -3,8 +3,6 @@
 
 // Purpose: Events that are available to all NPCs.
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"

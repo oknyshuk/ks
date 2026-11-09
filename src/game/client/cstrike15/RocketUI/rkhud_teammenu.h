@@ -12,7 +12,7 @@ class RocketTeamMenuEventListener : public CGameEventListener
 public:
     void StartAlwaysListenEvents();
     void StopAlwaysListenEvents();
-    virtual void FireGameEvent( IGameEvent *event );
+    void FireGameEvent( IGameEvent *event );
 };
 
 class RocketTeamMenuDocument

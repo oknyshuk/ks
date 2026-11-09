@@ -20,7 +20,7 @@ public:
 	DECLARE_CLASS( CBaseCSGrenadeProjectile, CBaseGrenade );
 	DECLARE_NETWORKCLASS(); 
 
-	virtual void Spawn();
+	KS_VIRTUAL void Spawn_Impl();
 	//virtual bool	IsGrenadeProjectile( void ) { return true; };
 
 public:
@@ -47,13 +47,13 @@ public:
 	DECLARE_DATADESC();
 
 	CBaseCSGrenadeProjectile() : m_pWeaponInfo(nullptr) {}
-	virtual void PostConstructor( const char *className );
+	KS_VIRTUAL void PostConstructor_Impl( const char *className );
 	virtual ~CBaseCSGrenadeProjectile();
 
-	virtual void Precache();
+	KS_VIRTUAL void Precache_Impl();
 
-	virtual int				UpdateTransmitState();
-	virtual int				ShouldTransmit( const CCheckTransmitInfo *pInfo );
+	KS_VIRTUAL int				UpdateTransmitState_Impl();
+	KS_VIRTUAL int				ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo );
 
 	//Constants for all CS Grenades
 	static inline float GetGrenadeGravity() { return 0.4f; }
@@ -66,7 +66,7 @@ public:
 	virtual void OnBounced( void ) {}
 	
 	virtual float GetShakeAmplitude( void ) { return 0.0f; }
-	virtual void Splash();
+	KS_VIRTUAL void Splash_Impl();
 
 	virtual GrenadeType_t GetGrenadeType( void ) { return GRENADE_TYPE_EXPLOSIVE; }
 
@@ -83,7 +83,7 @@ public:
 
 	void DetonateOnNextThink( void ) { m_flDetonateTime = 0.0f; }
 
-	virtual unsigned int PhysicsSolidMaskForEntity( void ) const;
+	KS_VIRTUAL unsigned int PhysicsSolidMaskForEntity_Impl( void ) const;
 
 protected:
 
@@ -93,7 +93,8 @@ protected:
 private:	
 	
 	//Custom collision to allow for constant elasticity on hit surfaces
-	virtual void ResolveFlyCollisionCustom( trace_t &trace, Vector &vecVelocity );
+	public: KS_VIRTUAL void ResolveFlyCollisionCustom_Impl( trace_t &trace, Vector &vecVelocity );
+	private:
 	
 	float m_flDetonateTime;
 

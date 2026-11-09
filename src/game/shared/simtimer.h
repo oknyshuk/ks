@@ -8,8 +8,6 @@
 #include "edict.h"
 extern CGlobalVars *gpGlobals;
 #endif
-import std;
-import ks.vstdlib;
 #include "sharedInterface.h"
 
 inline constexpr auto ST_EPS = 0.001;

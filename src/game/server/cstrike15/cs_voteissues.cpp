@@ -3,8 +3,6 @@
 
 // Purpose: CS-specific things to vote on
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -1544,7 +1542,7 @@ void CSurrender::ExecuteCommand( void )
 		if ( CSGameRules()->m_iRoundWinStatus != WINNER_NONE || CSGameRules()->GetGamePhase() == GAMEPHASE_HALFTIME )
 		{
 			// if the vote succeeds at the round end, just cancel it because we don't handle this in the gamerules round logic
-			CBasePlayer *pVoteCaller = dynamic_cast< CBasePlayer* >( pVoteHolder );
+			CBasePlayer *pVoteCaller = entity_cast<CBasePlayer>( pVoteHolder );
 			if ( pVoteCaller )
 				m_pVoteController->SendVoteFailedMessage( VOTE_FAILED_CANT_ROUND_END, pVoteCaller, 0 );
 		}
@@ -1685,160 +1683,5 @@ void CSurrender::ListIssueDetails( CBasePlayer *pForWhom )
 	if ( !sv_vote_issue_surrender_allowed.GetBool() )
 		return;
 
-	ListStandardNoArgCommand( pForWhom, GetTypeString() );
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CQueuedMatchmakingRematch::ExecuteCommand( void )
-{
-	if ( CSGameRules() )
-	{
-		CSGameRules()->m_eQueuedMatchmakingRematchState = CSGameRules()->k_EQueuedMatchmakingRematchState_VoteToRematchSucceeded;
-	}
-}
-
-void CQueuedMatchmakingRematch::OnVoteFailed()
-{
-	if ( CSGameRules() )
-	{
-		CSGameRules()->m_eQueuedMatchmakingRematchState = CSGameRules()->k_EQueuedMatchmakingRematchState_VoteToRematchFailed;
-	}
-}
-
-void CQueuedMatchmakingRematch::OnVoteStarted()
-{
-	if ( CSGameRules() )
-	{
-		CSGameRules()->m_eQueuedMatchmakingRematchState = CSGameRules()->k_EQueuedMatchmakingRematchState_VoteToRematchInProgress;
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-bool CQueuedMatchmakingRematch::IsEnabled( void )
-{
-	return IsTimeForRematchVote();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-bool CQueuedMatchmakingRematch::CanCallVote( int iEntIndex, const char *pszTypeString, const char *pszDetails, vote_create_failed_t &nFailCode, int &nTime )
-{
-	if ( !CBaseCSIssue::CanCallVote( iEntIndex, pszTypeString, pszDetails, nFailCode, nTime ) )
-		return false;
-
-	if ( !IsTimeForRematchVote() )
-		return false;
-
-	return true;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-const char *CQueuedMatchmakingRematch::GetDisplayString( void )
-{
-	return "#SFUI_vote_rematch";
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-const char *CQueuedMatchmakingRematch::GetVotePassedString( void )
-{
-	return "#SFUI_vote_passed_rematch";
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CQueuedMatchmakingRematch::ListIssueDetails( CBasePlayer *pForWhom )
-{
-	if ( !IsTimeForRematchVote() )
-		return;
-
-	ListStandardNoArgCommand( pForWhom, GetTypeString() );
-}
-
-bool CQueuedMatchmakingRematch::IsTimeForRematchVote()
-{
-	return CSGameRules() && CSGameRules()->IsQueuedMatchmaking() &&
-		( CSGameRules()->GetGamePhase() == GAMEPHASE_MATCH_ENDED ) &&
-		( CSGameRules()->m_eQueuedMatchmakingRematchState == CSGameRules()->k_EQueuedMatchmakingRematchState_VoteStarting );
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CQueuedMatchmakingContinue::ExecuteCommand( void )
-{
-	// By design: successful vote to continue does not disrupt the game
-}
-
-void CQueuedMatchmakingContinue::OnVoteFailed()
-{
-	Msg( "Aborting match...\n" );
-}
-
-void CQueuedMatchmakingContinue::OnVoteStarted()
-{
-	CBaseCSIssue::OnVoteStarted();
-
-	if ( CSGameRules() )
-		CSGameRules()->m_bNeedToAskPlayersForContinueVote = false;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-bool CQueuedMatchmakingContinue::IsEnabled( void )
-{
-	return ( CSGameRules() && CSGameRules()->IsQueuedMatchmaking() );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-bool CQueuedMatchmakingContinue::CanCallVote( int iEntIndex, const char *pszTypeString, const char *pszDetails, vote_create_failed_t &nFailCode, int &nTime )
-{
-	if ( !CBaseCSIssue::CanCallVote( iEntIndex, pszTypeString, pszDetails, nFailCode, nTime ) )
-		return false;
-
-	if ( !IsEnabled() )
-		return false;
-
-	if ( iEntIndex != 99 ) // only game rules on the server can call the vote
-		return false;
-
-	return true;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-const char *CQueuedMatchmakingContinue::GetDisplayString( void )
-{
-	return "#SFUI_vote_continue";
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-const char *CQueuedMatchmakingContinue::GetVotePassedString( void )
-{
-	return "#SFUI_vote_passed_continue";
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CQueuedMatchmakingContinue::ListIssueDetails( CBasePlayer *pForWhom )
-{
 	ListStandardNoArgCommand( pForWhom, GetTypeString() );
 }

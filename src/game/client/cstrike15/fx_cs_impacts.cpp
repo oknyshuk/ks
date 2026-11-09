@@ -4,8 +4,6 @@
 // Purpose: Game-specific impact effect hooks
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"

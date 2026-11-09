@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -24,7 +21,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -399,15 +395,15 @@ void CDecoyProjectile::GunfireThink( void )
 	}
 }
 
-void CDecoyProjectile::Spawn( void )
+void CDecoyProjectile::Spawn_Impl( void )
 {
 	SetModel( GRENADE_MODEL );
- 	BaseClass::Spawn();
+ 	BaseClass::Spawn_Impl();
 	
 	SetBodygroupPreset( "thrown" );
 }
 
-void CDecoyProjectile::Precache( void )
+void CDecoyProjectile::Precache_Impl( void )
 {
 	PrecacheModel( GRENADE_MODEL );
 
@@ -416,7 +412,7 @@ void CDecoyProjectile::Precache( void )
 
 	PrecacheParticleSystem( "weapon_decoy_ground_effect_shot" );
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 //TODO: Let physics handle the sound!

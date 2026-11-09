@@ -53,75 +53,109 @@ class CBaseServer  : public IServer
 friend class CMaster;
 
 public:
-	CBaseServer();
-	virtual ~CBaseServer();
+	enum class server_kind_t : unsigned char { game, hltv };
+
+	explicit CBaseServer( server_kind_t kind );
+	~CBaseServer();
+
+	server_kind_t m_server_kind;	// the class this object really is (see facade/baseserver.inl)
 
 	bool RestartOnLevelChange() { return m_bRestartOnLevelChange; }
 
 public: // IServer implementation
 
-	virtual int		GetNumClients( void ) const; // returns current number of clients
-	virtual int		GetNumProxies( void ) const; // returns number of attached HLTV proxies
-	virtual int		GetNumFakeClients() const; // returns number of fake clients/bots
-	virtual int		GetMaxClients( void ) const; // returns current client limit
-	virtual int		GetUDPPort( void ) const { return NET_GetUDPPort( m_Socket );	}
-	virtual IClient	*GetClient( int index ) { return m_Clients[index]; } // returns interface to client 
-	virtual int		GetClientCount() const { return std::ssize( m_Clients ); } // for iteration;
-	virtual float	GetTime( void ) const;
-	virtual int		GetTick( void ) const { return m_nTickCount; }
-	virtual float	GetTickInterval( void ) const { return m_flTickInterval; }
-	virtual float	GetTimescale( void ) const { return m_flTimescale; }
-	virtual const char *GetName( void ) const;
-	virtual const char *GetMapName( void ) const { return m_szMapname; }
-	virtual const char *GetBaseMapName( void ) const { return m_szBaseMapname; }
-	virtual const char *GetMapGroupName( void ) const { return m_szMapGroupName; }
-	virtual int		GetSpawnCount( void ) const { return m_nSpawnCount; }
-	virtual int		GetNumClasses( void ) const { return serverclasses; }
-	virtual int		GetClassBits( void ) const { return serverclassbits; }
-	virtual void	GetNetStats( float &avgIn, float &avgOut );
-	virtual int		GetNumPlayers();
-	virtual	bool	GetPlayerInfo( int nClientIndex, player_info_t *pinfo );
-	virtual float	GetCPUUsage( void ) { return m_fCPUPercent; }
+	int		GetNumClients( void ) const; // returns current number of clients
+	int		GetNumProxies( void ) const; // returns number of attached HLTV proxies
+	int		GetNumFakeClients() const; // returns number of fake clients/bots
+	int		GetMaxClients( void ) const; // returns current client limit
+	int		GetUDPPort( void ) const { return NET_GetUDPPort( m_Socket );	}
+	IClient	*GetClient( int index ) { return m_Clients[index]; } // returns interface to client 
+	int		GetClientCount() const { return std::ssize( m_Clients ); } // for iteration;
+	float	GetTime( void ) const;
+	int		GetTick( void ) const { return m_nTickCount; }
+	float	GetTickInterval( void ) const { return m_flTickInterval; }
+	float	GetTimescale( void ) const { return m_flTimescale; }
+	const char * GetName( void ) const;
+
+	const char *GetNameBase( void ) const;
+	const char *GetMapName( void ) const { return m_szMapname; }
+	const char *GetBaseMapName( void ) const { return m_szBaseMapname; }
+	const char *GetMapGroupName( void ) const { return m_szMapGroupName; }
+	int		GetSpawnCount( void ) const { return m_nSpawnCount; }
+	int		GetNumClasses( void ) const { return serverclasses; }
+	int		GetClassBits( void ) const { return serverclassbits; }
+	void GetNetStats( float &avgIn, float &avgOut );
+
+	void	GetNetStatsBase( float &avgIn, float &avgOut );
+	int		GetNumPlayers();
+	bool	GetPlayerInfo( int nClientIndex, player_info_t *pinfo );
+	float	GetCPUUsage( void ) { return m_fCPUPercent; }
 		
-	virtual bool	IsActive( void ) const { return m_State >= ss_active; }	
-	virtual bool	IsLoading( void ) const { return m_State == ss_loading; }
-	virtual bool	IsDedicated( void ) const { return m_bIsDedicated; }
-	virtual bool	IsPaused( void ) const { return m_State == ss_paused; }
-	virtual bool	IsMultiplayer( void ) const { return m_nMaxclients > 1; }
-	virtual bool	IsPausable( void ) const { return false; }
-	virtual bool	IsHLTV( void ) const { return false; }
-	virtual bool	IsReplay( void ) const { return false; }
+	bool	IsActive( void ) const { return m_State >= ss_active; }	
+	bool	IsLoading( void ) const { return m_State == ss_loading; }
+	bool	IsDedicated( void ) const { return m_bIsDedicated; }
+	bool	IsPaused( void ) const { return m_State == ss_paused; }
+	bool IsMultiplayer( void ) const;
 
-	virtual void	BroadcastMessage( INetMessage &msg, bool onlyActive = false, bool reliable = false );
-	virtual void	BroadcastMessage( INetMessage &msg, IRecipientFilter &filter );
-	[[gnu::format(printf, 2, 3)]] virtual void	BroadcastPrintf ( const char *fmt, ...);
+	bool	IsMultiplayerBase( void ) const { return m_nMaxclients > 1; }
+	bool IsPausable( void ) const;
 
-	virtual const char * GetPassword() const;
+	bool	IsPausableBase( void ) const { return false; }
+	bool IsHLTV( void ) const;
 
-	virtual void	SetMaxClients( int number );
-	virtual void	SetPaused(bool paused);
-	virtual void	SetTimescale( float flTimescale );
-	virtual void	SetPassword(const char *password);
+	bool	IsHLTVBase( void ) const { return false; }
+	bool	IsReplay( void ) const { return false; }
 
-	virtual void	DisconnectClient(IClient *client, const char *reason );
+	void	BroadcastMessage( INetMessage &msg, bool onlyActive = false, bool reliable = false );
+	void	BroadcastMessage( INetMessage &msg, IRecipientFilter &filter );
+	[[gnu::format(printf, 2, 3)]] void	BroadcastPrintf ( const char *fmt, ...);
+	const char * GetPassword(  ) const;
+
+
+	const char * GetPasswordBase() const;
+	void SetMaxClients( int number );
+
+
+	void	SetMaxClientsBase( int number );
+	void	SetPaused(bool paused);
+	void	SetTimescale( float flTimescale );
+	void	SetPassword(const char *password);
+
+	void	DisconnectClient(IClient *client, const char *reason );
 	
-	virtual void 	WriteDeltaEntities( CBaseClient *client, CClientFrame *to, CClientFrame *from, CSVCMsg_PacketEntities_t &msg );
-	virtual void	WriteTempEntities( CBaseClient *client, CFrameSnapshot *to, CFrameSnapshot *from, CSVCMsg_TempEntities_t &msg, int ev_max );
+	void 	WriteDeltaEntities( CBaseClient *client, CClientFrame *to, CClientFrame *from, CSVCMsg_PacketEntities_t &msg );
+	void	WriteTempEntities( CBaseClient *client, CFrameSnapshot *to, CFrameSnapshot *from, CSVCMsg_TempEntities_t &msg, int ev_max );
 	
 public: // IConnectionlessPacketHandler implementation
 
-	virtual bool	ProcessConnectionlessPacket( netpacket_t * packet );
+	bool	ProcessConnectionlessPacket( netpacket_t * packet );
+	void Init( bool isDedicated );
 
-	virtual void	Init( bool isDedicated );
-	virtual void	Clear( void );
-	virtual void	Shutdown( void );
-	virtual CBaseClient *CreateFakeClient(const char *name);
-	virtual void 	RemoveClientFromGame( CBaseClient *client ) {};
-	virtual void	SendClientMessages ( bool bSendSnapshots );
-	virtual void	FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo);
-	virtual void	UserInfoChanged( int nClientIndex );
 
-	virtual bool	GetClassBaseline( ServerClass *pClass, SerializedEntityHandle_t *pHandle);
+	void	InitBase( bool isDedicated );
+	void Clear( void );
+
+	void	ClearBase( void );
+	void Shutdown( void );
+
+	void	ShutdownBase( void );
+	CBaseClient *CreateFakeClient(const char *name);
+	void RemoveClientFromGame( CBaseClient *client );
+
+	void 	RemoveClientFromGameBase( CBaseClient *client ) {};
+	void SendClientMessages( bool bSendSnapshots );
+
+	void	SendClientMessagesBase ( bool bSendSnapshots );
+	void FillServerInfo( ks::net::CSVCMsg_ServerInfo &serverinfo );
+
+	void	FillServerInfoBase(ks::net::CSVCMsg_ServerInfo &serverinfo);
+	void UserInfoChanged( int nClientIndex );
+
+	void	UserInfoChangedBase( int nClientIndex );
+	bool GetClassBaseline( ServerClass *pClass, SerializedEntityHandle_t *pHandle );
+
+
+	bool	GetClassBaselineBase( ServerClass *pClass, SerializedEntityHandle_t *pHandle);
 	void	RunFrame( void );
 	void	ProcessVoice( void );
 	void	InactivateClients( void );
@@ -134,11 +168,11 @@ public: // IConnectionlessPacketHandler implementation
 	INetworkStringTable *GetLightStyleTable( void );
 	INetworkStringTable *GetUserInfoTable( void );
 
-	[[gnu::format(printf, 3, 4)]] virtual void	RejectConnection(const ns_address &adr, const char *fmt, ... );
+	[[gnu::format(printf, 3, 4)]] void	RejectConnection(const ns_address &adr, const char *fmt, ... );
 
 	float	GetFinalTickTime( void ) const;
 
-	virtual bool CheckIPRestrictions( const ns_address &adr, int nAuthProtocol );
+	bool CheckIPRestrictions( const ns_address &adr, int nAuthProtocol );
 
 	void	SetMasterServerRulesDirty();
 
@@ -169,36 +203,46 @@ public: // IConnectionlessPacketHandler implementation
 
 	void ShowTags() const;
 	uint64 GetMatchId()const { return m_nMatchId; }
-protected:
+public:
+	IClient * ConnectClient( const ns_address &adr, int protocol, int challenge, int authProtocol, const char *name, const char *password, const char *hashedCDkey, int cdKeyLen, const SplitPlayerConnects_t &splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform, const byte *pbEncryptionKey, int nEncryptionKeyIndex );
 
-	virtual IClient *ConnectClient ( const ns_address &adr, int protocol, int challenge, int authProtocol, 
+
+	IClient *ConnectClientBase ( const ns_address &adr, int protocol, int challenge, int authProtocol, 
 					    const char *name, const char *password, const char *hashedCDkey, int cdKeyLen,
 						const SplitPlayerConnects_t &splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
 						const byte *pbEncryptionKey, int nEncryptionKeyIndex );
+	bool GetRedirectAddressForConnectClient( const ns_address &adr, const SplitPlayerConnects_t &splitScreenClients, ns_address *pNetAdrRedirect );
+
 	
-	virtual bool GetRedirectAddressForConnectClient( const ns_address &adr, const SplitPlayerConnects_t &splitScreenClients, ns_address *pNetAdrRedirect ) { return false; }
+	bool GetRedirectAddressForConnectClientBase( const ns_address &adr, const SplitPlayerConnects_t &splitScreenClients, ns_address *pNetAdrRedirect ) { return false; }
 	
 	CBaseClient *GetFreeClient( const ns_address &adr );
+	CBaseClient * CreateNewClient( int slot );
 
-	virtual CBaseClient *CreateNewClient( int slot ) { return nullptr; }; // must be derived
+
+	CBaseClient *CreateNewClientBase( int slot ) { return nullptr; };
+	bool FinishCertificateCheck( const ns_address &adr, int nAuthProtocol, const char *szRawCertificate );
+ // must be derived
 
 	
-	virtual bool	FinishCertificateCheck( const ns_address &adr, int nAuthProtocol, const char *szRawCertificate ) { return true; };
+	bool	FinishCertificateCheckBase( const ns_address &adr, int nAuthProtocol, const char *szRawCertificate ) { return true; };
 	
-	virtual int		GetChallengeNr ( const ns_address &adr );
-	virtual int		GetChallengeType ( const ns_address &adr );
+	int		GetChallengeNr ( const ns_address &adr );
+	int GetChallengeType( const ns_address &adr );
 
-	virtual bool	CheckProtocol( const ns_address &adr, int nProtocol );
-	virtual bool	CheckChallengeNr( const ns_address &adr, int nChallengeValue );
-	virtual bool	CheckChallengeType( CBaseClient *client, int nNewUserID, const ns_address &adr, int nAuthProtocol, const char *pchLogonCookie, int cbCookie );
-	virtual bool	CheckPassword( const ns_address &adr, const char *password, const char *name );
+	int		GetChallengeTypeBase ( const ns_address &adr );
 
-	virtual void	ReplyChallenge( const ns_address &adr, bf_read &msg );
-	virtual void	ReplyServerChallenge( const ns_address &adr);
-	virtual void	ReplyReservationRequest( const ns_address &adr, bf_read &msg );
-	virtual void	ReplyReservationCheckRequest( const ns_address &adr, bf_read &msg );
+	bool	CheckProtocol( const ns_address &adr, int nProtocol );
+	bool	CheckChallengeNr( const ns_address &adr, int nChallengeValue );
+	bool	CheckChallengeType( CBaseClient *client, int nNewUserID, const ns_address &adr, int nAuthProtocol, const char *pchLogonCookie, int cbCookie );
+	bool	CheckPassword( const ns_address &adr, const char *password, const char *name );
 
-	virtual void	CalculateCPUUsage();
+	void	ReplyChallenge( const ns_address &adr, bf_read &msg );
+	void	ReplyServerChallenge( const ns_address &adr);
+	void	ReplyReservationRequest( const ns_address &adr, bf_read &msg );
+	void	ReplyReservationCheckRequest( const ns_address &adr, bf_read &msg );
+
+	void	CalculateCPUUsage();
 
 	void SetRestartOnLevelChange(bool state)  { m_bRestartOnLevelChange = state; }
 
@@ -260,7 +304,7 @@ public:
 	void	SendReservationStatus( EReservationStatus_t kEReservationStatus );
 	void	ClearReservationStatus();
 
-private:
+public:
 
 	// Gets the next user ID mod SHRT_MAX and unique (not used by any active clients).
 	int			GetNextUserID();
@@ -270,7 +314,7 @@ private:
 	void		ClearTagStrings();
 	void		AddTagString( std::string &dest, char const *pchString );
 
-protected:
+public:
 	CBaseClient *GetFreeClientInternal( const ns_address &adr );
 
 	int			m_nMaxclients;         // Current max #

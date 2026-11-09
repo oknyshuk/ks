@@ -4,10 +4,9 @@
 
 // Purpose: Definitions that are shared by the game DLL and the client DLL.
 
-import ks.math;
 #include "bittools.h"
 #include "in_buttons.h"
-import std;
+#include "entity_cast.h"
 
 #define TICK_INTERVAL			(gpGlobals->interval_per_tick)
 
@@ -687,6 +686,26 @@ enum
 };
 
 class CBaseEntity;
+struct inputdata_t;
+
+// Entity input handler. typedescription_t keeps it in an inputfunc_storage_t, which datamap.h
+// leaves untyped so that it names no game class.
+typedef void (CBaseEntity::*inputfunc_t)(inputdata_t &data);
+
+inline inputfunc_storage_t ToInputStorage( inputfunc_t pFunction )
+{
+	static_assert( sizeof( inputfunc_t ) == sizeof( inputfunc_storage_t ) );
+	inputfunc_storage_t storage = {};
+	std::memcpy( &storage, &pFunction, sizeof( pFunction ) );
+	return storage;
+}
+
+inline inputfunc_t FromInputStorage( const inputfunc_storage_t &storage )
+{
+	inputfunc_t pFunction;
+	std::memcpy( &pFunction, &storage, sizeof( pFunction ) );
+	return pFunction;
+}
 
 //-----------------------------------------------------------------------------
 // Bullet firing information
@@ -818,7 +837,6 @@ struct ModelScale
 #include "soundflags.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 
-struct CSoundParameters;
 //-----------------------------------------------------------------------------
 // Purpose: Aggregates and sets default parameters for EmitSound function calls
 //-----------------------------------------------------------------------------

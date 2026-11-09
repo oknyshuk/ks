@@ -14,7 +14,6 @@
 
 class CBaseHudChat;
 class CBaseHudWeaponSelection;
-class CViewSetup;
 class C_BaseEntity;
 class C_BasePlayer;
 
@@ -81,7 +80,7 @@ public:
 	virtual CNoopAnimController *GetViewportAnimationController()
 		{ return m_pViewport->GetAnimationController(); }
 	
-	virtual void FireGameEvent( IGameEvent *event );
+	void FireGameEvent( IGameEvent *event );
 
 	virtual bool CanRecordDemo( char *errorMsg, int length ) const { return true; }
 

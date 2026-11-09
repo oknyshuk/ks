@@ -71,4 +71,3 @@ public:
 };
 
 inline constexpr const char *RENDER_TO_RT_HELPER_INTERFACE_VERSION = "RenderToRTHelper001";
-extern IRenderToRTHelper *g_pRenderToRTHelper;

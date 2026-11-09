@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
 // dgoodenough - malloc.h doesn't exist on PS3
 // PS3_BUILDFIX
+import std;
+import ks.core;
+import ks.math;
 import ks.tier1;
 #include "ObjectList.h"
 

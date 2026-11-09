@@ -762,6 +762,7 @@ void CDemoRecorder::StartupDemoFile( void )
 }
 
 CDemoRecorder::CDemoRecorder()
+	: IDemoRecorder( recorder_kind_t::demo )
 {
 }
 
@@ -2059,6 +2060,7 @@ bool CDemoPlayer::IsPlayingBack( void )const
 }
 
 CDemoPlayer::CDemoPlayer()
+	: IDemoPlayer( player_kind_t::demo )
 {
 	m_flAutoResumeTime = 0.0f;
 	m_flPlaybackRateModifier = 1.0f;
@@ -2905,7 +2907,7 @@ void CDemoPlayer::ScanForImportantTicks()
 						bf_read data( msg->string_data->data(), msg->string_data->size() );
 						table->ParseUpdate( data, msg->num_changed_entries );
 					}
-					delete netmsg;
+					netmsg->DeleteThis();
 				}
 			}
 		}
@@ -3926,7 +3928,7 @@ static void demo_goto( const CCommand &args )
 
 		if ( demoplayer && demoplayer->IsPlayingBack() )
 		{
-			IDemoStream *pDemoStream = demoplayer->GetDemoStream();
+			CDemoFile *pDemoStream = demoplayer->GetDemoStream();
 			float flTotalTime = TICKS_TO_TIME( pDemoStream->GetTotalTicks() ) / 60.0f;
 
 			Msg( "  Currently playing %d of %d ticks. Minutes:%.2f File:%s\n",

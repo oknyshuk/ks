@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
 #include "soundflags.h"
 #include "ai_responsesystem.h"
-import std;
 #include "ai_speechconcept.h"
 #include "util.h"
 #include "baseflex.h"
@@ -295,11 +293,14 @@ public:
 
 protected:
 	int 			PlaySentence( const char *pszSentence, float delay, float volume = VOL_NORM, soundlevel_t soundlevel = SNDLVL_TALKING, CBaseEntity *pListener = nullptr );
-	virtual void	ModifyOrAppendCriteria( AI_CriteriaSet& set );
+	public: void	ModifyOrAppendCriteria_Impl( AI_CriteriaSet& set );
+	protected:
 
-	virtual ResponseRules::IResponseSystem *GetResponseSystem();
+	public: ResponseRules::IResponseSystem *GetResponseSystem_Impl();
+	protected:
 	// Override of base entity response input handler
-	virtual void	DispatchResponse( const char *conceptName );
+	public: void	DispatchResponse_Impl( const char *conceptName );
+	protected:
 };
 
 //-----------------------------------------------------------------------------
@@ -347,9 +348,9 @@ inline int CAI_ExpresserHost<BASE_NPC>::PlaySentence( const char *pszSentence, f
 extern void CAI_ExpresserHost_NPC_DoModifyOrAppendCriteria( CAI_BaseNPC *pSpeaker, AI_CriteriaSet& criteriaSet );
 
 template <class BASE_NPC>
-inline void CAI_ExpresserHost<BASE_NPC>::ModifyOrAppendCriteria( AI_CriteriaSet& criteriaSet )
+inline void CAI_ExpresserHost<BASE_NPC>::ModifyOrAppendCriteria_Impl( AI_CriteriaSet& criteriaSet )
 {
-	BaseClass::ModifyOrAppendCriteria( criteriaSet );
+	BaseClass::ModifyOrAppendCriteria_Impl( criteriaSet );
 
 	if ( this->MyNPCPointer() )
 	{
@@ -359,10 +360,10 @@ inline void CAI_ExpresserHost<BASE_NPC>::ModifyOrAppendCriteria( AI_CriteriaSet&
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
+extern ResponseRules::IResponseSystem *g_pResponseSystem;
 template <class BASE_NPC>
-inline ResponseRules::IResponseSystem *CAI_ExpresserHost<BASE_NPC>::GetResponseSystem()
+inline ResponseRules::IResponseSystem *CAI_ExpresserHost<BASE_NPC>::GetResponseSystem_Impl()
 {
-	extern ResponseRules::IResponseSystem *g_pResponseSystem;
 	// Expressive NPC's use the general response system
 	return g_pResponseSystem;
 }
@@ -412,7 +413,7 @@ inline float CAI_ExpresserHost<BASE_NPC>::GetResponseDuration( AI_Response *resp
 // Override of base entity response input handler
 //-----------------------------------------------------------------------------
 template <class BASE_NPC>
-inline void CAI_ExpresserHost<BASE_NPC>::DispatchResponse( const char *conceptName )
+inline void CAI_ExpresserHost<BASE_NPC>::DispatchResponse_Impl( const char *conceptName )
 	{
 		Speak( (AIConcept_t)conceptName );
 	}

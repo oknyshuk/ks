@@ -6,51 +6,6 @@
 import std;
 import ks.tier1;
 
-
-
-
-
-
-
-
-#ifndef DEDICATED
-#include "engineui.h"
-#include "localize/ilocalize.h"
-#endif
-#include "enginebugreporter.h"
-#include "bugreporter/bugreporter.h"
-
-static ConVar bugreporter_username( "bugreporter_username", "", FCVAR_ARCHIVE, "Username to use for bugreporter" );
-
-// Evil hack shim to expose convar to bugreporter_filequeue
-class CBugReporterDefaultUsername : public IBugReporterDefaultUsername
-{
-public:
-	virtual char const	*GetDefaultUsername() const
-	{
-		return bugreporter_username.GetString();
-	}
-};
-
-static CBugReporterDefaultUsername g_ExposeBugreporterUsername;
-
-class CStubBugReporter : public IEngineBugReporter
-{
-public:
-	virtual void		Init( void ) {}
-	virtual void		Shutdown( void ) {}
-
-	virtual bool		ShouldPause() const { return false; }
-
-	virtual bool		IsVisible() const { return false; }
-
-	virtual int			GetBugSubmissionCount() const { return 0; }
-	virtual void		ClearBugSubmissionCount() {}
-};
-
-static CStubBugReporter g_BugReporter;
-IEngineBugReporter *bugreporter = &g_BugReporter;
-
 unsigned long GetRam()
 {
 	unsigned long Ram = 0;

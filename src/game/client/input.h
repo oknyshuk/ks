@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
 #include "iinput.h"
-import std;
 #include "kbutton.h"
 #include "ehandle.h"
 #include "inputsystem/AnalogCode.h"
@@ -12,7 +10,6 @@ import std;
 #include "usercmd.h"
 #include "inputsystem/iinputstacksystem.h"
 
-typedef uint32 CRC32_t;
 
 // TrackIR
 extern QAngle	g_angleCenter;
@@ -32,7 +29,6 @@ public:
 	CKeyboardKey		*next;
 };
 
-class ConVar;
 
 class CVerifiedUserCmd
 {

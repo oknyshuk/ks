@@ -17,7 +17,7 @@ CRConServer & RCONServer()
 	return g_RCONServer;
 }
 
-static void RconPasswordChanged_f( IConVar *pConVar, const char *pOldString, float flOldValue )
+static void RconPasswordChanged_f( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	ConVarRef var( pConVar );
 	const char *pPassword = var.GetString(); 
@@ -117,7 +117,7 @@ bool CRConServer::CreateSocket()
 
 
 //-----------------------------------------------------------------------------
-// Inherited from ISocketCreatorListener
+// Socket listener methods (bound by CSocketCreator)
 //-----------------------------------------------------------------------------
 bool CRConServer::ShouldAcceptSocket( SocketHandle_t hSocket, const netadr_t & netAdr )
 {

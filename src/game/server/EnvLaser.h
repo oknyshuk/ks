@@ -15,9 +15,10 @@ class CEnvLaser : public CBeam
 {
 	DECLARE_CLASS( CEnvLaser, CBeam );
 public:
-	void	Spawn( void );
-	void	Precache( void );
-	bool	KeyValue( const char *szKeyName, const char *szValue );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
 
 	void	TurnOn( void );
 	void	TurnOff( void );

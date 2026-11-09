@@ -5,13 +5,13 @@ inline constexpr const char *BLACKBOX_INTERFACE_VERSION = "BlackBoxVersion001";
 class IBlackBox 
 {
 public:
-	virtual void Record(int type, const char *fmt) = 0;
-	virtual void SetLimit(int type, unsigned int count) = 0;
-	virtual const char *Get(int type, unsigned int index) = 0;
-	virtual int Count(int type) = 0;
-	virtual void Flush(int type) = 0;
+	void Record(int type, const char *fmt);
+	void SetLimit(int type, unsigned int count);
+	const char *Get(int type, unsigned int index);
+	int Count(int type);
+	void Flush(int type);
 
-	virtual const char *GetTypeName(int type) = 0;
-	virtual int GetTypeCount() = 0;
+	const char *GetTypeName(int type);
+	int GetTypeCount();
 };
 

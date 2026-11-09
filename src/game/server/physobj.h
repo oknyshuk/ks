@@ -39,17 +39,17 @@ DECLARE_CLASS( CPhysBox, CBreakable );
 public:
 	DECLARE_SERVERCLASS();
 
-	void	Spawn ( void );
-	bool	CreateVPhysics();
+	void	Spawn_Impl ( void );
+	bool	CreateVPhysics_Impl();
 	void	Move( const Vector &force );
-	virtual int ObjectCaps();
-	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	int ObjectCaps_Impl();
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	
-	virtual int DrawDebugTextOverlays(void);
+	int DrawDebugTextOverlays_Impl(void);
 
-	virtual void VPhysicsUpdate( IPhysicsObject *pPhysics );
-	virtual void VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
-	int		OnTakeDamage( const CTakeDamageInfo &info );
+	void VPhysicsUpdate_Impl( IPhysicsObject *pPhysics );
+	void VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent );
+	int		OnTakeDamage_Impl( const CTakeDamageInfo &info );
 	void		 EnableMotion( void );
 
 	bool CanBePickedUpByPhyscannon();
@@ -115,13 +115,13 @@ class CPhysExplosion : public CPointEntity
 public:
 	DECLARE_CLASS( CPhysExplosion, CPointEntity );
 
-	void	Spawn ( void );
+	void	Spawn_Impl ( void );
 	void	Explode( CBaseEntity *pActivator, CBaseEntity *pCaller );
 	void	ExplodeAndRemove( CBaseEntity *pActivator, CBaseEntity *pCaller );
 
 	CBaseEntity *FindEntity( CBaseEntity *pEntity, CBaseEntity *pActivator, CBaseEntity *pCaller );
 
-	int DrawDebugTextOverlays(void);
+	int DrawDebugTextOverlays_Impl(void);
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "Explode", .type = FIELD_VOID } ]] void InputExplode( inputdata_t &inputdata );
@@ -149,9 +149,9 @@ class CPhysImpact : public CPointEntity
 public:
 	DECLARE_CLASS( CPhysImpact, CPointEntity );
 
-	void		Spawn( void );
+	void		Spawn_Impl( void );
 	//void		Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	void		Activate( void );
+	void		Activate_Impl( void );
 
 	[[= ks::reflect::Input{ .name = "Impact", .type = FIELD_VOID } ]] void		InputImpact( inputdata_t &inputdata );
 
@@ -189,10 +189,10 @@ public:
 	CPhysMagnet();
 	~CPhysMagnet();
 
-	void	Spawn( void );
-	void	Precache( void );
-	void	Touch( CBaseEntity *pOther );
-	void	VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
+	void	Touch_Impl( CBaseEntity *pOther );
+	void	VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent );
 	void	DoMagnetSuck( CBaseEntity *pOther );
 	void	SetConstraintGroup( IPhysicsConstraintGroup *pGroup );
 

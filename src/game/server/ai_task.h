@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.core;
 
 // Purpose: Defines the tasks for default AI.
 
-class CStringRegistry;
 
 // ----------------------------------------------------------------------
 // Failure messages

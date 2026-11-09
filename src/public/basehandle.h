@@ -20,8 +20,6 @@ enum INVALID_EHANDLE_tag
 
 class CBaseHandle
 {
-friend class CBaseEntityList;
-
 public:
 
 	CBaseHandle();
@@ -41,7 +39,7 @@ public:
 	void Init( int iEntry, int iSerialNumber );
 	void Term();
 
-	// Even if this returns true, Get() still can return return a non-null value.
+	// Even if this returns true, dereferencing the handle still can return return a non-null value.
 	// This just tells if the handle has been initted with any values.
 	bool IsValid() const;
 
@@ -51,8 +49,6 @@ public:
 	int ToInt() const;
 	bool operator !=( const CBaseHandle &other ) const;
 	bool operator ==( const CBaseHandle &other ) const;
-	bool operator ==( const IHandleEntity* pEnt ) const;
-	bool operator !=( const IHandleEntity* pEnt ) const;
 	bool operator <( const CBaseHandle &other ) const;
 	bool operator <( const IHandleEntity* pEnt ) const;
 
@@ -60,9 +56,7 @@ public:
 	const CBaseHandle& operator=( const IHandleEntity *pEntity );
 	const CBaseHandle& Set( const IHandleEntity *pEntity );
 
-	// Use this to dereference the handle.
-	// Note: this is implemented in game code (ehandle.h)
-	IHandleEntity* Get() const;
+	// Dereferencing needs the side's entity list; see ehandle.h.
 
 
 protected:
@@ -162,16 +156,6 @@ inline bool CBaseHandle::operator !=( const CBaseHandle &other ) const
 inline bool CBaseHandle::operator ==( const CBaseHandle &other ) const
 {
 	return m_Index == other.m_Index;
-}
-
-inline bool CBaseHandle::operator ==( const IHandleEntity* pEnt ) const
-{
-	return Get() == pEnt;
-}
-
-inline bool CBaseHandle::operator !=( const IHandleEntity* pEnt ) const
-{
-	return Get() != pEnt;
 }
 
 inline bool CBaseHandle::operator <( const CBaseHandle &other ) const

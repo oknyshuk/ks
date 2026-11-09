@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -66,7 +63,7 @@ bool CBaseFilter::PassesFilter( CBaseEntity *pCaller, CBaseEntity *pEntity )
 }
 
 
-bool CBaseFilter::PassesDamageFilter(const CTakeDamageInfo &info)
+bool CBaseFilter::PassesDamageFilter_Impl(const CTakeDamageInfo &info)
 {
 	bool baseResult = PassesDamageFilterImpl(info);
 	return (m_bNegated) ? !baseResult : baseResult;
@@ -118,7 +115,8 @@ class CFilterMultiple : public CBaseFilter
 
 	bool PassesFilterImpl( CBaseEntity *pCaller, CBaseEntity *pEntity );
 	bool PassesDamageFilterImpl(const CTakeDamageInfo &info);
-	void Activate(void);
+	public: void Activate_Impl(void);
+	private:
 };
 
 LINK_ENTITY_TO_CLASS(filter_multi, CFilterMultiple);
@@ -130,9 +128,9 @@ IMPLEMENT_REFLECT_DATAMAP( CFilterMultiple )
 //------------------------------------------------------------------------------
 // Purpose : Called after all entities have been loaded
 //------------------------------------------------------------------------------
-void CFilterMultiple::Activate( void )
+void CFilterMultiple::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	
 	// We may reject an entity specified in the array of names, but we want the array of valid filters to be contiguous!
 	int nNextFilter = 0;

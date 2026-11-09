@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 
 #define ROTATION_SPEED				0.6
 inline constexpr auto TRADE_DURATION_MIN = 5;

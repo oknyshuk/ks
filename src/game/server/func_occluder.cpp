@@ -6,8 +6,6 @@
 // designer/worldcraft perspective, but by the time they reach the game, the
 // brush model is gone and this is, in effect, a point entity.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -25,7 +23,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -53,8 +50,8 @@ public:
 
 					CFuncOccluder();
 
-	virtual void	Spawn( void );
-	virtual int		UpdateTransmitState( void );
+	void	Spawn_Impl( void );
+	int		UpdateTransmitState_Impl( void );
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_VOID } ]] void InputActivate( inputdata_t &inputdata );
@@ -89,7 +86,7 @@ CFuncOccluder::CFuncOccluder()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CFuncOccluder::Spawn( void )
+void CFuncOccluder::Spawn_Impl( void )
 {
     Precache( );    
 
@@ -132,7 +129,7 @@ void CFuncOccluder::InputToggle( inputdata_t &inputdata )
 //------------------------------------------------------------------------------
 // We always want to transmit these bad boys
 //------------------------------------------------------------------------------
-int CFuncOccluder::UpdateTransmitState()
+int CFuncOccluder::UpdateTransmitState_Impl()
 {
 	// ALWAYS transmit to all clients.
 	return SetTransmitState( FL_EDICT_ALWAYS );

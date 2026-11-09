@@ -4,8 +4,6 @@
 // Purpose: an entity which turns on and off counting and display of the particle
 // performance metric
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -23,7 +21,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -56,8 +53,8 @@ public:
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 
-	void	Spawn( void );
-	int		UpdateTransmitState( void );
+	void	Spawn_Impl( void );
+	int		UpdateTransmitState_Impl( void );
 
 	// Inputs
 	[[= ks::reflect::Input{ .name = "TurnOnDisplay", .type = FIELD_VOID } ]] void	InputTurnOnDisplay( inputdata_t &inputdata );
@@ -79,7 +76,7 @@ IMPLEMENT_REFLECT_SERVERCLASS( CParticlePerformanceMonitor, DT_ParticlePerforman
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CParticlePerformanceMonitor::Spawn( void )
+void CParticlePerformanceMonitor::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	SetMoveType( MOVETYPE_NONE );
@@ -90,7 +87,7 @@ void CParticlePerformanceMonitor::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CParticlePerformanceMonitor::UpdateTransmitState()
+int CParticlePerformanceMonitor::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }

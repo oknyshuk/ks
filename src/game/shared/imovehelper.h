@@ -1,7 +1,6 @@
 #pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
-import ks.math;
 
 #include "shareddefs.h"
 #include "basehandle.h"
@@ -11,12 +10,6 @@ import ks.math;
 // Forward declarations
 //-----------------------------------------------------------------------------
 
-class IPhysicsSurfaceProps;
-struct model_t;
-struct cmodel_t;
-struct vcollide_t;
-class CGameTrace;
-enum soundlevel_t;
 
 //-----------------------------------------------------------------------------
 // Purpose: Identifies how submerged in water a player is.

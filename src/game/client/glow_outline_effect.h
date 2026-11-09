@@ -4,13 +4,8 @@
 
 // Purpose: Functionality to render a glowing outline around client renderable objects.
 
-import std;
-import ks.tier1;
 #include "c_baseentity.h"
 
-class CViewSetup;
-class ITexture;
-class CMatRenderContextPtr;
 
 static const int GLOW_FOR_ALL_SPLIT_SCREEN_SLOTS = -1;
 

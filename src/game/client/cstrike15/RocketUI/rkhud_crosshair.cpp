@@ -17,8 +17,6 @@
 #include "weapon_csbase.h"
 
 #include <rocketui/rmlui.h>
-import ks.tier1;
-import std;
 
 DECLARE_HUDELEMENT( RkHudCrosshair );
 

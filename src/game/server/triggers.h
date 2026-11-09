@@ -22,15 +22,15 @@ class [[= ks::reflect::NetTable{ .name = "DT_BaseTrigger" } ]]
 public:
 	CBaseTrigger();
 	
-	void Activate( void );
-	virtual void PostClientActive( void );
+	void Activate_Impl( void );
+	void PostClientActive_Impl( void );
 	void InitTrigger( void );
 
 	virtual void Enable( void );
 	virtual void Disable( void );
 
-	void Spawn( void );
-	void UpdateOnRemove( void );
+	void Spawn_Impl( void );
+	void UpdateOnRemove_Impl( void );
 	void TouchTest(  void );
 
 	// Input handlers
@@ -44,8 +44,8 @@ public:
 
 	virtual bool UsesFilter( void ){ return ( m_hFilter.Get() != nullptr ); }
 	virtual bool PassesTriggerFilters(CBaseEntity *pOther);
-	virtual void StartTouch(CBaseEntity *pOther);
-	virtual void EndTouch(CBaseEntity *pOther);
+	void StartTouch_Impl(CBaseEntity *pOther);
+	void EndTouch_Impl(CBaseEntity *pOther);
 
 	virtual void OnStartTouchAll(CBaseEntity *pOther);
 	virtual void OnEndTouchAll(CBaseEntity *pOther);
@@ -54,7 +54,7 @@ public:
 
 	CBaseEntity *GetTouchedEntityOfType( const char *sClassName );
 
-	virtual int	 DrawDebugTextOverlays(void);
+	int	 DrawDebugTextOverlays_Impl(void);
 
 	// by default, triggers don't deal with TraceAttack
 	void TraceAttack(CBaseEntity *pAttacker, float flDamage, const Vector &vecDir, trace_t *ptr, int bitsDamageType) {}
@@ -96,7 +96,7 @@ class CTriggerMultiple : public CBaseTrigger
 {
 	DECLARE_CLASS( CTriggerMultiple, CBaseTrigger );
 public:
-	void Spawn( void );
+	void Spawn_Impl( void );
 	void MultiTouch( CBaseEntity *pOther );
 	void MultiWaitOver( void );
 	virtual void ActivateMultiTrigger(CBaseEntity *pActivator);
@@ -127,17 +127,17 @@ class [[= ks::reflect::NetTable{ .name = "DT_BaseVPhysicsTrigger" } ]]
 public:
 	DECLARE_DATADESC();
 
-	virtual void Spawn();
-	virtual void UpdateOnRemove();
-	virtual bool CreateVPhysics();
-	virtual void Activate( void );
+	void Spawn_Impl();
+	void UpdateOnRemove_Impl();
+	bool CreateVPhysics_Impl();
+	void Activate_Impl( void );
 	virtual bool PassesTriggerFilters(CBaseEntity *pOther);
 
 	// UNDONE: Pass trigger event in or change Start/EndTouch.  Add ITriggerVPhysics perhaps?
 	// BUGBUG: If a player touches two of these, his movement will screw up.
 	// BUGBUG: If a player uses crouch/uncrouch it will generate touch events and clear the motioncontroller flag
-	virtual void StartTouch( CBaseEntity *pOther );
-	virtual void EndTouch( CBaseEntity *pOther );
+	void StartTouch_Impl( CBaseEntity *pOther );
+	void EndTouch_Impl( CBaseEntity *pOther );
 
 	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
@@ -165,11 +165,11 @@ public:
 
 	DECLARE_CLASS( CTriggerHurt, CBaseTrigger );
 
-	void Spawn( void );
+	void Spawn_Impl( void );
 	void RadiationThink( void );
 	void HurtThink( void );
-	void Touch( CBaseEntity *pOther );
-	void EndTouch( CBaseEntity *pOther );
+	void Touch_Impl( CBaseEntity *pOther );
+	void EndTouch_Impl( CBaseEntity *pOther );
 	bool HurtEntity( CBaseEntity *pOther, float damage );
 	int HurtAllTouchers( float dt );
 
@@ -208,8 +208,8 @@ public:
 	DECLARE_CLASS( CTriggerCallback, CBaseTrigger );
 	DECLARE_DATADESC();
 	
-	virtual void Spawn( void );
-	virtual void StartTouch( CBaseEntity *pOther );
+	void Spawn_Impl( void );
+	void StartTouch_Impl( CBaseEntity *pOther );
 
 	static CTriggerCallback *Create( const Vector &vecOrigin, const QAngle &vecAngles, const Vector &vecMins, const Vector &vecMaxs, CBaseEntity *pOwner, void (CBaseEntity::*pfnCallback)(CBaseEntity *) )
 	{
@@ -248,12 +248,13 @@ public:
 
 
 	CTriggerCamera();
-	void Spawn( void );
-	bool KeyValue( const char *szKeyName, const char *szValue );
+	void Spawn_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
 	void Enable( void );
 	void Disable( void );
 	void SetPlayer( CBaseEntity *pPlayer );
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void FindAttachment( void );
 	void FollowTarget( void );
 	void ReturnToEyes( void );
@@ -264,7 +265,7 @@ public:
 	void ScriptSetFov( int iFOV, float rate );
 
 	// Always transmit to clients so they know where to move the view to
-	virtual int UpdateTransmitState();
+	int UpdateTransmitState_Impl();
 
 	DECLARE_DATADESC();
 
@@ -326,8 +327,9 @@ public:
 	DECLARE_CLASS( CTriggerViewProxy, CBaseEntity );
 
 	CTriggerViewProxy();
-	void Spawn( void );
-	bool KeyValue( const char *szKeyName, const char *szValue );
+	void Spawn_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
 	void Enable( void );
 	void Disable( void );
 	void SetPlayer( CBaseEntity *pPlayer );
@@ -337,7 +339,7 @@ public:
 	Vector GetPlayerOffset();
 
 	// Always transmit to clients so they know where to move the view to
-	virtual int UpdateTransmitState();
+	int UpdateTransmitState_Impl();
 
 	DECLARE_DATADESC();
 

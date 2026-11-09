@@ -6,20 +6,24 @@ import ks.core;
 #include "matchmaking/imatchframework.h"
 #include "matchmaking/imatchevents.h"
 
-class IMatchSessionInternal : public IMatchSession, public IMatchEventsSink
+// Non-virtual facade: the only implementation is CMatchSessionOfflineCustom.
+class IMatchSessionInternal : public IMatchSession
 {
 public:
+	// Match events
+	void OnEvent( KeyValues *pEvent );
+
 	// Run a frame update
-	virtual void Update() = 0;
+	void Update();
 
 	// Destroy the session object
-	virtual void Destroy() = 0;
+	void Destroy();
 
 	// Debug print a session object
-	virtual void DebugPrint() = 0;
+	void DebugPrint();
 
 	// Check if another session is joinable
-	virtual bool IsAnotherSessionJoinable( char const *pszAnotherSessionInfo ) = 0;
+	bool IsAnotherSessionJoinable( char const *pszAnotherSessionInfo );
 };
 
 #include "protocol.h"

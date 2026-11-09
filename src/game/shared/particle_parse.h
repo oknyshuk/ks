@@ -2,12 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
-import std;
 #include "shared_classnames.h"
 
 class CBaseEntity;
-class IRecipientFilter;
 
 //-----------------------------------------------------------------------------
 // Particle attachment methods

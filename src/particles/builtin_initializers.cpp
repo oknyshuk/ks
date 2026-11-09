@@ -192,7 +192,7 @@ class C_INIT_RingWave : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		uint64 nMask = ( 1ULL << m_nControlPointNumber );
 		if ( m_nOverrideCP != -1 )
@@ -216,7 +216,7 @@ class C_INIT_RingWave : public CParticleInitializerOperatorInstance
 		return sizeof( RingWaveContext_t );
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		RingWaveContext_t *pCtx=reinterpret_cast<RingWaveContext_t *>( pContext );
 		pCtx->m_nCurrentCount = 0;
@@ -358,12 +358,12 @@ class C_INIT_CreateInEpitrochoid : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber | 1ULL << m_nScaleCP;
 	}
 
-	virtual uint64 GetNonPositionalControlPointMask() const
+	uint64 GetNonPositionalControlPointMask() const
 	{
 		return 1ULL << m_nScaleCP;
 	}
@@ -378,7 +378,7 @@ class C_INIT_CreateInEpitrochoid : public CParticleInitializerOperatorInstance
 		return sizeof( CreateInEpitrochoidContext_t );
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		CreateInEpitrochoidContext_t *pCtx=reinterpret_cast<CreateInEpitrochoidContext_t *>( pContext );
 		pCtx->m_nCurrentCount = 0;
@@ -524,7 +524,7 @@ class C_INIT_CreateOnModel : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
@@ -631,7 +631,7 @@ class C_INIT_SetHitboxToClosest : public CParticleInitializerOperatorInstance
 	}
 
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
@@ -724,7 +724,7 @@ class C_INIT_SetHitboxToModel : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
@@ -876,7 +876,7 @@ class C_INIT_CreateWithinSphere : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		uint64 nMask = ( 1ULL << m_nControlPointNumber );
 		if ( m_nScaleCP != -1 )
@@ -890,7 +890,7 @@ class C_INIT_CreateWithinSphere : public CParticleInitializerOperatorInstance
 								 int nParticleCount, int nAttributeWriteMask,
 								 void *pContext) const;
 
-	virtual void InitNewParticlesBlock( CParticleCollection *pParticles, 
+	void InitNewParticlesBlock( CParticleCollection *pParticles, 
 										int start_block, int n_blocks, int nAttributeWriteMask,
 										void *pContext ) const;
 
@@ -902,7 +902,7 @@ class C_INIT_CreateWithinSphere : public CParticleInitializerOperatorInstance
 		m_bDistanceBiasAbs = ( m_vecDistanceBiasAbs.x != 0.0f ) || ( m_vecDistanceBiasAbs.y != 0.0f ) || ( m_vecDistanceBiasAbs.z != 0.0f );
 	}
 
-	void Render( CParticleCollection *pParticles ) const;
+	void RenderDebug( CParticleCollection *pParticles ) const;
 };
 
 DEFINE_PARTICLE_OPERATOR( C_INIT_CreateWithinSphere, "Position Within Sphere Random", OPERATOR_PI_POSITION );
@@ -1224,7 +1224,7 @@ void C_INIT_CreateWithinSphere::InitNewParticlesBlock( CParticleCollection *pPar
 
 	}
 	else
-		CParticleOperatorInstance::InitNewParticlesBlock( pParticles, start_block, n_blocks, nAttributeWriteMask, pContext );
+		InitNewParticlesBlock_Default( pParticles, start_block, n_blocks, nAttributeWriteMask, pContext );
 
 }
 
@@ -1232,7 +1232,7 @@ void C_INIT_CreateWithinSphere::InitNewParticlesBlock( CParticleCollection *pPar
 //-----------------------------------------------------------------------------
 // Render visualization
 //-----------------------------------------------------------------------------
-void C_INIT_CreateWithinSphere::Render( CParticleCollection *pParticles ) const
+void C_INIT_CreateWithinSphere::RenderDebug( CParticleCollection *pParticles ) const
 {					   
 	Vector vecOrigin;
 	pParticles->GetControlPointAtTime( m_nControlPointNumber, pParticles->m_flCurTime, &vecOrigin );
@@ -1262,7 +1262,7 @@ class C_INIT_CreateWithinBox : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
@@ -1271,7 +1271,7 @@ class C_INIT_CreateWithinBox : public CParticleInitializerOperatorInstance
 								 int nParticleCount, int nAttributeWriteMask,
 								 void *pContext) const;
 
-	void Render( CParticleCollection *pParticles ) const;
+	void RenderDebug( CParticleCollection *pParticles ) const;
 };
 
 DEFINE_PARTICLE_OPERATOR( C_INIT_CreateWithinBox, "Position Within Box Random", OPERATOR_PI_POSITION );
@@ -1328,7 +1328,7 @@ void C_INIT_CreateWithinBox::InitNewParticlesScalar(
 //-----------------------------------------------------------------------------
 // Render visualization
 //-----------------------------------------------------------------------------
-void C_INIT_CreateWithinBox::Render( CParticleCollection *pParticles ) const
+void C_INIT_CreateWithinBox::RenderDebug( CParticleCollection *pParticles ) const
 {					   
 	Vector vecOrigin;
 	pParticles->GetControlPointAtTime( m_nControlPointNumber, pParticles->m_flCurTime, &vecOrigin );
@@ -1362,7 +1362,7 @@ class C_INIT_PositionOffset : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_XYZ_MASK | PARTICLE_ATTRIBUTE_PREV_XYZ_MASK | PARTICLE_ATTRIBUTE_CREATION_TIME_MASK | PARTICLE_ATTRIBUTE_RADIUS_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
@@ -1378,7 +1378,7 @@ class C_INIT_PositionOffset : public CParticleInitializerOperatorInstance
 
 	bool InitMultipleOverride ( void ) { return true; }
 
-	void Render( CParticleCollection *pParticles ) const;
+	void RenderDebug( CParticleCollection *pParticles ) const;
 };
 
 DEFINE_PARTICLE_OPERATOR( C_INIT_PositionOffset, "Position Modify Offset Random", OPERATOR_GENERIC );
@@ -1436,7 +1436,7 @@ void C_INIT_PositionOffset::InitNewParticlesScalar(
 //-----------------------------------------------------------------------------
 // Render visualization
 //-----------------------------------------------------------------------------
-void C_INIT_PositionOffset::Render( CParticleCollection *pParticles ) const
+void C_INIT_PositionOffset::RenderDebug( CParticleCollection *pParticles ) const
 {					   
 	Vector vecOrigin (0,0,0);
 	Vector vecMinExtent = m_OffsetMin;
@@ -1577,14 +1577,14 @@ class C_INIT_VelocityRandom : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_PREV_XYZ_MASK | PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		if ( m_bHasLocalSpeed )
 			return 1ULL << m_nControlPointNumber;
 		return 0;
 	}
 
-	virtual bool InitMultipleOverride() { return true; }
+	bool InitMultipleOverride() { return true; }
 
 	void InitNewParticlesScalar( CParticleCollection *pParticles, int start_p,
 								 int nParticleCount, int nAttributeWriteMask,
@@ -1672,7 +1672,7 @@ class C_INIT_InitialVelocityNoise : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK | PARTICLE_ATTRIBUTE_PREV_XYZ_MASK | PARTICLE_ATTRIBUTE_XYZ_MASK;
 	}
 	
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
@@ -1690,7 +1690,7 @@ class C_INIT_InitialVelocityNoise : public CParticleInitializerOperatorInstance
 		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
-	virtual bool InitMultipleOverride() { return true; }
+	bool InitMultipleOverride() { return true; }
 
 	Vector	m_vecAbsVal, m_vecAbsValInv, m_vecOffsetLoc;
 	float	m_flOffset;
@@ -2163,7 +2163,7 @@ class C_INIT_RandomVectorComponent : public CParticleInitializerOperatorInstance
 		return 1 << m_nFieldOutput;
 	}
 
-	virtual void InitParams( CParticleSystemDefinition *pDef )
+	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_nComponent = clamp( m_nComponent, 0, 2 );
 	}
@@ -2227,7 +2227,7 @@ class C_INIT_RandomRadius : public CParticleInitializerOperatorInstance
 												 m_flRadiusRandExponent, pParticles, start_p, nParticleCount );
 	}
 
-	virtual void InitNewParticlesBlock( CParticleCollection *pParticles, 
+	void InitNewParticlesBlock( CParticleCollection *pParticles, 
 										int start_block, int n_blocks, int nAttributeWriteMask,
 										void *pContext ) const
 	{
@@ -2269,13 +2269,13 @@ class C_INIT_RandomAlpha : public CParticleInitializerOperatorInstance
 		return 0;
 	}
 
-	virtual void InitParams( CParticleSystemDefinition *pDef )
+	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_flAlphaMin = m_nAlphaMin / 255.0f;
 		m_flAlphaMax = m_nAlphaMax / 255.0f;
 	}
 
-	virtual void InitNewParticlesBlock( CParticleCollection *pParticles, 
+	void InitNewParticlesBlock( CParticleCollection *pParticles, 
 		int start_block, int n_blocks, int nAttributeWriteMask,
 		void *pContext ) const
 	{
@@ -2311,14 +2311,14 @@ END_PARTICLE_OPERATOR_UNPACK( C_INIT_RandomAlpha )
 //-----------------------------------------------------------------------------
 // Random rotation
 //-----------------------------------------------------------------------------
+template < int ATTRIBUTE_TO_INIT >
 class CGeneralRandomRotation : public CParticleInitializerOperatorInstance
 {
 protected:
-	virtual int GetAttributeToInit( void ) const = 0;
 
 	uint32 GetWrittenAttributes( void ) const
 	{
-		return (1 << GetAttributeToInit() );
+		return (1 << ATTRIBUTE_TO_INIT );
 	}
 
 	uint32 GetReadAttributes( void ) const
@@ -2326,18 +2326,18 @@ protected:
 		return 0;
 	}
 
-	virtual void InitParams( CParticleSystemDefinition *pDef )
+	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_flRadians = m_flDegrees * ( std::numbers::pi / 180.0f );
 		m_flRadiansMin = m_flDegreesMin * ( std::numbers::pi / 180.0f );
 		m_flRadiansMax = m_flDegreesMax * ( std::numbers::pi / 180.0f );
 	}
 
-	virtual void InitNewParticlesBlock( CParticleCollection *pParticles, 
+	void InitNewParticlesBlock( CParticleCollection *pParticles, 
 		int start_block, int n_blocks, int nAttributeWriteMask,
 		void *pContext ) const
 	{
-		InitScalarAttributeRandomRangeExpBlock(  GetAttributeToInit(),
+		InitScalarAttributeRandomRangeExpBlock(  ATTRIBUTE_TO_INIT,
 												 m_flRadiansMin, m_flRadiansMax, m_flRotationRandExponent,
 												 pParticles, start_block, n_blocks, m_bRandomlyFlipDirection );
 	}
@@ -2348,7 +2348,7 @@ protected:
 		{
 			for( ; nParticleCount--; start_p++ )
 			{
-				float *pAttr = pParticles->GetFloatAttributePtrForWrite( GetAttributeToInit(), start_p );
+				float *pAttr = pParticles->GetFloatAttributePtrForWrite( ATTRIBUTE_TO_INIT, start_p );
 				*pAttr = m_flRadians + pParticles->RandomFloatExp( m_flRadiansMin, m_flRadiansMax, m_flRotationRandExponent );
 			}
 		}
@@ -2356,7 +2356,7 @@ protected:
 		{
 			for( ; nParticleCount--; start_p++ )
 			{
-				float *pAttr = pParticles->GetFloatAttributePtrForWrite( GetAttributeToInit(), start_p );
+				float *pAttr = pParticles->GetFloatAttributePtrForWrite( ATTRIBUTE_TO_INIT, start_p );
 				float  flRot = m_flRadians + pParticles->RandomFloatExp( m_flRadiansMin, m_flRadiansMax, m_flRotationRandExponent );
 				*pAttr = ( pParticles->RandomFloat( -1.0f, 1.0f ) >= 0.0f ) ? +flRot : -flRot;
 			}
@@ -2380,14 +2380,9 @@ protected:
 //-----------------------------------------------------------------------------
 // Random rotation
 //-----------------------------------------------------------------------------
-class C_INIT_RandomRotation : public CGeneralRandomRotation
+class C_INIT_RandomRotation : public CGeneralRandomRotation< PARTICLE_ATTRIBUTE_ROTATION >
 {
 	DECLARE_PARTICLE_OPERATOR( C_INIT_RandomRotation );
-
-	virtual int GetAttributeToInit( void ) const
-	{
-		return PARTICLE_ATTRIBUTE_ROTATION;
-	}
 };
 
 DEFINE_PARTICLE_OPERATOR( C_INIT_RandomRotation, "Rotation Random", OPERATOR_PI_ROTATION );
@@ -2404,14 +2399,9 @@ END_PARTICLE_OPERATOR_UNPACK( C_INIT_RandomRotation )
 //-----------------------------------------------------------------------------
 // Random rotation speed
 //-----------------------------------------------------------------------------
-class C_INIT_RandomRotationSpeed : public CGeneralRandomRotation
+class C_INIT_RandomRotationSpeed : public CGeneralRandomRotation< PARTICLE_ATTRIBUTE_ROTATION_SPEED >
 {
 	DECLARE_PARTICLE_OPERATOR( C_INIT_RandomRotationSpeed );
-
-	virtual int GetAttributeToInit( void ) const
-	{
-		return PARTICLE_ATTRIBUTE_ROTATION_SPEED;
-	}
 };
 
 DEFINE_PARTICLE_OPERATOR( C_INIT_RandomRotationSpeed, "Rotation Speed Random", OPERATOR_GENERIC );
@@ -2428,14 +2418,9 @@ END_PARTICLE_OPERATOR_UNPACK( C_INIT_RandomRotationSpeed )
 //-----------------------------------------------------------------------------
 // Random yaw
 //-----------------------------------------------------------------------------
-class C_INIT_RandomYaw : public CGeneralRandomRotation
+class C_INIT_RandomYaw : public CGeneralRandomRotation< PARTICLE_ATTRIBUTE_YAW >
 {
 	DECLARE_PARTICLE_OPERATOR( C_INIT_RandomYaw );
-
-	virtual int GetAttributeToInit( void ) const
-	{
-		return PARTICLE_ATTRIBUTE_YAW;
-	}
 };
 
 DEFINE_PARTICLE_OPERATOR( C_INIT_RandomYaw, "Rotation Yaw Random", OPERATOR_PI_YAW );
@@ -2533,13 +2518,13 @@ class C_INIT_RandomColor : public CParticleInitializerOperatorInstance
 		return sizeof( C_OP_RandomColorContext_t );
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		C_OP_RandomColorContext_t *pCtx=reinterpret_cast<C_OP_RandomColorContext_t *>( pContext );
 		pCtx->m_vPrevPosition = vec3_origin;
 	}
 
-	virtual void InitParams( CParticleSystemDefinition *pDef )
+	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_flNormColorMin[0] = ( float )m_ColorMin[0] / 255.0f;
 		m_flNormColorMin[1] = ( float )m_ColorMin[1] / 255.0f;
@@ -2615,7 +2600,7 @@ class C_INIT_RandomColor : public CParticleInitializerOperatorInstance
 		}
 	}
 
-	virtual void InitNewParticlesBlock( CParticleCollection *pParticles, 
+	void InitNewParticlesBlock( CParticleCollection *pParticles, 
 		int start_block, int n_blocks, int nAttributeWriteMask,
 		void *pContext ) const
 	{
@@ -2827,7 +2812,7 @@ class C_INIT_RandomColor : public CParticleInitializerOperatorInstance
 		ReleaseSIMDRandContext( nRandContext );
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nTintCP;
 	}
@@ -2881,7 +2866,7 @@ class C_INIT_ColorLitPerParticle : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_XYZ_MASK;
 	}
 
-	virtual void InitParams( CParticleSystemDefinition *pDef )
+	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_flNormColorMin[0] = ( float )m_ColorMin[0] / 255.0f;
 		m_flNormColorMin[1] = ( float )m_ColorMin[1] / 255.0f;
@@ -2961,11 +2946,11 @@ class C_INIT_RandomTrailLength : public CParticleInitializerOperatorInstance
 		return 0;
 	}
 
-	virtual void InitParams( CParticleSystemDefinition *pDef )
+	void InitParams( CParticleSystemDefinition *pDef )
 	{
 	}
 
-	virtual void InitNewParticlesBlock( CParticleCollection *pParticles, 
+	void InitNewParticlesBlock( CParticleCollection *pParticles, 
 		int start_block, int n_blocks, int nAttributeWriteMask,
 		void *pContext ) const
 	{
@@ -3011,7 +2996,7 @@ class C_INIT_RandomSequence : public CParticleInitializerOperatorInstance
 		return 0;
 	}
 
-	virtual void InitParams( CParticleSystemDefinition *pDef )
+	void InitParams( CParticleSystemDefinition *pDef )
 	{
 	}
 
@@ -3022,7 +3007,7 @@ class C_INIT_RandomSequence : public CParticleInitializerOperatorInstance
 		int nList[64];
 	};
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		if ( m_bShuffle || m_bLinear )
 		{
@@ -3050,7 +3035,7 @@ class C_INIT_RandomSequence : public CParticleInitializerOperatorInstance
 		return sizeof( SequenceContext_t );
 	}
 /*
-	virtual void InitNewParticlesBlock( CParticleCollection *pParticles, 
+	void InitNewParticlesBlock( CParticleCollection *pParticles, 
 		int start_block, int n_blocks, int nAttributeWriteMask,
 		void *pContext ) const
 	{
@@ -3146,7 +3131,7 @@ class C_INIT_SequenceFromCP : public CParticleInitializerOperatorInstance
 			return 0;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nCP;
 	}
@@ -3253,7 +3238,7 @@ class C_INIT_PositionWarp : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_CREATION_TIME;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
@@ -3262,7 +3247,7 @@ class C_INIT_PositionWarp : public CParticleInitializerOperatorInstance
 								 int nParticleCount, int nAttributeWriteMask,
 								 void *pContext) const;
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		PositionWarpContext_t *pCtx = reinterpret_cast<PositionWarpContext_t *>( pContext );
 		pCtx->m_flStartTime = pParticles->m_flCurTime;
@@ -3275,7 +3260,7 @@ class C_INIT_PositionWarp : public CParticleInitializerOperatorInstance
 		return sizeof( PositionWarpContext_t );
 	}
 
-	virtual void Restart( CParticleCollection *pParticles, void *pContext )
+	void Restart( CParticleCollection *pParticles, void *pContext )
 	{
 		PositionWarpContext_t *pCtx = reinterpret_cast<PositionWarpContext_t *>( pContext );
 		pCtx->m_flStartTime = pParticles->m_flCurTime;
@@ -3406,7 +3391,7 @@ class C_INIT_CreationNoise : public CParticleInitializerOperatorInstance
 		int start_block, int n_blocks, int nAttributeWriteMask,
 		void *pContext ) const;
 
-	virtual bool IsScrubSafe() { return true; }
+	bool IsScrubSafe() { return true; }
 	int		m_nFieldOutput;
 	bool	m_bAbsVal, m_bAbsValInv;
 	float	m_flOffset;
@@ -3629,7 +3614,7 @@ class C_INIT_CreateAlongPath : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		uint64 nStartMask = ( 1ULL << m_PathParams.m_nStartControlPointNumber ) - 1;
 		uint64 nEndMask = ( 1ULL << ( m_PathParams.m_nEndControlPointNumber + 1 ) ) - 1;
@@ -3734,7 +3719,7 @@ class C_INIT_MoveBetweenPoints : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_XYZ_MASK | PARTICLE_ATTRIBUTE_PREV_XYZ_MASK | PARTICLE_ATTRIBUTE_CREATION_TIME_MASK | PARTICLE_ATTRIBUTE_TRAIL_LENGTH_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nEndControlPointNumber;
 	}
@@ -3983,13 +3968,13 @@ class C_INIT_RemapParticleCountToScalar : public CParticleInitializerOperatorIns
 		return FILTER_PARAMETER_REMAPPING_MASK;
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		RemapCountContext_t *pCtx = reinterpret_cast<RemapCountContext_t *>( pContext );
 		pCtx->m_nCurrentParticleCount = 0;
 	}
 
-	virtual void Restart( CParticleCollection *pParticles, void *pContext )
+	void Restart( CParticleCollection *pParticles, void *pContext )
 	{
 		RemapCountContext_t *pCtx = reinterpret_cast<RemapCountContext_t *>( pContext );
 		pCtx->m_nCurrentParticleCount = 0;
@@ -4099,7 +4084,7 @@ class C_INIT_InheritVelocity : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_PREV_XYZ_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
@@ -4172,7 +4157,7 @@ class C_INIT_VelocityFromCP : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_PREV_XYZ_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		uint64 nMask = ( 1ULL << m_nControlPoint );
 		if ( m_nControlPointCompare != -1 )
@@ -4449,7 +4434,7 @@ class C_INIT_CreateInHierarchy : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		uint64 nStartMask = ( 1ULL << m_nDesiredStartPoint ) - 1;
 		uint64 nEndMask = m_bUseHighestEndCP ? 0xFFFFFFFFFFFFFFFFll : ( 1ULL << ( m_nDesiredEndPoint + 1 ) ) - 1;
@@ -4631,7 +4616,7 @@ class C_INIT_RemapScalarToVector : public CParticleInitializerOperatorInstance
 		return FILTER_PARAMETER_REMAPPING_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
@@ -4774,7 +4759,7 @@ class C_INIT_OffsetVectorToVector : public CParticleInitializerOperatorInstance
 		return FILTER_PARAMETER_REMAPPING_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
@@ -4857,14 +4842,14 @@ class C_INIT_CreateSequentialPath : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		uint64 nStartMask = ( 1ULL << m_PathParams.m_nStartControlPointNumber ) - 1;
 		uint64 nEndMask = m_bCPPairs ? 0xFFFFFFFFFFFFFFFFULL : ( 1ULL << ( m_PathParams.m_nEndControlPointNumber + 1 ) ) - 1;
 		return nEndMask & (~nStartMask);
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		SequentialPathContext_t *pCtx = reinterpret_cast<SequentialPathContext_t *>( pContext );
 		pCtx->m_flParticleCount = 0;
@@ -4893,7 +4878,7 @@ class C_INIT_CreateSequentialPath : public CParticleInitializerOperatorInstance
 		}
 	}
 
-	virtual void Restart( CParticleCollection *pParticles, void *pContext )
+	void Restart( CParticleCollection *pParticles, void *pContext )
 	{
 		SequentialPathContext_t *pCtx = reinterpret_cast<SequentialPathContext_t *>( pContext );
 		pCtx->m_flParticleCount = 0;
@@ -5077,7 +5062,7 @@ class C_INIT_InitialRepulsionVelocity : public CParticleInitializerOperatorInsta
 		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK | PARTICLE_ATTRIBUTE_RADIUS_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		if ( m_bPerParticle )
 			return 0;
@@ -5086,7 +5071,7 @@ class C_INIT_InitialRepulsionVelocity : public CParticleInitializerOperatorInsta
 		return 1ULL << m_nControlPointNumber;
 	}
 
-	virtual uint64 GetNonPositionalControlPointMask() const
+	uint64 GetNonPositionalControlPointMask() const
 	{
 		if ( m_bPerParticle || !m_bInherit )
 			return 0;
@@ -5406,7 +5391,7 @@ class C_INIT_RandomSecondSequence : public CParticleInitializerOperatorInstance
 		return 0;
 	}
  
-	virtual void InitParams( CParticleSystemDefinition *pDef )
+	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		// TODO: Validate the ranges here!
 	}
@@ -5457,12 +5442,12 @@ class C_INIT_RemapCPtoScalar : public CParticleInitializerOperatorInstance
 		return FILTER_PARAMETER_REMAPPING_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nCPInput;
 	}
 
-	virtual uint64 GetNonPositionalControlPointMask() const
+	uint64 GetNonPositionalControlPointMask() const
 	{
 		return 1ULL << m_nCPInput;
 	}
@@ -5473,7 +5458,7 @@ class C_INIT_RemapCPtoScalar : public CParticleInitializerOperatorInstance
 		int nParticleCount, int nAttributeWriteMask,
 		void *pContext) const;
 
-	virtual void InitParams( CParticleSystemDefinition *pDef )
+	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_nField = int (clamp (m_nField, 0, 2));
 
@@ -5578,7 +5563,7 @@ class C_INIT_RemapCPtoVector : public CParticleInitializerOperatorInstance
 		return FILTER_PARAMETER_REMAPPING_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		uint64 nMask = ( 1ULL << m_nCPInput );
 		if ( m_nLocalSpaceCP != -1 )
@@ -5739,12 +5724,12 @@ class C_INIT_ChaoticAttractor : public CParticleInitializerOperatorInstance
 		return 0;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nBaseCP;
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		AttractorContext_t *pCtx = reinterpret_cast<AttractorContext_t *>( pContext );
 		pCtx->m_vecLastPosition.Init();
@@ -5845,7 +5830,7 @@ class C_INIT_CreateFromParentParticles : public CParticleInitializerOperatorInst
 		return PARTICLE_ATTRIBUTE_CREATION_TIME_MASK;
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		ParentParticlesContext_t *pCtx = reinterpret_cast<ParentParticlesContext_t *>( pContext );
 		pCtx->m_nCurrentParentParticle = 0;
@@ -5975,7 +5960,7 @@ class C_INIT_InheritFromParentParticles : public CParticleInitializerOperatorIns
 		return FILTER_PARAMETER_REMAPPING_MASK;
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		ParentParticlesContext_t *pCtx = reinterpret_cast<ParentParticlesContext_t *>( pContext );
 		pCtx->m_nCurrentParentParticle = 0;
@@ -6090,7 +6075,7 @@ class C_INIT_DistanceToCPInit : public CParticleInitializerOperatorInstance
 		return FILTER_PARAMETER_REMAPPING_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nStartCP;
 	}
@@ -6247,7 +6232,7 @@ class C_INIT_LifespanFromVelocity : public CParticleInitializerOperatorInstance
 		int nParticleCount, int nAttributeWriteMask,
 		void *pContext) const;
 
-	virtual void InitNewParticlesBlock( CParticleCollection *pParticles, 
+	void InitNewParticlesBlock( CParticleCollection *pParticles, 
 		int start_block, int n_blocks, int nAttributeWriteMask,
 		void *pContext ) const;
 
@@ -6738,7 +6723,7 @@ class C_INIT_ModelCull : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_XYZ_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
@@ -6825,7 +6810,7 @@ class C_INIT_RtEnvCull : public CParticleInitializerOperatorInstance
 		int nParticleCount, int nAttributeWriteMask,
 		void *pContext) const;
 
-	virtual void InitNewParticlesBlock( CParticleCollection *pParticles, 
+	void InitNewParticlesBlock( CParticleCollection *pParticles, 
 		int start_block, int n_blocks, int nAttributeWriteMask,
 		void *pContext ) const;
 };
@@ -7141,7 +7126,7 @@ class C_INIT_NormalAlignToCP : public CParticleInitializerOperatorInstance
 		return 0;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
@@ -7213,7 +7198,7 @@ class C_INIT_NormalOffset : public CParticleInitializerOperatorInstance
 		return PARTICLE_ATTRIBUTE_NORMAL_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
@@ -7308,7 +7293,7 @@ class C_INIT_RemapSpeedToScalar : public CParticleInitializerOperatorInstance
 
 	bool InitMultipleOverride ( void ) { return true; }
 
-	virtual void InitNewParticlesBlock( CParticleCollection *pParticles, 
+	void InitNewParticlesBlock( CParticleCollection *pParticles, 
 		int start_block, int n_blocks, int nAttributeWriteMask,
 		void *pContext ) const;
 
@@ -7476,17 +7461,17 @@ class C_INIT_InitFromCPSnapshot : public CParticleInitializerOperatorInstance
 	int m_nAttributeToWrite;
 	int m_nLocalSpaceCP;
 
-	virtual uint32 GetWrittenAttributes( void ) const
+	uint32 GetWrittenAttributes( void ) const
 	{
 		return ( ( m_nAttributeToWrite == -1 ) ? 0 : ( 1 << m_nAttributeToWrite ) );
 	}
 
-	virtual uint32 GetReadAttributes( void ) const
+	uint32 GetReadAttributes( void ) const
 	{
 		return 0;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		uint64 nMask = 0;
 		if ( m_nControlPointNumber != -1 )
@@ -7496,17 +7481,8 @@ class C_INIT_InitFromCPSnapshot : public CParticleInitializerOperatorInstance
 		return nMask;
 	}
 
-	virtual void InitParams( CParticleSystemDefinition *pDef, CDmxElement *pElement )
-	{
-		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber    ) );
-		m_nLocalSpaceCP       = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nLocalSpaceCP          ) );
-		// If m_nAttributeToRead is not specified, just ask the snapshot for the written attribute
-		if ( m_nAttributeToRead == -1 )
-			m_nAttributeToRead = m_nAttributeToWrite;
-	}
-
 	// NOTE: InitNewParticlesBlock is not implemented, because InitNewParticlesScalar is just as efficient in this case
-	virtual void InitNewParticlesScalar( CParticleCollection *pParticles, int start_p,
+	void InitNewParticlesScalar( CParticleCollection *pParticles, int start_p,
 		int nParticleCount, int nAttributeWriteMask,
 		void *pContext) const;
 };
@@ -7608,24 +7584,24 @@ class C_INIT_InitFromParentKilled : public CParticleInitializerOperatorInstance
 	int m_nAttributeToCopy;
 	char m_AttributeCopyName[128];
 
-	virtual uint32 GetWrittenAttributes( void ) const
+	uint32 GetWrittenAttributes( void ) const
 	{
 		return ( ( m_nAttributeToCopy == -1 ) ? 0 : ( 1 << m_nAttributeToCopy ) );
 	}
 
-	virtual uint32 GetReadAttributes( void ) const
+	uint32 GetReadAttributes( void ) const
 	{
 		// TODO: this refers to parent attributes.... errr....
 		return ( ( m_nAttributeToCopy == -1 ) ? 0 : ( 1 << m_nAttributeToCopy ) );
 	}
 
-	virtual bool ShouldRun( bool bApplyingParentKillList ) const
+	bool ShouldRun( bool bApplyingParentKillList ) const
 	{
 		return bApplyingParentKillList;
 	}
 
 	// TODO: implement InitNewParticlesBlock (requires 'gather' memory reads, though)
-	virtual void InitNewParticlesScalar( CParticleCollection *pParticles, int start_p,
+	void InitNewParticlesScalar( CParticleCollection *pParticles, int start_p,
 		int nParticleCount, int nAttributeWriteMask,
 		void *pContext) const;
 };
@@ -7711,7 +7687,7 @@ class C_INIT_RemapInitialDirectionToCPToVector : public CParticleInitializerOper
 		return PARTICLE_ATTRIBUTE_XYZ_MASK;
 	}
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nCP;
 	}
@@ -7720,7 +7696,7 @@ class C_INIT_RemapInitialDirectionToCPToVector : public CParticleInitializerOper
 		int nParticleCount, int nAttributeWriteMask,
 		void *pContext) const;
 
-	virtual void InitNewParticlesBlock( CParticleCollection *pParticles, 
+	void InitNewParticlesBlock( CParticleCollection *pParticles, 
 		int start_block, int n_blocks, int nAttributeWriteMask,
 		void *pContext ) const;
 
@@ -7834,7 +7810,7 @@ class C_INIT_RemapInitialCPDirectionToRotation : public CParticleInitializerOper
 		return PARTICLE_ATTRIBUTE_XYZ_MASK;
 	}
 
-	virtual void InitParams( CParticleSystemDefinition *pDef )
+	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_nAxis = std::max( 0, std::min( 2, m_nAxis ) );
 		if ( m_nAxis == 0 )
@@ -7968,3 +7944,7 @@ void AddBuiltInParticleInitializers( void )
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_INITIALIZER, C_INIT_RemapInitialCPDirectionToRotation );	
 	//	REGISTER_PARTICLE_OPERATOR( FUNCTION_INITIALIZER, C_INIT_OffsetToCP );	
 }
+
+
+#define KS_PARTICLE_OP_GROUP Initializers
+#include "particle_operator_dispatch.inl"

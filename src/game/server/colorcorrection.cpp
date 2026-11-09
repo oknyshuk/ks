@@ -3,8 +3,6 @@
 
 // Purpose: Color correction entity.
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "edict.h"
 #include "eiface.h"
@@ -68,7 +66,7 @@ CColorCorrection::CColorCorrection() : BaseClass()
 //------------------------------------------------------------------------------
 // Purpose : Send even though we don't have a model
 //------------------------------------------------------------------------------
-int CColorCorrection::UpdateTransmitState()
+int CColorCorrection::UpdateTransmitState_Impl()
 {
 	// ALWAYS transmit to all clients.
 	return SetTransmitState( FL_EDICT_ALWAYS );
@@ -77,7 +75,7 @@ int CColorCorrection::UpdateTransmitState()
 //------------------------------------------------------------------------------
 // Purpose :
 //------------------------------------------------------------------------------
-void CColorCorrection::Spawn( void )
+void CColorCorrection::Spawn_Impl( void )
 {
 	AddEFlags( EFL_FORCE_CHECK_TRANSMIT | EFL_DIRTY_ABSTRANSFORM );
 	Precache();
@@ -101,12 +99,12 @@ void CColorCorrection::Spawn( void )
 	m_bMaster = IsMaster();
 	m_bClientSide = IsClientSide();
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
-void CColorCorrection::Activate( void )
+void CColorCorrection::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	V_strncpy( m_netlookupFilename.GetForModify(), STRING( m_lookupFilename ), MAX_PATH );
 }

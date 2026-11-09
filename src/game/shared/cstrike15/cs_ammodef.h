@@ -6,7 +6,6 @@
 
 #include "ammodef.h"
 
-class ConVar;
 
 struct CSAmmoCost
 {

@@ -8,28 +8,56 @@
 // Purpose: Linear iterator over source data.
 //			Keeps track of position in source, and maintains necessary buffers
 //-----------------------------------------------------------------------------
+enum class WaveDataKind : unsigned char
+{
+	StreamAsync,	// streamed from a file (snd_wave_data.cpp)
+	MemoryAsync,	// loaded into memory (snd_wave_data.cpp)
+	Voice,			// the data of a voice channel (CWaveDataVoice, voice_sound_engine_interface.cpp)
+};
+
 class IWaveData
 {
 public:
-	virtual						~IWaveData( void ) {}
-	virtual CAudioSource		&Source( void ) = 0;
-	virtual int					ReadSourceData( void **pData, int64 sampleIndex, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] ) = 0;
-	virtual bool				IsReadyToMix() = 0;
-	virtual void				UpdateLoopPosition( int nLoopPosition ) = 0;
+	// The wave data are a closed set (WaveDataKind): every call below switches on the kind and
+	// calls the member of the same name of its class (snd_wave_data.cpp).
+
+	// Destroys wave data of any kind
+	static void					Delete( IWaveData *pData );
+
+	CAudioSource				&Source( void );
+	int							ReadSourceData( void **pData, int64 sampleIndex, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] );
+	bool						IsReadyToMix();
+	void						UpdateLoopPosition( int nLoopPosition );
+
+protected:
+	explicit IWaveData( WaveDataKind kind ) : m_Kind( kind ) {}
+	~IWaveData( void ) {}
+
+	WaveDataKind				m_Kind;
 };
 
-class IWaveStreamSource
+class CAudioSourceWave;
+
+// The data of a voice channel is whatever the voice source gets from the voice code
+class CWaveDataVoice : public IWaveData
 {
 public:
-	virtual int64	UpdateLoopingSamplePosition( int64 samplePosition ) = 0;
-	virtual void	UpdateSamples( char *pData, int sampleCount ) = 0;
-	virtual int		GetLoopingInfo( int *pLoopBlock, int *pNumLeadingSamples, int *pNumTrailingSamples ) = 0;
+	explicit CWaveDataVoice( CAudioSourceWave &source ) : IWaveData( WaveDataKind::Voice ), m_source( source ) {}
+
+	CAudioSource &Source( void );
+	// this file is in memory, simply pass along the data request to the source
+	int ReadSourceData( void **pData, int64 sampleIndex, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] );
+	bool IsReadyToMix() { return true; }
+	void UpdateLoopPosition( int nLoopPosition );
+
+private:
+	CAudioSourceWave		&m_source;	// pointer to source
 };
 
 class IFileReadBinary;
 class CSfxTable;
 
-extern IWaveData *CreateWaveDataStream( CAudioSource &source, IWaveStreamSource *pStreamSource, const char *pFileName, int dataStart, int dataSize, CSfxTable *pSfx, int startOffset, int skipInitialSamples, SoundError &soundError );
+extern IWaveData *CreateWaveDataStream( CAudioSource &source, CAudioSource *pStreamSource, const char *pFileName, int dataStart, int dataSize, CSfxTable *pSfx, int startOffset, int skipInitialSamples, SoundError &soundError );
 extern IWaveData *CreateWaveDataMemory( CAudioSource &source );
 
 void PrefetchDataStream( const char *pFileName, int dataOffset, int dataSize );

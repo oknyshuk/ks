@@ -5,11 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
-import ks.vstdlib;
 #include "const.h"
 #include "string_t.h"
 #include "predictableid.h"
@@ -29,7 +25,6 @@ import ks.vstdlib;
 #include "cdll_client_int.h"
 #include "engine/ivmodelinfo.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"

@@ -11,35 +11,20 @@ export extern "C++" {
 inline constexpr auto NTAB = 32;
 
 //-----------------------------------------------------------------------------
-// A generator of uniformly distributed random numbers
-//-----------------------------------------------------------------------------
-class IUniformRandomStream
-{
-public:
-	// Sets the seed of the random number generator
-	virtual void	SetSeed( int iSeed ) = 0;
-
-	// Generates random numbers
-	virtual float	RandomFloat( float flMinVal = 0.0f, float flMaxVal = 1.0f ) = 0;
-	virtual int		RandomInt( int iMinVal, int iMaxVal ) = 0;
-	virtual float	RandomFloatExp( float flMinVal = 0.0f, float flMaxVal = 1.0f, float flExponent = 1.0f ) = 0;
-};
-
-//-----------------------------------------------------------------------------
 // The standard generator of uniformly distributed random numbers
 //-----------------------------------------------------------------------------
-class CUniformRandomStream : public IUniformRandomStream
+class CUniformRandomStream
 {
 public:
 	CUniformRandomStream();
 
 	// Sets the seed of the random number generator
-	virtual void	SetSeed( int iSeed );
+	void	SetSeed( int iSeed );
 
 	// Generates random numbers
-	virtual float	RandomFloat( float flMinVal = 0.0f, float flMaxVal = 1.0f );
-	virtual int		RandomInt( int iMinVal, int iMaxVal );
-	virtual float	RandomFloatExp( float flMinVal = 0.0f, float flMaxVal = 1.0f, float flExponent = 1.0f );
+	float	RandomFloat( float flMinVal = 0.0f, float flMaxVal = 1.0f );
+	int		RandomInt( int iMinVal, int iMaxVal );
+	float	RandomFloatExp( float flMinVal = 0.0f, float flMaxVal = 1.0f, float flExponent = 1.0f );
 
 private:
 	int		GenerateRandomNumber();
@@ -59,16 +44,16 @@ class CGaussianRandomStream
 public:
 	// Passing in NULL will cause the gaussian stream to use the
 	// installed global random number generator
-	CGaussianRandomStream( IUniformRandomStream *pUniformStream = nullptr );
+	CGaussianRandomStream( CUniformRandomStream *pUniformStream = nullptr );
 
 	// Attaches to a random uniform stream
-	void	AttachToStream( IUniformRandomStream *pUniformStream = nullptr );
+	void	AttachToStream( CUniformRandomStream *pUniformStream = nullptr );
 
 	// Generates random numbers
 	float	RandomFloat( float flMean = 0.0f, float flStdDev = 1.0f );
 
 private:
-	IUniformRandomStream *m_pUniformStream;
+	CUniformRandomStream *m_pUniformStream;
 	bool	m_bHaveValue;
 	float	m_flRandomValue;
 
@@ -85,8 +70,8 @@ int	RandomInt( int iMinVal, int iMaxVal );
 float	RandomGaussianFloat( float flMean = 0.0f, float flStdDev = 1.0f );
 
 //-----------------------------------------------------------------------------
-// Installs a global random number generator, which will affect the Random functions above
+// The library's global uniform stream, which the Random functions above draw from
 //-----------------------------------------------------------------------------
-void	InstallUniformRandomStream( IUniformRandomStream *pStream );
+CUniformRandomStream &GlobalUniformRandomStream();
 
 }

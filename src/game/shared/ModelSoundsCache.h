@@ -4,11 +4,9 @@
 
 #include "cached_file_data.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-import std;
 
 inline constexpr auto MODELSOUNDSCACHE_VERSION = 5;
 
-class CStudioHdr;
 
 
 #pragma pack(1)

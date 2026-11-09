@@ -4,8 +4,6 @@
 // Purpose: A special kind of beam effect that traces from its start position to
 //			its end position and stops if it hits anything.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -23,7 +21,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -68,8 +65,8 @@ public:
 
 	CBeamSpotlight();
 
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 
 	[[= ks::reflect::Input{ .name = "LightOn",  .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "LightOff", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );
@@ -78,10 +75,13 @@ public:
 	[[= ks::reflect::Input{ .name = "Reverse",  .type = FIELD_VOID } ]] void InputReverse( inputdata_t &inputdata );
 
 protected:
-	bool KeyValue( const char *szKeyName, const char *szValue );
+	public: using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	protected:
 
 private:
-	int  UpdateTransmitState();
+	public: int  UpdateTransmitState_Impl();
+	private:
 	void RecalcRotation( void );
 
 	CNetworkVar( int, m_nHaloIndex , [[= ks::reflect::Net{ .bits = 16, .flags = SPROP_UNSIGNED } ]]);
@@ -130,7 +130,7 @@ CBeamSpotlight::CBeamSpotlight()
 {
 }
 
-bool CBeamSpotlight::KeyValue( const char *szKeyName, const char *szValue )
+bool CBeamSpotlight::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if ( !V_stricmp( szKeyName, "SpotlightWidth" ) )
 	{
@@ -144,15 +144,15 @@ bool CBeamSpotlight::KeyValue( const char *szKeyName, const char *szValue )
 		return true;
 	}
 	
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBeamSpotlight::Precache( void )
+void CBeamSpotlight::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	// Sprites.
 	m_nHaloIndex = PrecacheModel("sprites/light_glow03.vmt");
@@ -193,7 +193,7 @@ void CBeamSpotlight::RecalcRotation( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBeamSpotlight::Spawn( void )
+void CBeamSpotlight::Spawn_Impl( void )
 {
 	Precache();
 
@@ -259,7 +259,7 @@ void CBeamSpotlight::InputReverse( inputdata_t &inputdata )
 //-------------------------------------------------------------------------------------
 // Purpose : Send even though we don't have a model so spotlight gets proper position
 //-------------------------------------------------------------------------------------
-int CBeamSpotlight::UpdateTransmitState()
+int CBeamSpotlight::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_PVSCHECK );
 }

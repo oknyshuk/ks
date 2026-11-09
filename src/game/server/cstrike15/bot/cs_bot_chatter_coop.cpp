@@ -3,8 +3,6 @@
 
 // Purpose: / Custom chatter rules for bots when playing in cooperative modes
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -32,7 +30,7 @@ import ks.math;
 #include "cs_team.h"
 
 BotChatterCoop::BotChatterCoop( CCSBot *me ) :
-BotChatterInterface( me )
+BotChatterInterface( me, Kind::Coop )
 {
 }
 //---------------------------------------------------------------------------------------------------------------
@@ -73,7 +71,7 @@ void BotChatterCoop::EnemySpotted( void )
 	float flChance = RandomFloat();
 	if( flChance < 0.3 )
 	{
-		BaseClass::EnemySpotted();
+		EnemySpottedDefault();
 	}
 	else if ( flChance < 0.7 )
 	{

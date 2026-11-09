@@ -4,8 +4,6 @@
 // Purpose: Local fast collision system for particles
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "const.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"

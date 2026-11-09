@@ -8,7 +8,6 @@
 
 class C_BaseEntity;
 
-class IMaterialVar;
 
 //-----------------------------------------------------------------------------
 // Base class all material proxies should inherit from

@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.core;
 #include "hudelement.h"
-import std;
 
 inline constexpr auto CHATLINE_NUM_FLASHES = 8.0f;
 inline constexpr auto CHATLINE_FLASH_TIME = 5.0f;
@@ -160,8 +158,8 @@ public:
 
 	virtual int		GetChatInputOffset( void );
 
-	// IGameEventListener interface:
-	virtual void FireGameEvent( IGameEvent *event);
+	// Game event handler
+	void FireGameEvent( IGameEvent *event);
 
 	CHudChatHistory			*GetChatHistory();
 

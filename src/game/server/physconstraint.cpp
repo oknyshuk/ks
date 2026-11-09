@@ -3,8 +3,6 @@
 
 // Purpose: Physics constraint entities
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -143,7 +140,7 @@ public:
 	{
 		m_massScale = 1.0f;
 	}
-	void Spawn( void )
+	void Spawn_Impl( void )
 	{
 		if ( GetParent() )
 		{
@@ -165,7 +162,7 @@ class CPhysConstraintSystem : public CLogicalEntity
 	DECLARE_CLASS( CPhysConstraintSystem, CLogicalEntity );
 public:
 
-	void Spawn();
+	void Spawn_Impl();
 	~CPhysConstraintSystem();
 	IPhysicsConstraintGroup *GetVPhysicsGroup() { return m_pMachine; }
 
@@ -178,7 +175,7 @@ private:
 IMPLEMENT_REFLECT_DATAMAP( CPhysConstraintSystem )
 
 
-void CPhysConstraintSystem::Spawn()
+void CPhysConstraintSystem::Spawn_Impl()
 {
 	constraint_groupparams_t group;
 	group.Defaults();
@@ -299,9 +296,9 @@ public:
 
 	DECLARE_DATADESC();
 
-	void Spawn( void );
-	void Precache( void );
-	void Activate( void );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	void Activate_Impl( void );
 
 	void ClearStaticFlag( IPhysicsObject *pObj )
 	{
@@ -410,9 +407,9 @@ public:
 		Deactivate();
 	}
 
-	int DrawDebugTextOverlays()
+	int DrawDebugTextOverlays_Impl()
 	{
-		int pos = BaseClass::DrawDebugTextOverlays();
+		int pos = BaseClass::DrawDebugTextOverlays_Impl();
 		if ( m_pConstraint && (m_debugOverlays & OVERLAY_TEXT_BIT) )
 		{
 			constraint_breakableparams_t params;
@@ -429,13 +426,13 @@ public:
 		return pos;
 	}
 
-	void DrawDebugGeometryOverlays()
+	void DrawDebugGeometryOverlays_Impl()
 	{
 		if ( m_debugOverlays & (OVERLAY_BBOX_BIT|OVERLAY_PIVOT_BIT|OVERLAY_ABSBOX_BIT) )
 		{
 			DrawConstraintObjectsAxes(this, m_pConstraint);
 		}
-		BaseClass::DrawDebugGeometryOverlays();
+		BaseClass::DrawDebugGeometryOverlays_Impl();
 	}
 
 	void GetBreakParams( constraint_breakableparams_t &params, const hl_constraint_info_t &info )
@@ -449,7 +446,7 @@ public:
 	}
 
 	// the notify system calls this on the constrained entities - used to detect & follow teleports
-	void NotifySystemEvent( CBaseEntity *pNotify, notify_system_event_t eventType, const notify_system_event_params_t &params );
+	void NotifySystemEvent_Impl( CBaseEntity *pNotify, notify_system_event_t eventType, const notify_system_event_params_t &params );
 	
 	// gets called at setup time on first init and restore
 	virtual void OnConstraintSetup( hl_constraint_info_t &info ); 
@@ -498,7 +495,7 @@ CPhysConstraint::~CPhysConstraint()
 	physenv->DestroyConstraint( m_pConstraint );
 }
 
-void CPhysConstraint::Precache( void )
+void CPhysConstraint::Precache_Impl( void )
 {
 	if ( m_breakSound != NULL_STRING )
 	{
@@ -506,9 +503,9 @@ void CPhysConstraint::Precache( void )
 	}
 }
 
-void CPhysConstraint::Spawn( void )
+void CPhysConstraint::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	Precache();
 }
@@ -669,9 +666,9 @@ void CPhysConstraint::GetConstraintObjects( hl_constraint_info_t &info )
 	}
 }
 
-void CPhysConstraint::Activate( void )
+void CPhysConstraint::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( HasSpawnFlags( SF_CONSTRAINT_NO_CONNECT_UNTIL_ACTIVATED ) == false )
 	{
@@ -748,7 +745,7 @@ bool CPhysConstraint::ActivateConstraint( void )
 	return true;
 }
 
-void CPhysConstraint::NotifySystemEvent( CBaseEntity *pNotify, notify_system_event_t eventType, const notify_system_event_params_t &params )
+void CPhysConstraint::NotifySystemEvent_Impl( CBaseEntity *pNotify, notify_system_event_t eventType, const notify_system_event_params_t &params )
 {
 	// don't recurse
 	if ( eventType != NOTIFY_EVENT_TELEPORT || (unsigned int)gpGlobals->tickcount == m_teleportTick )
@@ -772,7 +769,7 @@ class
 	DECLARE_CLASS( CPhysHinge, CPhysConstraint );
 
 public:
-	void Spawn( void );
+	void Spawn_Impl( void );
 	IPhysicsConstraint *CreateConstraint( IPhysicsConstraintGroup *pGroup, const hl_constraint_info_t &info )
 	{
 		if ( m_hinge.worldAxisDirection == vec3_origin )
@@ -801,13 +798,13 @@ public:
 		return physenv->CreateHingeConstraint( info.pObjects[0], info.pObjects[1], pGroup, m_hinge );
 	}
 
-	void DrawDebugGeometryOverlays()
+	void DrawDebugGeometryOverlays_Impl()
 	{
 		if ( m_debugOverlays & (OVERLAY_BBOX_BIT|OVERLAY_PIVOT_BIT|OVERLAY_ABSBOX_BIT) )
 		{
 			NDebugOverlay::Line(m_hinge.worldPosition, m_hinge.worldPosition + 48 * m_hinge.worldAxisDirection, 0, 255, 0, false, 0 );
 		}
-		BaseClass::DrawDebugGeometryOverlays();
+		BaseClass::DrawDebugGeometryOverlays_Impl();
 	}
 
 	[[= ks::reflect::Input{ .name = "SetAngularVelocity", .type = FIELD_FLOAT } ]]
@@ -942,7 +939,7 @@ IMPLEMENT_REFLECT_DATAMAP( CPhysHinge )
 LINK_ENTITY_TO_CLASS( phys_hinge, CPhysHinge );
 
 
-void CPhysHinge::Spawn( void )
+void CPhysHinge::Spawn_Impl( void )
 {
 	m_hinge.worldPosition = GetLocalOrigin();
 	m_hinge.worldAxisDirection -= GetLocalOrigin();
@@ -974,9 +971,9 @@ void CPhysHinge::Spawn( void )
 }
 
 #if HINGE_NOTIFY
-void CPhysHinge::Activate( void )
+void CPhysHinge::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	m_soundInfo.OnActivate(this);
 	if (m_pConstraint)
@@ -991,9 +988,9 @@ void CPhysHinge::Activate( void )
 	}
 }
 
-void CPhysHinge::Precache( void )
+void CPhysHinge::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 	return m_soundInfo.OnPrecache(this);
 }
 
@@ -1125,7 +1122,7 @@ public:
 		m_pConstraint->SetLinearMotor( speed, speed * loadscale * massLoad * (1.0/TICK_INTERVAL) );
 	}
 
-	void DrawDebugGeometryOverlays()
+	void DrawDebugGeometryOverlays_Impl()
 	{
 		if ( m_debugOverlays & (OVERLAY_BBOX_BIT|OVERLAY_PIVOT_BIT|OVERLAY_ABSBOX_BIT) )
 		{
@@ -1133,7 +1130,7 @@ public:
 			NDebugOverlay::Box( m_axisEnd, -Vector(4,4,4), Vector(4,4,4), 0, 0, 255, 0, 0 );
 			NDebugOverlay::Line( GetAbsOrigin(), m_axisEnd, 255, 255, 0, false, 0 );
 		}
-		BaseClass::DrawDebugGeometryOverlays();
+		BaseClass::DrawDebugGeometryOverlays_Impl();
 	}
 
 	void NotifyVPhysicsStateChanged( IPhysicsObject *pPhysics, CBaseEntity *pEntity, bool bAwake )
@@ -1283,9 +1280,9 @@ void CPhysSlideConstraint::SoundThink( void )
 
 }
 
-void CPhysSlideConstraint::Activate( void )
+void CPhysSlideConstraint::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	m_soundInfo.OnActivate(this);
 
@@ -1305,7 +1302,7 @@ void CPhysSlideConstraint::Activate( void )
 	}
 }
 
-void CPhysSlideConstraint::Precache()
+void CPhysSlideConstraint::Precache_Impl()
 {
 	m_soundInfo.OnPrecache(this);
 }
@@ -1339,21 +1336,21 @@ public:
 			}
 		}
 	}
-	int DrawDebugTextOverlays()
+	int DrawDebugTextOverlays_Impl()
 	{
 		if ( m_debugOverlays & OVERLAY_TEXT_BIT )
 		{
 			MoveToRefPosition();
 		}
-		return BaseClass::DrawDebugTextOverlays();
+		return BaseClass::DrawDebugTextOverlays_Impl();
 	}
-	void DrawDebugGeometryOverlays()
+	void DrawDebugGeometryOverlays_Impl()
 	{
 		if ( m_debugOverlays & (OVERLAY_BBOX_BIT|OVERLAY_PIVOT_BIT|OVERLAY_ABSBOX_BIT) )
 		{
 			MoveToRefPosition();
 		}
-		BaseClass::DrawDebugGeometryOverlays();
+		BaseClass::DrawDebugGeometryOverlays_Impl();
 	}
 };
 
@@ -1388,7 +1385,7 @@ class CPhysPulley : public CPhysConstraint
 public:
 	DECLARE_DATADESC();
 
-	void DrawDebugGeometryOverlays()
+	void DrawDebugGeometryOverlays_Impl()
 	{
 		if ( m_debugOverlays & (OVERLAY_BBOX_BIT|OVERLAY_PIVOT_BIT|OVERLAY_ABSBOX_BIT) )
 		{
@@ -1414,7 +1411,7 @@ public:
 			NDebugOverlay::Box( origin, -Vector(8,8,8), Vector(8,8,8), 128, 255, 128, 32, 0 );
 			NDebugOverlay::Box( m_position2, -Vector(8,8,8), Vector(8,8,8), 255, 128, 128, 32, 0 );
 		}
-		BaseClass::DrawDebugGeometryOverlays();
+		BaseClass::DrawDebugGeometryOverlays_Impl();
 	}
 
 	IPhysicsConstraint *CreateConstraint( IPhysicsConstraintGroup *pGroup, const hl_constraint_info_t &info );
@@ -1482,7 +1479,7 @@ class CPhysLength : public CPhysConstraint
 public:
 	DECLARE_DATADESC();
 
-	void DrawDebugGeometryOverlays()
+	void DrawDebugGeometryOverlays_Impl()
 	{
 		if ( m_debugOverlays & (OVERLAY_BBOX_BIT|OVERLAY_PIVOT_BIT|OVERLAY_ABSBOX_BIT) )
 		{
@@ -1516,7 +1513,7 @@ public:
 				NDebugOverlay::Line( refPos, attachPos, 0, 255, 0, false, 0 );
 			}
 		}
-		BaseClass::DrawDebugGeometryOverlays();
+		BaseClass::DrawDebugGeometryOverlays_Impl();
 	}
 
 	IPhysicsConstraint *CreateConstraint( IPhysicsConstraintGroup *pGroup, const hl_constraint_info_t &info );

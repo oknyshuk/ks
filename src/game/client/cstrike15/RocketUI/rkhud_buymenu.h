@@ -25,8 +25,8 @@ public:
     virtual bool ShouldDraw(void);
     void ShowPanel(bool bShow, bool force);
 
-    // CGameEventListener
-    virtual void FireGameEvent( IGameEvent *event );
+    // Game event handler
+    void FireGameEvent( IGameEvent *event );
 
 
     void UpdateBuyMenu();

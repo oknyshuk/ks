@@ -4,6 +4,7 @@
 import std;
 import ks.vstdlib;
 #include "studiorendercontext.h"
+#include "appframework/apptiers.h"
 #include "optimize.h"
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/imesh.h"
@@ -21,7 +22,7 @@ constexpr auto NUM_TOPOLOGY_INDICES_ATTRIBUTES = 14;
 //-----------------------------------------------------------------------------
 // Toggles studio queued mode
 //-----------------------------------------------------------------------------
-void StudioChangeCallback( IConVar *var, const char *pOldValue, float flOldValue )
+void StudioChangeCallback( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	// NOTE: This is necessary to flush the queued thread when this value changes
 	MaterialLock_t hLock = g_pMaterialSystem->Lock();
@@ -91,39 +92,6 @@ void BuildTexturePath( const char *pTexturePath, const char *pTextureName, char 
 static ConVar studio_queue_mode( "studio_queue_mode", "1", 0, "", StudioChangeCallback );
 
 //-----------------------------------------------------------------------------
-// Queue helper
-//-----------------------------------------------------------------------------
-class CRenderDataFunctorAllocator
-{
-public:
-	CRenderDataFunctorAllocator() : m_pRenderContext( nullptr ) {}
-
-	void BeginFrame( IMatRenderContext *pRenderContext )
-	{
-		m_pRenderContext = pRenderContext;
-	}
-
-	void EndFrame()
-	{
-		m_pRenderContext = nullptr;
-	}
-
-	void *Alloc( std::size_t bytes )
-	{
-		void *p = m_pRenderContext->LockRenderData( bytes );
-		m_pRenderContext->UnlockRenderData( p ); // Unlock is fine, always queued mode
-		return p;
-	}
-
-private:
-	IMatRenderContext *m_pRenderContext;
-};
-
-CRenderDataFunctorAllocator g_RenderDataAllocator;
-CCustomizedFunctorFactory<CRenderDataFunctorAllocator, CRefCounted1<CFunctor, CRefCountServiceDestruct< CRefST > > > g_StudioRenderFunctorFactory;
-#define StudioRenderFunctor(...) g_StudioRenderFunctorFactory.CreateFunctor( __VA_ARGS__ )
-
-//-----------------------------------------------------------------------------
 // Globals
 //-----------------------------------------------------------------------------
 static float s_pZeroFlexWeights[MAXSTUDIOFLEXDESC];
@@ -175,7 +143,7 @@ CStudioRenderContext::~CStudioRenderContext()
 //-----------------------------------------------------------------------------
 bool CStudioRenderContext::Connect( CreateInterfaceFn factory )
 {
-	if ( !BaseClass::Connect( factory ) )
+	if ( !AppSystemTier3Connect( factory ) )
 		return false;
 
 	g_pStudioDataCache = ( IStudioDataCache * )factory( STUDIO_DATA_CACHE_INTERFACE_VERSION, nullptr );
@@ -184,15 +152,13 @@ bool CStudioRenderContext::Connect( CreateInterfaceFn factory )
 		Msg("StudioRender failed to connect to a required system\n" );
 	}
 
-	g_StudioRenderFunctorFactory.SetAllocator( &g_RenderDataAllocator );
-
 	return ( g_pMaterialSystem && g_pMaterialSystemHardwareConfig && g_pStudioDataCache );
 }
 
 void CStudioRenderContext::Disconnect()
 {
 	g_pStudioDataCache = nullptr;
-	BaseClass::Disconnect();
+	AppSystemTier3Disconnect();
 }
 
 
@@ -215,7 +181,7 @@ InitReturnVal_t CStudioRenderContext::Init()
 {
 	MathLib_Init( 2.2f, 2.2f, 0.0f, 2.0f );
 
-	InitReturnVal_t nRetVal = BaseClass::Init();
+	InitReturnVal_t nRetVal = AppSystemTier1Init();
 	if ( nRetVal != INIT_OK )
 		return nRetVal;
 
@@ -228,16 +194,7 @@ InitReturnVal_t CStudioRenderContext::Init()
 void CStudioRenderContext::Shutdown( void )
 {
 	g_pStudioRenderImp->Shutdown();
-	BaseClass::Shutdown();
-}
-
-
-//-----------------------------------------------------------------------------
-// Used to activate the stub material system.
-//-----------------------------------------------------------------------------
-void CStudioRenderContext::Mat_Stub( IMaterialSystem *pMatSys )
-{
-	g_pMaterialSystem = pMatSys;
+	AppSystemTier1Shutdown();
 }
 
 
@@ -2089,7 +2046,6 @@ void CStudioRenderContext::BeginFrame( void )
 		g_pStudioRenderImp->BeginFrame();
 	else
 	{
-		g_RenderDataAllocator.BeginFrame( pRenderContext );
 		pCallQueue->QueueCall( g_pStudioRenderImp, &CStudioRender::BeginFrame );
 	}
 }
@@ -2104,7 +2060,6 @@ void CStudioRenderContext::EndFrame( void )
 	else
 	{
 		pCallQueue->QueueCall( g_pStudioRenderImp, &CStudioRender::EndFrame );
-		g_RenderDataAllocator.EndFrame();
 	}
 }
 
@@ -2465,7 +2420,7 @@ void CStudioRenderContext::DrawModel( DrawModelResults_t *pResults, const DrawMo
 				flex.m_pFlexDelayedWeights = rdFlexDelayed.Base();
 			}
 		}
-		pCallQueue->QueueFunctor( StudioRenderFunctor( g_pStudioRenderImp, &CStudioRender::DrawModel, info, m_RC, pBoneToWorld, flex, flags ) );
+		pCallQueue->QueueCall( g_pStudioRenderImp, &CStudioRender::DrawModel, info, m_RC, pBoneToWorld, flex, flags );
 	}
 
 	if( flags & STUDIORENDER_DRAW_ACCURATETIME )
@@ -2536,11 +2491,11 @@ void CStudioRenderContext::DrawModelArray( const StudioModelArrayInfo_t &drawInf
 				pInstanceData = (StudioArrayInstanceData_t*)( (unsigned char*)pInstanceData + nInstanceStride );
 				++pCurrInstanceData;
 			}
-			pCallQueue->QueueFunctor( StudioRenderFunctor( g_pStudioRenderImp, &CStudioRender::DrawModelArray, drawInfo, m_RC, nCount, pQueuedInstanceData, sizeof(StudioArrayInstanceData_t), nFlags ) );
+			pCallQueue->QueueCall( g_pStudioRenderImp, &CStudioRender::DrawModelArray, drawInfo, m_RC, nCount, pQueuedInstanceData, sizeof(StudioArrayInstanceData_t), nFlags );
 		}
 		else
 		{
-			pCallQueue->QueueFunctor( StudioRenderFunctor( g_pStudioRenderImp, &CStudioRender::DrawModelArray, drawInfo, m_RC, nCount, pInstanceData, nInstanceStride, nFlags ) );
+			pCallQueue->QueueCall( g_pStudioRenderImp, &CStudioRender::DrawModelArray, drawInfo, m_RC, nCount, pInstanceData, nInstanceStride, nFlags );
 		}
 	}
 }
@@ -2584,7 +2539,7 @@ void CStudioRenderContext::DrawModelArray( const StudioModelArrayInfo2_t &drawIn
 	{
 		CMatRenderData< StudioArrayData_t > arrayRenderData( pRenderContext, nCount, pArrayData ); 
 		pArrayData = arrayRenderData.Base();
-		pCallQueue->QueueFunctor( StudioRenderFunctor( g_pStudioRenderImp, &CStudioRender::DrawModelArray2, drawInfo, m_RC, nCount, pArrayData, nInstanceStride, nFlags ) );
+		pCallQueue->QueueCall( g_pStudioRenderImp, &CStudioRender::DrawModelArray2, drawInfo, m_RC, nCount, pArrayData, nInstanceStride, nFlags );
 	}
 }
 
@@ -2627,7 +2582,7 @@ void CStudioRenderContext::DrawModelShadowArray( int nCount, StudioArrayData_t *
 	{
 		CMatRenderData< StudioArrayData_t > renderData( pRenderContext, nCount, pShadowData ); 
 		pShadowData = renderData.Base();
-		pCallQueue->QueueFunctor( StudioRenderFunctor( g_pStudioRenderImp, &CStudioRender::DrawModelShadowArray, m_RC, nCount, pShadowData, nInstanceStride, nFlags ) );
+		pCallQueue->QueueCall( g_pStudioRenderImp, &CStudioRender::DrawModelShadowArray, m_RC, nCount, pShadowData, nInstanceStride, nFlags );
 	}
 }
 
@@ -2651,7 +2606,7 @@ void CStudioRenderContext::DrawModelStaticProp( const DrawModelInfo_t& info, con
 	else
 	{
 		InvokeBindProxies( pRenderContext, pCallQueue, info );
-		pCallQueue->QueueFunctor( StudioRenderFunctor( g_pStudioRenderImp, &CStudioRender::DrawModelStaticProp, info, m_RC, modelToWorld, flags ) );
+		pCallQueue->QueueCall( g_pStudioRenderImp, &CStudioRender::DrawModelStaticProp, info, m_RC, modelToWorld, flags );
 	}
 }
 
@@ -2679,11 +2634,11 @@ void CStudioRenderContext::DrawModelArrayStaticProp( const DrawModelInfo_t& info
 
 		if ( pColorMeshes )
 		{
-			pCallQueue->QueueFunctor( StudioRenderFunctor( g_pStudioRenderImp, &CStudioRender::DrawModelArrayStaticProp, info, m_RC, nInstanceCount, pQueuedInstanceData, ks::envelope<ColorMeshInfo_t *>(pColorMeshes, nInstanceCount) ) );
+			pCallQueue->QueueCall( g_pStudioRenderImp, &CStudioRender::DrawModelArrayStaticProp, info, m_RC, nInstanceCount, pQueuedInstanceData, ks::envelope<ColorMeshInfo_t *>(pColorMeshes, nInstanceCount) );
 		}
 		else
 		{
-			pCallQueue->QueueFunctor( StudioRenderFunctor( g_pStudioRenderImp, &CStudioRender::DrawModelArrayStaticProp, info, m_RC, nInstanceCount, pQueuedInstanceData, pColorMeshes ) );
+			pCallQueue->QueueCall( g_pStudioRenderImp, &CStudioRender::DrawModelArrayStaticProp, info, m_RC, nInstanceCount, pQueuedInstanceData, pColorMeshes );
 		}
 	}
 }
@@ -2729,8 +2684,8 @@ void CStudioRenderContext::AddShadow( IMaterial* pMaterial, void* pProxyData,
 
 		CMatRenderData< FlashlightState_t > rdFlashlight( pRenderContext, 1, pFlashlightState );
 		CMatRenderData< VMatrix > rdMatrix( pRenderContext, 1, pWorldToTexture );
-		pCallQueue->QueueFunctor( StudioRenderFunctor( g_pStudioRenderImp, &CStudioRender::AddShadow, pMaterial, 
-			(void*)nullptr, rdFlashlight.Base(), rdMatrix.Base(), pFlashlightDepthTexture ) );
+		pCallQueue->QueueCall( g_pStudioRenderImp, &CStudioRender::AddShadow, pMaterial, 
+			(void*)nullptr, rdFlashlight.Base(), rdMatrix.Base(), pFlashlightDepthTexture );
 	}
 }
 
@@ -2758,3 +2713,9 @@ void CStudioRenderContext::AddDecal( StudioDecalHandle_t handle, studiohdr_t *pS
 		handle, m_RC, pBoneToWorld, pStudioHdr, ray, decalUp, pDecalMaterial, radius, 
 		body, noPokethru, maxLODToDecal, pvProxyUserData, nAdditionalDecalFlags );
 }
+
+
+//-----------------------------------------------------------------------------
+// The IStudioRender members forward to CStudioRenderContext
+//-----------------------------------------------------------------------------
+#include "facade/istudiorender.inl"

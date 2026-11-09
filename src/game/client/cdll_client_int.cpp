@@ -16,8 +16,6 @@
 #include "engine/ivmodelinfo.h"
 #include "cdll_int.h"
 #include <crtmemdebug.h>
-import ks.vstdlib;
-import std;
 #include "clientui.h"
 #include "clientmode.h"
 #include "iinput.h"
@@ -43,7 +41,6 @@ import std;
 #include "detailobjectsystem.h"
 #include "soundenvelope.h"
 #include "c_basetempentity.h"
-#include "materialsystem/imaterialsystemstub.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "c_soundscape.h"
 #include "engine/ivdebugoverlay.h"
@@ -77,8 +74,6 @@ import std;
 #include "inputsystem/iinputsystem.h"
 #include "scenefilecache/ISceneFileCache.h"
 #include "tier3/tier3.h"
-#include "avi/iavi.h"
-#include "avi/iquicktime.h"
 #include "toolframework_client.h"
 #include "hltvcamera.h"
 #include "hltvreplaysystem.h"
@@ -102,7 +97,6 @@ import std;
 #include "activitylist.h"
 #include "eventlist.h"
 
-#include "game_controls/igameuisystemmgr.h"
 
 #include "imaterialproxydict.h"
 #include "engine/iblackbox.h"
@@ -123,7 +117,6 @@ import std;
 
 extern IClientMode *GetClientModeNormal();
 
-LoggingChannelID_t LOG_CONSOLE = LoggingSystem_RegisterLoggingChannel( "Console", nullptr );;
 
 // IF YOU ADD AN INTERFACE, EXTERN IT IN THE HEADER FILE.
 IVEngineClient	*engine = nullptr;
@@ -131,7 +124,6 @@ IVModelRender *modelrender = nullptr;
 IVEfx *effects = nullptr;
 IVRenderView *render = nullptr;
 IVDebugOverlay *debugoverlay = nullptr;
-IMaterialSystemStub *materials_stub = nullptr;
 IDataCache *datacache = nullptr;
 IVModelInfoClient *modelinfo = nullptr;
 IEngineUI *engineui = nullptr;
@@ -141,20 +133,17 @@ IFileSystem *filesystem = nullptr;
 IShadowMgr *shadowmgr = nullptr;
 IStaticPropMgrClient *staticpropmgr = nullptr;
 IEngineSound *enginesound = nullptr;
-IUniformRandomStream *random = nullptr;
+CUniformRandomStream *random = nullptr;
 static CGaussianRandomStream s_GaussianRandomStream;
 CGaussianRandomStream *randomgaussian = &s_GaussianRandomStream;
 ISharedGameRules *sharedgamerules = nullptr;
 IEngineTrace *enginetrace = nullptr;
-IFileLoggingListener *filelogginglistener = nullptr;
+CFileLoggingListener *filelogginglistener = nullptr;
 IGameUIFuncs *gameuifuncs = nullptr;
 IGameEventManager2 *gameeventmanager = nullptr;
 ISoundEmitterSystemBase *soundemitterbase = nullptr;
 IInputSystem *inputsystem = nullptr;
 ISceneFileCache *scenefilecache = nullptr;
-IAvi *avi = nullptr;
-IBik *bik = nullptr;
-IQuickTime *pQuicktime = nullptr;
 IRenderToRTHelper *g_pRenderToRTHelper = nullptr;
 
 IUploadGameStats *gamestatsuploader = nullptr;
@@ -165,7 +154,6 @@ AchievementsAndStatsInterface* g_pAchievementsAndStatsInterface = nullptr;
 IScriptManager *scriptmanager = nullptr;
 
 IGameSystem *SoundEmitterSystem();
-IGameSystem *ToolFrameworkClientSystem();
 IViewRender *GetViewRenderInstance();
 
 bool g_bEngineIsHLTV = false;
@@ -266,7 +254,6 @@ static int CountPendingDataChangedEvents()
 bool g_bDataChangedPostEventsAllowed = false;
 
 
-class IMoveHelper;
 
 static ConVar s_CV_ShowParticleCounts("showparticlecounts", "0", 0, "Display number of particles drawn per frame");
 // static ConVar s_cl_team("cl_team", "default", FCVAR_ARCHIVE, "Default team when joining a game");
@@ -677,8 +664,8 @@ public:
 	
 	virtual void					SetCrosshairAngle( const QAngle& angle );
 
-	virtual void					InitSprite( CEngineSprite *pSprite, const char *loadname );
-	virtual void					ShutdownSprite( CEngineSprite *pSprite );
+	virtual void					InitSprite( void *pSprite, const char *loadname );
+	virtual void					ShutdownSprite( void *pSprite );
 
 	virtual int						GetSpriteSize( void ) const;
 
@@ -804,7 +791,7 @@ public:
 	virtual void PrepareSignedEvidenceData( void *pvData, int numBytes, CDemoPlaybackParameters_t const *pPlaybackParameters );
 	virtual bool ShouldSkipEvidencePlayback( CDemoPlaybackParameters_t const *pPlaybackParameters );
 
-	virtual bool IsConnectedUserInfoChangeAllowed( IConVar *pCvar );
+	virtual bool IsConnectedUserInfoChangeAllowed( ConVar *pCvar );
 	virtual void OnCommandDuringPlayback( char const *cmd );
 
 	virtual void RetireAllPlayerDecals( bool bRenderContextValid );
@@ -959,7 +946,7 @@ const char *GetParticleSystemNameFromIndex( int nIndex )
 void PrecacheEffect( const char *pEffectName )
 {
 	// Bring in dependent resources
-	g_pPrecacheSystem->Cache( g_pPrecacheHandler, DISPATCH_EFFECT, pEffectName, true, RESOURCE_LIST_INVALID, true );
+	g_pPrecacheSystem->Cache( g_PrecacheHandler, DISPATCH_EFFECT, pEffectName, true, RESOURCE_LIST_INVALID, true );
 }
 
 
@@ -1015,7 +1002,6 @@ bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 	IGameSystem::Add( GameStringSystem() );
 	IGameSystem::Add( g_pPrecacheRegister );
 	IGameSystem::Add( SoundEmitterSystem() );
-	IGameSystem::Add( ToolFrameworkClientSystem() );
 	IGameSystem::Add( ClientLeafSystem() );
 	IGameSystem::Add( DetailObjectSystem() );
 	IGameSystem::Add( ViewportClientSystem() );
@@ -1145,12 +1131,10 @@ int CHLClient::Connect( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGl
 	// Hook up global variables
 	gpGlobals = pGlobals;
 
-	ConnectTier1Libraries( &appSystemFactory, 1 );
-	ConnectTier2Libraries( &appSystemFactory, 1 );
-	ConnectTier3Libraries( &appSystemFactory, 1 );
+	// The tier libraries are shared with the engine, which has connected them.
 
 	// Initialize the console variables.
-	ConVar_Register( FCVAR_CLIENTDLL );
+	ConVar_Register( ks::client_registry().convars, FCVAR_CLIENTDLL );
 
 	return true;
 }
@@ -1158,7 +1142,7 @@ int CHLClient::Connect( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGl
 
 void CHLClient::Disconnect()
 {
-	ConVar_Unregister( );
+	ConVar_Unregister( ks::client_registry().convars );
 }
 
 
@@ -1175,7 +1159,7 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 		return false;
 	if ( (enginetrace = (IEngineTrace *)appSystemFactory( INTERFACEVERSION_ENGINETRACE_CLIENT, nullptr )) == nullptr )
 		return false;
-	if ( (filelogginglistener = (IFileLoggingListener *)appSystemFactory(FILELOGGINGLISTENER_INTERFACE_VERSION, nullptr)) == nullptr )
+	if ( (filelogginglistener = (CFileLoggingListener *)appSystemFactory(FILELOGGINGLISTENER_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
 	if ( (render = (IVRenderView *)appSystemFactory( VENGINE_RENDERVIEW_INTERFACE_VERSION, nullptr )) == nullptr )
 		return false;
@@ -1201,7 +1185,7 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 		return false;
 	if ( (filesystem = (IFileSystem *)appSystemFactory(FILESYSTEM_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
-	if ( (random = (IUniformRandomStream *)appSystemFactory(VENGINE_CLIENT_RANDOM_INTERFACE_VERSION, nullptr)) == nullptr )
+	if ( (random = (CUniformRandomStream *)appSystemFactory(VENGINE_CLIENT_RANDOM_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
 	if ( (gameuifuncs = (IGameUIFuncs * )appSystemFactory( VENGINE_GAMEUIFUNCS_VERSION, nullptr )) == nullptr )
 		return false;
@@ -1262,9 +1246,6 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 	if ( CommandLine()->FindParm( "-headtracking" ) )
 		g_bHeadTrackingEnabled = true;
 
-	// Not fatal if the material system stub isn't around.
-	materials_stub = (IMaterialSystemStub*)appSystemFactory( MATERIAL_SYSTEM_STUB_INTERFACE_VERSION, nullptr );
-
 	if( !g_pMaterialSystemHardwareConfig )
 		return false;
 
@@ -1280,7 +1261,7 @@ int CHLClient::Init( CreateInterfaceFn appSystemFactory, CGlobalVarsBase *pGloba
 	bool bInitSuccess = false;
 	if ( cl_threaded_init.GetBool() )
 	{
-		CFunctorJob *pGameJob = new CFunctorJob( CreateFunctor( InitParticleManager ) );
+		CJob *pGameJob = new CJob( CreateFunctor( InitParticleManager ) );
 		g_pThreadPool->AddJob( pGameJob );
 		bInitSuccess = InitGameSystems( appSystemFactory );
 
@@ -1414,10 +1395,7 @@ void CHLClient::Shutdown( void )
 	Blobulator::ShutdownBlob();
 #endif // USE_BLOBULATOR
 
-	DisconnectTier3Libraries( );
-	DisconnectTier2Libraries( );
-	ConVar_Unregister();
-	DisconnectTier1Libraries( );
+	ConVar_Unregister( ks::client_registry().convars );
 
 	gameeventmanager = nullptr;
 }
@@ -1751,7 +1729,7 @@ void CHLClient::View_Fade( ScreenFade_t *pSF )
 // CPU level
 //-----------------------------------------------------------------------------
 void ConfigureCurrentSystemLevel( );
-void OnCPULevelChanged( IConVar *var, const char *pOldValue, float flOldValue )
+void OnCPULevelChanged( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	ConfigureCurrentSystemLevel();
 }
@@ -1777,7 +1755,7 @@ CPULevel_t GetActualCPULevel()
 //-----------------------------------------------------------------------------
 // GPU level
 //-----------------------------------------------------------------------------
-void OnGPULevelChanged( IConVar *var, const char *pOldValue, float flOldValue )
+void OnGPULevelChanged( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	ConfigureCurrentSystemLevel();
 }
@@ -1795,7 +1773,7 @@ GPULevel_t GetGPULevel()
 //-----------------------------------------------------------------------------
 // System Memory level
 //-----------------------------------------------------------------------------
-void OnMemLevelChanged( IConVar *var, const char *pOldValue, float flOldValue )
+void OnMemLevelChanged( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	ConfigureCurrentSystemLevel();
 }
@@ -1815,7 +1793,7 @@ MemLevel_t GetMemLevel()
 //-----------------------------------------------------------------------------
 // GPU Memory level
 //-----------------------------------------------------------------------------
-void OnGPUMemLevelChanged( IConVar *var, const char *pOldValue, float flOldValue )
+void OnGPUMemLevelChanged( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	ConfigureCurrentSystemLevel();
 }
@@ -2115,11 +2093,11 @@ void CHLClient::SetCrosshairAngle( const QAngle& angle )
 // Input  : *pSprite - 
 //			*loadname - 
 //-----------------------------------------------------------------------------
-void CHLClient::InitSprite( CEngineSprite *pSprite, const char *loadname )
+void CHLClient::InitSprite( void *pSprite, const char *loadname )
 {
 	if ( pSprite )
 	{
-		pSprite->Init( loadname );
+		static_cast<CEngineSprite *>( pSprite )->Init( loadname );
 	}
 }
 
@@ -2127,11 +2105,11 @@ void CHLClient::InitSprite( CEngineSprite *pSprite, const char *loadname )
 // Purpose: 
 // Input  : *pSprite - 
 //-----------------------------------------------------------------------------
-void CHLClient::ShutdownSprite( CEngineSprite *pSprite )
+void CHLClient::ShutdownSprite( void *pSprite )
 {
 	if ( pSprite )
 	{
-		pSprite->Shutdown();
+		static_cast<CEngineSprite *>( pSprite )->Shutdown();
 	}
 }
 
@@ -2190,7 +2168,7 @@ void OnMovieStringTableChanged( void *object, INetworkStringTable *stringTable, 
 void OnEffectStringTableChanged( void *object, INetworkStringTable *stringTable, int stringNumber, const char *newString, void const *newData )
 {
 	// Make sure this puppy is precached
-	g_pPrecacheSystem->Cache( g_pPrecacheHandler, DISPATCH_EFFECT, newString, true, RESOURCE_LIST_INVALID, true );
+	g_pPrecacheSystem->Cache( g_PrecacheHandler, DISPATCH_EFFECT, newString, true, RESOURCE_LIST_INVALID, true );
 	RequestCacheUsedMaterials();
 }
 
@@ -2472,7 +2450,7 @@ void ProcessOnDataChangedEvents()
 		if ( !pUnk )
 			continue;
 
-		C_BaseEntity *pEntity = pUnk->GetBaseEntity();
+		C_BaseEntity *pEntity = EntityCast<C_BaseEntity>( pUnk->GetBaseEntity() );
 		if ( !pEntity )
 			continue;
 
@@ -2678,12 +2656,6 @@ void OnRenderStart()
 	// Now that the view model's position is setup and aiments are marked dirty, update
 	// their positions so they're in the leaf system correctly.
 	C_BaseEntity::CalcAimEntPositions();
-
-	// For entities marked for recording, post bone messages to IToolSystems
-	if ( ToolsEnabled() )
-	{
-		C_BaseEntity::ToolRecordEntities();
-	}
 
 	// update dynamic light state. Necessary for light cache to work properly for d- and elights
 	engine->UpdateDAndELights();
@@ -3101,8 +3073,8 @@ IMaterialProxy *CHLClient::InstantiateMaterialProxy( const char *proxyName )
 //-----------------------------------------------------------------------------
 void CHLClient::MarkEntitiesAsTouching( IClientEntity *e1, IClientEntity *e2 )
 {
-	CBaseEntity *entity = e1->GetBaseEntity();
-	CBaseEntity *entityTouched = e2->GetBaseEntity();
+	CBaseEntity *entity = EntityCast<C_BaseEntity>( e1->GetBaseEntity() );
+	CBaseEntity *entityTouched = EntityCast<C_BaseEntity>( e2->GetBaseEntity() );
 	if ( entity && entityTouched )
 	{
 		trace_t tr;
@@ -3338,7 +3310,7 @@ bool CHLClient::ShouldSkipEvidencePlayback( CDemoPlaybackParameters_t const *pPl
 	return true;
 }
 
-bool CHLClient::IsConnectedUserInfoChangeAllowed( IConVar *pCvar )
+bool CHLClient::IsConnectedUserInfoChangeAllowed( ConVar *pCvar )
 {
 	return CSGameRules() ? CSGameRules()->IsConnectedUserInfoChangeAllowed( nullptr ) : true;
 }
@@ -3348,16 +3320,16 @@ void CHLClient::OnCommandDuringPlayback( char const *cmd )
 	/* Removed for partner depot */
 }
 
+extern void OnPlayerDecalsLevelShutdown();
+extern void OnPlayerDecalsUpdate();
 void CHLClient::RetireAllPlayerDecals( bool bRenderContextValid )
 {
-	extern void OnPlayerDecalsLevelShutdown();
 	OnPlayerDecalsLevelShutdown();
 
 	if ( bRenderContextValid )
 	{
 		// If the render context is valid (i.e. manual r_cleardecals)
 		// then we should immediately update and reapply to avoid flickers
-		extern void OnPlayerDecalsUpdate();
 		OnPlayerDecalsUpdate();
 	}
 }
@@ -3373,62 +3345,3 @@ void CHLClient::OnTickPre( int tickcount )
 
 extern IViewRender *view;
 
-//-----------------------------------------------------------------------------
-// Purpose: interface from materialsystem to client, currently just for recording into tools
-//-----------------------------------------------------------------------------
-class CClientMaterialSystem : public IClientMaterialSystem
-{
-	virtual HTOOLHANDLE GetCurrentRecordingEntity()
-	{
-		if ( !ToolsEnabled() )
-			return HTOOLHANDLE_INVALID;
-
-		if ( !clienttools->IsInRecordingMode() )
-			return HTOOLHANDLE_INVALID;
-
-		const C_BaseEntity *pEnt = nullptr;
-		if( m_pProxyData ) //dynamic_cast not possible with void *. Just going to have to search to verify that it actually is an entity
-		{
-			CClientEntityList &entList = ClientEntityList();
-			C_BaseEntity *pIter = entList.FirstBaseEntity();
-			while( pIter )
-			{
-				if( (pIter == m_pProxyData) || (pIter->GetClientRenderable() == m_pProxyData) )
-				{
-					pEnt = pIter;
-					break;
-				}
-				
-				pIter = entList.NextBaseEntity( pIter );
-			}
-		}
-		
-		if( !pEnt && (materials->GetThreadMode() == MATERIAL_SINGLE_THREADED) )
-		{
-			pEnt = view->GetCurrentlyDrawingEntity();
-		}
-
-		if ( !pEnt || !pEnt->IsToolRecording() )
-			return HTOOLHANDLE_INVALID;
-
-		return pEnt->GetToolHandle();
-	}
-	virtual void PostToolMessage( HTOOLHANDLE hEntity, KeyValues *pMsg )
-	{
-		ToolFramework_PostToolMessage( hEntity, pMsg );
-	}
-	virtual void SetMaterialProxyData( void *pProxyData )
-	{
-		m_pProxyData = pProxyData;
-	}
-
-	void *m_pProxyData;
-};
-
-
-//-----------------------------------------------------------------------------
-// Singleton instance
-//-----------------------------------------------------------------------------
-static CClientMaterialSystem s_ClientMaterialSystem;
-IClientMaterialSystem *g_pClientMaterialSystem = &s_ClientMaterialSystem;
-static InterfaceReg s_Reg_CClientMaterialSystem_IClientMaterialSystem( []() -> void * { return static_cast<IClientMaterialSystem *>( &s_ClientMaterialSystem ); }, VCLIENTMATERIALSYSTEM_INTERFACE_VERSION );;

@@ -16,14 +16,15 @@ public:
 	CCascadeLight();
 	virtual ~CCascadeLight();
 
-	void Spawn( void );
+	void Spawn_Impl( void );
 	void Release( void );
 	void OnActivate();
 	void OnDeactivate();
 
-	bool KeyValue( const char *szKeyName, const char *szValue );
-	virtual bool GetKeyValue( const char *szKeyName, char *szValue, int iMaxLen );
-	int  UpdateTransmitState();
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	bool GetKeyValue_Impl( const char *szKeyName, char *szValue, int iMaxLen );
+	int  UpdateTransmitState_Impl();
 
 	inline const Vector &GetShadowDirection() const { return m_shadowDirection; }
 	inline const Vector &GetEnvLightShadowDirection() const { return m_envLightShadowDirection; }
@@ -34,7 +35,7 @@ public:
 	[[= ks::reflect::Input{ .name = "LightColor", .type = FIELD_COLOR32 } ]] void	InputSetLightColor( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "LightColorScale", .type = FIELD_INTEGER } ]] void	InputSetLightColorScale( inputdata_t &inputdata );
 
-	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	int	ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION; }
 
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();

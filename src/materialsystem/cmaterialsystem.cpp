@@ -31,11 +31,8 @@ import ks.vstdlib;
 #include "shadersystem.h"
 #include "texturemanager.h"
 #include "shaderlib/ShaderDLL.h"
-#include "shaderapi_builtin.h"
-#include "cmatnullrendercontext.h"
 #include "datacache/iresourceaccesscontrol.h"
 #include "cdll_int.h"
-#include "shaderapidx9/imeshdx8.h"
 
 
 // this is hooked into the engines convar
@@ -100,7 +97,15 @@ constexpr auto MATERIAL_MAX_TREE_DEPTH = 256;
 //-----------------------------------------------------------------------------
 
 CMaterialSystem g_MaterialSystem;
-static InterfaceReg s_Reg_CMaterialSystem_IMaterialSystem( []() -> void * { return static_cast<IMaterialSystem *>( &g_MaterialSystem ); }, MATERIAL_SYSTEM_INTERFACE_VERSION );;
+
+// IMaterialSystem and IMaterialSystemInternal are stateless facades whose members, defined below,
+// forward to g_MaterialSystem.
+static IMaterialSystemInternal s_MaterialSystemFacade;
+static CMaterialSystem &MaterialSystemImpl() { return g_MaterialSystem; }
+#include "facade/imaterialsystem.inl"
+#include "facade/imaterialsysteminternal.inl"
+
+static InterfaceReg s_Reg_CMaterialSystem_IMaterialSystem( []() -> void * { return static_cast<IMaterialSystem *>( &s_MaterialSystemFacade ); }, MATERIAL_SYSTEM_INTERFACE_VERSION );;
 
 // Expose this to the external shader DLLs
 MaterialSystem_Config_t g_config;
@@ -119,27 +124,19 @@ struct MaterialSystem_Config_Internal_t
 };
 MaterialSystem_Config_Internal_t g_config_internal;
 
-//-----------------------------------------------------------------------------
-// Necessary to allow the shader DLLs to get ahold of IMaterialSystemHardwareConfig
-//-----------------------------------------------------------------------------
 IHardwareConfigInternal* g_pHWConfig = 0;
-static void *GetHardwareConfig()
-{
-	if ( g_pHWConfig )
-		return (IMaterialSystemHardwareConfig*)g_pHWConfig;
-
-	// can't call QueryShaderAPI here because it calls a factory function
-	// and we end up in an infinite recursion
-	return nullptr;
-}
-static InterfaceReg s_Reg_GetHardwareConfig( GetHardwareConfig, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------
 // Accessor to get at the material system
 //-----------------------------------------------------------------------------
-IMaterialSystemInternal *g_pInternalMaterialSystem = &g_MaterialSystem;
-IShaderUtil *g_pShaderUtil = &g_MaterialSystem;
+IMaterialSystemInternal *g_pInternalMaterialSystem = &s_MaterialSystemFacade;
+
+// IShaderUtil is a stateless facade that forwards to the material system.
+static IShaderUtil s_ShaderUtilFacade;
+IShaderUtil *g_pShaderUtil = &s_ShaderUtilFacade;
+static CMaterialSystem &ShaderUtilImpl() { return g_MaterialSystem; }
+#include "shaderapi_facade/ishaderutil.inl"
 
 
 #include "appframework/ilaunchermgr.h"
@@ -302,9 +299,7 @@ void CMaterialSystem::CleanUpErrorMaterial()
 CMaterialSystem::CMaterialSystem()
 {
 	m_nRenderThreadID = 0xFFFFFFFF;
-	m_ShaderHInst = 0;
 	m_pMaterialProxyFactory = nullptr;
-	m_pClientMaterialSystemInterface = nullptr;
 	m_nAdapter = 0;
 	m_nAdapterFlags = 0;
 	m_bRequestedEditorMaterials = false;
@@ -329,7 +324,6 @@ CMaterialSystem::CMaterialSystem()
 	m_LinearToGammaIdentityTableTextureHandle = INVALID_SHADERAPI_TEXTURE_HANDLE;
 	m_MaxDepthTextureHandle = INVALID_SHADERAPI_TEXTURE_HANDLE;
 
-	m_bInStubMode = false;
 	m_pForcedTextureLoadPathID = nullptr;
 	m_bDisableRenderTargetAllocationForever = false;
 	m_nAllocatingRenderTargets = false;
@@ -374,49 +368,9 @@ CMaterialSystem::~CMaterialSystem()
 
 
 //-----------------------------------------------------------------------------
-// Creates/destroys the shader implementation for the selected API
-//-----------------------------------------------------------------------------
-CreateInterfaceFn CMaterialSystem::CreateShaderAPI( char const* pShaderDLL )
-{
-	if ( !pShaderDLL )
-		return 0;
-
-	// Clean up the old shader
-	DestroyShaderAPI();
-
-	// Both shader APIs are linked in; the name selects one.
-	if ( !V_stricmp( pShaderDLL, "shaderapidx9.so" ) )
-		return Sys_GetFactoryThis();
-	if ( !V_stricmp( pShaderDLL, "shaderapiempty.so" ) )
-		return ShaderApiEmptyFactory();
-
-	// Load the new shader
-	m_ShaderHInst = Sys_LoadModule( pShaderDLL );
-
-	// Error loading the shader
-	if ( !m_ShaderHInst )
-		return 0;
-
-	// Get our class factory methods...
-	return Sys_GetFactory( m_ShaderHInst );
-}
-
-void CMaterialSystem::DestroyShaderAPI()
-{
-	if (m_ShaderHInst)
-	{
-		// NOTE: By unloading the library, this will destroy m_pShaderAPI
-		Sys_UnloadModule( m_ShaderHInst );
-		g_pShaderAPI = 0;
-		g_pHWConfig = 0;
-		g_pShaderShadow = 0;
-		m_ShaderHInst = 0;
-	}
-}
-
-
-//-----------------------------------------------------------------------------
 // Sets which shader we should be using. Has to be done before connect!
+// The shader API is selected when the executable is linked (shaderapidx9 for srceng,
+// shaderapiempty for srcds); the name is only used to report it.
 //-----------------------------------------------------------------------------
 void CMaterialSystem::SetShaderAPI( char const *pShaderAPIDLL )
 {
@@ -438,11 +392,8 @@ void CMaterialSystem::SetShaderAPI( char const *pShaderAPIDLL )
 	m_pShaderDLL = new char[len];
 	std::memcpy( m_pShaderDLL, pShaderAPIDLL, len );
 
-	m_ShaderAPIFactory = CreateShaderAPI( pShaderAPIDLL );
-	if ( !m_ShaderAPIFactory )
-	{
-		DestroyShaderAPI();
-	}
+	// The interfaces of the linked-in shader API are registered like any other
+	m_ShaderAPIFactory = Sys_GetFactoryThis();
 }
 	
 
@@ -454,8 +405,8 @@ bool CMaterialSystem::Connect( CreateInterfaceFn factory )
 	if ( !factory )
 		return false;
 
-	if ( !BaseClass::Connect( factory ) )
-		return false;
+	ConnectTier1Libraries( &factory, 1 );
+	ConnectTier2Libraries( &factory, 1 );
 
 	if ( !g_pFullFileSystem )
 	{
@@ -463,7 +414,7 @@ bool CMaterialSystem::Connect( CreateInterfaceFn factory )
 		return false;
 	}
 	
-	// Get at the interfaces exported by the shader DLL
+	// Get at the interfaces exported by the shader API
 
 	g_pShaderDeviceMgr = (IShaderDeviceMgr*)m_ShaderAPIFactory( SHADER_DEVICE_MGR_INTERFACE_VERSION, 0 );
 	if ( !g_pShaderDeviceMgr )
@@ -506,16 +457,14 @@ void CMaterialSystem::Disconnect()
 	{
 		g_pShaderDeviceMgr->Disconnect();
 		g_pShaderDeviceMgr = nullptr;
-
-		// Unload the DLL
-		DestroyShaderAPI();
 	}
 	g_pShaderAPI = nullptr;
 	g_pHWConfig = nullptr;
 	g_pShaderShadow = nullptr;
 	g_pShaderDevice = nullptr;
 
-	BaseClass::Disconnect();
+	DisconnectTier2Libraries();
+	DisconnectTier1Libraries();
 }
 
 
@@ -593,9 +542,10 @@ void AllocateScratchRSXMemory();
 
 InitReturnVal_t CMaterialSystem::Init()
 {
-	InitReturnVal_t nRetVal = BaseClass::Init();
-	if ( nRetVal != INIT_OK )
-		return nRetVal;
+	if ( g_pCVar )
+	{
+		ConVar_Register( 0 );
+	}
 
 	// NOTE! : Overbright is 1.0 so that Hammer will work properly with the white bumped and unbumped lightmaps.
 	MathLib_Init( 2.2f, 2.2f, 0.0f, OVERBRIGHT );
@@ -603,7 +553,6 @@ InitReturnVal_t CMaterialSystem::Init()
 	g_pShaderDeviceMgr->SetAdapter( m_nAdapter, m_nAdapterFlags );
 	if ( g_pShaderDeviceMgr->Init( ) != INIT_OK )
 	{
-		DestroyShaderAPI();
 		return INIT_FAILED;
 	}
 
@@ -742,7 +691,10 @@ void CMaterialSystem::Shutdown( )
 		g_pShaderDeviceMgr->Shutdown();
 	}
 
-	BaseClass::Shutdown();
+	if ( g_pCVar )
+	{
+		ConVar_Unregister();
+	}
 }
 
 void CMaterialSystem::ModInit()
@@ -762,7 +714,6 @@ void CMaterialSystem::ModShutdown()
 
 	// HACK - this is here to unhook ourselves from the client interface, since we're not actually notified when it happens
 	m_pMaterialProxyFactory = nullptr;
-	m_pClientMaterialSystemInterface = nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -867,56 +818,6 @@ IMatRenderContext *CMaterialSystem::GetRenderContext()
 }
 
 //-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
-IMatRenderContext *CMaterialSystem::CreateRenderContext( MaterialContextType_t type )
-{
-	switch ( type )
-	{
-	case MATERIAL_HARDWARE_CONTEXT:		
-		return nullptr;
-
-	case MATERIAL_QUEUED_CONTEXT:		
-		{
-			CMatQueuedRenderContext *pQueuedContext = new CMatQueuedRenderContext;
-			pQueuedContext->Init( this, &m_HardwareRenderContext );
-			pQueuedContext->BeginQueue( &m_HardwareRenderContext );
-			return pQueuedContext;
-
-		}
-
-	case MATERIAL_NULL_CONTEXT:
-		{
-			CMatRenderContextBase *pNullContext = CreateNullRenderContext();
-			pNullContext->Init();
-			pNullContext->InitializeFrom( &m_HardwareRenderContext );
-			return pNullContext;
-		}
-	}
-	contract_assert( 0 );
-	return nullptr;
-}
-
-//-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
-IMatRenderContext *CMaterialSystem::SetRenderContext( IMatRenderContext *pNewContext )
-{
-	IMatRenderContext *pOldContext = m_pRenderContext;
-	if ( pNewContext )
-	{
-		pNewContext->AddRef();
-		m_pRenderContext = ( static_cast<IMatRenderContextInternal *>(pNewContext) );
-	}
-	else
-	{
-		m_pRenderContext = nullptr;
-	}
-	return pOldContext;
-}
-
-
-//-----------------------------------------------------------------------------
 // Get/Set Material proxy factory
 //-----------------------------------------------------------------------------
 IMaterialProxyFactory* CMaterialSystem::GetMaterialProxyFactory()
@@ -933,22 +834,6 @@ void CMaterialSystem::SetMaterialProxyFactory( IMaterialProxyFactory* pFactory )
 	m_pMaterialProxyFactory = pFactory; 
 }
 
-
-IClientMaterialSystem *CMaterialSystem::GetClientMaterialSystemInterface()
-{
-	if ( m_pClientMaterialSystemInterface )
-		return m_pClientMaterialSystemInterface;
-
-	if ( !m_pMaterialProxyFactory )
-		return nullptr;
-
-	CreateInterfaceFn pClientFactory = m_pMaterialProxyFactory->GetFactory();
-	if ( !pClientFactory )
-		return nullptr;
-
-	m_pClientMaterialSystemInterface = (IClientMaterialSystem *)pClientFactory( VCLIENTMATERIALSYSTEM_INTERFACE_VERSION, nullptr );
-	return m_pClientMaterialSystemInterface;
-}
 
 void CMaterialSystem::RefreshFrontBufferNonInteractive()
 {
@@ -1515,7 +1400,7 @@ void CMaterialSystem::GenerateConfigFromConfigKeyValues( MaterialSystem_Config_t
 // If mat_proxy goes to 0, we need to reload all materials, because their shader
 // params might have been messed with.
 //-----------------------------------------------------------------------------
-static void MatProxyCallback( IConVar *pConVar, const char *old, float flOldValue )
+static void MatProxyCallback( ConVar *pConVar, const char *old, float flOldValue )
 {
 	ConVarRef var( pConVar );
 	int oldVal = (int)flOldValue;
@@ -1536,7 +1421,7 @@ static ConVar mat_filterlightmaps(	"mat_filterlightmaps", "1" );
 static ConVar mat_filtertextures(	"mat_filtertextures", "1" );
 static ConVar mat_mipmaptextures(	"mat_mipmaptextures", "1" );
 
-static void mat_showmiplevels_Callback_f( IConVar *var, const char *pOldValue, float flOldValue )
+static void mat_showmiplevels_Callback_f( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	// turn off texture filtering if we are showing mip levels.
 	mat_filtertextures.SetValue( ( ( ConVar * )var )->GetInt() == 0 );
@@ -2215,27 +2100,16 @@ void CMaterialSystem::ReacquireResources()
 //-----------------------------------------------------------------------------
 bool CMaterialSystem::OnDrawMesh( IMesh *pMesh, int firstIndex, int numIndices )
 {
-	if ( IsInStubMode() )
-	{
-		return false;
-	}
-
 	return GetRenderContextInternal()->OnDrawMesh( pMesh, firstIndex, numIndices );
 }
 
 bool CMaterialSystem::OnDrawMesh( IMesh *pMesh, CPrimList *pLists, int nLists )
 {
-	if ( IsInStubMode() )
-		return false;
-
 	return GetRenderContextInternal()->OnDrawMesh( pMesh, pLists, nLists );
 }
 
 bool CMaterialSystem::OnDrawMeshModulated( IMesh *pMesh, const Vector4D &diffuseModulation, int firstIndex, int numIndices )
 {
-	if ( IsInStubMode() )
-		return false;
-
 	return GetRenderContextInternal()->OnDrawMeshModulated( pMesh, diffuseModulation, firstIndex, numIndices );
 }
 
@@ -3289,7 +3163,7 @@ void CMaterialSystem::EndFrame( void )
 			m_QueuedRenderContexts[m_iCurQueuedContext].GetCallQueueInternal()->QueueCall( g_pShaderAPI, &IShaderAPI::AcquireThreadOwnership );
 			m_pRenderContext =  &m_QueuedRenderContexts[m_iCurQueuedContext];
 
-			m_pActiveAsyncJob = new CFunctorJob( CreateFunctor( this, &CMaterialSystem::ThreadExecuteQueuedContext, pPrevContext ) );
+			m_pActiveAsyncJob = new CJob( CreateFunctor( this, &CMaterialSystem::ThreadExecuteQueuedContext, pPrevContext ) );
 			if ( mat_queue_priority.GetBool() )
 			{
 				m_pActiveAsyncJob->SetFlags( m_pActiveAsyncJob->GetFlags() | JF_QUEUE );
@@ -3434,16 +3308,6 @@ void CMaterialSystem::EndFrame( void )
 
 	contract_assert( m_bInFrame );
 	m_bInFrame = false;
-}
-
-void CMaterialSystem::SetInStubMode( bool bInStubMode )
-{
-	m_bInStubMode = bInStubMode;
-}
-
-bool CMaterialSystem::IsInStubMode()
-{
-	return m_bInStubMode;
 }
 
 void CMaterialSystem::Flush( bool flushHardware )
@@ -4162,16 +4026,6 @@ bool CMaterialSystem::IsStereoActiveThisFrame() const
 //-----------------------------------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------------------------------
-class CThreadRelease : public CJob
-{
-	virtual JobStatus_t DoExecute()
-	{
-		g_pShaderAPI->ReleaseThreadOwnership();
-
-		return JOB_OK;
-	}
-};
-
 void CMaterialSystem::ThreadRelease( )
 {
 	if ( !m_bThreadHasOwnership )
@@ -4186,7 +4040,7 @@ void CMaterialSystem::ThreadRelease( )
 		flStartTime = Plat_FloatTime();
 	}
 
-	CJob		*pActiveAsyncJob = new CThreadRelease();
+	CJob		*pActiveAsyncJob = new CJob( []() { g_pShaderAPI->ReleaseThreadOwnership(); } );
 	CreateMatQueueThreadPool()->AddJob( pActiveAsyncJob );
 	pActiveAsyncJob->WaitForFinish();
 
@@ -4214,16 +4068,6 @@ void CMaterialSystem::ThreadRelease( )
 	}
 }
 
-class CThreadAcquire : public CJob
-{
-	virtual JobStatus_t DoExecute()
-	{
-		g_pShaderAPI->AcquireThreadOwnership();
-
-		return JOB_OK;
-	}
-};
-
 void CMaterialSystem::ThreadAcquire( )
 {
 	double flStartTime, flEndTime;
@@ -4235,7 +4079,7 @@ void CMaterialSystem::ThreadAcquire( )
 
 	g_pShaderAPI->ReleaseThreadOwnership();
 
-	CJob		*pActiveAsyncJob = new CThreadAcquire();
+	CJob		*pActiveAsyncJob = new CJob( []() { g_pShaderAPI->AcquireThreadOwnership(); } );
 	CreateMatQueueThreadPool()->AddJob( pActiveAsyncJob );
 	//	while we could wait for this job to finish, there's no reason too
 	//	pActiveAsyncJob->WaitForFinish();

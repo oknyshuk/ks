@@ -14,12 +14,6 @@ typedef CHandle<C_BaseEntity> EHANDLE;
 typedef CHandle<CBaseEntity> EHANDLE;
 #endif
 
-class IPhysics;
-class IPhysicsEnvironment;
-class IPhysicsSurfaceProps;
-class IPhysicsCollision;
-class IPhysicsObject;
-class IPhysicsObjectPairHash;
 class CSoundPatch;
 
 

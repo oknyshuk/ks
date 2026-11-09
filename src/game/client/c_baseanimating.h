@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 #include "c_baseentity.h"
@@ -20,8 +18,9 @@ import ks.tier1;
 #include "bone_merge_cache.h"
 #include "ragdoll_shared.h"
 #include "datacache/idatacache.h"
-#include "toolframework/itoolframework.h"
+#include "toolframework/itoolentity.h"
 #include "materialsystem/custommaterialowner.h"
+#include "jigglebones.h"
 
 inline constexpr const char *LIPSYNC_POSEPARAM_NAME = "mouth";
 inline constexpr auto NUM_HITBOX_FIRES = 10;
@@ -37,24 +36,17 @@ class C_BaseClientShader
 
 class IRagdoll;
 class C_ClientRagdoll;
-class CIKContext;
 class CIKState;
-class ConVar;
 class C_RopeKeyframe;
-class CBoneBitList;
-class CBoneList;
-class CJiggleBones;
-class IBoneSetup;
 class C_BaseAnimatingOverlay;
 
 
 
-struct memhandle_t__;
-using memhandle_t = memhandle_t__ *;
-typedef unsigned short MDLHandle_t;
 
 extern ConVar vcollide_wireframe;
 extern IDataCache *datacache;
+extern void DevMsgRT( char const* pMsg, ... );
+extern IPoseDebugger *g_pPoseDebugger;
 
 struct ClientModelRenderInfo_t : public ModelRenderInfo_t
 {
@@ -886,12 +878,14 @@ inline matrix3x4a_t* C_BaseAnimating::GetBoneArrayForWrite()
 
 inline bool C_BaseAnimating::isBoneAvailableForRead( int iBone ) const
 {
-	return m_BoneAccessor.isBoneAvailableForRead( iBone );
+	CStudioHdr *pHdr = GetModelPtr();
+	return pHdr && ( pHdr->boneFlags( iBone ) & m_BoneAccessor.GetReadableBones() ) != 0;
 }
 
 inline bool C_BaseAnimating::isBoneAvailableForWrite( int iBone ) const
 {
-	return m_BoneAccessor.isBoneAvailableForWrite( iBone );
+	CStudioHdr *pHdr = GetModelPtr();
+	return pHdr && ( pHdr->boneFlags( iBone ) & m_BoneAccessor.GetWritableBones() ) != 0;
 }
 
 inline bool C_BaseAnimating::ShouldMuzzleFlash() const
@@ -964,4 +958,3 @@ void SetColumn( Vector &src, int column, matrix3x4_t& dest );
 EXTERN_RECV_TABLE(DT_BaseAnimating);
 
 
-extern void DevMsgRT( char const* pMsg, ... );

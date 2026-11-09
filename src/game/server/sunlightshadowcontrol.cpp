@@ -3,8 +3,6 @@
 
 // Purpose: Sunlight shadow control entity.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -57,10 +54,11 @@ public:
 
 	CSunlightShadowControl();
 
-	void Spawn( void );
-	bool KeyValue( const char *szKeyName, const char *szValue );
-	virtual bool GetKeyValue( const char *szKeyName, char *szValue, int iMaxLen );
-	int  UpdateTransmitState();
+	void Spawn_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	bool GetKeyValue_Impl( const char *szKeyName, char *szValue, int iMaxLen );
+	int  UpdateTransmitState_Impl();
 
 	// Inputs
 	[[= ks::reflect::Input{ .name = "SetAngles", .type = FIELD_STRING } ]] void	InputSetAngles( inputdata_t &inputdata );
@@ -70,7 +68,7 @@ public:
 	[[= ks::reflect::Input{ .name = "EnableShadows", .type = FIELD_BOOLEAN } ]] void	InputSetEnableShadows( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "LightColor", .type = FIELD_COLOR32 } ]] void	InputSetLightColor( inputdata_t &inputdata );
 
-	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	int	ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION; }
 
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
@@ -113,14 +111,14 @@ CSunlightShadowControl::CSunlightShadowControl()
 //------------------------------------------------------------------------------
 // Purpose : Send even though we don't have a model
 //------------------------------------------------------------------------------
-int CSunlightShadowControl::UpdateTransmitState()
+int CSunlightShadowControl::UpdateTransmitState_Impl()
 {
 	// ALWAYS transmit to all clients.
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
 
 
-bool CSunlightShadowControl::KeyValue( const char *szKeyName, const char *szValue )
+bool CSunlightShadowControl::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if ( FStrEq( szKeyName, "color" ) )
 	{
@@ -150,10 +148,10 @@ bool CSunlightShadowControl::KeyValue( const char *szKeyName, const char *szValu
 		V_strcpy( m_TextureName.GetForModify(), szValue );
 	}
 
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
-bool CSunlightShadowControl::GetKeyValue( const char *szKeyName, char *szValue, int iMaxLen )
+bool CSunlightShadowControl::GetKeyValue_Impl( const char *szKeyName, char *szValue, int iMaxLen )
 {
 	if ( FStrEq( szKeyName, "color" ) )
 	{
@@ -165,13 +163,13 @@ bool CSunlightShadowControl::GetKeyValue( const char *szKeyName, char *szValue, 
 		V_snprintf( szValue, iMaxLen, "%s", m_TextureName.Get() );
 		return true;
 	}
-	return BaseClass::GetKeyValue( szKeyName, szValue, iMaxLen );
+	return BaseClass::GetKeyValue_Impl( szKeyName, szValue, iMaxLen );
 }
 
 //------------------------------------------------------------------------------
 // Purpose :
 //------------------------------------------------------------------------------
-void CSunlightShadowControl::Spawn( void )
+void CSunlightShadowControl::Spawn_Impl( void )
 {
 	Precache();
 	SetSolid( SOLID_NONE );

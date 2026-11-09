@@ -41,79 +41,58 @@
 //-----------------------------------------------------------------------------
 class IShaderManager
 {
-protected:
-
-	// The current vertex and pixel shader index
-	int m_nVertexShaderIndex;
-	int m_nPixelShaderIndex;
-
 public:
 	// Initialize, shutdown
-	virtual void Init() = 0;
-	virtual void Shutdown() = 0;
+	void Init();
+	void Shutdown();
 
 	// Compiles vertex shaders
-	virtual IShaderBuffer *CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion ) = 0;
+	IShaderBuffer *CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion );
 
 	// New version of these methods	[dx10 port]
-	virtual VertexShaderHandle_t CreateVertexShader( IShaderBuffer* pShaderBuffer ) = 0;
-	virtual void DestroyVertexShader( VertexShaderHandle_t hShader ) = 0;
-	virtual PixelShaderHandle_t CreatePixelShader( IShaderBuffer* pShaderBuffer ) = 0;
-	virtual void DestroyPixelShader( PixelShaderHandle_t hShader ) = 0;
+	VertexShaderHandle_t CreateVertexShader( IShaderBuffer* pShaderBuffer );
+	void DestroyVertexShader( VertexShaderHandle_t hShader );
+	PixelShaderHandle_t CreatePixelShader( IShaderBuffer* pShaderBuffer );
+	void DestroyPixelShader( PixelShaderHandle_t hShader );
 
 	// Creates vertex, pixel shaders
-	virtual VertexShader_t CreateVertexShader( const char *pVertexShaderFile, int nStaticVshIndex = 0, char *debugLabel = nullptr  ) = 0;
-	virtual PixelShader_t CreatePixelShader( const char *pPixelShaderFile, int nStaticPshIndex = 0, char *debugLabel = nullptr ) = 0;
+	VertexShader_t CreateVertexShader( const char *pVertexShaderFile, int nStaticVshIndex = 0, char *debugLabel = nullptr  );
+	PixelShader_t CreatePixelShader( const char *pPixelShaderFile, int nStaticPshIndex = 0, char *debugLabel = nullptr );
 
 	// Sets which dynamic version of the vertex + pixel shader to use
-	[[gnu::always_inline]] inline void SetVertexShaderIndex( int vshIndex );
-	[[gnu::always_inline]] inline void SetPixelShaderIndex( int pshIndex );
+	void SetVertexShaderIndex( int vshIndex );
+	void SetPixelShaderIndex( int pshIndex );
 
 	// Sets the vertex + pixel shader render state
-	virtual void SetVertexShader( VertexShader_t shader ) = 0;
-	virtual void SetPixelShader( PixelShader_t shader ) = 0;
+	void SetVertexShader( VertexShader_t shader );
+	void SetPixelShader( PixelShader_t shader );
 
-	virtual void SetPixelShaderState_Internal( HardwareShader_t shader, DataCacheHandle_t hCachedShader  ) = 0;
-	virtual void SetVertexShaderState_Internal( HardwareShader_t shader, DataCacheHandle_t hCachedShader ) = 0;
+	void SetPixelShaderState_Internal( HardwareShader_t shader, DataCacheHandle_t hCachedShader  );
+	void SetVertexShaderState_Internal( HardwareShader_t shader, DataCacheHandle_t hCachedShader );
 
 	// Resets the vertex + pixel shader state
-	virtual void ResetShaderState() = 0;
+	void ResetShaderState();
 
 	// Flushes all shaders so they are reloaded+recompiled (does nothing unless dynamic shader compile is enabled)
-	virtual void FlushShaders() = 0;
+	void FlushShaders();
 
 	// Returns the current vertex + pixel shaders
-	virtual void *GetCurrentVertexShader() = 0;
-	virtual void *GetCurrentPixelShader() = 0;
+	void *GetCurrentVertexShader();
+	void *GetCurrentPixelShader();
 
-	virtual void ClearVertexAndPixelShaderRefCounts() = 0;
-	virtual void PurgeUnusedVertexAndPixelShaders() = 0;
+	void ClearVertexAndPixelShaderRefCounts();
+	void PurgeUnusedVertexAndPixelShaders();
 
 	// The low-level dx call to set the vertex shader state
-	virtual void BindVertexShader( VertexShaderHandle_t shader ) = 0;
-	virtual void BindPixelShader( PixelShaderHandle_t shader ) = 0;
+	void BindVertexShader( VertexShaderHandle_t shader );
+	void BindPixelShader( PixelShaderHandle_t shader );
 
-	virtual void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics ) = 0;
+	void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics );
 
 
 
-	virtual HardwareShader_t GetVertexShader( VertexShader_t vs, int dynIdx ) = 0;
-	virtual HardwareShader_t GetPixelShader( PixelShader_t ps, int dynIdx ) = 0;
+	HardwareShader_t GetVertexShader( VertexShader_t vs, int dynIdx );
+	HardwareShader_t GetPixelShader( PixelShader_t ps, int dynIdx );
 };
-
-//-----------------------------------------------------------------------------
-//
-// Methods related to setting vertex + pixel shader state
-//
-//-----------------------------------------------------------------------------
-[[gnu::always_inline]] inline void IShaderManager::SetVertexShaderIndex( int vshIndex )
-{
-	m_nVertexShaderIndex = vshIndex;
-}
-
-[[gnu::always_inline]] inline void IShaderManager::SetPixelShaderIndex( int pshIndex )
-{
-	m_nPixelShaderIndex = pshIndex;
-}
 
 extern void DestroyAllVertexAndPixelShaders( void );

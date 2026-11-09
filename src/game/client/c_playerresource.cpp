@@ -4,8 +4,6 @@
 // Purpose: Entity that propagates general data needed by clients for every player.
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"

@@ -74,7 +74,7 @@ public:
 };
 }
 
-class CParentProcessNetConsoleMgr : public ISocketCreatorListener
+class CParentProcessNetConsoleMgr
 {
 public:
 	CSocketCreator m_Socket;

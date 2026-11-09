@@ -6,8 +6,6 @@
 //			This files ONLY contains functions and data necessary to build an interface
 //			to external modules
 
-import std;
-import ks.vstdlib;
 #include "string_t.h"
 #include "edict.h"
 #include "eiface.h"
@@ -84,7 +82,6 @@ import ks.vstdlib;
 
 
 #include "ragdoll_shared.h"
-#include "toolframework/iserverenginetools.h"
 #include "sceneentity.h"
 #include "scenefilecache/ISceneFileCache.h"
 #include "tier2/tier2.h"
@@ -94,11 +91,7 @@ import ks.vstdlib;
 #include "querycache.h"
 #include "particle_parse.h"
 #include "tier3/tier3.h"
-#include "serverbenchmark_base.h"
 #include "vscript/ivscript.h"
-#include "foundryhelpers_server.h"
-#include "entity_tools_server.h"
-#include "foundry/iserverfoundry.h"
 #include "point_template.h"
 #include "engine/iblackbox.h"
 #include "tier2/tier2_logging.h"
@@ -109,17 +102,14 @@ import ks.vstdlib;
 
 #ifdef CSTRIKE_DLL // BOTPORT: TODO: move these ifdefs out
 #include "bot/bot.h"
+#include "bot/cs_bot_manager.h"
 #endif
 
 
 
 
 
-extern IToolFrameworkServer *g_pToolFrameworkServer;
-extern IParticleSystemQuery *g_pParticleSystemQuery;
 
-extern ConVar game_type;
-extern ConVar game_mode;
 ConVar occlusion_test_shadow_length( "occlusion_test_shadow_length", "144", FCVAR_RELEASE, "Max length of completely occluded shadow to consider a player for occlusion test. If shadow provably stops at this distance, the player may be considered for occlusion test. For longer shadows, we just don't do occlusion because we are not likely to find full occlusion when one of the boxes is expanded too much." );
 //ConVar occlusion_test_margins( "occlusion_test_margins", "36", FCVAR_RELEASE, "Amount by which the player bounding box is expanded for occlusion test. This margin should be large enough to accommodate player movement within a frame or two, and the longest weapon they might hold. Shadow does not take this into account." ); // default: 360 (max speed) / 30 ( give it a couple of frames) + however much the biggest weapon can stick out
 ConVar occlusion_test_camera_margins( "occlusion_test_camera_margins", "12", FCVAR_RELEASE, "Amount by which the camera (viewer's eye) is expanded for occlusion test. This should be large enough to accommodate eye's movement within a frame or two" ); // default: 360 (max speed) / 30 ( give it a couple of frames)
@@ -133,7 +123,6 @@ bool ShouldHideAllPlayers() { return false; }
 IUploadGameStats *gamestatsuploader = nullptr;
 
 
-LoggingChannelID_t LOG_CONSOLE = LoggingSystem_RegisterLoggingChannel( "Console", nullptr );;
 
 
 CTimedEventMgr g_NetworkPropertyEventMgr;
@@ -147,19 +136,17 @@ IVoiceServer	*g_pVoiceServer = nullptr;
 IFileSystem		*filesystem = nullptr;
 INetworkStringTableContainer *networkstringtable = nullptr;
 IStaticPropMgrServer *staticpropmgr = nullptr;
-IUniformRandomStream *random = nullptr;
+CUniformRandomStream *random = nullptr;
 IEngineSound *enginesound = nullptr;
 ISpatialPartition *partition = nullptr;
 IVModelInfo *modelinfo = nullptr;
 IEngineTrace *enginetrace = nullptr;
-IFileLoggingListener *filelogginglistener = nullptr;
+CFileLoggingListener *filelogginglistener = nullptr;
 IGameEventManager2 *gameeventmanager = nullptr;
 IDataCache *datacache = nullptr;
 IVDebugOverlay * debugoverlay = nullptr;
 ISoundEmitterSystemBase *soundemitterbase = nullptr;
 IServerPluginHelpers *serverpluginhelpers = nullptr;
-IServerEngineTools *serverenginetools = nullptr;
-IServerFoundry *serverfoundry = nullptr;
 ISceneFileCache *scenefilecache = nullptr;
 IScriptManager *scriptmanager = nullptr;
 IBlackBox *blackboxrecorder = nullptr;
@@ -173,8 +160,6 @@ void ModelSoundsCacheShutdown();
 
 void SceneManager_ClientActive( CBasePlayer *player );
 
-class IMaterialSystem;
-class IStudioRender;
 
 #ifdef _DEBUG
 static ConVar s_UseNetworkVars( "UseNetworkVars", "1", FCVAR_CHEAT, "For profiling, toggle network vars." );
@@ -223,18 +208,6 @@ static ConVar sv_showhitboxes( "sv_showhitboxes", "-1", FCVAR_CHEAT, "Send serve
 static ClientPutInServerOverrideFn g_pClientPutInServerOverride = nullptr;
 static void UpdateChapterRestrictions( const char *mapname );
 
-CSharedEdictChangeInfo *g_pSharedChangeInfo = nullptr;
-
-IChangeInfoAccessor *CBaseEdict::GetChangeAccessor()
-{
-	return engine->GetChangeAccessor( (const edict_t *)this );
-}
-
-const IChangeInfoAccessor *CBaseEdict::GetChangeAccessor() const
-{
-	return engine->GetChangeAccessor( (const edict_t *)this );
-}
-
 const char *GetHintTypeDescription( CAI_Hint *pHint );
 
 void ClientPutInServerOverride( ClientPutInServerOverrideFn fn )
@@ -253,13 +226,6 @@ bool IsHeadTrackingEnabled()
 	return false;
 }
 
-//-----------------------------------------------------------------------------
-// Also in cdll so linked libs can extern it
-//-----------------------------------------------------------------------------
-bool UTIL_IsDedicatedServer( void )
-{
-	return engine->IsDedicatedServer();
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -524,15 +490,7 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 		CreateInterfaceFn physicsFactory, CreateInterfaceFn fileSystemFactory, 
 		CGlobalVars *pGlobals)
 {
-	COM_TimestampedLog( "ConnectTier1/2/3Libraries - Start" );
-
-	ConnectTier1Libraries( &appSystemFactory, 1 );
-	ConnectTier2Libraries( &appSystemFactory, 1 );
-	ConnectTier3Libraries( &appSystemFactory, 1 );
-
-	COM_TimestampedLog( "ConnectTier1/2/3Libraries - Finish" );
-
-	// Connected in ConnectTier1Libraries
+	// The tier libraries are shared with the engine, which has connected them.
 	if ( cvar == nullptr )
 		return false;
 
@@ -548,7 +506,7 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 		return false;
 	if ( (staticpropmgr = (IStaticPropMgrServer *)appSystemFactory(INTERFACEVERSION_STATICPROPMGR_SERVER,nullptr)) == nullptr )
 		return false;
-	if ( (random = (IUniformRandomStream *)appSystemFactory(VENGINE_SERVER_RANDOM_INTERFACE_VERSION, nullptr)) == nullptr )
+	if ( (random = (CUniformRandomStream *)appSystemFactory(VENGINE_SERVER_RANDOM_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
 	if ( (enginesound = (IEngineSound *)appSystemFactory(IENGINESOUND_SERVER_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
@@ -558,7 +516,7 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 		return false;
 	if ( (enginetrace = (IEngineTrace *)appSystemFactory(INTERFACEVERSION_ENGINETRACE_SERVER,nullptr)) == nullptr )
 		return false;
-	if ( (filelogginglistener = (IFileLoggingListener *)appSystemFactory(FILELOGGINGLISTENER_INTERFACE_VERSION, nullptr)) == nullptr )
+	if ( (filelogginglistener = (CFileLoggingListener *)appSystemFactory(FILELOGGINGLISTENER_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
 	if ( (filesystem = (IFileSystem *)fileSystemFactory(FILESYSTEM_INTERFACE_VERSION,nullptr)) == nullptr )
 		return false;
@@ -610,8 +568,6 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	// cache the globals
 	gpGlobals = pGlobals;
 
-	g_pSharedChangeInfo = engine->GetSharedEdictChangeInfo();
-	
 	COM_TimestampedLog( "MathLib_Init" );
 
 	MathLib_Init( 2.2f, 2.2f, 0.0f, 2.0f );
@@ -632,9 +588,10 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	InitializeCvars();
 	
 	COM_TimestampedLog( "g_pParticleSystemMgr->Init" );
-	// Initialize the particle system
+	// The particle system manager is shared with the client, which supplies the query it simulates
+	// with. The server only loads and precaches the definitions.
 	bool bPrecacheParticles = true;
-	if ( !g_pParticleSystemMgr->Init( g_pParticleSystemQuery, bPrecacheParticles ) )
+	if ( !g_pParticleSystemMgr->Init( nullptr, bPrecacheParticles ) )
 	{
 		return false;
 	}
@@ -650,7 +607,7 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 	bool bInitSuccess = false;
 	if ( sv_threaded_init.GetBool() )
 	{
-		CFunctorJob *pGameJob = new CFunctorJob( CreateFunctor( ParseParticleEffects, false ) );
+		CJob *pGameJob = new CJob( CreateFunctor( ParseParticleEffects, false ) );
 		g_pThreadPool->AddJob( pGameJob );
 		bInitSuccess = InitGameSystems( appSystemFactory );
 
@@ -698,14 +655,6 @@ void CServerGameDLL::PostInit()
 
 }
 
-void CServerGameDLL::PostToolsInit()
-{
-	if ( serverenginetools )
-	{
-		serverfoundry = ( IServerFoundry * )serverenginetools->QueryInterface( VSERVERFOUNDRY_INTERFACE_VERSION );
-	}
-}
-
 void CServerGameDLL::DLLShutdown( void )
 {
 
@@ -738,10 +687,7 @@ void CServerGameDLL::DLLShutdown( void )
 		TheNavMesh = nullptr;
 	}
 
-	DisconnectTier3Libraries();
-	DisconnectTier2Libraries();
-	ConVar_Unregister();
-	DisconnectTier1Libraries();
+	ConVar_Unregister( ks::server_registry().convars );
 }
 
 
@@ -953,8 +899,6 @@ bool CServerGameDLL::LevelInit( const char *pMapName, char const *pMapEntities, 
 		CMapLoadEntityFilter filter;
 		MapEntity_ParseAllEntities( pMapEntities, &filter );
 
-		g_pServerBenchmark->StartBenchmark();
-
 		// Now call the mod specific parse
 		LevelInit_ParseAllEntities( pMapEntities );
 	}
@@ -1048,7 +992,7 @@ void CServerGameDLL::ServerActivate( edict_t *pEdictList, int edictCount, int cl
 	TheNavMesh->OnServerActivate();
 
 #if defined( CSTRIKE_DLL ) // BOTPORT: TODO: move these ifdefs out
-	TheBots->ServerActivate();
+	TheCSBots()->ServerActivate();
 #endif
 }
 
@@ -1057,6 +1001,9 @@ void CServerGameDLL::ServerActivate( edict_t *pEdictList, int edictCount, int cl
 //-----------------------------------------------------------------------------
 ConVar  trace_report( "trace_report", "0" );
 
+extern void GameStartFrame( void );
+extern void ServiceEventQueue( void );
+extern void Physics_RunThinkFunctions( bool simulating );
 void CServerGameDLL::GameFrame( bool simulating )
 {
 	CVProfScope _( "CServerGameDLL::GameFrame", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
@@ -1085,14 +1032,10 @@ void CServerGameDLL::GameFrame( bool simulating )
 	g_bUseNetworkVars = s_UseNetworkVars.GetBool();
 #endif
 
-	extern void GameStartFrame( void );
-	extern void ServiceEventQueue( void );
-	extern void Physics_RunThinkFunctions( bool simulating );
 
 	// Delete anything that was marked for deletion
 	//  outside of server frameloop (e.g., in response to concommand)
 	gEntList.CleanupDeleteList();
-	HandleFoundryEntitySpawnRecords();
 
 	{
 		MDLCACHE_CRITICAL_SECTION();
@@ -1111,12 +1054,6 @@ void CServerGameDLL::GameFrame( bool simulating )
 			CVProfScope _( "UpdateQueryCache", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 			UpdateQueryCache();
 		}
-		
-		{
-			CVProfScope _( "g_pServerBenchmark->UpdateBenchmark", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
-			g_pServerBenchmark->UpdateBenchmark();
-		}
-		
 
 		Physics_RunThinkFunctions( simulating );
 		
@@ -1200,7 +1137,7 @@ void CServerGameDLL::PreClientUpdate( bool simulating )
 			if ( !pEntity )
 				break;
 
-			CBaseAnimating *anim = dynamic_cast< CBaseAnimating * >( pEntity );
+			CBaseAnimating *anim = entity_cast<CBaseAnimating>( pEntity );
 
 			if (anim)
 			{
@@ -1210,7 +1147,7 @@ void CServerGameDLL::PreClientUpdate( bool simulating )
 		return;
 	}
 
-	CBaseAnimating *anim = dynamic_cast< CBaseAnimating * >( CBaseEntity::Instance( INDEXENT( sv_showhitboxes.GetInt() ) ) );
+	CBaseAnimating *anim = entity_cast<CBaseAnimating>( CBaseEntity::Instance( INDEXENT( sv_showhitboxes.GetInt() ) ) );
 	if ( !anim )
 		return;
 
@@ -1458,7 +1395,7 @@ void CServerGameDLL::InvalidateMdlCache()
 	CBaseAnimating *pAnimating;
 	for ( CBaseEntity *pEntity = gEntList.FirstEnt(); pEntity != nullptr; pEntity = gEntList.NextEnt(pEntity) )
 	{
-		pAnimating = dynamic_cast<CBaseAnimating *>(pEntity);
+		pAnimating = entity_cast<CBaseAnimating>(pEntity);
 		if ( pAnimating )
 		{
 			pAnimating->InvalidateMdlCache();
@@ -1636,7 +1573,7 @@ static bool IsValidPath( const char *pszFilename )
 	return true;
 }
 
-static void ValidateMOTDFilename( IConVar *pConVar, const char *oldValue, float flOldValue )
+static void ValidateMOTDFilename( ConVar *pConVar, const char *oldValue, float flOldValue )
 {
 	ConVarRef var( pConVar );
 	if ( !IsValidPath( var.GetString() ) )
@@ -2006,7 +1943,7 @@ class CServerGameEnts : public IServerGameEnts
 public:
 	virtual void			MarkEntitiesAsTouching( edict_t *e1, edict_t *e2 );
 	virtual void			FreeContainingEntity( edict_t * ); 
-	virtual edict_t*		BaseEntityToEdict( CBaseEntity *pEnt );
+	virtual edict_t*		BaseEntityToEdict( IServerUnknown *pEnt );
 	virtual CBaseEntity*	EdictToBaseEntity( edict_t *pEdict );
 	virtual void			CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned short *pEdictIndices, int nEdicts );
 	virtual void			PrepareForFullUpdate( edict_t *pEdict );
@@ -2038,10 +1975,10 @@ void CServerGameEnts::FreeContainingEntity( edict_t *e )
 	::FreeContainingEntity(e);
 }
 
-edict_t* CServerGameEnts::BaseEntityToEdict( CBaseEntity *pEnt )
+edict_t* CServerGameEnts::BaseEntityToEdict( IServerUnknown *pEnt )
 {
 	if ( pEnt )
-		return pEnt->edict();
+		return EntityCast<CBaseEntity>( pEnt )->edict();
 	else
 		return nullptr;
 }
@@ -2268,7 +2205,7 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 			continue;
 		}
 
-		CBasePlayer *pPlayer = dynamic_cast< CBasePlayer* >( pEnt );
+		CBasePlayer *pPlayer = entity_cast<CBasePlayer>( pEnt );
 
 		// Team Lead in gungame should be always visible in counter-strike. Yes, even if he's out of PVS. Yes, even if he's behind the wall.
 		if ( pPlayer && static_cast< CCSPlayer* >( pPlayer )->m_isCurrentGunGameTeamLeader )
@@ -2312,7 +2249,7 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 			{
 				do
 				{
-					if ( CBaseEntity *pParent = pNetworkParent->GetBaseEntity() )
+					if ( CBaseEntity *pParent = EntityCast<CBaseEntity>( pNetworkParent->GetBaseEntity() ) )
 					{
 						if ( pParent->IsPlayer() )
 						{
@@ -2323,7 +2260,7 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 								check = nullptr; // don't check anything, just don't transmit this entity
 							}
 							/*
-							if ( CBasePlayer *pParentPlayer = dynamic_cast< CBasePlayer* >( pParent ) )
+							if ( CBasePlayer *pParentPlayer = entity_cast<CBasePlayer>( pParent ) )
 							{
 								if ( pRecipientPlayer->ShouldCheckOcclusion( pParentPlayer ) )
 								{
@@ -2392,7 +2329,7 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 			if ( checkFlags == FL_EDICT_FULLCHECK )
 			{
 				// do a full ShouldTransmit() check, may return FL_EDICT_CHECKPVS
-				CBaseEntity *pCheckEntity = check->GetBaseEntity();
+				CBaseEntity *pCheckEntity = EntityCast<CBaseEntity>( check->GetBaseEntity() );
 				nFlags = pCheckEntity->ShouldTransmit( pInfo );
 				contract_assert( !(nFlags & FL_EDICT_FULLCHECK) );
 				if ( nFlags & FL_EDICT_ALWAYS )
@@ -2505,9 +2442,9 @@ void CServerGameClients::ClientFullyConnect( edict_t *pEdict )
 // Purpose: called when a player disconnects from a server
 // Input  : *pEdict - the player
 //-----------------------------------------------------------------------------
+extern bool	g_fGameOver;
 void CServerGameClients::ClientDisconnect( edict_t *pEdict )
 {
-	extern bool	g_fGameOver;
 
 	CBasePlayer *player = ( CBasePlayer * )CBaseEntity::Instance( pEdict );
 	if ( player )
@@ -2713,8 +2650,6 @@ void CServerGameClients::ClientSetupVisibility( edict_t *pViewEntity, edict_t *p
 
 	// Reset the PVS!!!
 	engine->ResetPVS( pvs, pvssize );
-
-	g_pToolFrameworkServer->PreSetupVisibility();
 
 	// Find the client's PVS
 	CBaseEntity *pVE = nullptr;
@@ -2992,7 +2927,7 @@ bool CServerGameClients::ClientReplayEvent( edict_t *pEdict, const ClientReplayE
 // Input  : *player - 
 // Output : CPlayerState
 //-----------------------------------------------------------------------------
-CPlayerState *CServerGameClients::GetPlayerState( edict_t *player )
+void *CServerGameClients::GetPlayerState( edict_t *player )
 {
 	// Is the client spawned yet?
 	if ( !player || !player->GetUnknown() )

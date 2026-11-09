@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -44,12 +42,12 @@ public:
 	static CPhysicsNPCSolver *Create( CAI_BaseNPC *pNPC, CBaseEntity *pPhysicsObject, bool disableCollisions, float separationTime );
 
 	// CBaseEntity
-	virtual void Spawn();
-	virtual void UpdateOnRemove();
-	virtual void Think();
-	virtual void OnRestore()
+	void Spawn_Impl();
+	void UpdateOnRemove_Impl();
+	void Think_Impl();
+	void OnRestore_Impl()
 	{
-		BaseClass::OnRestore();
+		BaseClass::OnRestore_Impl();
 		if ( m_allowIntersection )
 		{
 			PhysDisableEntityCollisions( m_hNPC, m_hEntity );
@@ -151,7 +149,7 @@ void CPhysicsNPCSolver::BecomePenetrationSolver()
 	}
 }
 
-void CPhysicsNPCSolver::Spawn()
+void CPhysicsNPCSolver::Spawn_Impl()
 {
 	if ( m_allowIntersection )
 	{
@@ -164,7 +162,7 @@ void CPhysicsNPCSolver::Spawn()
 	ResetCancelTime();
 }
 
-void CPhysicsNPCSolver::UpdateOnRemove()
+void CPhysicsNPCSolver::UpdateOnRemove_Impl()
 {
 	if ( m_allowIntersection )
 	{
@@ -180,7 +178,7 @@ void CPhysicsNPCSolver::UpdateOnRemove()
 		}
 	}
 	//NDebugOverlay::EntityBounds(m_hNPC, 0, 255, 0, 64, 0.5f );
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 bool CPhysicsNPCSolver::IsIntersecting()
@@ -274,7 +272,7 @@ bool CPhysicsNPCSolver::CheckTouching()
 	return found;
 }
 
-void CPhysicsNPCSolver::Think()
+void CPhysicsNPCSolver::Think_Impl()
 {
 	bool finished = m_allowIntersection ? !IsIntersecting() : !CheckTouching();
 
@@ -377,9 +375,9 @@ public:
 	static CPhysicsEntitySolver *Create( CBaseEntity *pMovingEntity, CBaseEntity *pPhysicsBlocker, float separationTime );
 
 	// CBaseEntity
-	virtual void Spawn();
-	virtual void UpdateOnRemove();
-	virtual void Think();
+	void Spawn_Impl();
+	void UpdateOnRemove_Impl();
+	void Think_Impl();
 
 	// IMotionEvent
 	//virtual simresult_e	Simulate( IPhysicsMotionController *pController, IPhysicsObject *pObject, float deltaTime, Vector &linear, AngularImpulse &angular );
@@ -419,7 +417,7 @@ void CPhysicsEntitySolver::Init( CBaseEntity *pMovingEntity, CBaseEntity *pPhysi
 	m_separationDuration = separationTime;
 }
 
-void CPhysicsEntitySolver::Spawn()
+void CPhysicsEntitySolver::Spawn_Impl()
 {
 	SetNextThink( gpGlobals->curtime + m_separationDuration );
 	PhysDisableEntityCollisions( m_hMovingEntity, m_hPhysicsBlocker );
@@ -431,12 +429,12 @@ void CPhysicsEntitySolver::Spawn()
 	}
 }
 
-void CPhysicsEntitySolver::Think()
+void CPhysicsEntitySolver::Think_Impl()
 {
 	UTIL_Remove(this);
 }
 
-void CPhysicsEntitySolver::UpdateOnRemove()
+void CPhysicsEntitySolver::UpdateOnRemove_Impl()
 {
 	//physenv->DestroyMotionController( m_pController );
 	//m_pController = NULL;
@@ -450,7 +448,7 @@ void CPhysicsEntitySolver::UpdateOnRemove()
 	{
 		pPhysics->SetCollisionGroup( m_savedCollisionGroup );
 	}
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 

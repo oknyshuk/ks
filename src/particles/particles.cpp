@@ -282,22 +282,7 @@ BEGIN_DMXELEMENT_UNPACK( ParticleChildrenInfo_t )
 	DMXELEMENT_UNPACK_FIELD( "end cap effect", "0", bool, m_bEndCap )
 END_DMXELEMENT_UNPACK( ParticleChildrenInfo_t, s_ChildrenInfoUnpack )
 
-class CChildOperatorDefinition : public IParticleOperatorDefinition
-{
-public:
-	virtual const char *GetName() const { contract_assert( 0 ); return nullptr; }
-	virtual CParticleOperatorInstance *CreateInstance( const DmObjectId_t &id ) const { contract_assert( 0 ); return nullptr; }
-	//	virtual void DestroyInstance( CParticleOperatorInstance *pInstance ) const { Assert(0); }
-	virtual const DmxElementUnpackStructure_t* GetUnpackStructure() const
-	{
-		return s_ChildrenInfoUnpack;
-	}
-	virtual ParticleOperatorId_t GetId() const { return OPERATOR_GENERIC; }
-	virtual uint32 GetFilter() const { return 0; }
-	virtual bool IsObsolete() const { return false; }
-};
-
-static CChildOperatorDefinition s_ChildOperatorDefinition;
+static IParticleOperatorDefinition s_ChildOperatorDefinition( &s_ChildrenInfoUnpack );
 
 
 //-----------------------------------------------------------------------------
@@ -536,42 +521,42 @@ void CParticleSystemDefinition::ParseOperators(
 			// found it!
 			bFound = true;
 
-			std::unique_ptr< CParticleOperatorInstance > pNewRef( flist[j]->CreateInstance( ops[i]->GetId() ) );
+			std::unique_ptr< CParticleOperatorInstance, CParticleOperatorDeleter > pNewRef( flist[j]->CreateInstance( ops[i]->GetId() ) );
 			const DmxElementUnpackStructure_t *pUnpack = flist[j]->GetUnpackStructure();
 			if ( pUnpack )
 			{
 				ops[i]->UnpackIntoStructure( pNewRef.get(), pUnpack );
 			}
-			pNewRef->InitParams( this );
+			pNewRef.get()->InitParams( this );
 			pNewRef->CheckForFastPath();
 
-			m_nAttributeReadMask |= pNewRef->GetReadAttributes();
-			m_nControlPointReadMask |= pNewRef->GetReadControlPointMask();
-			m_nControlPointNonPositionalMask |= pNewRef->GetNonPositionalControlPointMask();
+			m_nAttributeReadMask |= pNewRef.get()->GetReadAttributes();
+			m_nControlPointReadMask |= pNewRef.get()->GetReadControlPointMask();
+			m_nControlPointNonPositionalMask |= pNewRef.get()->GetNonPositionalControlPointMask();
 
 			switch( nFunctionType )
 			{
 			case FUNCTION_INITIALIZER:
 			case FUNCTION_EMITTER:
-				m_nPerParticleInitializedAttributeMask |= pNewRef->GetWrittenAttributes();
-				contract_assert( pNewRef->GetReadInitialAttributes() == 0 );
+				m_nPerParticleInitializedAttributeMask |= pNewRef.get()->GetWrittenAttributes();
+				contract_assert( pNewRef.get()->GetReadInitialAttributes() == 0 );
 				break;
 
 			case FUNCTION_OPERATOR:
 			case FUNCTION_FORCEGENERATOR:
 			case FUNCTION_CONSTRAINT:
-				m_nPerParticleUpdatedAttributeMask |= pNewRef->GetWrittenAttributes();
-				m_nInitialAttributeReadMask |= pNewRef->GetReadInitialAttributes();
+				m_nPerParticleUpdatedAttributeMask |= pNewRef.get()->GetWrittenAttributes();
+				m_nInitialAttributeReadMask |= pNewRef.get()->GetReadInitialAttributes();
 				break;
 				
 			case FUNCTION_RENDERER:
-				m_nPerParticleUpdatedAttributeMask |= pNewRef->GetWrittenAttributes();
-				m_nInitialAttributeReadMask |= pNewRef->GetReadInitialAttributes();
+				m_nPerParticleUpdatedAttributeMask |= pNewRef.get()->GetWrittenAttributes();
+				m_nInitialAttributeReadMask |= pNewRef.get()->GetReadInitialAttributes();
 				break;
 			}
 
 			// Special case: Reading particle ID means we're reading the initial particle id
-			if ( ( pNewRef->GetReadAttributes() | pNewRef->GetReadInitialAttributes() ) & PARTICLE_ATTRIBUTE_PARTICLE_ID_MASK )
+			if ( ( pNewRef.get()->GetReadAttributes() | pNewRef.get()->GetReadInitialAttributes() ) & PARTICLE_ATTRIBUTE_PARTICLE_ID_MASK )
 			{
 				m_nInitialAttributeReadMask |= PARTICLE_ATTRIBUTE_PARTICLE_ID_MASK;
 				m_nPerParticleInitializedAttributeMask |= PARTICLE_ATTRIBUTE_PARTICLE_ID_MASK;
@@ -811,7 +796,7 @@ void CParticleSystemDefinition::SetupContextData( void )
 		for( int j = 0; j < nCount; j++ )
 		{
 			offsetLists[i]->push_back( m_nContextDataSize );
-			m_nContextDataSize += (*olists[i])[j]->GetRequiredContextBytes();
+			m_nContextDataSize += (*olists[i])[j].get()->GetRequiredContextBytes();
 			// align context data
 			m_nContextDataSize = (m_nContextDataSize + 15) & (~0xf );
 		}
@@ -883,6 +868,66 @@ CParticleOperatorInstance *CParticleSystemDefinition::FindOperatorByName( const 
 		}
 	}
 	return nullptr;
+}
+
+
+//-----------------------------------------------------------------------------
+// Operator dispatch: the group (source file) of the operator's kind picks the switch that knows
+// its class (see particle_operator_dispatch.inl).
+//-----------------------------------------------------------------------------
+#define KS_PARTICLE_OP_DEFINE_ENTRY( Ret, Name, Const, Params, Args ) \
+	Ret ParticleOps::Name( KS_PARTICLE_OP_SIGNATURE( Const, KS_PARTICLE_OP_UNPAREN Params ) ) \
+	{ \
+		switch ( pOp->m_Group ) \
+		{ \
+		case ParticleOperatorGroup::Constraints: return Name##_Constraints( KS_PARTICLE_OP_ARGS( KS_PARTICLE_OP_UNPAREN Args ) ); \
+		case ParticleOperatorGroup::Initializers: return Name##_Initializers( KS_PARTICLE_OP_ARGS( KS_PARTICLE_OP_UNPAREN Args ) ); \
+		case ParticleOperatorGroup::Emitters: return Name##_Emitters( KS_PARTICLE_OP_ARGS( KS_PARTICLE_OP_UNPAREN Args ) ); \
+		case ParticleOperatorGroup::Forces: return Name##_Forces( KS_PARTICLE_OP_ARGS( KS_PARTICLE_OP_UNPAREN Args ) ); \
+		case ParticleOperatorGroup::Operators: return Name##_Operators( KS_PARTICLE_OP_ARGS( KS_PARTICLE_OP_UNPAREN Args ) ); \
+		case ParticleOperatorGroup::Renderers: return Name##_Renderers( KS_PARTICLE_OP_ARGS( KS_PARTICLE_OP_UNPAREN Args ) ); \
+		} \
+		std::unreachable(); \
+	}
+KS_PARTICLE_OP_ENTRIES( KS_PARTICLE_OP_DEFINE_ENTRY )
+#undef KS_PARTICLE_OP_DEFINE_ENTRY
+
+CParticleOperatorInstance *ParticleOps::Create( ParticleOperatorKind kind )
+{
+	switch ( ParticleOperatorGroupOf( kind ) )
+	{
+	case ParticleOperatorGroup::Constraints: return Create_Constraints( kind );
+	case ParticleOperatorGroup::Initializers: return Create_Initializers( kind );
+	case ParticleOperatorGroup::Emitters: return Create_Emitters( kind );
+	case ParticleOperatorGroup::Forces: return Create_Forces( kind );
+	case ParticleOperatorGroup::Operators: return Create_Operators( kind );
+	case ParticleOperatorGroup::Renderers: return Create_Renderers( kind );
+	}
+	std::unreachable();
+}
+
+void ParticleOps::Destroy( CParticleOperatorInstance *pOp )
+{
+	if ( !pOp )
+		return;
+	switch ( pOp->m_Group )
+	{
+	case ParticleOperatorGroup::Constraints: return Destroy_Constraints( pOp );
+	case ParticleOperatorGroup::Initializers: return Destroy_Initializers( pOp );
+	case ParticleOperatorGroup::Emitters: return Destroy_Emitters( pOp );
+	case ParticleOperatorGroup::Forces: return Destroy_Forces( pOp );
+	case ParticleOperatorGroup::Operators: return Destroy_Operators( pOp );
+	case ParticleOperatorGroup::Renderers: return Destroy_Renderers( pOp );
+	}
+	std::unreachable();
+}
+
+CParticleOperatorInstance *IParticleOperatorDefinition::CreateInstance( const DmObjectId_t &id ) const
+{
+	contract_assert( m_bCreatable );
+	CParticleOperatorInstance *pOp = ParticleOps::Create( m_Kind );
+	pOp->SetDefinition( this, id );
+	return pOp;
 }
 
 
@@ -1233,7 +1278,7 @@ void CParticleCollection::Init( CParticleSystemDefinition *pDef, float flDelay, 
 		int nOperatorCount = std::ssize( *olists[i] );
 		for( int j=0; j < nOperatorCount; j++ )
 		{
-			(*olists[i])[j]->InitializeContextData( this, m_pOperatorContextData+ (*offsetlists)[i][j] );
+			(*olists[i])[j].get()->InitializeContextData( this, m_pOperatorContextData+ (*offsetlists)[i][j] );
 		}
 	}
 
@@ -1796,7 +1841,7 @@ bool CParticleCollection::ComputeRunForParentApplyKillList()
 	int nEmitterCount = std::ssize( m_pDef->m_Emitters );
 	for( int i = 0; i < nEmitterCount; i++ )
 	{
-		if ( m_pDef->m_Emitters[i]->ShouldRun( bApplyingKillList ) )
+		if ( m_pDef->m_Emitters[i].get()->ShouldRun( bApplyingKillList ) )
 			return true;
 	}
 
@@ -1981,7 +2026,7 @@ void CParticleCollection::RunRestartedEmitters( void )
 		float flEmitStrength = 0;
 		if ( CheckIfOperatorShouldRun( m_pDef->m_Emitters[i].get(), &flEmitStrength ) )
 		{
-			uint32 nInittedMask = m_pDef->m_Emitters[i]->Emit( 
+			uint32 nInittedMask = m_pDef->m_Emitters[i].get()->Emit( 
 				this, flEmitStrength, 
 				m_pOperatorContextData + m_pDef->m_nEmittersCtxOffsets[i] );
 			if ( nOldParticleCount != m_nActiveParticles )
@@ -2029,13 +2074,13 @@ void CParticleCollection::Restart( EParticleRestartMode_t eMode )
 	int nEmitterCount = std::ssize( m_pDef->m_Emitters );
 	for( int i = 0; i < nEmitterCount; i++ )
 	{
-		m_pDef->m_Emitters[i]->Restart( this, m_pOperatorContextData + m_pDef->m_nEmittersCtxOffsets[i] );
+		m_pDef->m_Emitters[i].get()->Restart( this, m_pOperatorContextData + m_pDef->m_nEmittersCtxOffsets[i] );
 	}
 
 	int nInitializerCount = std::ssize( m_pDef->m_Initializers );
 	for( int i = 0; i < nInitializerCount; i++ )
 	{
-		m_pDef->m_Initializers[i]->Restart( this, m_pOperatorContextData + m_pDef->m_nInitializersCtxOffsets[i] );
+		m_pDef->m_Initializers[i].get()->Restart( this, m_pOperatorContextData + m_pDef->m_nInitializersCtxOffsets[i] );
 	}
 
 	// Update all children
@@ -2090,7 +2135,7 @@ void CParticleCollection::Render( int nViewRecursionLevel, IMatRenderContext *pR
 					pRenderContext->PushMatrix();
 					pRenderContext->LoadIdentity();
 					pRenderContext->Ortho( -100, -100, 100, 100, -100, 100 );
-					m_pDef->m_Renderers[i]->Render(
+					m_pDef->m_Renderers[i].get()->Render( 
 						pRenderContext, this, vecActualModulation, m_pOperatorContextData + m_pDef->m_nRenderersCtxOffsets[i], nViewRecursionLevel );
 					pRenderContext->MatrixMode( MATERIAL_VIEW );
 					pRenderContext->PopMatrix();
@@ -2099,7 +2144,7 @@ void CParticleCollection::Render( int nViewRecursionLevel, IMatRenderContext *pR
 				}
 				else
 				{
-					m_pDef->m_Renderers[i]->Render(
+					m_pDef->m_Renderers[i].get()->Render( 
 						pRenderContext, this, vecActualModulation, m_pOperatorContextData + m_pDef->m_nRenderersCtxOffsets[i], nViewRecursionLevel );
 				}
 			}
@@ -2116,7 +2161,7 @@ void CParticleCollection::Render( int nViewRecursionLevel, IMatRenderContext *pR
 	// Visualize specific ops for debugging/editing
 	if ( m_pRenderOp )
 	{
-		m_pRenderOp->Render( this );
+		m_pRenderOp->RenderDebug( this );
 	}
 }
 
@@ -2172,7 +2217,7 @@ void CParticleCollection::InitializeNewParticles( int nFirstParticle, int nParti
 	// always run second tier initializers (modifiers) after first tier - this ensures they don't get stomped.
 	for ( int i = 0; i < nInitializerCount; i++ )
 	{
-		int nInitializerAttrMask = m_pDef->m_Initializers[i]->GetWrittenAttributes();
+		int nInitializerAttrMask = m_pDef->m_Initializers[i].get()->GetWrittenAttributes();
 		CParticleOperatorInstance *pOp = m_pDef->m_Initializers[i].get();
 		if ( !pOp->InitMultipleOverride() )
 			continue;
@@ -2219,7 +2264,7 @@ void CParticleCollection::SkipToTime( float t )
 		int i;
 		for( i = 0; i < nEmitterCount; i++ )
 		{
-			m_pDef->m_Emitters[i]->SkipToTime( t, this, m_pOperatorContextData + m_pDef->m_nEmittersCtxOffsets[i] );
+			m_pDef->m_Emitters[i].get()->SkipToTime( t, this, m_pOperatorContextData + m_pDef->m_nEmittersCtxOffsets[i] );
 		}
 
 		CParticleCollection *pChild;
@@ -2284,7 +2329,7 @@ void CParticleCollection::EmitAndInit( CParticleCollection *pCollection, bool bA
 		float flEmitStrength = 0;
 		if ( pCollection->CheckIfOperatorShouldRun( pCollection->m_pDef->m_Emitters[i].get(), &flEmitStrength, bApplyingParentKillList ) )
 		{
-			uint32 nInittedMask = pCollection->m_pDef->m_Emitters[i]->Emit( 
+			uint32 nInittedMask = pCollection->m_pDef->m_Emitters[i].get()->Emit( 
 				pCollection, flEmitStrength, pCollection->m_pOperatorContextData + pCollection->m_pDef->m_nEmittersCtxOffsets[i] );
 			if ( nOldParticleCount != pCollection->m_nActiveParticles )
 			{
@@ -2964,7 +3009,7 @@ bool CParticleCollection::IsFinished( void ) const
 	int nEmitterCount = std::ssize( m_pDef->m_Emitters );
 	for( int i=0; i < nEmitterCount; i++ )
 	{
-		if ( m_pDef->m_Emitters[i]->MayCreateMoreParticles( this, m_pOperatorContextData+m_pDef->m_nEmittersCtxOffsets[i] ) )
+		if ( m_pDef->m_Emitters[i].get()->MayCreateMoreParticles( this, m_pOperatorContextData+m_pDef->m_nEmittersCtxOffsets[i] ) )
 			return false;
 	}
 
@@ -3008,7 +3053,7 @@ void CParticleCollection::StopEmission( bool bInfiniteOnly, bool bRemoveAllParti
 
 	for( int i=0; i < std::ssize( m_pDef->m_Emitters ); i++ )
 	{
-		m_pDef->m_Emitters[i]->StopEmission( this, m_pOperatorContextData + m_pDef->m_nEmittersCtxOffsets[i], bInfiniteOnly );
+		m_pDef->m_Emitters[i].get()->StopEmission( this, m_pOperatorContextData + m_pDef->m_nEmittersCtxOffsets[i], bInfiniteOnly );
 	}
 
 	if ( bRemoveAllParticles )
@@ -3055,7 +3100,7 @@ void CParticleCollection::StartEmission( bool bInfiniteOnly )
 
 	for( int i=0; i < std::ssize( m_pDef->m_Emitters ); i++ )
 	{
-		m_pDef->m_Emitters[i]->StartEmission( this, m_pOperatorContextData + m_pDef->m_nEmittersCtxOffsets[i], bInfiniteOnly );
+		m_pDef->m_Emitters[i].get()->StartEmission( this, m_pOperatorContextData + m_pDef->m_nEmittersCtxOffsets[i], bInfiniteOnly );
 	}
 
 	// Start our children as well
@@ -3342,101 +3387,7 @@ void CParticleCollection::CalculatePathValues( CPathParameters const &PathIn,
 //
 //-----------------------------------------------------------------------------
 
-class CDefaultParticleSystemQuery : public CBaseAppSystem< IParticleSystemQuery >
-{
-public:
-	virtual bool IsEditor( ) { return false; }
-
-	virtual void GetLightingAtPoint( const Vector& vecOrigin, Color &tint )
-	{
-		tint.SetColor( 255, 255, 255, 255 );
-	}
-	virtual void TraceLine( const Vector& vecAbsStart,
-							const Vector& vecAbsEnd, unsigned int mask, 
-							const class IHandleEntity *ignore,
-							int collisionGroup, CBaseTrace *ptr )
-	{
-		ptr->fraction = 1.0;								// no hit
-	}
-
-	virtual bool IsPointInSolid( const Vector& vecPos, const int nContentsMask )
-	{
-		return false;
-	}
-
-	virtual void GetRandomPointsOnControllingObjectHitBox( 
-		CParticleCollection *pParticles,
-		int nControlPointNumber, 
-		int nNumPtsOut,
-		float flBBoxScale,
-		int nNumTrysToGetAPointInsideTheModel,
-		Vector *pPntsOut,
-		Vector vecDirectionBias,
-		Vector *pHitBoxRelativeCoordOut, int *pHitBoxIndexOut, 	int nDesiredHitbox,
-		const char *pszHitboxSetName ) 
-	{
-		for ( int i = 0; i < nNumPtsOut; ++i )
-		{
-			pPntsOut[i].Init();
-		}
-	}
-
-	virtual void GetClosestControllingObjectHitBox( CParticleCollection *pParticles,
-		int nControlPointNumber, 
-		int nNumPtsIn,
-		float flBBoxScale,
-		Vector *pPntsIn,
-		Vector *pHitBoxRelativeCoordOut,
-		int *pHitBoxIndexOut,
-		int nDesiredHitbox, 
-		const char *pszHitboxSetName )
-	{
-		for ( int i=0; i < nNumPtsIn; i++ )
-		{
-			if ( pHitBoxIndexOut )
-				pHitBoxIndexOut[i] = 0;
-
-			if ( pHitBoxRelativeCoordOut )
-				pHitBoxRelativeCoordOut[i].Init();
-		}
-	}
-
-	virtual void TraceAgainstRayTraceEnv( 
-		int envnumber,  
-		const FourRays &rays, fltx4 TMin, fltx4 TMax,
-		RayTracingResult *rslt_out, int32 skip_id ) const
-	{
-		rslt_out->HitDistance = Four_Ones;
-		rslt_out->surface_normal.DuplicateVector( vec3_origin );
-	}
-
-	virtual Vector GetCurrentViewOrigin()
-	{
-		return vec3_origin;
-	}
-
-	virtual int GetActivityCount() { return 0; }
-
-	virtual const char *GetActivityNameFromIndex( int nActivityIndex ) { return 0; }
-	virtual int GetActivityNumber( void *pModel, const char *m_pszActivityName ) { return -1; }
-
-	virtual float GetPixelVisibility( int *pQueryHandle, const Vector &vecOrigin, float flScale ) { return 0.0f; }
-
-	virtual void PreSimulate( ) { }
-
-	virtual void PostSimulate( ) { }
-
-	virtual void DebugDrawLine( const Vector &origin, const Vector &target, int r, int g, int b, bool noDepthTest, float duration )
-	{
-	}
-
-	virtual void DrawModel( void *pModel, const matrix3x4_t &DrawMatrix, CParticleCollection *pParticles, int nParticleNumber, int nBodyPart, int nSubModel,
-		int nSkin, int nAnimationSequence = 0, float flAnimationRate = 30.0f, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f ) { }
-
-	virtual void UpdateProjectedTexture( const int nParticleID, IMaterial *pMaterial, Vector &vOrigin, float flRadius, float flRotation, float r, float g, float b, float a, void *&pUserVar ) { }
-};
-
-static CDefaultParticleSystemQuery s_DefaultParticleSystemQuery;
+static IParticleSystemQuery s_DefaultParticleSystemQuery;
 
 
 //-----------------------------------------------------------------------------
@@ -4615,32 +4566,6 @@ void CParticleSystemMgr::DrawRenderCache( IMatRenderContext *pRenderContext, boo
 	pRenderContext->PopMatrix();
 }
 
-
-
-
-void IParticleSystemQuery::GetRandomPointsOnControllingObjectHitBox(
-	CParticleCollection *pParticles,
-	int nControlPointNumber, 
-	int nNumPtsOut,
-	float flBBoxScale,
-	int nNumTrysToGetAPointInsideTheModel,
-	Vector *pPntsOut,
-	Vector vecDirectionalBias,
-	Vector *pHitBoxRelativeCoordOut,
-	int *pHitBoxIndexOut,
-	int nDesiredHitbox, 
-	const char *pszHitboxSetName
-	)
-{
-	for(int i=0; i < nNumPtsOut; i++)
-	{
-		pPntsOut[i]=pParticles->ControlPoint( nControlPointNumber ).m_Position;
-		if ( pHitBoxRelativeCoordOut )
-			pHitBoxRelativeCoordOut[i].Init();
-		if ( pHitBoxIndexOut )
-			pHitBoxIndexOut[i] = -1;
-	}
-}
 
 
 

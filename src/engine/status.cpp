@@ -11,22 +11,6 @@ import ks.tier1;
 
 
 
-//-----------------------------------------------------------------------------
-
-class CKeyValuesDumpForStatusReport : public IKeyValuesDumpContextAsText
-{
-public:
-	CKeyValuesDumpForStatusReport( ks::text_writer &buffer ) : m_buffer( buffer ) {}
-
-public:
-	virtual bool KvWriteText( char const *szText ) { m_buffer.put( szText ); return true; }
-
-protected:
-	ks::text_writer &m_buffer;
-};
-
-//-----------------------------------------------------------------------------
-
 static char g_szCombinedStatusBuffer[10240] = {0};
 static char g_szMinidumpInfoBuffer[4094] = {0}; // 4094 because ETW marks are limited to this.
 static char g_szHostStatusBuffer[1024] = {0};
@@ -133,7 +117,8 @@ static void Status_UpdateMatchmakingBuffer()
 			
 			matchmakingStatusBuffer.printf( "match session %p\n", pMatchSession );
 
-			CKeyValuesDumpForStatusReport kvDumpContext( matchmakingStatusBuffer );
+			auto writeStatusText = [&matchmakingStatusBuffer]( char const *szText ) { matchmakingStatusBuffer.put( szText ); return true; };
+			CKeyValuesDumpContext kvDumpContext( writeStatusText );
 
 			matchmakingStatusBuffer.printf( "session system data:\n" );
 			pMatchSession->GetSessionSystemData()->Dump( &kvDumpContext );

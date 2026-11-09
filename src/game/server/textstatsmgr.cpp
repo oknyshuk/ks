@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.core;
 #include "textstatsmgr.h"
 
 CTextStatsMgr g_TextStatsMgr;	// The default text stats manager.

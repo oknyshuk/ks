@@ -10,8 +10,6 @@
 //			new script may enqueue itself unless there is already a non critical
 //			script in the queue.
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -144,7 +142,7 @@ void CAI_ScriptedSequence::ScriptEntityCancel( CBaseEntity *pentCine, bool bPret
 //-----------------------------------------------------------------------------
 // Purpose: Called before spawning, after keyvalues have been parsed.
 //-----------------------------------------------------------------------------
-void CAI_ScriptedSequence::Spawn( void )
+void CAI_ScriptedSequence::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 
@@ -185,10 +183,10 @@ void CAI_ScriptedSequence::Spawn( void )
 }
 
 //-----------------------------------------------------------------------------
-void CAI_ScriptedSequence::UpdateOnRemove(void)
+void CAI_ScriptedSequence::UpdateOnRemove_Impl(void)
 {
 	ScriptEntityCancel( this );
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 //-----------------------------------------------------------------------------
@@ -404,7 +402,7 @@ bool CAI_ScriptedSequence::IsWaitingForBegin( void )
 // Purpose: This doesn't really make sense since only MOVETYPE_PUSH get 'Blocked' events
 // Input  : pOther - The entity blocking us.
 //-----------------------------------------------------------------------------
-void CAI_ScriptedSequence::Blocked( CBaseEntity *pOther )
+void CAI_ScriptedSequence::Blocked_Impl( CBaseEntity *pOther )
 {
 }
 
@@ -413,7 +411,7 @@ void CAI_ScriptedSequence::Blocked( CBaseEntity *pOther )
 // Purpose: 
 // Input  : pOther - The entity touching us.
 //-----------------------------------------------------------------------------
-void CAI_ScriptedSequence::Touch( CBaseEntity *pOther )
+void CAI_ScriptedSequence::Touch_Impl( CBaseEntity *pOther )
 {
 /*
 	DevMsg( 2,  "Cine Touch\n" );
@@ -1222,7 +1220,7 @@ void CAI_ScriptedSequence::ModifyScriptedAutoMovement( Vector *vecNewPos )
 			Msg("%s current org: %f %f", m_hInteractionRelativeEntity->GetDebugName(), vecRelativeOrigin.x, vecRelativeOrigin.y );
 		}
 
-		CBaseAnimating *pAnimating = dynamic_cast<CBaseAnimating*>(m_hInteractionRelativeEntity.Get());
+		CBaseAnimating *pAnimating = entity_cast<CBaseAnimating>(m_hInteractionRelativeEntity.Get());
 		if ( pAnimating )
 		{
 			Vector vecDeltaPos;
@@ -1374,9 +1372,9 @@ void CAI_ScriptedSequence::DelayStart( bool bDelay )
 // Purpose: Find an entity that I'm interested in and precache the sounds he'll
 //			need in the sequence.
 //-----------------------------------------------------------------------------
-void CAI_ScriptedSequence::Activate( void )
+void CAI_ScriptedSequence::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	//
 	// See if there is another script specified to run immediately after this one.
@@ -1391,9 +1389,9 @@ void CAI_ScriptedSequence::Activate( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CAI_ScriptedSequence::DrawDebugGeometryOverlays( void )
+void CAI_ScriptedSequence::DrawDebugGeometryOverlays_Impl( void )
 {
-	BaseClass::DrawDebugGeometryOverlays();
+	BaseClass::DrawDebugGeometryOverlays_Impl();
 
 	if ( m_debugOverlays & OVERLAY_TEXT_BIT )
 	{
@@ -1409,9 +1407,9 @@ void CAI_ScriptedSequence::DrawDebugGeometryOverlays( void )
 // Input  :
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CAI_ScriptedSequence::DrawDebugTextOverlays( void ) 
+int CAI_ScriptedSequence::DrawDebugTextOverlays_Impl( void ) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -1839,11 +1837,12 @@ class CAI_ScriptedSentence : public CPointEntity
 public:
 	DECLARE_CLASS( CAI_ScriptedSentence, CPointEntity );
 
-	void Spawn( void );
-	bool KeyValue( const char *szKeyName, const char *szValue );
+	void Spawn_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
 	void FindThink( void );
 	void DelayThink( void );
-	int	 ObjectCaps( void ) { return (BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION); }
+	int	 ObjectCaps_Impl( void ) { return (BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION); }
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "BeginSentence", .type = FIELD_VOID } ]] void InputBeginSentence( inputdata_t &inputdata );
@@ -1891,7 +1890,7 @@ LINK_ENTITY_TO_CLASS( scripted_sentence, CAI_ScriptedSentence );
 //			szValue - 
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-bool CAI_ScriptedSentence::KeyValue( const char *szKeyName, const char *szValue )
+bool CAI_ScriptedSentence::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if(FStrEq(szKeyName, "volume"))
 	{
@@ -1899,7 +1898,7 @@ bool CAI_ScriptedSentence::KeyValue( const char *szKeyName, const char *szValue 
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
@@ -1925,7 +1924,7 @@ void CAI_ScriptedSentence::InputBeginSentence( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CAI_ScriptedSentence::Spawn( void )
+void CAI_ScriptedSentence::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	

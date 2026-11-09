@@ -13,22 +13,22 @@ class IOcclusionSystem
 {
 public:
 	// Activate/deactivate an occluder brush model
-	virtual void ActivateOccluder( int nOccluderIndex, bool bActive ) = 0;
+	void ActivateOccluder( int nOccluderIndex, bool bActive );
 
 	// Sets the view transform
-	virtual void SetView( const Vector &vecCameraPos, float flFOV, const VMatrix &worldToCamera, 
-		const VMatrix &cameraToProjection, const VPlane &nearClipPlane ) = 0;
-	virtual int GetViewId() const = 0;
+	void SetView( const Vector &vecCameraPos, float flFOV, const VMatrix &worldToCamera, 
+		const VMatrix &cameraToProjection, const VPlane &nearClipPlane );
+	int GetViewId() const;
 
 	// Test for occlusion (bounds specified in abs space)
-	virtual bool IsOccluded( int occlusionViewId, const Vector &vecAbsMins, const Vector &vecAbsMaxs ) = 0;
+	bool IsOccluded( int occlusionViewId, const Vector &vecAbsMins, const Vector &vecAbsMaxs );
 
 	// Sets global occlusion parameters
-	virtual void SetOcclusionParameters( float flMaxOccludeeArea, float flMinOccluderArea ) = 0;
-	virtual float MinOccluderArea() const = 0;
+	void SetOcclusionParameters( float flMaxOccludeeArea, float flMinOccluderArea );
+	float MinOccluderArea() const;
 
 	// Render debugging overlay
-	virtual void DrawDebugOverlays() = 0;
+	void DrawDebugOverlays();
 };
 
 

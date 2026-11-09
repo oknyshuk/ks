@@ -65,11 +65,11 @@ CPureServerWhitelist* CPureServerWhitelist::Create( IFileSystem *pFileSystem )
 
 
 CPureServerWhitelist::CPureServerWhitelist()
+	: m_AllowFromDiskList( IFileList::KIND_ALLOW_FROM_DISK, this ),
+	  m_ForceMatchList( IFileList::KIND_FORCE_MATCH, this )
 {
 	m_pFileSystem = nullptr;
 	m_LoadCounter = 0;
-	m_AllowFromDiskList.m_pWhitelist = this;
-	m_ForceMatchList.m_pWhitelist = this;
 	m_RefCount = 1;
 	m_bFullyPureMode = false;
 }
@@ -440,13 +440,43 @@ IFileList* CPureServerWhitelist::GetForceMatchList()
 
 
 // --------------------------------------------------------------------------------------------------- //
-// CAllowFromDiskList/CForceMatchList implementation.
+// IFileList implementation: the three kinds of list (see ifilelist.h).
 // --------------------------------------------------------------------------------------------------- //
 
-bool CPureServerWhitelist::CAllowFromDiskList::IsFileInList( const char *pFilename )
+bool IFileList::IsFileInList( const char *pFilename )
+{
+	switch ( m_Kind )
+	{
+	case KIND_ALLOW_FROM_DISK:
+		return static_cast<CPureServerWhitelist *>( m_pOwner )->IsAllowedFromDisk( pFilename );
+	case KIND_FORCE_MATCH:
+		return static_cast<CPureServerWhitelist *>( m_pOwner )->IsInForceMatchList( pFilename );
+	case KIND_RELOAD:
+		// The engine is calling this for any files it wants to be pure.
+		// Return true if this file should be reloaded based on its current state and the whitelist that we have now.
+		return static_cast<IFileSystem *>( m_pOwner )->ShouldGameReloadFile( pFilename );
+	}
+	return false;
+}
+
+void IFileList::Release()
+{
+	switch ( m_Kind )
+	{
+	case KIND_ALLOW_FROM_DISK:
+	case KIND_FORCE_MATCH:
+		static_cast<CPureServerWhitelist *>( m_pOwner )->Release();
+		break;
+	case KIND_RELOAD:
+		delete this;
+		break;
+	}
+}
+
+bool CPureServerWhitelist::IsAllowedFromDisk( const char *pFilename )
 {
 	// In "fully pure" mode, all files must come from disk.
-	if ( m_pWhitelist->m_bFullyPureMode )
+	if ( m_bFullyPureMode )
 	{
 		// Only protect maps, models, and sounds.
 		if ( IsProtectedBySvPure2( pFilename ) )
@@ -455,34 +485,24 @@ bool CPureServerWhitelist::CAllowFromDiskList::IsFileInList( const char *pFilena
 			return true;
 	}
 		
-	CCommand *pCommand = m_pWhitelist->GetBestEntry( pFilename );
+	CCommand *pCommand = GetBestEntry( pFilename );
 	if ( pCommand )
 		return pCommand->m_bAllowFromDisk;
 	else
 		return true;	// All files are allowed to come from disk by default.
 }
 
-void CPureServerWhitelist::CAllowFromDiskList::Release()
-{
-	m_pWhitelist->Release();
-}
-
-bool CPureServerWhitelist::CForceMatchList::IsFileInList( const char *pFilename )
+bool CPureServerWhitelist::IsInForceMatchList( const char *pFilename )
 {
 	// In "fully pure" mode, all files must match the server files
-	if ( m_pWhitelist->m_bFullyPureMode )
+	if ( m_bFullyPureMode )
 		return true;
 
-	CCommand *pCommand = m_pWhitelist->GetBestEntry( pFilename );
+	CCommand *pCommand = GetBestEntry( pFilename );
 	if ( pCommand )
 		return pCommand->m_bCheckCRC;
 	else
 		return false;	// By default, no files require the CRC check.
-}
-
-void CPureServerWhitelist::CForceMatchList::Release()
-{
-	m_pWhitelist->Release();
 }
 
 

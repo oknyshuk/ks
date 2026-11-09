@@ -11,9 +11,16 @@
 import std;
 
 import ks.core;
+import ks.tier1;
+#include "game_entry.h"
 
-typedef int (*DedicatedMain_t)( int argc, char *argv[] );
+extern "C" int DedicatedMain( int argc, char *argv[] );
 
+
+// The game server is linked into this executable, there is no game client.
+static void *ServerFactory( const char *pName, int *pReturnCode ) { return ks::server_registry().create_interface( pName, pReturnCode ); }
+CreateInterfaceFn ServerGameFactory() { return &ServerFactory; }
+CreateInterfaceFn ClientGameFactory() { return nullptr; }
 
 //-----------------------------------------------------------------------------
 // Purpose: Return the directory where this .exe is running from
@@ -72,20 +79,6 @@ int main( int argc, char *argv[] )
 		std::printf( "failed to set LD_LIBRARY_PATH\n" );
 	}
 
-	const char *pBinaryName = "bin/libengine.so";
-
-	ks::platform::library *dedicated = ks::platform::load_library( pBinaryName, nullptr );
-	if ( !dedicated )
-	{
-		std::printf( "Failed to open %s (%s)\n", pBinaryName, ks::platform::library_error());
-		return -1;
-	}
-	DedicatedMain_t main = (DedicatedMain_t)ks::platform::library_symbol( dedicated, "DedicatedMain" );
-	if ( !main )
-	{
-		std::printf( "Failed to find dedicated server entry point (%s)\n", ks::platform::library_error() );
-		return -1;
-	}
-
-	return main( argc, argv );
+	// The engine and the game server are linked into this executable.
+	return DedicatedMain( argc, argv );
 }

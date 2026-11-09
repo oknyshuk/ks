@@ -28,8 +28,6 @@ static const tokenset_t< int > s_GameListenerTypeMap[] =
 	{ "SERVERSIDE",     CGameEventManager::SERVERSIDE     }, // this is a server side listener, event logger etc
 	{ "CLIENTSIDE",     CGameEventManager::CLIENTSIDE     }, // this is a client side listenet, HUD element etc
 	{ "CLIENTSTUB",     CGameEventManager::CLIENTSTUB     }, // this is a serverside stub for a remote client listener (used by engine only)
-	{ "SERVERSIDE_OLD", CGameEventManager::SERVERSIDE_OLD }, // legacy support for old server event listeners
-	{ "CLIENTSIDE_OLD", CGameEventManager::CLIENTSIDE_OLD }, // legecy support for old client event listeners
 	{ nullptr,             -1                                }
 };
 
@@ -52,7 +50,7 @@ static ConVar net_showeventlisteners( "net_showeventlisteners", "0", 0, "Show li
 
 // Expose CVEngineServer to the engine.
 
-static InterfaceReg s_Reg_CGameEventManager_IGameEventManager2( []() -> void * { return static_cast<IGameEventManager2 *>( &s_GameEventManager ); }, INTERFACEVERSION_GAMEEVENTSMANAGER2 );;
+static InterfaceReg s_Reg_CGameEventManager_IGameEventManager2( []() -> void * { return &s_GameEventManager; }, INTERFACEVERSION_GAMEEVENTSMANAGER2 );;
 
 CGameEvent::CGameEvent( CGameEventDescriptor *descriptor, const char *name )
 {
@@ -159,35 +157,6 @@ bool CGameEvent::IsLocal() const
 bool CGameEvent::IsReliable() const
 {
 	return m_pDescriptor->reliable;
-}
-
-bool CGameEvent::ForEventData( IGameEventVisitor2* visitor ) const
-{
-	CGameEventDescriptor *descriptor = m_pDescriptor;
-
-	bool iterate = true;
-	for ( KeyValues* key = descriptor->keys->GetFirstSubKey(); key && iterate; key = key->GetNextKey() )
-	{
-		const char * keyName = key->GetName();
-
-		int type = key->GetInt();
-
-		// see s_GameEventTypesMap for index
-		switch ( type )
-		{
-		case CGameEventManager::TYPE_LOCAL: iterate = visitor->VisitLocal( keyName, GetPtr( keyName ) ); break;
-		case CGameEventManager::TYPE_STRING: iterate = visitor->VisitString( keyName, GetString( keyName, "" ) ); break;
-		case CGameEventManager::TYPE_FLOAT: iterate = visitor->VisitFloat( keyName, GetFloat( keyName, 0.0f ) ); break;
-		case CGameEventManager::TYPE_LONG: iterate = visitor->VisitInt( keyName, GetInt( keyName, 0 ) ); break;
-		case CGameEventManager::TYPE_SHORT: iterate = visitor->VisitInt( keyName, GetInt( keyName, 0 ) ); break;
-		case CGameEventManager::TYPE_BYTE: iterate = visitor->VisitInt( keyName, GetInt( keyName, 0 ) ); break;
-		case CGameEventManager::TYPE_BOOL: iterate = visitor->VisitBool( keyName, GetBool( keyName, false ) ); break;
-		case CGameEventManager::TYPE_UINT64: iterate = visitor->VisitUint64( keyName, GetUint64( keyName, 0 ) ); break;
-		case CGameEventManager::TYPE_WSTRING: iterate = visitor->VisitWString( keyName, GetWString( keyName, L"" ) ); break;
-		}
-	}
-
-	return iterate;
 }
 
 CGameEventManager::CGameEventManager()
@@ -362,8 +331,7 @@ void CGameEventManager::WriteListenEventList(ks::net::CCLCMsg_ListenEvents *msg)
 		{
 			CGameEventCallback *listener = descriptor.listeners[j];
 
-			if ( listener->m_nListenerType == CGameEventManager::CLIENTSIDE ||
-				listener->m_nListenerType == CGameEventManager::CLIENTSIDE_OLD	)
+			if ( listener->m_nListenerType == CGameEventManager::CLIENTSIDE )
 			{
 				// if we have a client side listener and server knows this event, add it
 				bHasClientListener = true;
@@ -440,7 +408,7 @@ bool CGameEventManager::FireEventClientSide( IGameEvent *event )
 
 IGameEvent *CGameEventManager::DuplicateEvent( IGameEvent *event )
 {
-	CGameEvent *gameEvent = dynamic_cast<CGameEvent*>(event);
+	CGameEvent *gameEvent = event;
 
 	if ( !gameEvent )
 		return nullptr;
@@ -532,15 +500,11 @@ bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bo
 		contract_assert( listener );
 
 		// don't trigger server listners for clientside only events
-		if ( ( listener->m_nListenerType == SERVERSIDE ||
-			   listener->m_nListenerType == SERVERSIDE_OLD ) &&
-			   bClientOnly  )
+		if ( listener->m_nListenerType == SERVERSIDE && bClientOnly )
 			continue;
 
         // don't trigger clientside events, if not explicit a clientside event
-		if ( ( listener->m_nListenerType == CLIENTSIDE ||
-			   listener->m_nListenerType == CLIENTSIDE_OLD ) &&
-			   !bClientOnly  )
+		if ( listener->m_nListenerType == CLIENTSIDE && !bClientOnly )
 			continue;
 
 		// don't broadcast events if server side only
@@ -554,37 +518,7 @@ bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bo
 		// TODO optimized the serialize event for clients, call only once and not per client
 
 		// fire event in this listener module
-		if ( listener->m_nListenerType == CLIENTSIDE_OLD ||
-			 listener->m_nListenerType == SERVERSIDE_OLD )
-		{
-			// legacy support for old system
-			IGameEventListener *pCallback = static_cast<IGameEventListener*>(listener->m_pCallback);
-			CGameEvent *pEvent = static_cast<CGameEvent*>(event);
-
-			pCallback->FireGameEvent( pEvent->m_pDataKeys );
-		}
-		else
-		{
-			// new system
-			IGameEventListener2 *pCallback =  static_cast<IGameEventListener2*>(listener->m_pCallback);
-			contract_assert( pCallback );
-			if ( pCallback )
-			{
-				if ( pCallback->GetEventDebugID() != EVENT_DEBUG_ID_INIT )
-				{
-					Msg( "GameEventListener2 callback in list that should NOT be - %s!\n", event->GetName() );
-					contract_assert( 0 );
-				}
-				else
-				{
-					pCallback->FireGameEvent( event );
-				}
-			}
-			else
-			{
-				Warning( "Callback for event \"%s\" is NULL!!!\n", event->GetName() );
-			}
-		}
+		listener->m_Callback( event );
 	}
 
 	if ( bClientOnly || ( !V_stricmp( "portal2", COM_GetModDirectory() ) ) )
@@ -745,7 +679,7 @@ KeyValues* CGameEventManager::GetEventDataTypes( IGameEvent* event )
 }
 
 // returns true if this listener is listens to given event
-bool CGameEventManager::FindListener( IGameEventListener2 *listener, const char *name )
+bool CGameEventManager::FindListener( const void *listener, const char *name )
 {
 	std::scoped_lock lock( m_mutex );
 	CGameEventDescriptor *pDescriptor = GetEventDescriptor( name );
@@ -762,13 +696,13 @@ bool CGameEventManager::FindListener( IGameEventListener2 *listener, const char 
 	return ks::is_valid_index( pDescriptor->listeners, ks::find_index( pDescriptor->listeners, pCallback ) );
 }
 
-CGameEventCallback* CGameEventManager::FindEventListener( void* pCallback )
+CGameEventCallback* CGameEventManager::FindEventListener( const void* pOwner )
 {
 	for (int i=0; i < std::ssize( m_Listeners ); i++ )
 	{
 		CGameEventCallback *listener = m_Listeners[ i ].get();
 
-		if ( listener->m_pCallback == pCallback )
+		if ( listener->m_pOwner == pOwner )
 		{
 			return listener;
 		}
@@ -777,7 +711,7 @@ CGameEventCallback* CGameEventManager::FindEventListener( void* pCallback )
 	return nullptr;
 }
 
-void CGameEventManager::RemoveListener(IGameEventListener2 *listener)
+void CGameEventManager::RemoveListener( const void *listener )
 {
 	std::scoped_lock lock( m_mutex );
 	CGameEventCallback *pCallback = FindEventListener( listener );
@@ -803,7 +737,7 @@ void CGameEventManager::RemoveListener(IGameEventListener2 *listener)
 	std::erase_if( m_Listeners, [pCallback]( const auto &p ) { return p.get() == pCallback; } );	// frees the callback
 }
 
-bool CGameEventManager::AddListenerGlobal( IGameEventListener2 *listener, bool bServerSide )
+bool CGameEventManager::AddListenerGlobal( const void *listener, GameEventCallback_t callback, bool bServerSide )
 {
 	std::scoped_lock lock( m_mutex );
 
@@ -814,7 +748,7 @@ bool CGameEventManager::AddListenerGlobal( IGameEventListener2 *listener, bool b
 	{
 		CGameEventDescriptor *descriptor = &m_GameEvents[ i ];
 
-		AddListener( listener, descriptor, bServerSide ? SERVERSIDE : CLIENTSIDE );
+		AddListener( listener, callback, descriptor, bServerSide ? SERVERSIDE : CLIENTSIDE );
 	}
 
 	return true;
@@ -872,7 +806,7 @@ void CGameEventManager::ReloadEventDefinitions()
 	}
 }
 
-bool CGameEventManager::AddListener( IGameEventListener2 *listener, const char *event, bool bServerSide )
+bool CGameEventManager::AddListener( const void *listener, GameEventCallback_t callback, const char *event, bool bServerSide )
 {
 	std::scoped_lock lock( m_mutex );
 	if ( !event )
@@ -887,10 +821,10 @@ bool CGameEventManager::AddListener( IGameEventListener2 *listener, const char *
 		return false;	// that should not happen
 	}
 
-	return AddListener( listener, descriptor, bServerSide ? SERVERSIDE : CLIENTSIDE );
+	return AddListener( listener, callback, descriptor, bServerSide ? SERVERSIDE : CLIENTSIDE );
 }
 
-bool CGameEventManager::AddListener( void *listener, CGameEventDescriptor *descriptor,  int nListenerType )
+bool CGameEventManager::AddListener( const void *listener, GameEventCallback_t callback, CGameEventDescriptor *descriptor,  int nListenerType )
 {
 	std::scoped_lock lock( m_mutex );
 	if ( !listener || !descriptor )
@@ -902,16 +836,13 @@ bool CGameEventManager::AddListener( void *listener, CGameEventDescriptor *descr
 	if ( pCallback == nullptr )
 	{
 		// add new callback
-		pCallback = m_Listeners.emplace_back( std::make_unique< CGameEventCallback >() ).get();
-
-		pCallback->m_nListenerType = nListenerType;
-		pCallback->m_pCallback = listener;
+		pCallback = m_Listeners.emplace_back( std::make_unique< CGameEventCallback >( listener, callback, nListenerType ) ).get();
 	}
 	else
 	{
 		// make sure that it hasn't changed:
 		contract_assert( pCallback->m_nListenerType == nListenerType );
-		contract_assert( pCallback->m_pCallback == listener );
+		contract_assert( pCallback->m_pOwner == listener );
 	}
 
 	// add to event listeners list if not already in there
@@ -928,7 +859,7 @@ bool CGameEventManager::AddListener( void *listener, CGameEventDescriptor *descr
 				listener );
 		}
 
-		if ( nListenerType == CLIENTSIDE || nListenerType == CLIENTSIDE_OLD )
+		if ( nListenerType == CLIENTSIDE )
 			m_bClientListenersChanged = true;
 	}
 
@@ -1013,7 +944,7 @@ bool CGameEventManager::RegisterEvent( KeyValues * event)
 
 CGameEventDescriptor *CGameEventManager::GetEventDescriptor(IGameEvent *event)
 {
-	CGameEvent *gameevent = dynamic_cast<CGameEvent*>(event);
+	CGameEvent *gameevent = event;
 
 	if ( !gameevent )
 		return nullptr;
@@ -1074,51 +1005,6 @@ CGameEventDescriptor *CGameEventManager::GetEventDescriptor(const char * name, i
 	return &m_GameEvents[gameEventIndex];
 }
 
-bool CGameEventManager::AddListenerAll( void *listener, int nListenerType )
-{
-	std::scoped_lock lock( m_mutex );
-	if ( !listener )
-		return false;
-
-	for (int i=0; i < std::ssize( m_GameEvents ); i++ )
-	{
-		CGameEventDescriptor *descriptor = &m_GameEvents[i];
-
-		AddListener( listener, descriptor, nListenerType );
-	}
-
-	DevMsg("Warning! Game event listener registerd for all events. Use newer game event interface.\n");
-
-	return true;
-}
-
-void CGameEventManager::RemoveListenerOld( void *listener)
-{
-	std::scoped_lock lock( m_mutex );
-	CGameEventCallback *pCallback = FindEventListener( listener );
-
-	if ( pCallback == nullptr )
-	{
-		DevMsg("RemoveListenerOld: couldn't find listener\n");
-		return;
-	}
-
-	// remove reference from events
-	for (int i=0; i < std::ssize( m_GameEvents ); i++ )
-	{
-		CGameEventDescriptor &et = m_GameEvents[ i ];
-		ks::erase_first( et.listeners, pCallback );
-	}
-
-	if ( pCallback->m_nListenerType == CLIENTSIDE_OLD )
-	{
-		m_bClientListenersChanged = true;
-	}
-
-	// and from global list
-	std::erase_if( m_Listeners, [pCallback]( const auto &p ) { return p.get() == pCallback; } );	// frees the callback
-}
-
 void CGameEventManager::VerifyListenerList( void )
 {
 	int nGameEventCount = std::ssize( m_GameEvents );
@@ -1139,13 +1025,6 @@ void CGameEventManager::VerifyListenerList( void )
 			if ( !pListener)
 			{
 				Msg( "VerifyListenerList-Bug: Bad listener in list! (%s)\n", pName );
-				continue;
-			}
-
-			IGameEventListener2 *pCallback = static_cast<IGameEventListener2*>( pListener->m_pCallback );
-			if ( pCallback->GetEventDebugID() != EVENT_DEBUG_ID_INIT )
-			{
-				Msg( "VerifyListenerList-Bug: Bad callback in list! (%s)\n", pName );
 				continue;
 			}
 		}

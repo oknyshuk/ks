@@ -116,3 +116,6 @@ void CMatchExtensions::OnExtensionInterfaceUpdated( char const *szInterfaceStrin
 		}
 	}
 }
+
+//-----------------------------------------------------------------------------
+#include "facade/imatchextensions.inl"

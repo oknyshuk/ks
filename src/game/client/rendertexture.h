@@ -7,7 +7,6 @@
 
 
 
-class ITexture;
 ITexture *GetPowerOfTwoFrameBufferTexture( void );
 ITexture *GetFullFrameFrameBufferTexture( int textureIndex );
 ITexture *GetWaterReflectionTexture( void );

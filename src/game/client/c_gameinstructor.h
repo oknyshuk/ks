@@ -4,9 +4,7 @@
 
 // Purpose: Client handler for instruction players how to play
 
-import ks.tier1;
 #include "GameEventListener.h"
-import std;
 #include "igamesystem.h"
 #include "ehandle.h"
 
@@ -51,7 +49,7 @@ public:
 	void UpdateHiddenByOtherElements( void );
 	bool Mod_HiddenByOtherElements( void );
 
-	virtual void FireGameEvent( IGameEvent *event );
+	void FireGameEvent( IGameEvent *event );
 
 	void DefineLesson( CBaseLesson *pLesson );
 

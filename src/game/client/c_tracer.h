@@ -1,10 +1,8 @@
 #pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
-import ks.math;
 
 class ParticleDraw;
-class CMeshBuilder;
 
 //-----------------------------------------------------------------------------
 // Tracer_Draw(): draws a tracer, assuming the modelview matrix is identity

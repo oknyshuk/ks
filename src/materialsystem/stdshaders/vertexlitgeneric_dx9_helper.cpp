@@ -47,7 +47,7 @@ ConVar r_staticlight_streams( "r_staticlight_streams", "1", FCVAR_MATERIAL_SYSTE
 //  Prequisite: 3 lighting streams enabled
 ConVar r_staticlight_streams_indirect_only( "r_staticlight_streams_indirect_only", "-", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_HIDDEN );
 
-static void r_staticlight_mode_changed( IConVar *var, const char *pOldValue, float flOldValue )
+static void r_staticlight_mode_changed( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	g_pMaterialSystem->ReloadMaterials( nullptr );
 }

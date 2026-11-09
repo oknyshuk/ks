@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -162,16 +160,6 @@ C_SmokeTrail::C_SmokeTrail()
 
 C_SmokeTrail::~C_SmokeTrail()
 {
-	if ( ToolsEnabled() && clienttools->IsInRecordingMode() && m_pSmokeEmitter && m_pSmokeEmitter->GetToolParticleEffectId() != TOOLPARTICLESYSTEMID_INVALID )
-	{
-		KeyValues *msg = new KeyValues( "OldParticleSystem_ActivateEmitter" );
-		msg->SetInt( "id", m_pSmokeEmitter->GetToolParticleEffectId() );
-		msg->SetInt( "emitter", 0 );
-		msg->SetInt( "active", false );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
 
 	if ( m_pParticleMgr )
 	{
@@ -185,7 +173,7 @@ C_SmokeTrail::~C_SmokeTrail()
 //-----------------------------------------------------------------------------
 void C_SmokeTrail::GetAimEntOrigin( IClientEntity *pAttachedTo, Vector *pAbsOrigin, QAngle *pAbsAngles )
 {
-	C_BaseEntity *pEnt = pAttachedTo->GetBaseEntity();
+	C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( pAttachedTo->GetBaseEntity() );
 	if (pEnt && (m_nAttachment > 0))
 	{
 		pEnt->GetAttachment( m_nAttachment, *pAbsOrigin, *pAbsAngles );
@@ -356,142 +344,6 @@ void C_SmokeTrail::SimulateParticles( CParticleSimulateIterator *pIterator )
 }
 
 
-//-----------------------------------------------------------------------------
-// This is called after sending this entity's recording state
-//-----------------------------------------------------------------------------
-
-void C_SmokeTrail::CleanupToolRecordingState( KeyValues *msg )
-{
-	if ( !ToolsEnabled() )
-		return;
-
-	BaseClass::CleanupToolRecordingState( msg );
-
-	// Generally, this is used to allow the entity to clean up
-	// allocated state it put into the message, but here we're going
-	// to use it to send particle system messages because we
-	// know the grenade has been recorded at this point
-	if ( !clienttools->IsInRecordingMode() || !m_pSmokeEmitter )
-		return;
-	
-	// For now, we can't record smoketrails that don't have a moveparent
-	C_BaseEntity *pEnt = GetMoveParent();
-	if ( !pEnt )
-		return;
-
-	bool bEmitterActive = m_bEmit && ( ( m_StopEmitTime == 0 ) || ( m_StopEmitTime > gpGlobals->curtime ) );
-
-	// NOTE: Particle system destruction message will be sent by the particle effect itself.
-	if ( m_pSmokeEmitter->GetToolParticleEffectId() == TOOLPARTICLESYSTEMID_INVALID )
-	{
-		int nId = m_pSmokeEmitter->AllocateToolParticleEffectId();
-
-		KeyValues *msg = new KeyValues( "OldParticleSystem_Create" );
-		msg->SetString( "name", "C_SmokeTrail" );
-		msg->SetInt( "id", nId );
-		msg->SetFloat( "time", gpGlobals->curtime );
-
-		KeyValues *pRandomEmitter = msg->FindKey( "DmeRandomEmitter", true );
-		pRandomEmitter->SetInt( "count", m_SpawnRate );	// particles per second, when duration is < 0
-		pRandomEmitter->SetFloat( "duration", -1 );
-		pRandomEmitter->SetInt( "active", bEmitterActive );
-
-		KeyValues *pEmitterParent1 = pRandomEmitter->FindKey( "emitter1", true );
-		pEmitterParent1->SetFloat( "randomamount", 0.5f );
-		KeyValues *pEmitterParent2 = pRandomEmitter->FindKey( "emitter2", true );
-		pEmitterParent2->SetFloat( "randomamount", 0.5f );
-
-		KeyValues *pEmitter = pEmitterParent1->FindKey( "DmeSpriteEmitter", true );
-		pEmitter->SetString( "material", "particle/particle_smokegrenade" );
-
-		KeyValues *pInitializers = pEmitter->FindKey( "initializers", true );
-
-		// FIXME: Until we can interpolate ent logs during emission, this can't work
-		KeyValues *pPosition = pInitializers->FindKey( "DmePositionPointToEntityInitializer", true );
-		pPosition->SetPtr( "entindex", (void*)pEnt->entindex() );
-		pPosition->SetInt( "attachmentIndex", m_nAttachment );
-		pPosition->SetFloat( "randomDist", m_SpawnRadius );
-		pPosition->SetFloat( "startx", pEnt->GetAbsOrigin().x );
-		pPosition->SetFloat( "starty", pEnt->GetAbsOrigin().y );
-		pPosition->SetFloat( "startz", pEnt->GetAbsOrigin().z );
-
-		KeyValues *pLifetime = pInitializers->FindKey( "DmeRandomLifetimeInitializer", true );
-		pLifetime->SetFloat( "minLifetime", m_ParticleLifetime );
- 		pLifetime->SetFloat( "maxLifetime", m_ParticleLifetime );
-
-		KeyValues *pVelocity = pInitializers->FindKey( "DmeAttachmentVelocityInitializer", true );
-		pVelocity->SetPtr( "entindex", (void*)entindex() );
-		pVelocity->SetFloat( "minAttachmentSpeed", m_MinDirectedSpeed );
- 		pVelocity->SetFloat( "maxAttachmentSpeed", m_MaxDirectedSpeed );
- 		pVelocity->SetFloat( "minRandomSpeed", m_MinSpeed );
- 		pVelocity->SetFloat( "maxRandomSpeed", m_MaxSpeed );
-
-		KeyValues *pRoll = pInitializers->FindKey( "DmeRandomRollInitializer", true );
-		pRoll->SetFloat( "minRoll", 0.0f );
- 		pRoll->SetFloat( "maxRoll", 360.0f );
-
-		KeyValues *pRollSpeed = pInitializers->FindKey( "DmeRandomRollSpeedInitializer", true );
-		pRollSpeed->SetFloat( "minRollSpeed", -1.0f );
- 		pRollSpeed->SetFloat( "maxRollSpeed", 1.0f );
-
-		KeyValues *pColor = pInitializers->FindKey( "DmeRandomValueColorInitializer", true );
-		Color c( 
-			clamp( m_StartColor.x * 255.0f, 0, 255 ),
-			clamp( m_StartColor.y * 255.0f, 0, 255 ),
-			clamp( m_StartColor.z * 255.0f, 0, 255 ), 255 );
-		pColor->SetColor( "startColor", c );
-		pColor->SetFloat( "minStartValueDelta", -0.2f );
- 		pColor->SetFloat( "maxStartValueDelta", 0.2f );
-		pColor->SetColor( "endColor", Color( 0, 0, 0, 255 ) );
-
-		KeyValues *pAlpha = pInitializers->FindKey( "DmeRandomAlphaInitializer", true );
-		int nMinAlpha = 255 * m_Opacity * 0.75f;
-		int nMaxAlpha = 255 * m_Opacity * 1.25f;
-		pAlpha->SetInt( "minStartAlpha", 0 );
-		pAlpha->SetInt( "maxStartAlpha", 0 );
-		pAlpha->SetInt( "minEndAlpha", clamp( nMinAlpha, 0, 255 ) );
-		pAlpha->SetInt( "maxEndAlpha", clamp( nMaxAlpha, 0, 255 ) );
-
-		KeyValues *pSize = pInitializers->FindKey( "DmeRandomSizeInitializer", true );
-		pSize->SetFloat( "minStartSize", m_StartSize );
-		pSize->SetFloat( "maxStartSize", m_StartSize );
-		pSize->SetFloat( "minEndSize", m_EndSize );
-		pSize->SetFloat( "maxEndSize", m_EndSize );
-
-		KeyValues *pUpdaters = pEmitter->FindKey( "updaters", true );
-	    
-		pUpdaters->FindKey( "DmePositionVelocityUpdater", true );
-		pUpdaters->FindKey( "DmeRollUpdater", true );
-
-		KeyValues *pRollSpeedUpdater = pUpdaters->FindKey( "DmeRollSpeedAttenuateUpdater", true );
-		pRollSpeedUpdater->SetFloat( "attenuation", 1.0f - 8.0f / 30.0f );
-		pRollSpeedUpdater->SetFloat( "attenuationTme", 1.0f / 30.0f );
-		pRollSpeedUpdater->SetFloat( "minRollSpeed", 0.5f );
-
-		pUpdaters->FindKey( "DmeAlphaSineUpdater", true );
-		pUpdaters->FindKey( "DmeColorUpdater", true );
-		pUpdaters->FindKey( "DmeSizeUpdater", true );
-
-		KeyValues *pEmitter2 = pEmitter->MakeCopy();
-		pEmitter2->SetString( "material", "particle/particle_noisesphere" );
-		pEmitterParent2->AddSubKey( pEmitter2 );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
-	else 
-	{
-		KeyValues *msg = new KeyValues( "OldParticleSystem_ActivateEmitter" );
-		msg->SetInt( "id", m_pSmokeEmitter->GetToolParticleEffectId() );
-		msg->SetInt( "emitter", 0 );
-		msg->SetInt( "active", bEmitterActive );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
-}
-
-
 //==================================================
 // RocketTrail
 //==================================================
@@ -546,7 +398,7 @@ C_RocketTrail::~C_RocketTrail()
 //-----------------------------------------------------------------------------
 void C_RocketTrail::GetAimEntOrigin( IClientEntity *pAttachedTo, Vector *pAbsOrigin, QAngle *pAbsAngles )
 {
-	C_BaseEntity *pEnt = pAttachedTo->GetBaseEntity();
+	C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( pAttachedTo->GetBaseEntity() );
 	if (pEnt && (m_nAttachment > 0))
 	{
 		pEnt->GetAttachment( m_nAttachment, *pAbsOrigin, *pAbsAngles );
@@ -1352,7 +1204,7 @@ void C_SporeTrail::SimulateParticles( CParticleSimulateIterator *pIterator )
 //-----------------------------------------------------------------------------
 void C_SporeTrail::GetAimEntOrigin( IClientEntity *pAttachedTo, Vector *pAbsOrigin, QAngle *pAbsAngles )
 {
-	C_BaseEntity *pEnt = pAttachedTo->GetBaseEntity();
+	C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( pAttachedTo->GetBaseEntity() );
 	
 	pEnt->GetAttachment( 1, *pAbsOrigin, *pAbsAngles );
 
@@ -1578,16 +1430,6 @@ C_DustTrail::C_DustTrail()
 
 C_DustTrail::~C_DustTrail()
 {
-	if ( ToolsEnabled() && clienttools->IsInRecordingMode() && m_pDustEmitter && m_pDustEmitter->GetToolParticleEffectId() != TOOLPARTICLESYSTEMID_INVALID )
-	{
-		KeyValues *msg = new KeyValues( "OldParticleSystem_ActivateEmitter" );
-		msg->SetInt( "id", m_pDustEmitter->GetToolParticleEffectId() );
-		msg->SetInt( "emitter", 0 );
-		msg->SetInt( "active", false );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
 
 	if ( m_pParticleMgr )
 	{
@@ -1790,125 +1632,3 @@ void C_DustTrail::SimulateParticles( CParticleSimulateIterator *pIterator )
 }
 
 
-//-----------------------------------------------------------------------------
-// This is called after sending this entity's recording state
-//-----------------------------------------------------------------------------
-
-void C_DustTrail::CleanupToolRecordingState( KeyValues *msg )
-{
-	if ( !ToolsEnabled() )
-		return;
-
-	BaseClass::CleanupToolRecordingState( msg );
-
-	// Generally, this is used to allow the entity to clean up
-	// allocated state it put into the message, but here we're going
-	// to use it to send particle system messages because we
-	// know the grenade has been recorded at this point
-	if ( !clienttools->IsInRecordingMode() || !m_pDustEmitter )
-		return;
-	
-	// For now, we can't record Dusttrails that don't have a moveparent
-	C_BaseEntity *pEnt = GetMoveParent();
-	if ( !pEnt )
-		return;
-
-	bool bEmitterActive = m_bEmit && ( ( m_StopEmitTime == 0 ) || ( m_StopEmitTime > gpGlobals->curtime ) );
-
-	// NOTE: Particle system destruction message will be sent by the particle effect itself.
-	if ( m_pDustEmitter->GetToolParticleEffectId() == TOOLPARTICLESYSTEMID_INVALID )
-	{
-		int nId = m_pDustEmitter->AllocateToolParticleEffectId();
-
-		KeyValues *msg = new KeyValues( "OldParticleSystem_Create" );
-		msg->SetString( "name", "C_DustTrail" );
-		msg->SetInt( "id", nId );
-		msg->SetFloat( "time", gpGlobals->curtime );
-
-		KeyValues *pEmitter = msg->FindKey( "DmeSpriteEmitter", true );
-		pEmitter->SetString( "material", "particle/smokesprites_0001" );
-		pEmitter->SetInt( "count", m_SpawnRate );	// particles per second, when duration is < 0
-		pEmitter->SetFloat( "duration", -1 ); // FIXME
-		pEmitter->SetInt( "active", bEmitterActive );
-
-		KeyValues *pInitializers = pEmitter->FindKey( "initializers", true );
-
-		// FIXME: Until we can interpolate ent logs during emission, this can't work
-		KeyValues *pPosition = pInitializers->FindKey( "DmePositionPointToEntityInitializer", true );
-		pPosition->SetPtr( "entindex", (void*)pEnt->entindex() );
-		pPosition->SetInt( "attachmentIndex", GetParentAttachment() );
-		pPosition->SetFloat( "randomDist", m_SpawnRadius );
-		pPosition->SetFloat( "startx", pEnt->GetAbsOrigin().x );
-		pPosition->SetFloat( "starty", pEnt->GetAbsOrigin().y );
-		pPosition->SetFloat( "startz", pEnt->GetAbsOrigin().z );
-
-		KeyValues *pVelocity = pInitializers->FindKey( "DmeDecayVelocityInitializer", true );
-		pVelocity->SetFloat( "velocityX", pEnt->GetAbsVelocity().x );
-		pVelocity->SetFloat( "velocityY", pEnt->GetAbsVelocity().y );
-		pVelocity->SetFloat( "velocityZ", pEnt->GetAbsVelocity().z );
-		pVelocity->SetFloat( "decayto", 0.5 );
-		pVelocity->SetFloat( "decaytime", 0.3 );
-
-		KeyValues *pLifetime = pInitializers->FindKey( "DmeRandomLifetimeInitializer", true );
-		pLifetime->SetFloat( "minLifetime", m_ParticleLifetime );
- 		pLifetime->SetFloat( "maxLifetime", m_ParticleLifetime );
-
-		KeyValues *pRoll = pInitializers->FindKey( "DmeRandomRollInitializer", true );
-		pRoll->SetFloat( "minRoll", 0.0f );
- 		pRoll->SetFloat( "maxRoll", 360.0f );
-
-		KeyValues *pRollSpeed = pInitializers->FindKey( "DmeRandomRollSpeedInitializer", true );
-		pRollSpeed->SetFloat( "minRollSpeed", -1.0f );
- 		pRollSpeed->SetFloat( "maxRollSpeed", 1.0f );
-
-		KeyValues *pColor = pInitializers->FindKey( "DmeRandomValueColorInitializer", true );
-		Color c( 
-			clamp( m_Color.x * 255.0f, 0, 255 ),
-			clamp( m_Color.y * 255.0f, 0, 255 ),
-			clamp( m_Color.z * 255.0f, 0, 255 ), 255 );
-		pColor->SetColor( "startColor", c );
-		pColor->SetFloat( "minStartValueDelta", 0.0f );
- 		pColor->SetFloat( "maxStartValueDelta", 0.0f );
-		pColor->SetColor( "endColor", c );
-
-		KeyValues *pAlpha = pInitializers->FindKey( "DmeRandomAlphaInitializer", true );
-		int nMinAlpha = 255 * m_Opacity * 0.75f;
-		int nMaxAlpha = 255 * m_Opacity * 1.25f;
-		pAlpha->SetInt( "minStartAlpha", clamp( nMinAlpha, 0, 255 ) );
-		pAlpha->SetInt( "maxStartAlpha", clamp( nMaxAlpha, 0, 255 ) );
-		pAlpha->SetInt( "minEndAlpha", clamp( nMinAlpha, 0, 255 ) );
-		pAlpha->SetInt( "maxEndAlpha", clamp( nMaxAlpha, 0, 255 ) );
-
-		KeyValues *pSize = pInitializers->FindKey( "DmeRandomSizeInitializer", true );
-		pSize->SetFloat( "minStartSize", m_StartSize );
-		pSize->SetFloat( "maxStartSize", m_StartSize );
-		pSize->SetFloat( "minEndSize", m_EndSize );
-		pSize->SetFloat( "maxEndSize", m_EndSize );
-
-		KeyValues *pUpdaters = pEmitter->FindKey( "updaters", true );
-		pUpdaters->FindKey( "DmePositionVelocityDecayUpdater", true );
-		pUpdaters->FindKey( "DmeRollUpdater", true );
-
-		KeyValues *pRollSpeedUpdater = pUpdaters->FindKey( "DmeRollSpeedAttenuateUpdater", true );
-		pRollSpeedUpdater->SetFloat( "attenuation", 1.0f - 8.0f / 30.0f );
-		pRollSpeedUpdater->SetFloat( "attenuationTme", 1.0f / 30.0f );
-		pRollSpeedUpdater->SetFloat( "minRollSpeed", 0.5f );
-
-		pUpdaters->FindKey( "DmeAlphaSineRampUpdater", true );
-		pUpdaters->FindKey( "DmeColorUpdater", true );
-		pUpdaters->FindKey( "DmeSizeUpdater", true );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
-	else 
-	{
-		KeyValues *msg = new KeyValues( "OldParticleSystem_ActivateEmitter" );
-		msg->SetInt( "id", m_pDustEmitter->GetToolParticleEffectId() );
-		msg->SetInt( "emitter", 0 );
-		msg->SetInt( "active", bEmitterActive );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
-}

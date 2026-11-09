@@ -5,8 +5,6 @@ import ks.tier1;
 #include "keys.h"
 #include "cdll_engine_int.h"
 #include "cmd.h"
-#include "toolframework/itoolframework.h"
-#include "toolframework/itoolsystem.h"
 import std;
 #include "engineui.h"
 #include "tier2/tier2.h"
@@ -30,7 +28,6 @@ enum KeyUpTarget_t
 	KEY_UP_ANYTARGET = 0,
 	KEY_UP_ENGINE,
 	KEY_UP_UI,
-	KEY_UP_TOOLS,
 	KEY_UP_CLIENT,
 	KEY_UP_GAMEUI,
 	KEY_UP_ROCKETUI,
@@ -862,20 +859,6 @@ static bool FilterTrappedKey( ButtonCode_t code, bool bDown )
 
 #ifndef DEDICATED
 //-----------------------------------------------------------------------------
-// Lets tools have a whack at key events
-//-----------------------------------------------------------------------------
-static bool HandleToolKey( const InputEvent_t &event )
-{
-	// Tools are not given typed messages
-	if ( event.m_nType == IE_KeyTyped || event.m_nType == IE_KeyCodeTyped )
-		return false;
-
-	IToolSystem *toolsys = toolframework->GetTopmostTool();
-	return toolsys && toolsys->TrapKey( (ButtonCode_t)event.m_nData, ( event.m_nType != IE_ButtonReleased ) );
-}
-
-
-//-----------------------------------------------------------------------------
 // Lets vgui have a whack at key events
 //-----------------------------------------------------------------------------
 static bool HandleUIKey( const InputEvent_t &event )
@@ -1130,10 +1113,6 @@ void Key_Event( const InputEvent_t &event )
 		// prevent ESC key during loading
 		return;
 	}
-
-	// Let tools have a whack at keys
-	if ( FilterKey( event, KEY_UP_TOOLS, HandleToolKey ) )
-		return;	
 
 	// If we happen to be checking the MAGICAL ESC key then
 	// let's have the client check first since we do magical things

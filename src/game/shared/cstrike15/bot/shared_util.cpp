@@ -5,8 +5,6 @@
 
 // Author: Matthew D. Campbell (matt@turtlerockstudios.com), 2003
 
-import std;
-import ks.tier1;
 
 #include "shared_util.h"
 

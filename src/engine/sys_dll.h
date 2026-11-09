@@ -14,13 +14,10 @@ class IDataCache;
 class IPhysics;
 class IMDLCache;
 class IMatSystemSurface;
-class IAvi;
-class IBik;
 class IInputSystem;
 class IDedicatedExports;
 class ISoundEmitterSystemBase;
 
-typedef unsigned short AVIHandle_t;
 
 
 //-----------------------------------------------------------------------------
@@ -38,14 +35,11 @@ extern CreateInterfaceFn g_GameSystemFactory;
 // Singleton interfaces
 //-----------------------------------------------------------------------------
 extern IPhysics *g_pPhysics;
-extern IAvi *avi;
-extern IBik *bik;
 extern IDedicatedExports *dedicated;
 
 //-----------------------------------------------------------------------------
 // Other singletons
 //-----------------------------------------------------------------------------
-extern AVIHandle_t g_hCurrentAVI;
 
 
 inline bool InEditMode()

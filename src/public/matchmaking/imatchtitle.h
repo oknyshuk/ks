@@ -76,44 +76,44 @@ class IMatchTitle
 {
 public:
 	// Title ID
-	virtual uint64 GetTitleID() = 0;
+	uint64 GetTitleID();
 
 	// Service ID for XLSP
-	virtual uint64 GetTitleServiceID() = 0;
+	uint64 GetTitleServiceID();
 
 	// Describe title settings using a bitwise combination of flags
-	virtual uint64 GetTitleSettingsFlags() = 0;
+	uint64 GetTitleSettingsFlags();
 
 	// Prepare network startup params for the title
-	virtual void PrepareNetStartupParams( void *pNetStartupParams ) = 0;
+	void PrepareNetStartupParams( void *pNetStartupParams );
 
 	// Get total number of players supported by the title
-	virtual int GetTotalNumPlayersSupported() = 0;
+	int GetTotalNumPlayersSupported();
 
 	// Get a guest player name
-	virtual char const * GetGuestPlayerName( int iUserIndex ) = 0;
+	char const * GetGuestPlayerName( int iUserIndex );
 
 	// Decipher title data fields
-	virtual TitleDataFieldsDescription_t const * DescribeTitleDataStorage() = 0;
+	TitleDataFieldsDescription_t const * DescribeTitleDataStorage();
 
 	// Title achievements
-	virtual TitleAchievementsDescription_t const * DescribeTitleAchievements() = 0;
+	TitleAchievementsDescription_t const * DescribeTitleAchievements();
 
 	// Title avatar awards
-	virtual TitleAvatarAwardsDescription_t const * DescribeTitleAvatarAwards() = 0;
+	TitleAvatarAwardsDescription_t const * DescribeTitleAvatarAwards();
 
 	// Sets up all necessary client-side convars and user info before
 	// connecting to server
-	virtual void PrepareClientForConnect( KeyValues *pSettings ) = 0;
+	void PrepareClientForConnect( KeyValues *pSettings );
 
 	// Start up a listen server with the given settings
-	virtual bool StartServerMap( KeyValues *pSettings ) = 0;
+	bool StartServerMap( KeyValues *pSettings );
 
 	// Title DLC description
-	virtual TitleDlcDescription_t const * DescribeTitleDlcs() = 0;
+	TitleDlcDescription_t const * DescribeTitleDlcs();
 
 	// Run every frame
-	virtual void RunFrame() = 0;
+	void RunFrame();
 };
 
 //
@@ -124,29 +124,29 @@ class IMatchTitleGameSettingsMgr
 {
 public:
 	// Extends server game details
-	virtual void ExtendServerDetails( KeyValues *pDetails, KeyValues *pRequest ) = 0;
+	void ExtendServerDetails( KeyValues *pDetails, KeyValues *pRequest );
 	
 	// Adds the essential part of game details to be broadcast
-	virtual void ExtendLobbyDetailsTemplate( KeyValues *pDetails, char const *szReason, KeyValues *pFullSettings ) = 0;
+	void ExtendLobbyDetailsTemplate( KeyValues *pDetails, char const *szReason, KeyValues *pFullSettings );
 
 	// Initializes full game settings from potentially abbreviated game settings
-	virtual void InitializeGameSettings( KeyValues *pSettings, char const *szReason ) = 0;
+	void InitializeGameSettings( KeyValues *pSettings, char const *szReason );
 
 	// Sets the bspname key given a mapgroup
-	virtual void SetBspnameFromMapgroup( KeyValues *pSettings ) = 0;
+	void SetBspnameFromMapgroup( KeyValues *pSettings );
 
 	// Extends game settings update packet before it gets merged with
 	// session settings and networked to remote clients
-	virtual void ExtendGameSettingsUpdateKeys( KeyValues *pSettings, KeyValues *pUpdateDeleteKeys ) = 0;
+	void ExtendGameSettingsUpdateKeys( KeyValues *pSettings, KeyValues *pUpdateDeleteKeys );
 
 	// Executes the command on the session settings, this function on host
 	// is allowed to modify Members/Game subkeys and has to fill in modified players KeyValues
 	// When running on a remote client "ppPlayersUpdated" is NULL and players cannot
 	// be modified
-	virtual void ExecuteCommand( KeyValues *pCommand, KeyValues *pSessionSystemData, KeyValues *pSettings, KeyValues **ppPlayersUpdated ) = 0;
+	void ExecuteCommand( KeyValues *pCommand, KeyValues *pSessionSystemData, KeyValues *pSettings, KeyValues **ppPlayersUpdated );
 
 	// Prepares the host lobby for game or adjust settings of new players who
 	// join a game in progress, this function is allowed to modify
 	// Members/Game subkeys and has to fill in modified players KeyValues
-	virtual void PrepareLobbyForGame( KeyValues *pSettings, KeyValues **ppPlayersUpdated ) = 0;
+	void PrepareLobbyForGame( KeyValues *pSettings, KeyValues **ppPlayersUpdated );
 };

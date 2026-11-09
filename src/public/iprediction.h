@@ -5,8 +5,6 @@
 import ks.tier1;
 import std;
 
-class IMoveHelper;
-
 //-----------------------------------------------------------------------------
 // Purpose: Engine interface into client side prediction system
 //-----------------------------------------------------------------------------

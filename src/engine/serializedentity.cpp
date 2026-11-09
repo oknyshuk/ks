@@ -272,13 +272,13 @@ public:
 	{
 	}
 
-	virtual SerializedEntityHandle_t AllocateSerializedEntity(char const *pFile, int nLine )
+	SerializedEntityHandle_t AllocateSerializedEntity(char const *pFile, int nLine )
 	{
 		CSerializedEntity *pEntity = new CSerializedEntity();
 		return reinterpret_cast< SerializedEntityHandle_t >( pEntity );
 	}
 
-	virtual void ReleaseSerializedEntity( SerializedEntityHandle_t handle )
+	void ReleaseSerializedEntity( SerializedEntityHandle_t handle )
 	{
 		if ( handle == SERIALIZED_ENTITY_HANDLE_INVALID )
 			return;
@@ -287,7 +287,7 @@ public:
 		delete pEntity;
 	}
 
-	virtual SerializedEntityHandle_t CopySerializedEntity( SerializedEntityHandle_t handle, char const *pFile, int nLine )
+	SerializedEntityHandle_t CopySerializedEntity( SerializedEntityHandle_t handle, char const *pFile, int nLine )
 	{
 		if ( handle == SERIALIZED_ENTITY_HANDLE_INVALID )
 		{
@@ -304,6 +304,9 @@ public:
 	}
 
 };
+
+#include "facade/iserializedentities.inl"
+
 
 static CSerializedEntities g_SerializedEntities;
 ISerializedEntities *g_pSerializedEntities = &g_SerializedEntities;

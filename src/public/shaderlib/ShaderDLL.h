@@ -19,9 +19,9 @@ class IShaderDLL
 {
 public:
 	// Adds a shader to the list of shaders
-	virtual void InsertShader( IShader *pShader ) = 0;
+	void InsertShader( IShader *pShader );
 
-	virtual void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics ) = 0;
+	void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics );
 };
 
 

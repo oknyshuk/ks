@@ -7,10 +7,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "string_t.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"
@@ -28,7 +25,6 @@ import ks.tier1;
 #include "npcevent.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "edict.h"
 #include "eiface.h"
@@ -98,24 +94,24 @@ constexpr auto POINT_AT_ORIGIN_EPSILON = 0.1f;
 //-----------------------------------------------------------------------------
 // Interface to allow the particle system to call back into the game code
 //-----------------------------------------------------------------------------
-class CParticleSystemQuery : public CBaseAppSystem< IParticleSystemQuery >
+class CParticleSystemQuery
 {
 public:
-	virtual bool IsEditor( ) { return false; }
+	bool IsEditor( ) { return false; }
 
-	// Inherited from IParticleSystemQuery
-	virtual void GetLightingAtPoint( const Vector& vecOrigin, Color &cTint );
-	virtual void TraceLine( const Vector& vecAbsStart,
+	// The answers of the game: ParticleQueryHooks below hands them to the particle system
+	void GetLightingAtPoint( const Vector& vecOrigin, Color &cTint );
+	void TraceLine( const Vector& vecAbsStart,
 							const Vector& vecAbsEnd, unsigned int mask, 
 							const IHandleEntity *ignore,
 							int collisionGroup, CBaseTrace *ptr );
 
-	virtual bool IsPointInSolid( const Vector& vecPos, const int nContentsMask );
+	bool IsPointInSolid( const Vector& vecPos, const int nContentsMask );
 
-	virtual bool MovePointInsideControllingObject( CParticleCollection *pParticles,
+	bool MovePointInsideControllingObject( CParticleCollection *pParticles,
 												   void *pObject,
 												   Vector *pPnt );
-	virtual void GetRandomPointsOnControllingObjectHitBox( 
+	void GetRandomPointsOnControllingObjectHitBox( 
 		CParticleCollection *pParticles,
 		int nControlPointNumber, 
 		int nNumPtsOut,
@@ -139,64 +135,64 @@ public:
 		int nDesiredHitbox, 
 		const char *pszHitboxSetName );
 
-	virtual int GetRayTraceEnvironmentFromName( const char *pszRtEnvName );
+	int GetRayTraceEnvironmentFromName( const char *pszRtEnvName );
 
-	virtual int GetCollisionGroupFromName( const char *pszCollisionGroupName );
+	int GetCollisionGroupFromName( const char *pszCollisionGroupName );
 
 
-	virtual int GetControllingObjectHitBoxInfo(
+	int GetControllingObjectHitBoxInfo(
 		CParticleCollection *pParticles,
 		int nControlPointNumber,
 		int nBufSize,										// # of output slots available
 		ModelHitBoxInfo_t *pHitBoxOutputBuffer, 
 		const char *pszHitboxSetName );
 
-	virtual	bool IsPointInControllingObjectHitBox( 
+	bool IsPointInControllingObjectHitBox( 
 		CParticleCollection *pParticles,
 		int nControlPointNumber, Vector vecPos, bool bBBoxOnly, 
 		const char *pszHitboxSetName  );
 
-	virtual	void GetControllingObjectOBBox( 
+	void GetControllingObjectOBBox( 
 		CParticleCollection *pParticles,
 		int nControlPointNumber, Vector vecMin, Vector vecMax );
 	
 	// Traces Four Rays against a defined RayTraceEnvironment
-	virtual void TraceAgainstRayTraceEnv( int envnumber, const FourRays &rays, fltx4 TMin, fltx4 TMax,
+	void TraceAgainstRayTraceEnv( int envnumber, const FourRays &rays, fltx4 TMin, fltx4 TMax,
 		RayTracingResult *rslt_out, int32 skip_id ) const ;
 
-	virtual Vector GetLocalPlayerPos( void );
-	virtual void GetLocalPlayerEyeVectors( Vector *pForward, Vector *pRight = nullptr, Vector *pUp = nullptr );
+	Vector GetLocalPlayerPos( void );
+	void GetLocalPlayerEyeVectors( Vector *pForward, Vector *pRight = nullptr, Vector *pUp = nullptr );
 
-	virtual Vector GetCurrentViewOrigin();
+	Vector GetCurrentViewOrigin();
 
-	virtual int GetActivityCount();
-	virtual const char *GetActivityNameFromIndex( int nActivityIndex );
-	virtual int GetActivityNumber( void *pModel, const char *m_pszActivityName );
+	int GetActivityCount();
+	const char *GetActivityNameFromIndex( int nActivityIndex );
+	int GetActivityNumber( void *pModel, const char *m_pszActivityName );
 
-	virtual float GetPixelVisibility( int *pQueryHandle, const Vector &vecOrigin, float flScale );
-	virtual void SetUpLightingEnvironment( const Vector& pos );
+	float GetPixelVisibility( int *pQueryHandle, const Vector &vecOrigin, float flScale );
+	void SetUpLightingEnvironment( const Vector& pos );
 
-	virtual void PreSimulate( );
+	void PreSimulate( );
 
-	virtual void PostSimulate( );
+	void PostSimulate( );
 
-	virtual void DebugDrawLine( const Vector &origin, const Vector &target, int r, int g, int b, bool noDepthTest, float duration );
+	void DebugDrawLine( const Vector &origin, const Vector &target, int r, int g, int b, bool noDepthTest, float duration );
 
-	virtual void BeginDrawModels( int nMaxNumToDraw, Vector const &vecCenterPosition, CParticleCollection *pParticles )
+	void BeginDrawModels( int nMaxNumToDraw, Vector const &vecCenterPosition, CParticleCollection *pParticles )
 	{
 	}
 
-	virtual void DrawModel( void *pModel, const matrix3x4_t &DrawMatrix, CParticleCollection *pParticles, int nParticleNumber, int nBodyPart, int nSubModel,
+	void DrawModel( void *pModel, const matrix3x4_t &DrawMatrix, CParticleCollection *pParticles, int nParticleNumber, int nBodyPart, int nSubModel,
 							int nSkin, int nAnimationSequence = 0, float flAnimationRate = 30.0f, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f );
 
 
-	virtual void FinishDrawModels( CParticleCollection *pParticles )
+	void FinishDrawModels( CParticleCollection *pParticles )
 	{
 	}
 
-	virtual void *GetModel( char const *pMdlName );
+	void *GetModel( char const *pMdlName );
 
-	virtual void UpdateProjectedTexture( const int nParticleID, IMaterial *pMaterial, Vector &vOrigin, float flRadius, float flRotation, float r, float g, float b, float a, void *&pUserVar );
+	void UpdateProjectedTexture( const int nParticleID, IMaterial *pMaterial, Vector &vOrigin, float flRadius, float flRotation, float r, float g, float b, float a, void *&pUserVar );
 
 private:
 #if defined( CLIENT_DLL )
@@ -209,15 +205,41 @@ private:
 
 
 static CParticleSystemQuery s_ParticleSystemQuery;
-IParticleSystemQuery *g_pParticleSystemQuery = &s_ParticleSystemQuery;
 
+#define KS_PARTICLE_QUERY_HOOK( name ) { std::cw<&CParticleSystemQuery::name>, &s_ParticleSystemQuery }
+static const ParticleQueryHooks s_ParticleQueryHooks =
+{
+	KS_PARTICLE_QUERY_HOOK( GetLightingAtPoint ),
+	KS_PARTICLE_QUERY_HOOK( TraceLine ),
+	KS_PARTICLE_QUERY_HOOK( IsPointInSolid ),
+	KS_PARTICLE_QUERY_HOOK( MovePointInsideControllingObject ),
+	KS_PARTICLE_QUERY_HOOK( GetRayTraceEnvironmentFromName ),
+	KS_PARTICLE_QUERY_HOOK( GetCollisionGroupFromName ),
+	KS_PARTICLE_QUERY_HOOK( GetRandomPointsOnControllingObjectHitBox ),
+	KS_PARTICLE_QUERY_HOOK( GetClosestControllingObjectHitBox ),
+	KS_PARTICLE_QUERY_HOOK( GetControllingObjectHitBoxInfo ),
+	KS_PARTICLE_QUERY_HOOK( GetControllingObjectOBBox ),
+	KS_PARTICLE_QUERY_HOOK( TraceAgainstRayTraceEnv ),
+	KS_PARTICLE_QUERY_HOOK( GetLocalPlayerPos ),
+	KS_PARTICLE_QUERY_HOOK( GetLocalPlayerEyeVectors ),
+	KS_PARTICLE_QUERY_HOOK( GetCurrentViewOrigin ),
+	KS_PARTICLE_QUERY_HOOK( GetActivityCount ),
+	KS_PARTICLE_QUERY_HOOK( GetActivityNameFromIndex ),
+	KS_PARTICLE_QUERY_HOOK( GetActivityNumber ),
+	KS_PARTICLE_QUERY_HOOK( GetPixelVisibility ),
+	KS_PARTICLE_QUERY_HOOK( SetUpLightingEnvironment ),
+	KS_PARTICLE_QUERY_HOOK( PreSimulate ),
+	KS_PARTICLE_QUERY_HOOK( PostSimulate ),
+	KS_PARTICLE_QUERY_HOOK( DebugDrawLine ),
+	KS_PARTICLE_QUERY_HOOK( GetModel ),
+	KS_PARTICLE_QUERY_HOOK( DrawModel ),
+	KS_PARTICLE_QUERY_HOOK( UpdateProjectedTexture ),
+};
+#undef KS_PARTICLE_QUERY_HOOK
 
-//-----------------------------------------------------------------------------
-// Exposes the interface (so tools can get at it)
-//-----------------------------------------------------------------------------
-#ifdef CLIENT_DLL
-static InterfaceReg s_Reg_CParticleSystemQuery_IParticleSystemQuery( []() -> void * { return static_cast<IParticleSystemQuery *>( &s_ParticleSystemQuery ); }, PARTICLE_SYSTEM_QUERY_INTERFACE_VERSION );;
-#endif
+static IParticleSystemQuery s_ParticleSystemQueryForParticles( s_ParticleQueryHooks );
+IParticleSystemQuery *g_pParticleSystemQuery = &s_ParticleSystemQueryForParticles;
+
 
 static std::recursive_mutex s_LightMutex;
 static std::recursive_mutex s_BoneMutex;

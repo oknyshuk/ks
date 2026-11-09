@@ -3,8 +3,6 @@
 
 // Purpose: Spawn, think, and use functions for common brush entities.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -59,9 +56,9 @@ class CFuncWall : public CBaseEntity
 public:
 	DECLARE_DATADESC();
 	DECLARE_CLASS( CFuncWall, CBaseEntity );
-	void	Spawn( void );
-	bool	CreateVPhysics( void );
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void	Spawn_Impl( void );
+	bool	CreateVPhysics_Impl( void );
+	void	Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	int		m_nState;
 };
@@ -73,7 +70,7 @@ LINK_ENTITY_TO_CLASS( func_wall, CFuncWall );
 //---------------------------------------------------------
 IMPLEMENT_REFLECT_DATAMAP( CFuncWall )
 
-void CFuncWall::Spawn( void )
+void CFuncWall::Spawn_Impl( void )
 {
 	SetLocalAngles( vec3_angle );
 	SetMoveType( MOVETYPE_PUSH );  // so it doesn't get pushed by anything
@@ -87,7 +84,7 @@ void CFuncWall::Spawn( void )
 }
 
 
-bool CFuncWall::CreateVPhysics( void )
+bool CFuncWall::CreateVPhysics_Impl( void )
 {
 	SetSolid( SOLID_BSP );
 	IPhysicsObject *pPhys = VPhysicsInitStatic();
@@ -106,7 +103,7 @@ bool CFuncWall::CreateVPhysics( void )
 }
 
 
-void CFuncWall::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CFuncWall::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	if ( ShouldToggle( useType, m_nState ) )
 	{
@@ -124,8 +121,8 @@ public:
 
 	DECLARE_DATADESC();
 
-	void	Spawn( void );
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void	Spawn_Impl( void );
+	void	Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void	InputToggle( inputdata_t &inputdata );
 
@@ -139,9 +136,9 @@ IMPLEMENT_REFLECT_DATAMAP( CFuncWallToggle )
 
 LINK_ENTITY_TO_CLASS( func_wall_toggle, CFuncWallToggle );
 
-void CFuncWallToggle::Spawn( void )
+void CFuncWallToggle::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	if ( HasSpawnFlags( SF_WALL_START_OFF ) )
 		TurnOff();
 	
@@ -194,7 +191,7 @@ void CFuncWallToggle::InputToggle( inputdata_t &inputdata )
 }
 
 //Adrian - Is this function needed at all?
-void CFuncWallToggle::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CFuncWallToggle::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	int status = IsOn();
 
@@ -214,8 +211,8 @@ public:
 	DECLARE_CLASS( CFuncVehicleClip, CBaseEntity );
 	DECLARE_DATADESC();
 
-	void Spawn();
-	bool CreateVPhysics( void );
+	void Spawn_Impl();
+	bool CreateVPhysics_Impl( void );
 
 	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &data );
 	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &data );
@@ -227,7 +224,7 @@ IMPLEMENT_REFLECT_DATAMAP( CFuncVehicleClip )
 
 LINK_ENTITY_TO_CLASS( func_vehicleclip, CFuncVehicleClip );
 
-void CFuncVehicleClip::Spawn()
+void CFuncVehicleClip::Spawn_Impl()
 {
 
 	SetLocalAngles( vec3_angle );
@@ -244,7 +241,7 @@ void CFuncVehicleClip::Spawn()
 	SetCollisionGroup( COLLISION_GROUP_VEHICLE_CLIP );
 }
 
-bool CFuncVehicleClip::CreateVPhysics( void )
+bool CFuncVehicleClip::CreateVPhysics_Impl( void )
 {
 	SetSolid( SOLID_BSP );
 	VPhysicsInitStatic();
@@ -287,11 +284,11 @@ public:
 
 	CFuncConveyor();
 
-	void	Spawn( void );
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void	Spawn_Impl( void );
+	void	Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void	UpdateSpeed( float flNewSpeed );
 
-	void	GetGroundVelocityToApply( Vector &vecGroundVel );
+	void	GetGroundVelocityToApply_Impl( Vector &vecGroundVel );
 
 	// Input handlers.
 	[[= ks::reflect::Input{ .name = "ToggleDirection", .type = FIELD_VOID } ]] void	InputToggleDirection( inputdata_t &inputdata );
@@ -316,13 +313,13 @@ CFuncConveyor::CFuncConveyor()
 	m_flConveyorSpeed = 0.0;
 }
 
-void CFuncConveyor::Spawn( void )
+void CFuncConveyor::Spawn_Impl( void )
 {
 	// Convert movedir from angles to a vector
 	QAngle angMoveDir = QAngle( m_vecMoveDir.x, m_vecMoveDir.y, m_vecMoveDir.z );
 	AngleVectors( angMoveDir, &m_vecMoveDir );
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	if ( !HasSpawnFlags(SF_CONVEYOR_VISUAL) )
 		AddFlag( FL_CONVEYOR );
@@ -346,7 +343,7 @@ void CFuncConveyor::UpdateSpeed( float flNewSpeed )
 }
 
 
-void CFuncConveyor::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CFuncConveyor::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
     m_flSpeed = -m_flSpeed;
 	UpdateSpeed( m_flSpeed );
@@ -369,7 +366,7 @@ void CFuncConveyor::InputSetSpeed( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 // Purpose: Returns the velocity imparted to players standing on us.
 //-----------------------------------------------------------------------------
-void CFuncConveyor::GetGroundVelocityToApply( Vector &vecGroundVel )
+void CFuncConveyor::GetGroundVelocityToApply_Impl( Vector &vecGroundVel )
 {
 	vecGroundVel = m_vecMoveDir * m_flSpeed;
 }
@@ -381,12 +378,12 @@ class CFuncIllusionary : public CBaseEntity
 {
 	DECLARE_CLASS( CFuncIllusionary, CBaseEntity );
 public:
-	void Spawn( void );
+	void Spawn_Impl( void );
 };
 
 LINK_ENTITY_TO_CLASS( func_illusionary, CFuncIllusionary );
 
-void CFuncIllusionary::Spawn( void )
+void CFuncIllusionary::Spawn_Impl( void )
 {
 	SetLocalAngles( vec3_angle );
 	SetMoveType( MOVETYPE_NONE );  
@@ -429,22 +426,23 @@ class [[= ks::reflect::NetTable{ .name = "DT_FuncRotating" } ]]
 	DECLARE_CLASS( CFuncRotating, CBaseEntity );
 public:
 	// basic functions
-	void Spawn( void  );
-	void Precache( void  );
-	bool CreateVPhysics( void );
+	void Spawn_Impl( void  );
+	void Precache_Impl( void  );
+	bool CreateVPhysics_Impl( void );
 	void SpinUpMove( void );
 	void SpinDownMove( void );
-	bool KeyValue( const char *szKeyName, const char *szValue );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
 	void HurtTouch ( CBaseEntity *pOther );
 	void RotatingUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void RotateMove( void );
 	void ReverseMove( void );
 	void RampPitchVol( void );
-	void Blocked( CBaseEntity *pOther );
+	void Blocked_Impl( CBaseEntity *pOther );
 	void SetTargetSpeed( float flSpeed );
 	void UpdateSpeed( float flNewSpeed );
 	
-	int	 DrawDebugTextOverlays(void);
+	int	 DrawDebugTextOverlays_Impl(void);
 
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
@@ -540,7 +538,7 @@ IMPLEMENT_REFLECT_SERVERCLASS( CFuncRotating, DT_FuncRotating )
 //-----------------------------------------------------------------------------
 // Purpose: Handles keyvalues from the BSP. Called before spawning.
 //-----------------------------------------------------------------------------
-bool CFuncRotating::KeyValue( const char *szKeyName, const char *szValue )
+bool CFuncRotating::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "fanfriction"))
 	{
@@ -553,7 +551,7 @@ bool CFuncRotating::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{ 
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
@@ -563,7 +561,7 @@ bool CFuncRotating::KeyValue( const char *szKeyName, const char *szValue )
 //-----------------------------------------------------------------------------
 // Purpose: Called when spawning, after keyvalues have been set.
 //-----------------------------------------------------------------------------
-void CFuncRotating::Spawn( )
+void CFuncRotating::Spawn_Impl( )
 {
 
 	//
@@ -699,7 +697,7 @@ void CFuncRotating::Spawn( )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CFuncRotating::CreateVPhysics( void )
+bool CFuncRotating::CreateVPhysics_Impl( void )
 {
 	if ( !IsSolidFlagSet( FSOLID_NOT_SOLID ))
 	{
@@ -712,7 +710,7 @@ bool CFuncRotating::CreateVPhysics( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CFuncRotating::Precache( void )
+void CFuncRotating::Precache_Impl( void )
 {
 	//
 	// Set up rotation sound.
@@ -1317,7 +1315,7 @@ void CFuncRotating::InputToggle( inputdata_t &inputdata )
 // Purpose: An entity has blocked the brush.
 // Input  : pOther - 
 //-----------------------------------------------------------------------------
-void CFuncRotating::Blocked( CBaseEntity *pOther )
+void CFuncRotating::Blocked_Impl( CBaseEntity *pOther )
 {
 	pOther->TakeDamage( CTakeDamageInfo( this, this, m_flBlockDamage, DMG_CRUSH ) );
 }
@@ -1328,9 +1326,9 @@ void CFuncRotating::Blocked( CBaseEntity *pOther )
 // Input  :
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CFuncRotating::DrawDebugTextOverlays(void) 
+int CFuncRotating::DrawDebugTextOverlays_Impl(void) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -1350,12 +1348,12 @@ class CFuncVPhysicsClip : public CBaseEntity
 	DECLARE_CLASS( CFuncVPhysicsClip, CBaseEntity );
 
 public:
-	void Spawn();
-	void Activate();
-	bool CreateVPhysics( void );
+	void Spawn_Impl();
+	void Activate_Impl();
+	bool CreateVPhysics_Impl( void );
 
 	bool EntityPassesFilter( CBaseEntity *pOther );
-	bool ForceVPhysicsCollide( CBaseEntity *pEntity );
+	bool ForceVPhysicsCollide_Impl( CBaseEntity *pEntity );
 
 	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
@@ -1373,7 +1371,7 @@ IMPLEMENT_REFLECT_DATAMAP( CFuncVPhysicsClip )
 
 LINK_ENTITY_TO_CLASS( func_clip_vphysics, CFuncVPhysicsClip );
 
-void CFuncVPhysicsClip::Spawn( void )
+void CFuncVPhysicsClip::Spawn_Impl( void )
 {
 	SetMoveType( MOVETYPE_PUSH );  // so it doesn't get pushed by anything
 	SetSolid( SOLID_VPHYSICS );
@@ -1385,21 +1383,21 @@ void CFuncVPhysicsClip::Spawn( void )
 }
 
 
-bool CFuncVPhysicsClip::CreateVPhysics( void )
+bool CFuncVPhysicsClip::CreateVPhysics_Impl( void )
 {
 	VPhysicsInitStatic();
 	return true;
 }
 
 
-void CFuncVPhysicsClip::Activate( void ) 
+void CFuncVPhysicsClip::Activate_Impl( void ) 
 { 
 	// Get a handle to my filter entity if there is one
 	if (m_iFilterName != NULL_STRING)
 	{
 		m_hFilter = dynamic_cast<CBaseFilter *>(gEntList.FindEntityByName( nullptr, m_iFilterName ));
 	}
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 }
 
 bool CFuncVPhysicsClip::EntityPassesFilter( CBaseEntity *pOther )
@@ -1419,7 +1417,7 @@ bool CFuncVPhysicsClip::EntityPassesFilter( CBaseEntity *pOther )
 }
 
 
-bool CFuncVPhysicsClip::ForceVPhysicsCollide( CBaseEntity *pEntity )
+bool CFuncVPhysicsClip::ForceVPhysicsCollide_Impl( CBaseEntity *pEntity )
 {
 	return EntityPassesFilter(pEntity);
 }

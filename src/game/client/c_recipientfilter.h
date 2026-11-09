@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
 #include "irecipientfilter.h"
 #include "soundflags.h"
-import std;
 #include "const.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "c_baseentity.h"

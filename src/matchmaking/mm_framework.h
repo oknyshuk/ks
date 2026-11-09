@@ -31,70 +31,68 @@ class CMatchFramework;
 #include "matchsystem.h"
 #include "playermanager.h"
 
-class CMatchFramework :
-	public CTier2AppSystem< IMatchFramework >,
-	public IMatchEventsSink
+class CMatchFramework : public IMatchFramework
 {
-	// Methods of IAppSystem
+	// App system protocol (see IMatchFramework)
 public:
-	virtual bool Connect( CreateInterfaceFn factory );
-	virtual void Disconnect();
-	virtual void *QueryInterface( const char *pInterfaceName );
-	virtual InitReturnVal_t Init();
-	virtual void Shutdown();
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t Init();
+	void Shutdown();
 
 	// Methods of IMatchFramework
 public:
 	// Run frame of the matchmaking framework
-	virtual void RunFrame();
+	void RunFrame();
 
 
 	// Get matchmaking extensions
-	virtual IMatchExtensions * GetMatchExtensions();
+	IMatchExtensions * GetMatchExtensions();
 
 	// Get events container
-	virtual IMatchEventsSubscription * GetEventsSubscription();
+	IMatchEventsSubscription * GetEventsSubscription();
 
 	// Get the matchmaking title interface
-	virtual IMatchTitle * GetMatchTitle();
+	IMatchTitle * GetMatchTitle();
 
 	// Get the match session interface of the current match framework type
-	virtual IMatchSession * GetMatchSession();
+	IMatchSession * GetMatchSession();
 
 	// Get the network msg encode/decode factory
-	virtual IMatchNetworkMsgController * GetMatchNetworkMsgController();
+	IMatchNetworkMsgController * GetMatchNetworkMsgController();
 
 	// Get the match system
-	virtual IMatchSystem * GetMatchSystem();
+	IMatchSystem * GetMatchSystem();
 	
 	// Send the key values back to the server
-	virtual void ApplySettings( KeyValues* keyValues );
+	void ApplySettings( KeyValues* keyValues );
 
 	// Entry point to create session
-	virtual void CreateSession( KeyValues *pSettings );
+	void CreateSession( KeyValues *pSettings );
 
 	// Entry point to match into a session
-	virtual void MatchSession( KeyValues *pSettings );
+	void MatchSession( KeyValues *pSettings );
 
 	// Close the session
-	virtual void CloseSession();
+	void CloseSession();
 
 	// Checks to see if the current game is being played online ( as opposed to locally against bots )
-	virtual bool IsOnlineGame( void );
+	bool IsOnlineGame( void );
 
 	// Called by the client to notify matchmaking that it should update matchmaking properties based
 	// on player distribution among the teams.
-	virtual void UpdateTeamProperties( KeyValues *pTeamProperties );
+	void UpdateTeamProperties( KeyValues *pTeamProperties );
 
 	//
-	// IMatchEventsSink
+	// Match events, cracked internally before the external subscribers
 	//
 public:
-	virtual void OnEvent( KeyValues *pEvent );
+	void OnEvent( KeyValues *pEvent );
 
 	// Additional matchmaking title-defined interface
 public:
-	virtual IMatchTitleGameSettingsMgr * GetMatchTitleGameSettingsMgr();
+	IMatchTitleGameSettingsMgr * GetMatchTitleGameSettingsMgr();
 
 public:
 	void SetCurrentMatchSession( IMatchSessionInternal *pNewMatchSession );

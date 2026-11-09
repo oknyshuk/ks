@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -46,7 +44,7 @@ public:
 	DECLARE_DATADESC();
 
 	CBuyZone();
-	void Spawn();
+	void Spawn_Impl();
 	void BuyZoneTouch( CBaseEntity* pOther );
 
 	[[= ks::reflect::Input{ .name = "SetTeam_TerroristOnly", .type = FIELD_VOID } ]] void InputSetTeam_TerroristOnly( inputdata_t& inputdata );
@@ -55,7 +53,7 @@ public:
 	[[= ks::reflect::Input{ .name = "SetTeam_None", .type = FIELD_VOID } ]] void InputSetTeam_None( inputdata_t& inputdata );
 
 	// CBaseTrigger override
-	virtual void EndTouch( CBaseEntity *pOther ) override;
+	void EndTouch_Impl( CBaseEntity *pOther ) ;
 
 public:
 	[[= ks::reflect::Key{ .name = "team", .input = true } ]] int m_LegacyTeamNum;
@@ -73,7 +71,7 @@ CBuyZone::CBuyZone()
 }
 
 
-void CBuyZone::Spawn()
+void CBuyZone::Spawn_Impl()
 {
 	InitTrigger();
 	SetTouch( &CBuyZone::BuyZoneTouch );
@@ -133,9 +131,9 @@ void CBuyZone::InputSetTeam_None( inputdata_t& inputdata )
 	ChangeTeam( -1 );
 }
 
-void CBuyZone::EndTouch( CBaseEntity *pOther )
+void CBuyZone::EndTouch_Impl( CBaseEntity *pOther )
 {
-	BaseClass::EndTouch( pOther );
+	BaseClass::EndTouch_Impl( pOther );
 
 	// Feature mostly for tournament organizers to aid match stat log parsing. 
 	if ( mp_logdetail.GetInt() >= 3 && pOther->IsPlayer() )

@@ -6,6 +6,10 @@
 import std;
 import ks.vstdlib;
 
+// GCC module workaround: the body of std::atomic<int>::load has to be streamed in by an
+// explicit use before the implicit conversions in the imported job code are instantiated.
+[[maybe_unused]] static int LoadAtomicInt( const std::atomic<int> &value ) { return value.load(); }
+
 //-----------------------------------------------------------------------------
 // Globals
 //-----------------------------------------------------------------------------
@@ -782,168 +786,6 @@ void CSOAContainer::ResampleAttribute( CSOAContainer &src, int nAttr )
 }
 
 
-
-struct KMeansQuantizationWorkUnit
-{
-	CSOAContainer *m_pContainer;
-	int m_nRowIndex;
-	int m_nNumResultsDesired;
-	IKMeansErrorMetric *m_pErrorCalculator;
-	int const *m_pFieldIndices;
-	int m_nNumFields;
-	int m_nFieldToStoreIndexInto;
-	KMeansQuantizedValue *m_pOutValues;
-	int m_nErrorChannel;
-	void Process( void );
-};
-
-
-
-static void DoKMeansWork( KMeansQuantizationWorkUnit &jobDesc )
-{
-	jobDesc.Process();
-}
-
-void KMeansQuantizationWorkUnit::Process( void )
-{
-	FourVectors v4SamplePositions;
-	for( int nZ = 0; nZ < m_pContainer->NumSlices(); nZ++ )
-	{
-		v4SamplePositions.z = ReplicateX4( nZ );
-		for( int nY = m_nRowIndex; nY < m_pContainer->NumRows(); nY += QUANTIZER_NJOBS )
-		{
-			v4SamplePositions.y = ReplicateX4( nY );
-			KMeansSampleDescriptor samples;
-			for( int c = 0; c < m_nNumFields; c++ )
-			{
-				samples.m_pInputValues[c] = m_pContainer->RowPtr<fltx4>( m_pFieldIndices[c], nY, nZ );
-			}
-			fltx4 *pIndexOut = m_pContainer->RowPtr<fltx4>( m_nFieldToStoreIndexInto, nY, nZ );
-			fltx4 *pErrOut = nullptr;
-			if ( m_nErrorChannel != -1 )
-			{
-				pErrOut = m_pContainer->RowPtr<fltx4>( m_nErrorChannel, nY, nZ );
-			}
-			v4SamplePositions.x = g_SIMD_0123;
-
-			// simd closest match search
-			int nXSize = m_pContainer->NumQuadsPerRow();
-			do
-			{
-				fltx4 fl4SampleIdx = Four_Zeros;
-				fltx4 fl4ClosestError = Four_FLT_MAX;
-				fltx4 fl4BestSampleIdx = Four_Zeros;
-				for( int n = 0; n < m_nNumResultsDesired; n++ )
-				{
-					fltx4 fl4TrialError;
-					m_pErrorCalculator->CalculateError( samples, v4SamplePositions, m_pOutValues[n], &fl4TrialError );
-					// find which samples got a closest match from this comparison
-					bi32x4 fl4BetterMask = CmpLeSIMD( fl4TrialError, fl4ClosestError );
-					fl4BestSampleIdx = MaskedAssign( fl4BetterMask, fl4SampleIdx, fl4BestSampleIdx );
-					fl4ClosestError = MaskedAssign( fl4BetterMask, fl4TrialError, fl4ClosestError );
-					fl4SampleIdx = AddSIMD( fl4SampleIdx, Four_Ones );
-				}
-				// now, we have found the best match for 4 sample values. Need to update output indices and statistics
-				*( pIndexOut++ ) = fl4BestSampleIdx;
-				if ( pErrOut )
-				{
-					*( pErrOut++ ) = fl4ClosestError;
-				}
-
-				// unfortunately, we can not quite simd this because of needing scatter
-				for( int s = 0; s < 4; s++ )
-				{
-					int nIdx = ( int )SubFloat( fl4BestSampleIdx, s );
-					for( int c = 0; c < m_nNumFields; c++ )
-					{
-						m_pOutValues[nIdx].m_flValueAccumulators[m_nRowIndex][c] += SubFloat( *samples.m_pInputValues[c], s );
-					}
-					m_pOutValues[nIdx].m_flWeightAccumulators[m_nRowIndex] += 1.0;
-				}
-
-				for( int c = 0; c < m_nNumFields; c++ )
-				{
-					samples.m_pInputValues[c]++;
-				}
-				fl4SampleIdx = AddSIMD( fl4SampleIdx, Four_Ones );
-				v4SamplePositions.x = AddSIMD( v4SamplePositions.x, Four_Fours );
-
-			} while( -- nXSize );
-		}
-	}
-}
-
-// kmeans quantization
-void CSOAContainer:: KMeansQuantization( int const *pFieldIndices, int nNumFields, 
-										 KMeansQuantizedValue *pOutValues,
-										 int nNumResultsDesired, IKMeansErrorMetric *pErrorCalculator,
-										 int nFieldToStoreIndexInto, int nNumIterations,
-										 int nChannelToReceiveErrorSignal )
-{
-	// first, initialize trial samples randomly
-	HaltonSequenceGenerator_t xSequence( 13 );
-	HaltonSequenceGenerator_t ySequence( 17 );
-	HaltonSequenceGenerator_t zSequence( 23 );
-	for( int i = 0; i < nNumResultsDesired; i++ )
-	{
-		int nX = ( int )( ( NumCols() - 1 ) * xSequence.NextValue() );
-		int nY = ( int )( ( NumRows() - 1 ) * ySequence.NextValue() );
-		int nZ = ( int )( ( NumSlices() - 1 ) * zSequence.NextValue() );
-		pOutValues[i].m_vecValuePosition.DuplicateVector( Vector( nX, nY, nZ ) );
-		for( int c = 0; c < nNumFields; c++ )
-		{
-			pOutValues[i].m_fl4Values[c] = ReplicateX4( FloatValue( pFieldIndices[c], nX, nY, nZ ) );
-		}
-	}
-
-	// now,. run iterations
-	while( nNumIterations-- )
-	{
-		for( int i = 0; i < nNumResultsDesired; i++ )
-		{
-			std::memset( pOutValues[i].m_flValueAccumulators, 0, sizeof( pOutValues[i].m_flValueAccumulators ) );
-			std::memset( pOutValues[i].m_flWeightAccumulators, 0, sizeof( pOutValues[i].m_flWeightAccumulators ) );
-		}
-		// now, find the closest matches for all data samples, in parallel
-		KMeansQuantizationWorkUnit jobs[QUANTIZER_NJOBS];
-		for( int i = 0; i < QUANTIZER_NJOBS; i++ )
-		{
-			jobs[i].m_pContainer = this;
-			jobs[i].m_nRowIndex = i;
-			jobs[i].m_nNumResultsDesired = nNumResultsDesired;
-			jobs[i].m_pErrorCalculator = pErrorCalculator;
-			jobs[i].m_pFieldIndices = pFieldIndices;
-			jobs[i].m_nNumFields = nNumFields;
-			jobs[i].m_nFieldToStoreIndexInto = nFieldToStoreIndexInto;
-			jobs[i].m_pOutValues = pOutValues;
-			jobs[i].m_nErrorChannel = nChannelToReceiveErrorSignal;
-		}
-		ParallelProcess( jobs, std::size( jobs ), DoKMeansWork );
-		if ( nNumIterations )						// don't refine the results after the last pass
-		{
-			for( int n = 0; n < nNumResultsDesired; n++ )
-			{
-				// accumulate over all threads
-				for( int j = 1; j < QUANTIZER_NJOBS; j++ )
-				{
-					pOutValues[n].m_flWeightAccumulators[0] += pOutValues[n].m_flWeightAccumulators[j];
-					for( int c = 0; c < nNumFields; c++ )
-					{
-						pOutValues[n].m_flValueAccumulators[0][c] += pOutValues[n].m_flValueAccumulators[j][c];
-					}
-				}
-				// re-adjust quantized values
-				float flOOWeight = 1.0 / std::max( std::numeric_limits<float>::epsilon(), pOutValues[n].m_flWeightAccumulators[0] );
-				for( int c = 0; c < nNumFields; c++ )
-				{
-					pOutValues[n].m_fl4Values[c] = ReplicateX4( pOutValues[n].m_flValueAccumulators[0][c] * flOOWeight );
-				}				
-				pErrorCalculator->PostAdjustQuantizedValue( pOutValues[n] );
-			}
-			pErrorCalculator->PostStep( pFieldIndices, nNumFields, pOutValues, nNumResultsDesired, nFieldToStoreIndexInto, *this );
-		}
-	}
-}
 
 constexpr auto THRESH = 0.9;
 

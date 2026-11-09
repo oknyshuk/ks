@@ -35,10 +35,10 @@ public:
 
 	void Initialize( CFishPool *pool, unsigned int id );
 	
-	virtual void Spawn( void );
+	void Spawn_Impl( void );
 
-	virtual void Event_Killed( const CTakeDamageInfo &info );
-	virtual void Touch( CBaseEntity *other );			///< in contact with "other"
+	void Event_Killed_Impl( const CTakeDamageInfo &info );
+	void Touch_Impl( CBaseEntity *other );			///< in contact with "other"
 
 	void Update( float deltaT );						///< invoked each server tick
 
@@ -99,11 +99,12 @@ public:
 
 	CFishPool( void );
 
-	virtual void Spawn();
+	void Spawn_Impl();
 
-	virtual bool KeyValue( const char *szKeyName, const char *szValue );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
 
-	virtual void FireGameEvent( IGameEvent *event );
+	void FireGameEvent( IGameEvent *event );
 
 	void Update( void );					///< invoked each server tick
 

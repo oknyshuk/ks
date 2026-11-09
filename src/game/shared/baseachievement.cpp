@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "sharedvar.h"
@@ -23,7 +20,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -712,133 +708,4 @@ bool CBaseAchievement::CheckAchievementsEnabled( void )
 		return false;
 
 	return m_pAchievementMgr->CheckAchievementsEnabled();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Constructor
-//-----------------------------------------------------------------------------
-CFailableAchievement::CFailableAchievement() : CBaseAchievement()
-{
-	m_bFailed = false;
-	m_bActivated = false;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: returns whether we should save this achievement with a save game
-//-----------------------------------------------------------------------------
-bool CFailableAchievement::ShouldSaveWithGame() 
-{ 
-	// save if we should get saved with the game, and are active or have failed
-	return ( ( ( m_iFlags & ACH_SAVE_WITH_GAME ) > 0 ) && ( m_bActivated || m_bFailed ) );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: clears dynamic state for this achievement
-//-----------------------------------------------------------------------------
-void CFailableAchievement::PreRestoreSavedGame() 
-{ 
-	m_bFailed = false;
-	m_bActivated = false;
-
-	BaseClass::PreRestoreSavedGame();
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: called after the data in this achievement has been restored from saved game
-//-----------------------------------------------------------------------------
-void CFailableAchievement::PostRestoreSavedGame()
-{
-	// if there is no activation event set for this achievement, it is always active, activate it now
-	if ( !m_bFailed && !GetActivationEventName()[0] )
-	{
-		m_bActivated = true;
-	}
-
-	if ( m_bActivated )
-	{
-		Activate();
-	}
-
-	BaseClass::PostRestoreSavedGame();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: called when a map event occurs
-//-----------------------------------------------------------------------------
-void CFailableAchievement::OnMapEvent( const char *pEventName )
-{
-	// if we're not activated and we got the activation event, activate
-	if ( !m_bActivated && ( 0 == V_stricmp( pEventName, GetActivationEventName() ) ) )
-	{
-		OnActivationEvent();
-	}
-	// if this is the evaluation event, see if we've failed or not
-	else if ( m_bActivated && 0 == V_stricmp( pEventName, GetEvaluationEventName() ) )
-	{
-		OnEvaluationEvent();
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Called when this failable achievement is activated
-//-----------------------------------------------------------------------------
-void CFailableAchievement::Activate()
-{
-	m_bActivated = true;
-	ListenForEvents();
-	if ( cc_achievement_debug.GetInt() )
-	{
-		Msg( "Failable achievement %s now active\n", GetName() );
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Called when this failable achievement should be evaluated
-//-----------------------------------------------------------------------------
-void CFailableAchievement::OnEvaluationEvent()
-{
-	if ( !m_bFailed )
-	{
-		// we haven't failed and we reached the evaluation point, we've succeeded
-		IncrementCount();
-	}
-	
-	if ( cc_achievement_debug.GetInt() )
-	{
-		Msg( "Failable achievement %s has been evaluated (%s), now inactive\n", GetName(), m_bFailed ? "FAILED" : "AWARDED" );
-	}
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Sets this achievement to failed
-//-----------------------------------------------------------------------------
-void CFailableAchievement::SetFailed()
-{
-	if ( !m_bFailed )
-	{
-		m_bFailed = true;
-
-		if ( cc_achievement_debug.GetInt() )
-		{
-			Msg( "Achievement failed: %s (%s)\n", GetName(), GetName() );
-		}	
-	}	
-}
-
-//===========================================
-
-void CAchievement_AchievedCount::Init() 
-{
-	SetFlags( ACH_SAVE_GLOBAL );
-	SetGoal( 1 );
-	SetAchievementsRequired( 0, 0, 0 );
-}
-
-void CAchievement_AchievedCount::SetAchievementsRequired( int iNumRequired, int iLowRange, int iHighRange )
-{
-	m_iNumRequired = iNumRequired;
-	m_iLowRange = iLowRange;
-	m_iHighRange = iHighRange;
 }

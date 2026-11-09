@@ -4,45 +4,38 @@
 // Purpose: Cache for VCDs. PC async loads and uses the datacache to manage.
 // 360 uses a baked resident image of aggregated compiled VCDs.
 
+import std;
+import ks.core;
+import ks.math;
 import ks.tier1;
 #include "scenefilecache/ISceneFileCache.h"
 #include "filesystem.h"
-import std;
 #include "scenefilecache/SceneImageFile.h"
 #include "choreoscene.h"
 
 IFileSystem	*filesystem = nullptr;
 																				
-bool IsBufferBinaryVCD( char *pBuffer, int bufferSize )
-{	
-	if ( bufferSize > 4 && *(int *)pBuffer == SCENE_BINARY_TAG )
-	{
-		return true;	
-	}
-
-	return false;
-}
-
-class CSceneFileCache : public CBaseAppSystem< ISceneFileCache >
+class CSceneFileCache : public ISceneFileCache
 {
 public:
-	// IAppSystem
-	virtual bool			Connect( CreateInterfaceFn factory );
-	virtual void			Disconnect();
-	virtual InitReturnVal_t Init();
-	virtual void			Shutdown();
+	// App system protocol
+	bool			Connect( CreateInterfaceFn factory );
+	void			Disconnect();
+	void			*QueryInterface( const char *pInterfaceName ) { return nullptr; }
+	InitReturnVal_t Init();
+	void			Shutdown();
 
 	// ISceneFileCache
 	// Physically reloads image from disk
-	virtual void			Reload();
+	void			Reload();
 
-	virtual std::size_t			GetSceneBufferSize( char const *pFilename );
-	virtual bool			GetSceneData( char const *pFilename, byte *buf, std::size_t bufsize );
+	std::size_t			GetSceneBufferSize( char const *pFilename );
+	bool			GetSceneData( char const *pFilename, byte *buf, std::size_t bufsize );
 
 	// alternate resident image implementation
-	virtual bool			GetSceneCachedData( char const *pFilename, SceneCachedData_t *pData );
-	virtual short			GetSceneCachedSound( int iScene, int iSound );
-	virtual const char		*GetSceneString( short stringId );
+	bool			GetSceneCachedData( char const *pFilename, SceneCachedData_t *pData );
+	short			GetSceneCachedSound( int iScene, int iSound );
+	const char		*GetSceneString( short stringId );
 
 private:
 	// alternate implementation - uses a resident baked image of the file cache, contains all the compiled VCDs
@@ -309,3 +302,7 @@ bool CSceneFileCache::GetSceneDataFromImage( const char *pFileName, int iScene, 
 
 static CSceneFileCache g_SceneFileCache;
 static InterfaceReg s_Reg_CSceneFileCache_ISceneFileCache( []() -> void * { return static_cast<ISceneFileCache *>( &g_SceneFileCache ); }, SCENE_FILE_CACHE_INTERFACE_VERSION );;
+
+
+// The ISceneFileCache members forward to CSceneFileCache
+#include "facade/iscenefilecache.inl"

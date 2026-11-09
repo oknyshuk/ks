@@ -9,6 +9,4 @@
 
 */
 
-import std;
-import ks.core;
 #line 12

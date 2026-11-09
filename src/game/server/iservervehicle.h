@@ -9,7 +9,8 @@ class CBaseEntity;
 class CBasePlayer;
 class CBaseCombatCharacter;
 class CNPC_VehicleDriver;
-enum VehicleSeatQuery_e;
+class CPassengerSeatTransition;
+typedef std::vector< CPassengerSeatTransition > PassengerSeatAnims_t;
 
 // This is used by the player to access vehicles. It's an interface so the
 // vehicles are not restricted in what they can derive from.

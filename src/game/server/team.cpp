@@ -3,8 +3,6 @@
 
 // Purpose: Team management class. Contains all the details for a specific team
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -18,7 +16,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "baseentity_shared.h"
 #include "basetoggle.h"
@@ -142,7 +139,7 @@ void CTeam::ResetTeamLeaders()
 //-----------------------------------------------------------------------------
 // Purpose: Called every frame
 //-----------------------------------------------------------------------------
-void CTeam::Think( void )
+void CTeam::Think_Impl( void )
 {
 	if ( m_flLastPlayerSortTime + 0.025f < gpGlobals->curtime )
 	{
@@ -269,7 +266,7 @@ int CTeam::TeamGGSortFunction( CCSPlayer* const *entry1, CCSPlayer* const *entry
 //-----------------------------------------------------------------------------
 // Purpose: Teams are always transmitted to clients
 //-----------------------------------------------------------------------------
-int CTeam::UpdateTransmitState()
+int CTeam::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }

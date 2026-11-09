@@ -18,7 +18,7 @@ inline constexpr auto RCON_MAX_RCON_COMMAND_LEN = 1024; // max size of an incomi
 //-----------------------------------------------------------------------------
 // container class to handle network streams
 //-----------------------------------------------------------------------------
-class CRConServer : public ISocketCreatorListener
+class CRConServer
 {
 public:
 	CRConServer( const char *netAddress );
@@ -40,10 +40,10 @@ public:
 	// Allows a server to request a listening client to connect to it
 	bool ConnectToListeningClient( const netadr_t &adr, bool bSingleSocket );
 
-	// Inherited from ISocketCreatorListener
-	virtual bool ShouldAcceptSocket( SocketHandle_t hSocket, const netadr_t & netAdr ); 
-	virtual void OnSocketAccepted( SocketHandle_t hSocket, const netadr_t & netAdr, void** ppData ); 
-	virtual void OnSocketClosed( SocketHandle_t hSocket, const netadr_t & netAdr, void* pData );
+	// Socket listener methods (bound by CSocketCreator)
+	bool ShouldAcceptSocket( SocketHandle_t hSocket, const netadr_t & netAdr ); 
+	void OnSocketAccepted( SocketHandle_t hSocket, const netadr_t & netAdr, void** ppData ); 
+	void OnSocketClosed( SocketHandle_t hSocket, const netadr_t & netAdr, void* pData );
 
 private:
 	struct PendingSend_t

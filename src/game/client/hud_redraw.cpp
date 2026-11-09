@@ -5,8 +5,6 @@
 // hud_redraw.cpp
 //
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -29,7 +27,7 @@ const int CHud::HUDPB_VERTICAL = 1;
 const int CHud::HUDPB_HORIZONTAL_INV = 2;
 
 // Called when a ConVar changes value
-static void FovChanged_Callback( IConVar *pConVar, const char *pOldString, float flOldValue )
+static void FovChanged_Callback( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	ConVarRef var( pConVar );
 	if ( engine->IsInGame() )

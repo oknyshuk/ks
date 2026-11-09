@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "edict.h"
 #include "iserverentity.h"
 #include "shareddefs.h"
@@ -34,7 +32,7 @@ public:
 	CInfoCameraLink();
 	~CInfoCameraLink();
 
-	virtual void Activate();
+	void Activate_Impl();
 
 private:
 	[[= ks::reflect::Input{ .name = "SetCamera", .type = FIELD_STRING } ]] void InputSetCamera(inputdata_t &inputdata);
@@ -82,9 +80,9 @@ CInfoCameraLink::~CInfoCameraLink()
 //-----------------------------------------------------------------------------
 // Purpose: Called after all entities have spawned and after a load game.
 //-----------------------------------------------------------------------------
-void CInfoCameraLink::Activate()
+void CInfoCameraLink::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	// Checks necessary to prevent interference with CreateInfoCameraLink
 	if ( !m_hCamera )

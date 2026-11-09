@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2004 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "cs_weapon_parse.h"
 
 bool BlackMarket_DownloadPrices( void );

@@ -10,9 +10,7 @@
 */
 //--------------------------------------------------------------------------------------------------------
 
-import ks.core;
 #include "debugoverlay_shared.h"
-import std;
 #include "shareddefs.h"
 #ifdef CLIENT_DLL
 #include "c_basecombatcharacter.h"

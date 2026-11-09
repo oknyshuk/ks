@@ -25,15 +25,12 @@ import ks.core;
 #include "client.h"
 #include "tier3/tier3.h"
 #include "MapReslistGenerator.h"
-#include "toolframework/itoolframework.h"
 #include "DevShotGenerator.h"
 #include "gl_shader.h"
 #include "l_studio.h"
 #include "sys_dll.h"
 #include "materialsystem/materialsystem_config.h"
 #include "server.h"
-#include "avi/iavi.h"
-#include "avi/ibik.h"
 #include "datacache/idatacache.h"
 #include "vphysics_interface.h"
 #include "inputsystem/iinputsystem.h"
@@ -67,8 +64,6 @@ import ks.core;
 IDedicatedExports *dedicated = nullptr;
 extern CreateInterfaceFn g_AppSystemFactory;
 IPhysics *g_pPhysics = nullptr;
-IAvi *avi = nullptr;
-IBik *bik = nullptr;
 
 #ifndef DEDICATED
 extern CreateInterfaceFn g_ClientFactory;
@@ -80,6 +75,12 @@ CreateInterfaceFn g_pfnMatchmakingFactory = nullptr;
 
 IMatchFramework *g_pIfaceMatchFramework = nullptr;
 bool s_bIsDedicatedServer = false;
+
+// For the libraries that behave differently without a client (particles).
+bool UTIL_IsDedicatedServer( void )
+{
+	return s_bIsDedicatedServer;
+}
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -278,11 +279,11 @@ public:
 	}
 
 	// Methods of IApplication
-	virtual bool Create();
-	virtual bool PreInit();
-	virtual int Main();
-	virtual void PostShutdown();
-	virtual void Destroy();
+	bool Create();
+	bool PreInit();
+	int Main();
+	void PostShutdown();
+	void Destroy();
 
 private:
 
@@ -1593,8 +1594,6 @@ int CModAppSystemGroup::Main()
 		if ( eng->Load( false, host_parms.basedir ) )					
 		{
 #if !defined(DEDICATED)
-			toolframework->ServerInit( g_ServerFactory );
-
 			if ( s_EngineAPI.MainLoop() )
 			{
 				nRunResult = RUN_RESTART;
@@ -1602,8 +1601,6 @@ int CModAppSystemGroup::Main()
 
 			// unload systems
 			eng->Unload();
-
-			toolframework->ServerShutdown();
 #endif
 			SV_ShutdownGameDLL();
 		}
@@ -2066,7 +2063,7 @@ public:
 		return ::Key_BindingForKey( code );
 	}
 
-	virtual ButtonCode_t GetButtonCodeForBind( const char *bind, int userId )
+	ButtonCode_t GetButtonCodeForBind( const char *bind, int userId )
 	{
 		const char *pKeyName = Key_NameForBinding( bind , userId );
 		if ( !pKeyName )
@@ -2094,11 +2091,14 @@ public:
 		game->GetDesktopInfo( width, height, refreshrate );
 	}
 
-	virtual void SetFriendsID( uint friendsID, const char *friendsName )
+	void SetFriendsID( uint friendsID, const char *friendsName )
 	{
 		GetLocalClient().SetFriendsID( friendsID, friendsName );
 	}
 };
+
+#include "facade/igameuifuncs.inl"
+
 
 static CGameUIFuncs s_Singleton_CGameUIFuncs;
 static InterfaceReg s_Reg_CGameUIFuncs_IGameUIFuncs( []() -> void * { return static_cast<IGameUIFuncs *>( &s_Singleton_CGameUIFuncs ); }, VENGINE_GAMEUIFUNCS_VERSION );;

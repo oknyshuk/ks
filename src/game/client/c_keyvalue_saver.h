@@ -4,9 +4,7 @@
 
 // Purpose: Client handler for instruction players how to play
 
-import ks.tier1;
 #include "GameEventListener.h"
-import std;
 #include "igamesystem.h"
 
 typedef void (*KeyValueBuilder)( KeyValues* );
@@ -36,8 +34,8 @@ public:
 	virtual void Shutdown( void );
 	virtual void Update( float frametime );
 
-	// Methods of CGameEventListener
-	virtual void FireGameEvent( IGameEvent *event );
+	// Game event handler
+	void FireGameEvent( IGameEvent *event );
 
 	bool InitKeyValues( const char *pchFileName, KeyValueBuilder funcKeyValueBuilder );
 	bool WriteDirtyKeyValues( const char *pchFileName, bool bForceWrite = false );

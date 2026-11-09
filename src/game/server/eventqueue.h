@@ -7,8 +7,6 @@
 //			they are held before being dispatched to their recipients.
 //			The queue is serviced once per server frame.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "entitylist.h"
 #include "variant_t.h"

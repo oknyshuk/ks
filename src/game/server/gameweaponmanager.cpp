@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "const.h"
 #include "shareddefs.h"
 #include "datamap.h"
@@ -40,7 +38,7 @@ class CGameWeaponManager : public CBaseEntity
 	DECLARE_DATADESC();
 
 public:
-	void Spawn();
+	void Spawn_Impl();
 	CGameWeaponManager()
 	{
 		m_flAmmoMod = 1.0f;
@@ -53,7 +51,7 @@ public:
 		ks::erase_first( g_Managers, this );
 	}
 
-	void Think();
+	void Think_Impl();
 	[[= ks::reflect::Input{ .name = "SetMaxPieces", .type = FIELD_INTEGER } ]] void InputSetMaxPieces( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "SetAmmoModifier", .type = FIELD_FLOAT } ]] void InputSetAmmoModifier( inputdata_t &inputdata );
 
@@ -136,7 +134,7 @@ void WeaponManager_RemoveManaged( CBaseEntity *pWeapon )
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-void CGameWeaponManager::Spawn()
+void CGameWeaponManager::Spawn_Impl()
 {
 	SetThink( &CGameWeaponManager::Think );
 	SetNextThink( gpGlobals->curtime );
@@ -148,7 +146,7 @@ void CGameWeaponManager::Spawn()
 	}
 	else
 	{
-		m_bExpectingWeapon = ( dynamic_cast<CBaseCombatWeapon *>(pEntity) != nullptr );
+		m_bExpectingWeapon = ( entity_cast<CBaseCombatWeapon>(pEntity) != nullptr );
 		UTIL_Remove(pEntity);
 	}
 }
@@ -177,7 +175,7 @@ void CGameWeaponManager::Spawn()
 // really want. We may only want to conduct the cleanup on
 // weapons that are IN the player's PVS.
 //---------------------------------------------------------
-void CGameWeaponManager::Think()
+void CGameWeaponManager::Think_Impl()
 {
 	int i;
 

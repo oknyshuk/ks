@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import std;
-import ks.math;
 #include "mathlib/camera.h"
 #include "materialsystem/imaterialsystem.h"
 

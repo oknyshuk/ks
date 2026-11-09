@@ -7,11 +7,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
-import ks.vstdlib;
 #include "const.h"
 #include "string_t.h"
 #include "predictableid.h"
@@ -28,7 +24,6 @@ import ks.vstdlib;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -46,7 +41,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -95,9 +89,9 @@ IMPLEMENT_REFLECT_DATAMAP( CPoseController )
 IMPLEMENT_REFLECT_SERVERCLASS( CPoseController, DT_PoseController )
 
 
-void CPoseController::Spawn( void )
+void CPoseController::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	// Talk to the client class when data changes
 	AddEFlags( EFL_FORCE_CHECK_TRANSMIT );
@@ -107,7 +101,7 @@ void CPoseController::Spawn( void )
 	SetNextThink( gpGlobals->curtime + 1.0 );
 }
 
-void CPoseController::Think( void )
+void CPoseController::Think_Impl( void )
 {
 	if ( !m_bDisablePropLookup )
 	{
@@ -365,7 +359,7 @@ void C_PoseController::Spawn( void )
 	m_fCurrentFMod = 0.0f;
 	m_PoseTransitionValue.Init( 0.0f, 0.0f, 0.0f );
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 void C_PoseController::OnDataChanged( DataUpdateType_t updateType )

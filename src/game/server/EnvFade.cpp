@@ -3,8 +3,6 @@
 
 // Purpose: Implements visual effects entities: sprites, beams, bubbles, etc.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -62,7 +59,7 @@ public:
 
 	CEnvFade();
 
-	virtual void Spawn( void );
+	void Spawn_Impl( void );
 
 	inline float Duration( void ) { return m_Duration; }
 	inline float HoldTime( void ) { return m_HoldTime; }
@@ -70,7 +67,7 @@ public:
 	inline void SetDuration( float duration ) { m_Duration = duration; }
 	inline void SetHoldTime( float hold ) { m_HoldTime = hold; }
 
-	int DrawDebugTextOverlays(void);
+	int DrawDebugTextOverlays_Impl(void);
 
 	// Inputs
 	[[= ks::reflect::Input{ .name = "Fade", .type = FIELD_VOID } ]] void InputFade( inputdata_t &inputdata );
@@ -97,7 +94,7 @@ CEnvFade::CEnvFade()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvFade::Spawn( void )
+void CEnvFade::Spawn_Impl( void )
 {
 }
 
@@ -282,9 +279,9 @@ static ConCommand fadein("fadein", CC_FadeIn, "fadein {time r g b}: Fades the sc
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CEnvFade::DrawDebugTextOverlays( void ) 
+int CEnvFade::DrawDebugTextOverlays_Impl( void ) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{

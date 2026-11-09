@@ -3,8 +3,6 @@
 
 // Purpose: Shadow control entity.
 
-import std;
-import ks.math;
 #include "edict.h"
 #include "shareddefs.h"
 #include "datamap.h"
@@ -44,12 +42,13 @@ public:
 
 	CShadowControl();
 
-	void Spawn( void );
-	bool KeyValue( const char *szKeyName, const char *szValue );
-	int  UpdateTransmitState();
+	void Spawn_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	int  UpdateTransmitState_Impl();
 	[[= ks::reflect::Input{ .name = "SetAngles", .type = FIELD_STRING } ]] void InputSetAngles( inputdata_t &inputdata );
 
-	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	int	ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION; }
 
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
@@ -83,14 +82,14 @@ CShadowControl::CShadowControl()
 //------------------------------------------------------------------------------
 // Purpose : Send even though we don't have a model
 //------------------------------------------------------------------------------
-int CShadowControl::UpdateTransmitState()
+int CShadowControl::UpdateTransmitState_Impl()
 {
 	// ALWAYS transmit to all clients.
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
 
 
-bool CShadowControl::KeyValue( const char *szKeyName, const char *szValue )
+bool CShadowControl::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if ( FStrEq( szKeyName, "color" ) )
 	{
@@ -127,13 +126,13 @@ bool CShadowControl::KeyValue( const char *szKeyName, const char *szValue )
 		return true;
 	}
 
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 //------------------------------------------------------------------------------
 // Purpose :
 //------------------------------------------------------------------------------
-void CShadowControl::Spawn( void )
+void CShadowControl::Spawn_Impl( void )
 {
 	Precache();
 	SetSolid( SOLID_NONE );

@@ -4,8 +4,6 @@
 // Purpose: Implements breakables and pushables. func_breakable is a bmodel
 //			that breaks into pieces after taking damage.
 
-import std;
-import ks.vstdlib;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -127,7 +125,7 @@ IMPLEMENT_REFLECT_DATAMAP( CBreakable )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CBreakable::KeyValue( const char *szKeyName, const char *szValue )
+bool CBreakable::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	// UNDONE_WC: explicitly ignoring these fields, but they shouldn't be in the map file!
 	if (FStrEq(szKeyName, "material"))
@@ -177,7 +175,7 @@ bool CBreakable::KeyValue( const char *szKeyName, const char *szValue )
 	{
 	}
 	else
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 
 	return true;
 }
@@ -185,7 +183,7 @@ bool CBreakable::KeyValue( const char *szKeyName, const char *szValue )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBreakable::Spawn( void )
+void CBreakable::Spawn_Impl( void )
 {
 	// Initialize damage modifiers. Must be done before baseclass spawn.
 	m_flDmgModBullet = func_breakdmg_bullet.GetFloat();
@@ -255,7 +253,7 @@ void CBreakable::ParsePropData( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CBreakable::CreateVPhysics( void )
+bool CBreakable::CreateVPhysics_Impl( void )
 {
 	VPhysicsInitStatic();
 	return true;
@@ -317,7 +315,7 @@ void CBreakable::MaterialSoundRandom( int entindex, Materials soundMaterial, flo
 }
 
 
-void CBreakable::Precache( void )
+void CBreakable::Precache_Impl( void )
 {
 	const char *pGibName = "WoodChunks";
 
@@ -637,7 +635,7 @@ void CBreakable::Break( CBaseEntity *pBreaker )
 }
 
 
-void CBreakable::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
+void CBreakable::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
 	// random spark if this is a 'computer' object
 	if (random->RandomInt(0,1) )
@@ -658,16 +656,16 @@ void CBreakable::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir,
 		}
 	}
 
-	BaseClass::TraceAttack( info, vecDir, ptr );
+	BaseClass::TraceAttack_Impl( info, vecDir, ptr );
 }
 
 
 //-----------------------------------------------------------------------------
 // Purpose: Allows us to take damage from physics objects
 //-----------------------------------------------------------------------------
-void CBreakable::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
+void CBreakable::VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent )
 {
-	BaseClass::VPhysicsCollision( index, pEvent );
+	BaseClass::VPhysicsCollision_Impl( index, pEvent );
 
 	Vector damagePos;
 	pEvent->pInternalData->GetContactPoint( damagePos );
@@ -719,7 +717,7 @@ void CBreakable::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 //-----------------------------------------------------------------------------
 // Purpose: Allows us to make damage exceptions that are breakable-specific.
 //-----------------------------------------------------------------------------
-int CBreakable::OnTakeDamage( const CTakeDamageInfo &info )
+int CBreakable::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	Vector	vecTemp;
 
@@ -745,7 +743,7 @@ int CBreakable::OnTakeDamage( const CTakeDamageInfo &info )
 	subInfo.SetDamage( flPropDamage );
 	
 	int iPrevHealth = m_iHealth;
-	BaseClass::OnTakeDamage( subInfo );
+	BaseClass::OnTakeDamage_Impl( subInfo );
 
 	// HACK: slam health back to what it was so UpdateHealth can do its thing
 	int iNewHealth = m_iHealth;
@@ -1002,7 +1000,7 @@ bool CBreakable::IsBreakable( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-char const *CBreakable::DamageDecal( int bitsDamageType, int gameMaterial )
+char const *CBreakable::DamageDecal_Impl( int bitsDamageType, int gameMaterial )
 {
 	if ( m_Material == matGlass  )
 		return "GlassBreak";
@@ -1010,16 +1008,16 @@ char const *CBreakable::DamageDecal( int bitsDamageType, int gameMaterial )
 	if ( m_Material == matUnbreakableGlass )
 		return "BulletProof";
 
-	return BaseClass::DamageDecal( bitsDamageType, gameMaterial );
+	return BaseClass::DamageDecal_Impl( bitsDamageType, gameMaterial );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CBreakable::DrawDebugTextOverlays(void) 
+int CBreakable::DrawDebugTextOverlays_Impl(void) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -1060,7 +1058,7 @@ void CBreakable::OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t reason 
 	m_flLastPhysicsInfluenceTime = gpGlobals->curtime;
 }
 
-CBasePlayer *CBreakable::HasPhysicsAttacker( float dt )
+CBasePlayer *CBreakable::HasPhysicsAttacker_Impl( float dt )
 {
 	if (gpGlobals->curtime - dt <= m_flLastPhysicsInfluenceTime)
 	{
@@ -1082,27 +1080,27 @@ class CPushable : public CBreakable
 public:
 	DECLARE_CLASS( CPushable, CBreakable );
 
-	void	Spawn ( void );
-	bool	CreateVPhysics( void );
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void	Spawn_Impl ( void );
+	bool	CreateVPhysics_Impl( void );
+	void	Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
-	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() | FCAP_ONOFF_USE; }
+	int	ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() | FCAP_ONOFF_USE; }
 
 	// breakables use an overridden takedamage
-	virtual int OnTakeDamage( const CTakeDamageInfo &info );
-	virtual void VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
-	unsigned int PhysicsSolidMaskForEntity( void ) const { return MASK_PLAYERSOLID; }
+	int OnTakeDamage_Impl( const CTakeDamageInfo &info );
+	void VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent );
+	unsigned int PhysicsSolidMaskForEntity_Impl( void ) const { return MASK_PLAYERSOLID; }
 };
 
 
 LINK_ENTITY_TO_CLASS( func_pushable, CPushable );
 
 
-void CPushable::Spawn( void )
+void CPushable::Spawn_Impl( void )
 {
 	if ( HasSpawnFlags( SF_PUSH_BREAKABLE ) )
 	{
-		BaseClass::Spawn();
+		BaseClass::Spawn_Impl();
 	}
 	else
 	{
@@ -1118,7 +1116,7 @@ void CPushable::Spawn( void )
 }
 
 
-bool CPushable::CreateVPhysics( void )
+bool CPushable::CreateVPhysics_Impl( void )
 {
 	VPhysicsInitNormal( SOLID_VPHYSICS, 0, false );
 	IPhysicsObject *pPhysObj = VPhysicsGetObject();
@@ -1133,16 +1131,16 @@ bool CPushable::CreateVPhysics( void )
 }
 
 // Pull the func_pushable
-void CPushable::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CPushable::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	BaseClass::Use( pActivator, pCaller, useType, value );
+	BaseClass::Use_Impl( pActivator, pCaller, useType, value );
 }
 
 
-int CPushable::OnTakeDamage( const CTakeDamageInfo &info )
+int CPushable::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	if ( m_spawnflags & SF_PUSH_BREAKABLE )
-		return BaseClass::OnTakeDamage( info );
+		return BaseClass::OnTakeDamage_Impl( info );
 
 	return 1;
 }
@@ -1150,7 +1148,7 @@ int CPushable::OnTakeDamage( const CTakeDamageInfo &info )
 //-----------------------------------------------------------------------------
 // Purpose: Allows us to take damage from physics objects
 //-----------------------------------------------------------------------------
-void CPushable::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
+void CPushable::VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent )
 {
 	int otherIndex = !index;
 	CBaseEntity *pOther = pEvent->pEntities[otherIndex];
@@ -1158,9 +1156,9 @@ void CPushable::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 	{
 		// Pushables don't take damage from impacts with the player
 		// We call all the way back to the baseclass to get the physics effects.
-		CBaseEntity::VPhysicsCollision( index, pEvent );
+		CBaseEntity::VPhysicsCollision_Impl( index, pEvent );
 		return;
 	}
 
-	BaseClass::VPhysicsCollision( index, pEvent );
+	BaseClass::VPhysicsCollision_Impl( index, pEvent );
 }

@@ -4,8 +4,6 @@
 
 #include "materialsystem/imaterialproxy.h"
 
-class IMaterial;
-class IMaterialVar;
 
 
 class CBaseAnimatedTextureProxy : public IMaterialProxy

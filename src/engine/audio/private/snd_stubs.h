@@ -6,32 +6,32 @@
 class CEngineVoiceStub : public IEngineVoice
 {
 public:
-	virtual bool IsHeadsetPresent( int iController ) { return false; }
-	virtual bool IsLocalPlayerTalking( int iController ) { return false; }
+	bool IsHeadsetPresent( int iController ) { return false; }
+	bool IsLocalPlayerTalking( int iController ) { return false; }
 
-	virtual void AddPlayerToVoiceList( XUID xPlayer, int iController, uint64 uiFlags ) {}
-	virtual void RemovePlayerFromVoiceList( XUID xPlayer, int iController ) {}
+	void AddPlayerToVoiceList( XUID xPlayer, int iController, uint64 uiFlags ) {}
+	void RemovePlayerFromVoiceList( XUID xPlayer, int iController ) {}
 
-	virtual void GetRemoteTalkers( int *pNumTalkers, XUID *pRemoteTalkers )
+	void GetRemoteTalkers( int *pNumTalkers, XUID *pRemoteTalkers )
 	{
 		if ( pNumTalkers )
 			*pNumTalkers = 0;
 	}
 
-	virtual bool VoiceUpdateData( int iController ) { return false; }
-	virtual void GetVoiceData( int iController, const byte **ppvVoiceDataBuffer, unsigned int *pnumVoiceDataBytes )
+	bool VoiceUpdateData( int iController ) { return false; }
+	void GetVoiceData( int iController, const byte **ppvVoiceDataBuffer, unsigned int *pnumVoiceDataBytes )
 	{
 		if ( ppvVoiceDataBuffer )
 			*ppvVoiceDataBuffer = nullptr;
 		if ( pnumVoiceDataBytes )
 			*pnumVoiceDataBytes = 0;
 	}
-	virtual void VoiceResetLocalData( int iController ) {}
+	void VoiceResetLocalData( int iController ) {}
 
-	virtual void SetPlaybackPriority( XUID remoteTalker, int iController, int iAllowPlayback ) {}
-	virtual void PlayIncomingVoiceData( XUID xuid, const byte *pbData, unsigned int dwDataSize, const bool *bAudiblePlayers = nullptr ) {}
+	void SetPlaybackPriority( XUID remoteTalker, int iController, int iAllowPlayback ) {}
+	void PlayIncomingVoiceData( XUID xuid, const byte *pbData, unsigned int dwDataSize, const bool *bAudiblePlayers = nullptr ) {}
 
-	virtual void RemoveAllTalkers() {}
+	void RemoveAllTalkers() {}
 };
 
 CEngineVoiceStub *Audio_GetEngineVoiceStub();

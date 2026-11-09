@@ -31,7 +31,7 @@ class C_OP_RandomForce : public CParticleOperatorInstance
 	}
 
 
-	virtual void AddForces( FourVectors *pAccumulatedForces, 
+	void AddForces( FourVectors *pAccumulatedForces, 
 							CParticleCollection *pParticles,
 							int nBlocks,
 							float flStrength,
@@ -87,7 +87,7 @@ class C_OP_ParentVortices : public CParticleOperatorInstance
 	}
 
 
-	virtual void AddForces( FourVectors *pAccumulatedForces, 
+	void AddForces( FourVectors *pAccumulatedForces, 
 							CParticleCollection *pParticles,
 							int nBlocks,
 							float flStrength,
@@ -199,7 +199,7 @@ class C_OP_TwistAroundAxis : public CParticleOperatorInstance
 	}
 
 
-	virtual void AddForces( FourVectors *pAccumulatedForces, 
+	void AddForces( FourVectors *pAccumulatedForces, 
 							CParticleCollection *pParticles,
 							int nBlocks,
 							float flStrength,
@@ -273,13 +273,13 @@ class C_OP_AttractToControlPoint : public CParticleOperatorInstance
 	}
 
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
 
 
-	virtual void AddForces( FourVectors *pAccumulatedForces, 
+	void AddForces( FourVectors *pAccumulatedForces, 
 							CParticleCollection *pParticles,
 							int nBlocks,
 							float flStrength,
@@ -346,13 +346,13 @@ class C_OP_ForceBasedOnDistanceToPlane : public CParticleOperatorInstance
 	}
 
 
-	virtual uint64 GetReadControlPointMask() const
+	uint64 GetReadControlPointMask() const
 	{
 		return 1ULL << m_nControlPointNumber;
 	}
 
 
-	virtual void AddForces( FourVectors *pAccumulatedForces, 
+	void AddForces( FourVectors *pAccumulatedForces, 
 							CParticleCollection *pParticles,
 							int nBlocks,
 							float flStrength,
@@ -450,7 +450,7 @@ class C_OP_LennardJonesForce : public CParticleOperatorInstance
 		m_pPhysTiler = new PhysTiler(m_fInteractionRadius);
 	}
 
-	virtual void AddForces( FourVectors *pAccumulatedForces, 
+	void AddForces( FourVectors *pAccumulatedForces, 
 		CParticleCollection *pParticles,
 		int nBlocks,
 		float flStrength,
@@ -469,7 +469,7 @@ class C_OP_LennardJonesForce : public CParticleOperatorInstance
 
 private:
 	//virtual void addParticleForce(PhysParticle* a, PhysParticleCacheNode* bcn, float flStrength, float ts) const;
-	virtual void addParticleForce(PhysParticle* a, PhysParticle* b, float distSq, float flStrength, float ts) const;
+	void addParticleForce(PhysParticle* a, PhysParticle* b, float distSq, float flStrength, float ts) const;
 };
 
 
@@ -746,7 +746,7 @@ class C_OP_TimeVaryingForce : public CParticleOperatorInstance
 	}
 
 
-	virtual void AddForces( FourVectors *pAccumulatedForces, 
+	void AddForces( FourVectors *pAccumulatedForces, 
 							CParticleCollection *pParticles,
 							int nBlocks,
 							float flStrength,
@@ -811,7 +811,7 @@ class C_OP_TurbulenceForce : public CParticleOperatorInstance
 	}
 
 
-	virtual void AddForces( FourVectors *pAccumulatedForces, 
+	void AddForces( FourVectors *pAccumulatedForces, 
 							CParticleCollection *pParticles,
 							int nBlocks,
 							float flStrength,
@@ -879,3 +879,7 @@ void AddBuiltInParticleForceGenerators( void )
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_FORCEGENERATOR, C_OP_LennardJonesForce );
 #endif
 }
+
+
+#define KS_PARTICLE_OP_GROUP Forces
+#include "particle_operator_dispatch.inl"

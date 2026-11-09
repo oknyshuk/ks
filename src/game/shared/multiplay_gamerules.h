@@ -51,30 +51,7 @@ typedef struct
 
 extern ConVar mp_timelimit;
 
-// 
 class CBaseMultiplayerPlayer;
-class CSameTeamGroup
-{
-public:
-	CSameTeamGroup();
-	CSameTeamGroup( const CSameTeamGroup &src );
-
-	// Different users will require different logic for whom to add (e.g., all SplitScreen players on same team)
-	virtual void Build( CGameRules *pGameRules, CBasePlayer *pl ) = 0;
-	virtual void MaybeAddPlayer( CBasePlayer *pl ) = 0;
-
-	CBasePlayer *GetPlayer( int idx );
-
-	int						Count() const;
-	int						Score() const;
-
-	static bool Less( const CSameTeamGroup &p1, const CSameTeamGroup &p2 );
-
-protected:
-
-	std::vector< CBasePlayer * >				m_Players;
-	int										m_nScore;
-};
 
 //=========================================================
 // CMultiplayRules - rules for the basic half life multiplayer

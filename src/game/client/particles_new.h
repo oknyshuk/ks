@@ -5,12 +5,10 @@
 // Purpose: provide client-side access to the new particle system, with similar
 // usage to CSimpleEmitter
 
-import ks.tier1;
 #include "particlemgr.h"
 #include "particles/particles.h"
 #include "particlesphererenderer.h"
 #include "particles_simple.h"
-import std;
 #include "ehandle.h"
 #include "shared_classnames.h"
 

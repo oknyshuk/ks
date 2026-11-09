@@ -3,8 +3,6 @@
 
 // Purpose: Base VoteController.  Handles holding and voting on issues.
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "eiface.h"
 #include "shareddefs.h"
@@ -223,11 +221,11 @@ void CVoteController::ResetData( void )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CVoteController::Spawn( void )
+void CVoteController::Spawn_Impl( void )
 {
 	ResetData();
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	SetThink( &CVoteController::VoteControllerThink );
 	SetNextThink( gpGlobals->curtime );
@@ -237,7 +235,7 @@ void CVoteController::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-int CVoteController::UpdateTransmitState( void )
+int CVoteController::UpdateTransmitState_Impl( void )
 {
 	// ALWAYS transmit to all clients.
 	return SetTransmitState( FL_EDICT_ALWAYS );

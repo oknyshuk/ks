@@ -41,79 +41,66 @@ public:
 
 // ILauncherMgr impls.
 public:
-	virtual bool Connect( CreateInterfaceFn factory );
-	virtual void Disconnect();
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
 
-	virtual void *QueryInterface( const char *pInterfaceName );
+	void *QueryInterface( const char *pInterfaceName );
 
 	// Init, shutdown
-	virtual InitReturnVal_t Init();
-	virtual void Shutdown();
+	InitReturnVal_t Init();
+	void Shutdown();
 
-	virtual bool CreateGameWindow( const char *pTitle, bool bWindowed, int width, int height, bool bDesktopFriendlyFullscreen );
+	bool CreateGameWindow( const char *pTitle, bool bWindowed, int width, int height, bool bDesktopFriendlyFullscreen );
 
 	// Get the next N events. The function returns the number of events that were filled into your array.
-	virtual int GetEvents( ks::desktop::event *pEvents, int nMaxEventsToReturn );
+	int GetEvents( ks::desktop::event *pEvents, int nMaxEventsToReturn );
 
 	// Set the mouse cursor position.
-	virtual void SetCursorPosition( int x, int y );
-	virtual void GetCursorPosition( int *px, int *py );
+	void SetCursorPosition( int x, int y );
+	void GetCursorPosition( int *px, int *py );
 
-	virtual void SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight, bool bDesktopFriendlyFullscreen );
-	virtual void PumpWindowsMessageLoop();
+	void SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight, bool bDesktopFriendlyFullscreen );
+	void PumpWindowsMessageLoop();
 
 	// Not part of ILauncherMgr; used internally by CreateGameWindow()/SetWindowFullScreen().
 	void MoveWindow( int x, int y );
 	void SizeWindow( int width, int tall );
 
-	virtual void DestroyGameWindow();
-	virtual void SetApplicationIcon( const char *pchAppIconFile );
+	void DestroyGameWindow();
+	void SetApplicationIcon( const char *pchAppIconFile );
 
-	virtual void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta = false );
+	void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta = false );
 
 	// Not part of ILauncherMgr; used internally by CreateGameWindow().
 	void GetNativeDisplayInfo( int nDisplay, uint &nWidth, uint &nHeight, uint &nRefreshHz );
 
-  	virtual InputCursorHandle_t LoadCursorFromFile( const char *pchFileName );
+	InputCursorHandle_t LoadCursorFromFile( const char *pchFileName );
 
-	virtual void FreeCursor( const InputCursorHandle_t pchCursor );
-	virtual void SetCursorIcon( const InputCursorHandle_t pchCursor );
+	void FreeCursor( const InputCursorHandle_t pchCursor );
+	void SetCursorIcon( const InputCursorHandle_t pchCursor );
 
 	// Post an event to the input event queue.
 	void PostEvent( const SDL_Event &theEvent );
 
 	// Map SDL window coordinates into engine screen space.
-	virtual void WindowToEngineCoords( float wx, float wy, int &ex, int &ey );
+	void WindowToEngineCoords( float wx, float wy, int &ex, int &ey );
 	void EngineToWindowCoords( int ex, int ey, float &wx, float &wy );
 
-	virtual void SetMouseVisible( bool bState );
+	void SetMouseVisible( bool bState );
 
 	// Push the desired pointer state to SDL. Cheap to repeat: diffs against SDL first.
 	void ApplyPointerState();
-	virtual void SetMouseCursor( ks::desktop::cursor *hCursor );
-	virtual void SetForbidMouseGrab( bool bForbidMouseGrab ) { m_bForbidMouseGrab = bForbidMouseGrab; }
+	void SetMouseCursor( ks::desktop::cursor *hCursor );
+	void SetForbidMouseGrab( bool bForbidMouseGrab ) { m_bForbidMouseGrab = bForbidMouseGrab; }
 
-	virtual void OnFrameRendered();
+	void OnFrameRendered();
 
-	// Returns all dependent libraries
-	virtual const AppSystemInfo_t* GetDependencies() {return nullptr;}
-
-	virtual void ForceSystemCursorVisible();
-	virtual void UnforceSystemCursorVisible();
-
-	// Returns the tier
-	virtual AppSystemTier_t GetTier()
-	{
-		return APP_SYSTEM_TIER2;
-	}
-	// Reconnect to a particular interface
-	virtual void Reconnect( CreateInterfaceFn factory, const char *pInterfaceName ) {}
+	void ForceSystemCursorVisible();
+	void UnforceSystemCursorVisible();
 
 	// Called to create a game window that will be hidden, designed for
 	// getting an OpenGL context going so we can begin initializing things.
     bool CreateHiddenGameWindow( const char *pTitle, bool bWindowed, int width, int height );
-
-	virtual bool IsSingleton() { return false; }
 
 private:
 
@@ -179,6 +166,30 @@ private:
 
 ILauncherMgr *g_pLauncherMgr = nullptr;
 
+// ILauncherMgr's methods: the one implementation is CSDLMgr.
+static CSDLMgr &Impl( ILauncherMgr *pMgr ) { return *static_cast< CSDLMgr * >( pMgr ); }
+
+bool ILauncherMgr::Connect( CreateInterfaceFn factory ) { return Impl( this ).Connect( factory ); }
+void ILauncherMgr::Disconnect() { Impl( this ).Disconnect(); }
+void *ILauncherMgr::QueryInterface( const char *pInterfaceName ) { return Impl( this ).QueryInterface( pInterfaceName ); }
+InitReturnVal_t ILauncherMgr::Init() { return Impl( this ).Init(); }
+void ILauncherMgr::Shutdown() { Impl( this ).Shutdown(); }
+bool ILauncherMgr::CreateGameWindow( const char *pTitle, bool bWindowed, int width, int height, bool bDesktopFriendlyFullscreen ) { return Impl( this ).CreateGameWindow( pTitle, bWindowed, width, height, bDesktopFriendlyFullscreen ); }
+int ILauncherMgr::GetEvents( ks::desktop::event *pEvents, int nMaxEventsToReturn ) { return Impl( this ).GetEvents( pEvents, nMaxEventsToReturn ); }
+void ILauncherMgr::WindowToEngineCoords( float wx, float wy, int &ex, int &ey ) { Impl( this ).WindowToEngineCoords( wx, wy, ex, ey ); }
+void ILauncherMgr::SetCursorPosition( int x, int y ) { Impl( this ).SetCursorPosition( x, y ); }
+void ILauncherMgr::SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight, bool bDesktopFriendlyFullscreen ) { Impl( this ).SetWindowFullScreen( bFullScreen, nWidth, nHeight, bDesktopFriendlyFullscreen ); }
+void ILauncherMgr::PumpWindowsMessageLoop() { Impl( this ).PumpWindowsMessageLoop(); }
+void ILauncherMgr::DestroyGameWindow() { Impl( this ).DestroyGameWindow(); }
+void ILauncherMgr::SetApplicationIcon( const char *pchAppIconFile ) { Impl( this ).SetApplicationIcon( pchAppIconFile ); }
+void ILauncherMgr::GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta ) { Impl( this ).GetMouseDelta( x, y, bIgnoreNextMouseDelta ); }
+void ILauncherMgr::SetMouseVisible( bool bState ) { Impl( this ).SetMouseVisible( bState ); }
+void ILauncherMgr::SetMouseCursor( ks::desktop::cursor *hCursor ) { Impl( this ).SetMouseCursor( hCursor ); }
+void ILauncherMgr::SetForbidMouseGrab( bool bForbidMouseGrab ) { Impl( this ).SetForbidMouseGrab( bForbidMouseGrab ); }
+void ILauncherMgr::OnFrameRendered() { Impl( this ).OnFrameRendered(); }
+void ILauncherMgr::ForceSystemCursorVisible() { Impl( this ).ForceSystemCursorVisible(); }
+void ILauncherMgr::UnforceSystemCursorVisible() { Impl( this ).UnforceSystemCursorVisible(); }
+
 void* CreateSDLMgr()
 {
 	if ( g_pLauncherMgr == nullptr )
@@ -190,9 +201,9 @@ void* CreateSDLMgr()
 
 // Display index to show window on.
 static bool g_bSDLDisplayindexSet = false;
-static void sdl_displayindex_changed( IConVar *pConVar, const char *pOldString, float flOldValue );
+static void sdl_displayindex_changed( ConVar *pConVar, const char *pOldString, float flOldValue );
 ConVar sdl_displayindex( "sdl_displayindex", "-1", FCVAR_ARCHIVE | FCVAR_HIDDEN, "SDL fullscreen display index.", sdl_displayindex_changed );
-static void sdl_displayindex_changed( IConVar *pConVar, const char *pOldString, float flOldValue )
+static void sdl_displayindex_changed( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	int NumVideoDisplays = 0;
 	SDL_DisplayID *displays = SDL_GetDisplays( &NumVideoDisplays );

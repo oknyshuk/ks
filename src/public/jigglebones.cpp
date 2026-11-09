@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "jigglebones.h"
 #ifdef CLIENT_DLL
 #include "engine/ivdebugoverlay.h"
 #include "cdll_client_int.h"
+
 #endif
 
 //-----------------------------------------------------------------------------

@@ -8,8 +8,6 @@
 //			m_iHealth is current health
 //			m_iMaxHealth is the amount to reset to each time it starts
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -27,7 +25,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -57,15 +54,15 @@ class CGunTarget : public CBaseToggle
 
 public:
 
-	virtual void Spawn( void );
-	virtual void Activate( void );
-	bool CreateVPhysics( void );
+	void Spawn_Impl( void );
+	void Activate_Impl( void );
+	bool CreateVPhysics_Impl( void );
 
-	virtual int BloodColor( void ) { return DONT_BLEED; }
+	int BloodColor_Impl( void ) { return DONT_BLEED; }
 
-	virtual Class_T Classify( void ) { return CLASS_NONE; }
-	virtual int OnTakeDamage( const CTakeDamageInfo &info );
-	virtual Vector BodyTarget( const Vector &posSrc, bool bNoisy = true ) { return GetAbsOrigin(); }
+	Class_T Classify_Impl( void ) { return CLASS_NONE; }
+	int OnTakeDamage_Impl( const CTakeDamageInfo &info );
+	Vector BodyTarget_Impl( const Vector &posSrc, bool bNoisy = true ) { return GetAbsOrigin(); }
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "Start", .type = FIELD_VOID } ]] void InputStart( inputdata_t &inputdata );
@@ -97,7 +94,7 @@ IMPLEMENT_REFLECT_DATAMAP( CGunTarget )
 
 
 
-void CGunTarget::Spawn( void )
+void CGunTarget::Spawn_Impl( void )
 {
 	SetSolid( SOLID_BSP );
 	SetMoveType( MOVETYPE_PUSH );
@@ -123,15 +120,15 @@ void CGunTarget::Spawn( void )
 }
 
 
-bool CGunTarget::CreateVPhysics( void )
+bool CGunTarget::CreateVPhysics_Impl( void )
 {
 	VPhysicsInitShadow( false, false );
 	return true;
 }
 
-void CGunTarget::Activate( void )
+void CGunTarget::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	CBaseEntity	*pTarg;
 	// now find our next target
@@ -211,7 +208,7 @@ void CGunTarget::Stop( void )
 }
 
 
-int	CGunTarget::OnTakeDamage( const CTakeDamageInfo &info )
+int	CGunTarget::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	if ( m_iHealth > 0 )
 	{

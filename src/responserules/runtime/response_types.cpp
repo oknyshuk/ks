@@ -224,3 +224,7 @@ void Rule::SetContext( const char *context )
 	// we don't own the data we point to, so just update pointer
 	m_szContext = ResponseCopyString( context );
 }
+
+// The datamaps of these types are filled in by the game that embeds them in its entities.
+datamap_t ResponseRules::ResponseParams::m_DataMap = { .dataClassName = "ResponseParams" };
+datamap_t ResponseRules::CRR_Response::m_DataMap = { .dataClassName = "CRR_Response" };

@@ -24,7 +24,6 @@ add_library(matchmaking_base STATIC
     mm_session_offline_custom.cpp
     matchsystem.cpp
     playermanager.cpp
-    extkeyvalues.cpp
     main.cpp
 )
 target_link_libraries(matchmaking_base PRIVATE ks_common tier0 memoverride public_common tier1 tier2 tier3 interfaces vstdlib mathlib)

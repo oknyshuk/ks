@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -22,7 +19,6 @@ import ks.tier1;
 #include "cdll_client_int.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -95,9 +91,9 @@ void CMolotovGrenade::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVe
 	CMolotovProjectile::Create( vecSrc, vecAngles, vecVel, angImpulse, pPlayer, weaponInfo );
 }
 
-void CMolotovGrenade::Precache( void )
+void CMolotovGrenade::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 	
 	PrecacheScriptSound( "Molotov.IdleLoop" );
 }
@@ -241,9 +237,9 @@ void CIncendiaryGrenade::EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector ve
 	CMolotovProjectile::Create( vecSrc, vecAngles, vecVel, angImpulse, pPlayer, weaponInfo );
 }
 
-void CIncendiaryGrenade::Precache( void )
+void CIncendiaryGrenade::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	PrecacheScriptSound( "Molotov.IdleLoop" );
 }

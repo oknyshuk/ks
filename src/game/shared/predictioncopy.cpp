@@ -2,8 +2,6 @@
 // Copyright (c) Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -789,7 +787,7 @@ void CPredictionCopy::DescribeFields( const std::vector< const datamap_t * > &ve
 	int				fieldOffsetDest;
 	int				fieldSize;
 
-	const flattenedoffsets_t &flat = pCurrentMap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
+	const flattenedoffsets_t &flat = OptimizedDataMap( pCurrentMap )->m_Info[ nPredictionCopyType ].m_Flat;
 	int fieldCount = std::ssize( flat.m_Flattened );
 	const typedescription_t * __restrict__ pField = &flat.m_Flattened[ 0 ];
 
@@ -832,7 +830,7 @@ const typedescription_t *CPredictionCopy::FindFlatFieldByName( const char *field
 
 	for ( int i = 0; i < PC_COPYTYPE_COUNT; ++i )
 	{
-		const flattenedoffsets_t &flat = dmap->m_pOptimizedDataMap->m_Info[ i ].m_Flat;
+		const flattenedoffsets_t &flat = OptimizedDataMap( dmap )->m_Info[ i ].m_Flat;
 		int c = std::ssize( flat.m_Flattened );
 		for ( int j = 0; j < c; ++j )
 		{
@@ -1100,7 +1098,7 @@ static void BuildDataRuns( datamap_t *dmap )
 {
 	for ( int pc = 0; pc < PC_COPYTYPE_COUNT; ++pc )
 	{
-		datamapinfo_t &info = dmap->m_pOptimizedDataMap->m_Info[ pc ];
+		datamapinfo_t &info = OptimizedDataMap( dmap )->m_Info[ pc ];
 		datacopyruns_t *runs = &info.m_CopyRuns;
 
 		contract_assert( !std::ssize( info.m_CopyRuns.m_vecRuns ) );
@@ -1175,7 +1173,7 @@ static void BuildFlattenedChains( datamap_t *dmap )
 
 	for ( int nPredictionCopyType = 0; nPredictionCopyType < PC_COPYTYPE_COUNT; ++nPredictionCopyType )
 	{
-		std::vector< typedescription_t > &build = dmap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat.m_Flattened;
+		std::vector< typedescription_t > &build = OptimizedDataMap( dmap )->m_Info[ nPredictionCopyType ].m_Flat.m_Flattened;
 
 		int nGroupCount = 0;
 		int nBaseOffset = 0;
@@ -1193,7 +1191,7 @@ static void BuildFlattenedChains( datamap_t *dmap )
 	{
 		int nMaxGroup = nMaxGroupSeen[ nPredictionCopyType ];
 
-		std::vector< typedescription_t > &build = dmap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat.m_Flattened;
+		std::vector< typedescription_t > &build = OptimizedDataMap( dmap )->m_Info[ nPredictionCopyType ].m_Flat.m_Flattened;
 
 		for ( int i = 0; i < std::ssize( build ); ++i )
 		{
@@ -1205,7 +1203,7 @@ static void BuildFlattenedChains( datamap_t *dmap )
 	int nPackedDataStartOffset = 0;
 	for ( int nPredictionCopyType = 0; nPredictionCopyType < PC_COPYTYPE_COUNT; ++nPredictionCopyType )
 	{
-		flattenedoffsets_t &flat = dmap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
+		flattenedoffsets_t &flat = OptimizedDataMap( dmap )->m_Info[ nPredictionCopyType ].m_Flat;
 		qsort( flat.m_Flattened.data(), std::ssize( flat.m_Flattened ), sizeof( typedescription_t ), (int (*)(const void *, const void *))CompareFlattenedOffsets );
 
 		nPackedDataStartOffset = BuildPackedFlattenedOffsets( nPackedDataStartOffset, flat );
@@ -1234,8 +1232,8 @@ static void DescribeRuns( const datamap_t *dmap, int nPredictionCopyType, int pa
 {
 	const flattenedoffsets_t *flat;
 	const datarun_t *run;
-	const datacopyruns_t &runs = dmap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_CopyRuns;
-	flat = &dmap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
+	const datacopyruns_t &runs = OptimizedDataMap( dmap )->m_Info[ nPredictionCopyType ].m_CopyRuns;
+	flat = &OptimizedDataMap( dmap )->m_Info[ nPredictionCopyType ].m_Flat;
 	Msg( "   Runs for copy type: %s, packing: %s\n", s_PredCopyType->GetNameByToken( nPredictionCopyType ), s_PredPackType->GetNameByToken( packType ) );
 	for ( int i = 0; i < std::ssize( runs.m_vecRuns ); ++i )
 	{
@@ -1261,7 +1259,7 @@ static void DescribeFlattenedList( const datamap_t *dmap, int nPredictionCopyTyp
 	int nBytesInRuns = 0;
 	int offset = 0;
 
-	const flattenedoffsets_t &list = dmap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
+	const flattenedoffsets_t &list = OptimizedDataMap( dmap )->m_Info[ nPredictionCopyType ].m_Flat;
 	for ( int i = 0; i < std::ssize( list.m_Flattened ); ++i )
 	{
 		const typedescription_t *td = &list.m_Flattened[ i ];
@@ -1317,7 +1315,7 @@ void CPredictionCopy::CopyFlatFieldsUsingRuns( const datamap_t *pCurrentMap, int
 	byte			* __restrict__ pOutputData;
 	const byte		* __restrict__ pInputData;
 
-	const datacopyruns_t &runs = pCurrentMap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_CopyRuns;
+	const datacopyruns_t &runs = OptimizedDataMap( pCurrentMap )->m_Info[ nPredictionCopyType ].m_CopyRuns;
 
 	byte * __restrict__ pDest = ( byte * __restrict__ )m_pDest;
 	const byte * __restrict__ pSrc = (const byte * __restrict__)m_pSrc;
@@ -1347,7 +1345,7 @@ void CPredictionCopy::CopyFlatFields( const datamap_t *pCurrentMap, int nPredict
 	const byte * __restrict__ pSrc = (const byte * __restrict__)m_pSrc;
 
 
-	const flattenedoffsets_t &flat = pCurrentMap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
+	const flattenedoffsets_t &flat = OptimizedDataMap( pCurrentMap )->m_Info[ nPredictionCopyType ].m_Flat;
 
 	int fieldCount = std::ssize( flat.m_Flattened );
 	for ( int i = 0; i < fieldCount; ++i )
@@ -1371,7 +1369,7 @@ void CPredictionCopy::ErrorCheckFlatFields_NoSpew( const datamap_t *pCurrentMap,
 	int				fieldOffsetDest;
 	int				fieldSize;
 
-	const flattenedoffsets_t &flat = pCurrentMap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
+	const flattenedoffsets_t &flat = OptimizedDataMap( pCurrentMap )->m_Info[ nPredictionCopyType ].m_Flat;
 	const typedescription_t *pBase = &flat.m_Flattened[ 0 ];
 	int fieldCount = std::ssize( flat.m_Flattened );
 
@@ -1411,7 +1409,7 @@ void CPredictionCopy::ErrorCheckFlatFields_Spew( const datamap_t *pCurrentMap, i
 	int				fieldOffsetDest;
 	int				fieldSize;
 
-	const flattenedoffsets_t &flat = pCurrentMap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
+	const flattenedoffsets_t &flat = OptimizedDataMap( pCurrentMap )->m_Info[ nPredictionCopyType ].m_Flat;
 	const typedescription_t *pBase = &flat.m_Flattened[ 0 ];
 	int fieldCount = std::ssize( flat.m_Flattened );
 

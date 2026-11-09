@@ -18,8 +18,8 @@ public:
 		float flStartTime, int nDissolveType = 0, bool *pRagdollCreated = nullptr );
 	static CEntityDissolve	*Create( CBaseEntity *pTarget, CBaseEntity *pSource );
 	
-	void	Precache();
-	void	Spawn();
+	void	Precache_Impl();
+	void	Spawn_Impl();
 	void	AttachToEntity( CBaseEntity *pTarget );
 	void	SetStartTime( float flStartTime );
 	void	SetDissolverOrigin( Vector vOrigin ) { m_vDissolverOrigin = vOrigin; }

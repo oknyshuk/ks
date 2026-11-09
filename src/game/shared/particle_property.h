@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
 #include "reflect_annotations.h"
 #include "predictable_entity.h"
 
-import std;
 #include "globalvars_base.h"
 #include "particles_new.h"
 #include "particle_parse.h"

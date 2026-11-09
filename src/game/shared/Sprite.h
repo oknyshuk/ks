@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
 
 #include "reflect_annotations.h"
 #include "dt_recv.h"
@@ -25,8 +24,8 @@ class CBasePlayer;
 #if defined( CLIENT_DLL )
 #define CSprite C_Sprite
 #define CSpriteOriented C_SpriteOriented
-#include "c_pixel_visibility.h"
 class CEngineSprite;
+#include "c_pixel_visibility.h"
 
 class C_SpriteRenderer
 {
@@ -96,7 +95,7 @@ public:
 	CSprite();
 	virtual ~CSprite();
 
-	virtual void SetModel( const char *szModelName );
+	KS_VIRTUAL void SetModel_Impl( const char *szModelName );
 
 #if defined( CLIENT_DLL )
 	virtual bool IsSprite( void ) const
@@ -107,21 +106,21 @@ public:
 	bool IsClientOnly() const { return m_bClientOnly; }
 #endif
 
-	void Spawn( void );
-	void Precache( void );
-	virtual void ComputeWorldSpaceSurroundingBox( Vector *pVecWorldMins, Vector *pVecWorldMaxs );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	KS_VIRTUAL void ComputeWorldSpaceSurroundingBox_Impl( Vector *pVecWorldMins, Vector *pVecWorldMaxs );
 
 	void SetGlowProxySize( float flSize ) { m_flGlowProxySize = flSize; }
 
 #if !defined( CLIENT_DLL )
 
-	virtual int ShouldTransmit( const CCheckTransmitInfo *pInfo );
-	virtual int UpdateTransmitState( void );
+	KS_VIRTUAL int ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo );
+	KS_VIRTUAL int UpdateTransmitState_Impl( void );
 	
 	void SetAsTemporary( void ) { AddSpawnFlags( SF_SPRITE_TEMPORARY ); }
 	bool IsTemporary( void ) { return ( HasSpawnFlags( SF_SPRITE_TEMPORARY ) ); }
 	
-	int	ObjectCaps( void )
+	int	ObjectCaps_Impl( void )
 	{ 
 		int flags = 0;
 		
@@ -130,10 +129,10 @@ public:
 			flags = FCAP_DONT_SAVE;
 		}
 		
-		return (BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | flags; 
+		return (BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION) | flags; 
 	}
 
-	void OnRestore();
+	void OnRestore_Impl();
 #endif
 
 	void AnimateThink( void );
@@ -143,7 +142,7 @@ public:
 	void SpriteInit( const char *pSpriteName, const Vector &origin );
 
 #if !defined( CLIENT_DLL )
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "HideSprite", .type = FIELD_VOID } ]] void InputHideSprite( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "ShowSprite", .type = FIELD_VOID } ]] void InputShowSprite( inputdata_t &inputdata );
@@ -298,7 +297,7 @@ public:
 	DECLARE_CLASS( CSpriteOriented, CSprite );
 #if !defined( CLIENT_DLL )
 	DECLARE_SERVERCLASS();
-	void Spawn( void );
+	void Spawn_Impl( void );
 #else
 	DECLARE_CLIENTCLASS();
 	virtual RenderableTranslucencyType_t ComputeTranslucencyType();

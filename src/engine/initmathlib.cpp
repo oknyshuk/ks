@@ -6,11 +6,11 @@ import ks.tier1;
 
 static bool s_bAllowSSE2 = true;
 
-static void OnEnableFastMathChanged( IConVar *var = nullptr, const char *pOldValue = nullptr, float flOldValue = 0.0f);
+static void OnEnableFastMathChanged( ConVar *var = nullptr, const char *pOldValue = nullptr, float flOldValue = 0.0f);
 
 ConVar enable_fast_math( "enable_fast_math", "1" , FCVAR_RELEASE, "Turns Denormals-Are-Zeroes and Flush-to-Zero on or off", OnEnableFastMathChanged );
 
-static void OnEnableFastMathChanged( IConVar *var, const char *pOldValue, float flOldValue )
+static void OnEnableFastMathChanged( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	ks::simd::set_flush_to_zero( enable_fast_math.GetBool() );
 }

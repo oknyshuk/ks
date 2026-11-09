@@ -7,10 +7,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -26,7 +23,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "edict.h"
 #include "iserverentity.h"
 #include "shareddefs.h"
@@ -38,7 +34,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "baseentity_shared.h"
 #include "basetoggle.h"
@@ -74,8 +69,8 @@ import ks.math;
 #endif
 
 #if !defined( CLIENT_DLL )
-LINK_ENTITY_TO_CLASS( env_glow, CSprite ); // For backwards compatibility, remove when no longer needed.
-LINK_ENTITY_TO_CLASS( env_sprite_clientside, CSprite );
+LINK_ENTITY_TO_CLASS_ALIAS( env_glow, CSprite ); // For backwards compatibility, remove when no longer needed.
+LINK_ENTITY_TO_CLASS_ALIAS( env_sprite_clientside, CSprite );
 #endif
 
 #if !defined( CLIENT_DLL )
@@ -129,7 +124,7 @@ CSprite::~CSprite()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CSprite::Spawn( void )
+void CSprite::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	SetMoveType( MOVETYPE_NONE );
@@ -213,7 +208,7 @@ void CSprite::EnableWorldSpaceScale( bool bEnable )
 //-----------------------------------------------------------------------------
 // Purpose: Initialize absmin & absmax to the appropriate box
 //-----------------------------------------------------------------------------
-void CSprite::ComputeWorldSpaceSurroundingBox( Vector *pVecWorldMins, Vector *pVecWorldMaxs )
+void CSprite::ComputeWorldSpaceSurroundingBox_Impl( Vector *pVecWorldMins, Vector *pVecWorldMaxs )
 {
 	float flScale = m_flSpriteScale * 0.5f;
 
@@ -236,7 +231,7 @@ void CSprite::ComputeWorldSpaceSurroundingBox( Vector *pVecWorldMins, Vector *pV
 // Purpose: 
 // Input  : *szModelName - 
 //-----------------------------------------------------------------------------
-void CSprite::SetModel( const char *szModelName )
+void CSprite::SetModel_Impl( const char *szModelName )
 {
 	int index = modelinfo->GetModelIndex( szModelName );
 	const model_t *model = modelinfo->GetModel( index );
@@ -248,14 +243,14 @@ void CSprite::SetModel( const char *szModelName )
 #if !defined( CLIENT_DLL )
 	UTIL_SetModel( this, szModelName );
 #else
-	BaseClass::SetModel( szModelName );
+	BaseClass::SetModel_Impl( szModelName );
 #endif
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CSprite::Precache( void )
+void CSprite::Precache_Impl( void )
 {
 	if ( GetModelName() != NULL_STRING )
 	{
@@ -277,7 +272,7 @@ void CSprite::SpriteInit( const char *pSpriteName, const Vector &origin )
 
 #if !defined( CLIENT_DLL )
 
-int CSprite::UpdateTransmitState( void )
+int CSprite::UpdateTransmitState_Impl( void )
 {
 	if ( GetMoveParent() )
 	{
@@ -290,7 +285,7 @@ int CSprite::UpdateTransmitState( void )
 	}
 }
 
-int CSprite::ShouldTransmit( const CCheckTransmitInfo *pInfo )
+int CSprite::ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo )
 {
 	// Certain entities like sprites and ropes are strewn throughout the level and they rarely change.
 	// For these entities, it's more efficient to transmit them once and then always leave them on
@@ -313,9 +308,9 @@ int CSprite::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 //-----------------------------------------------------------------------------
 // Purpose: Fixup parent after restore
 //-----------------------------------------------------------------------------
-void CSprite::OnRestore()
+void CSprite::OnRestore_Impl()
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	// Reset attachment after save/restore
 	if ( GetFollowedEntity() )
@@ -521,7 +516,7 @@ void CSprite::TurnOn( void )
 
 #if !defined( CLIENT_DLL )
 // DVS TODO: Obsolete Use handler
-void CSprite::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CSprite::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	int on = !IsEffectActive( EF_NODRAW );
 	if ( ShouldToggle( useType, on ) )
@@ -820,11 +815,11 @@ LINK_ENTITY_TO_CLASS_ALIASED( env_sprite_oriented, SpriteOriented );
 
 #if !defined( CLIENT_DLL )
 
-void CSpriteOriented::Spawn( void )
+void CSpriteOriented::Spawn_Impl( void )
 {
 	// save a copy of the angles, CSprite swaps the yaw and roll
 	QAngle angles = GetAbsAngles();
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	// ORIENTED sprites "forward" vector points in the players "view" direction, not the direction "out" from the sprite (gah)
 	angles.y = anglemod( angles.y + 180 );
 	SetAbsAngles( angles );

@@ -37,7 +37,7 @@ constexpr auto SSAO_NOISE_TEXTURE_SIZE = 32;
 //-----------------------------------------------------------------------------
 // Creates a checkerboard texture
 //-----------------------------------------------------------------------------
-class CCheckerboardTexture : public ITextureRegenerator
+class CCheckerboardTexture
 {
 public:
 	CCheckerboardTexture( int nCheckerSize, color32 color1, color32 color2 ) :
@@ -45,7 +45,7 @@ public:
 	{
 	}
 
-	virtual void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect )
+	void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect )
 	{
 		for (int iFrame = 0; iFrame < pVTFTexture->FrameCount(); ++iFrame )
 		{
@@ -81,11 +81,6 @@ public:
 		}
 	}
 
-	virtual void Release()
-	{
-		delete this;
-	}
-
 private:
 	int		m_nCheckerSize;
 	color32 m_Color1;
@@ -94,21 +89,21 @@ private:
 
 static void CreateCheckerboardTexture( ITextureInternal *pTexture, int nCheckerSize, color32 color1, color32 color2 )
 {
-	ITextureRegenerator *pRegen = new CCheckerboardTexture( nCheckerSize, color1, color2 );
+	ITextureRegenerator *pRegen = ITextureRegenerator::Owned( CCheckerboardTexture( nCheckerSize, color1, color2 ) );
 	pTexture->SetTextureRegenerator( pRegen );
 }
 
 //-----------------------------------------------------------------------------
 // Creates a solid texture
 //-----------------------------------------------------------------------------
-class CSolidTexture : public ITextureRegenerator
+class CSolidTexture
 {
 public:
 	CSolidTexture( color32 color ) : m_Color(color)
 	{
 	}
 
-	virtual void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect )
+	void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect )
 	{
 		int nMipCount = pTexture->IsMipmapped() ? pVTFTexture->MipCount() : 1;
 		for (int iFrame = 0; iFrame < pVTFTexture->FrameCount(); ++iFrame )
@@ -139,28 +134,23 @@ public:
 		}
 	}
 
-	virtual void Release()
-	{
-		delete this;
-	}
-
 private:
 	color32 m_Color;
 };
 
 static void CreateSolidTexture( ITextureInternal *pTexture, color32 color )
 {
-	ITextureRegenerator *pRegen = new CSolidTexture( color );
+	ITextureRegenerator *pRegen = ITextureRegenerator::Owned( CSolidTexture( color ) );
 	pTexture->SetTextureRegenerator( pRegen );
 }
 
 //-----------------------------------------------------------------------------
 // Creates a normalization cubemap texture
 //-----------------------------------------------------------------------------
-class CNormalizationCubemap : public ITextureRegenerator
+class CNormalizationCubemap
 {
 public:
-	virtual void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect )
+	void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect )
 	{
 		// Normalization cubemap doesn't make sense on low-end hardware
 		// So we won't construct a spheremap out of this
@@ -223,19 +213,16 @@ public:
 		}
 	}
 
-	// NOTE: The normalization cubemap regenerator is stateless
-	// so there's no need to allocate + deallocate them
-	virtual void Release() {}
 };
 
 
 //-----------------------------------------------------------------------------
 // Creates a normalization cubemap texture
 //-----------------------------------------------------------------------------
-class CSignedNormalizationCubemap : public ITextureRegenerator
+class CSignedNormalizationCubemap
 {
 public:
-	virtual void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect )
+	void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect )
 	{
 		// Normalization cubemap doesn't make sense on low-end hardware
 		// So we won't construct a spheremap out of this
@@ -347,9 +334,6 @@ public:
 		} // iFace
 	}
 
-	// NOTE: The normalization cubemap regenerator is stateless
-	// so there's no need to allocate + deallocate them
-	virtual void Release() {}
 };
 
 static void CreateNormalizationCubemap( ITextureInternal *pTexture )
@@ -357,7 +341,8 @@ static void CreateNormalizationCubemap( ITextureInternal *pTexture )
 	// NOTE: The normalization cubemap regenerator is stateless
 	// so there's no need to allocate + deallocate them
 	static CNormalizationCubemap s_NormalizationCubemap;
-	pTexture->SetTextureRegenerator( &s_NormalizationCubemap );
+	static ITextureRegenerator s_Regenerator( s_NormalizationCubemap );
+	pTexture->SetTextureRegenerator( &s_Regenerator );
 }
 
 static void CreateSignedNormalizationCubemap( ITextureInternal *pTexture )
@@ -365,7 +350,8 @@ static void CreateSignedNormalizationCubemap( ITextureInternal *pTexture )
 	// NOTE: The normalization cubemap regenerator is stateless
 	// so there's no need to allocate + deallocate them
 	static CSignedNormalizationCubemap s_SignedNormalizationCubemap;
-	pTexture->SetTextureRegenerator( &s_SignedNormalizationCubemap );
+	static ITextureRegenerator s_Regenerator( s_SignedNormalizationCubemap );
+	pTexture->SetTextureRegenerator( &s_Regenerator );
 }
 
 /*
@@ -381,33 +367,33 @@ static void CreateSSAONoiseTexture( ITextureInternal *pTexture )
 //-----------------------------------------------------------------------------
 // Implementation of the texture manager
 //-----------------------------------------------------------------------------
-class CTextureManager : public ITextureManager
+class CTextureManager
 {
 public:
 	CTextureManager( void );
 
 	// Initialization + shutdown
-	virtual void Init( int nFlags );
-	virtual void Shutdown();
+	void Init( int nFlags );
+	void Shutdown();
 
-	virtual void AllocateStandardRenderTargets( );
-	virtual void FreeStandardRenderTargets();
+	void AllocateStandardRenderTargets( );
+	void FreeStandardRenderTargets();
 
-	virtual void CacheExternalStandardRenderTargets();
+	void CacheExternalStandardRenderTargets();
 
-	virtual ITextureInternal *CreateProceduralTexture( const char *pTextureName, const char *pTextureGroupName, int w, int h, int d, ImageFormat fmt, int nFlags );
-	virtual ITextureInternal *FindOrLoadTexture( const char *textureName, const char *pTextureGroupName, int nAdditionalCreationFlags = 0 );
- 	virtual bool IsTextureLoaded( const char *pTextureName );
-	virtual bool GetTextureInformation( char const *szTextureName, MaterialTextureInfo_t &info );
+	ITextureInternal *CreateProceduralTexture( const char *pTextureName, const char *pTextureGroupName, int w, int h, int d, ImageFormat fmt, int nFlags );
+	ITextureInternal *FindOrLoadTexture( const char *textureName, const char *pTextureGroupName, int nAdditionalCreationFlags = 0 );
+ 	bool IsTextureLoaded( const char *pTextureName );
+	bool GetTextureInformation( char const *szTextureName, MaterialTextureInfo_t &info );
 
-	virtual void AddTextureAlias( const char *pAlias, const char *pRealName );
-	virtual void RemoveTextureAlias( const char *pAlias );
+	void AddTextureAlias( const char *pAlias, const char *pRealName );
+	void RemoveTextureAlias( const char *pAlias );
 
-	virtual void SetExcludedTextures( const char *pScriptName, bool bUsingWeaponModelCache );
-	virtual void UpdateExcludedTextures();
-	virtual void ClearForceExcludes();
+	void SetExcludedTextures( const char *pScriptName, bool bUsingWeaponModelCache );
+	void UpdateExcludedTextures();
+	void ClearForceExcludes();
 
-	virtual void ResetTextureFilteringState();
+	void ResetTextureFilteringState();
 	void ReloadTextures( void );
 
 	// These are used when we lose our video memory due to a mode switch etc
@@ -420,28 +406,28 @@ public:
 	void DebugPrintUsedTextures( void );
 
 	// Request a texture ID
-	virtual int	RequestNextTextureID();
+	int	RequestNextTextureID();
 
 	// Get at a couple standard textures
-	virtual ITextureInternal *ErrorTexture();
-	virtual ITextureInternal *NormalizationCubemap();
-	virtual ITextureInternal *SignedNormalizationCubemap();
-	virtual ITextureInternal *ShadowNoise2D();
-	virtual ITextureInternal *SSAONoise2D();	
-	virtual ITextureInternal *IdentityLightWarp();
-	virtual ITextureInternal *ColorCorrectionTexture( int i );
-	virtual ITextureInternal *FullFrameDepthTexture();
-	virtual ITextureInternal *StereoParamTexture();
+	ITextureInternal *ErrorTexture();
+	ITextureInternal *NormalizationCubemap();
+	ITextureInternal *SignedNormalizationCubemap();
+	ITextureInternal *ShadowNoise2D();
+	ITextureInternal *SSAONoise2D();	
+	ITextureInternal *IdentityLightWarp();
+	ITextureInternal *ColorCorrectionTexture( int i );
+	ITextureInternal *FullFrameDepthTexture();
+	ITextureInternal *StereoParamTexture();
 
 	// Generates an error texture pattern
-	virtual void GenerateErrorTexture( ITexture *pTexture, IVTFTexture *pVTFTexture );
+	void GenerateErrorTexture( ITexture *pTexture, IVTFTexture *pVTFTexture );
 
 	// Updates the color correction state
-	virtual void SetColorCorrectionTexture( int i, ITextureInternal *pTexture );
+	void SetColorCorrectionTexture( int i, ITextureInternal *pTexture );
 
-	virtual void ForceAllTexturesIntoHardware( void );
+	void ForceAllTexturesIntoHardware( void );
 
-	virtual ITextureInternal *CreateRenderTargetTexture( 
+	ITextureInternal *CreateRenderTargetTexture( 
 		const char *pRTName,	// NULL for auto-generated name
 		int w, 
 		int h, 
@@ -452,12 +438,12 @@ public:
 		unsigned int renderTargetFlags,
 		bool bMultipleTargets );
 
-	virtual void RemoveTexture( ITextureInternal *pTexture );
-	virtual void ReloadFilesInList( IFileList *pFilesToReload );
+	void RemoveTexture( ITextureInternal *pTexture );
+	void ReloadFilesInList( IFileList *pFilesToReload );
 
 	// start with -1, list terminates with -1
 
-	virtual void ReleaseTempRenderTargetBits( void );
+	void ReleaseTempRenderTargetBits( void );
 
 protected:
 	ITextureInternal *FindTexture( const char *textureName );
@@ -503,7 +489,12 @@ private:
 // Singleton instance
 //-----------------------------------------------------------------------------
 static CTextureManager s_TextureManager;
-ITextureManager *g_pTextureManager = &s_TextureManager;
+
+// ITextureManager is a stateless facade; its members, defined below, forward to s_TextureManager.
+static ITextureManager s_TextureManagerFacade;
+ITextureManager *g_pTextureManager = &s_TextureManagerFacade;
+static CTextureManager &TextureManagerImpl() { return s_TextureManager; }
+#include "facade/itexturemanager.inl"
 
 
 //-----------------------------------------------------------------------------
@@ -692,7 +683,7 @@ void CTextureManager::Shutdown()
 
 	if ( m_pErrorRegen )
 	{
-		m_pErrorRegen->Release();
+		delete m_pErrorRegen;
 		m_pErrorRegen = nullptr;
 	}
 

@@ -16,7 +16,7 @@ public:
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
 
-	virtual void Spawn( void );
+	void Spawn_Impl( void );
 
 	[[= ks::reflect::Input{ .name = "SetColor", .type = FIELD_COLOR32 } ]] void InputSetColor(inputdata_t &inputdata);
 	void SetColor( const Vector &vecColor );

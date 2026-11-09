@@ -4,8 +4,6 @@
 // Purpose: Functionality to render a glowing outline around client renderable objects.
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "const.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"

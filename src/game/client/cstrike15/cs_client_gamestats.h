@@ -3,7 +3,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import std;
 #include "GameEventListener.h"
 #include "cs_gamestats_shared.h"
 #include "matchmaking/cstrike15/imatchext_cstrike15.h"
@@ -67,7 +66,9 @@ public:
 	CUserMessageBinder m_UMCMsgXRankUpd;
 
 protected:
+public:
 	void FireGameEvent( IGameEvent *event );
+protected:
 
 	void UpdateStats( const StatsCollection_t &stats, int nUserSlot );
 	void CalculateMatchFavoriteWeapons();

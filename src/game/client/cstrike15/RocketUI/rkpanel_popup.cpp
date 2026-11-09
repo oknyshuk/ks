@@ -25,8 +25,6 @@
 #include "cdll_client_int.h" // extern globals to interfaces like engineclient
 
 #include <rocketui/rmlui.h>
-import ks.tier1;
-import std;
 
 
 static void rocket_test_popup( const CCommand &args );

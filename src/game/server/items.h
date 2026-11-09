@@ -41,12 +41,12 @@ public:
 	CItem();
 	virtual ~CItem();
 
-	virtual void Spawn( void );
-	virtual void Precache();
+	void Spawn_Impl( void );
+	void Precache_Impl();
 
 	virtual bool HasBloatedCollision( void ) const { return true; } // Does this item increase its collision box to make it easier to pick up?
 
-	virtual CBaseEntity* Respawn( void );
+	CBaseEntity* Respawn_Impl( void );
 	void ItemTouch( CBaseEntity *pOther );
 	void ItemForceTouch( CBaseEntity *pOther );
 	
@@ -54,7 +54,7 @@ public:
 	virtual bool MyTouch( CBasePlayer *pPlayer ) { return false; };
 
 	// Become touchable when we are at rest
-	virtual void OnEntityEvent( EntityEvent_t event, void *pEventData );
+	void OnEntityEvent_Impl( EntityEvent_t event, void *pEventData );
 
 	// Activate when at rest, but don't allow pickup until then
 	void ActivateWhenAtRest( float flTime = 0.5f );
@@ -63,8 +63,8 @@ public:
 	virtual void OnPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunPickup_t reason = PICKED_UP_BY_CANNON );
 	virtual void OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t reason );
 
-	virtual int	ObjectCaps() { return BaseClass::ObjectCaps() | FCAP_IMPULSE_USE | FCAP_WCEDIT_POSITION; };
-	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	int	ObjectCaps_Impl() { return BaseClass::ObjectCaps_Impl() | FCAP_IMPULSE_USE | FCAP_WCEDIT_POSITION; };
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	Vector	GetOriginalSpawnOrigin( void ) { return m_vOriginalSpawnOrigin;	}
 	QAngle	GetOriginalSpawnAngles( void ) { return m_vOriginalSpawnAngles;	}
 	void	SetOriginalSpawnOrigin( const Vector& origin ) { m_vOriginalSpawnOrigin = origin; }

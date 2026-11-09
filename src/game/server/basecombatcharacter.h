@@ -140,18 +140,18 @@ public:
 
 public:
 
-	virtual void		Spawn( void );
+	void		Spawn_Impl( void );
 
-	virtual void		Precache();
+	void		Precache_Impl();
 
 
 	virtual const impactdamagetable_t	&GetPhysicsImpactDamageTable( void );
 
-	int					TakeHealth( float flHealth, int bitsDamageType );
+	int					TakeHealth_Impl( float flHealth, int bitsDamageType );
 	void				CauseDeath( const CTakeDamageInfo &info );
 
-	virtual	bool		FVisible ( CBaseEntity *pEntity, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = nullptr ); // true iff the parameter can be seen by me.
-	virtual bool		FVisible( const Vector &vecTarget, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = nullptr )	{ return BaseClass::FVisible( vecTarget, traceMask, ppBlocker ); }
+	bool		FVisible_Impl ( CBaseEntity *pEntity, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = nullptr ); // true iff the parameter can be seen by me.
+	bool		FVisible_Impl( const Vector &vecTarget, int traceMask = MASK_BLOCKLOS, CBaseEntity **ppBlocker = nullptr )	{ return BaseClass::FVisible_Impl( vecTarget, traceMask, ppBlocker ); }
 	static void			ResetVisibilityCache( CBaseCombatCharacter *pBCC = nullptr );
 
 
@@ -177,7 +177,7 @@ public:
 	virtual Vector		EyeDirection2D( void ) 	{ return HeadDirection2D( );  }; // No eye motion so just return head dir
 	virtual Vector		EyeDirection3D( void ) 	{ return HeadDirection3D( );  }; // No eye motion so just return head dir
 
-	virtual void SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
+	void SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways );
 
 
 	// -----------------------
@@ -275,7 +275,7 @@ public:
 	// Damage
 	// -----------------------
 	// Don't override this for characters, override the per-life-state versions below
-	virtual int				OnTakeDamage( const CTakeDamageInfo &info );
+	int				OnTakeDamage_Impl( const CTakeDamageInfo &info );
 
 	// Override these to control how your character takes damage in different states
 	virtual int				OnTakeDamage_Alive( const CTakeDamageInfo &info );
@@ -297,7 +297,7 @@ public:
 	// utility function to calc damage force
 	virtual Vector			CalcDeathForceVector( const CTakeDamageInfo &info );
 
-	virtual int				BloodColor();
+	int				BloodColor_Impl();
 	virtual Activity		GetDeathActivity( void );
 
 	virtual bool			CorpseGib( const CTakeDamageInfo &info );
@@ -310,7 +310,7 @@ public:
 	int	  GetDamageCount( void ) { return m_iDamageCount; }	// # of times NPC has been damaged.  used for tracking 1-shot kills.
 
 	// Character killed (only fired once)
-	virtual void			Event_Killed( const CTakeDamageInfo &info );
+	void			Event_Killed_Impl( const CTakeDamageInfo &info );
 	virtual bool			ShouldDropActiveWeaponWhenKilled() { return true; }
 
 	// Killed a character
@@ -336,11 +336,11 @@ public:
 	virtual CBaseEntity		*CheckTraceHullAttack( float flDist, const Vector &mins, const Vector &maxs, float flDamage, int iDmgType, float forceScale = 1.0f, bool bDamageAnyNPC = false );
 	virtual CBaseEntity		*CheckTraceHullAttack( const Vector &vStart, const Vector &vEnd, const Vector &mins, const Vector &maxs, float flDamage, int iDmgType, float flForceScale = 1.0f, bool bDamageAnyNPC = false );
 
-	virtual CBaseCombatCharacter *MyCombatCharacterPointer( void ) { return this; }
+	CBaseCombatCharacter *MyCombatCharacterPointer_Impl( void ) { return this; }
 
 	// VPHYSICS
-	virtual void			VPhysicsShadowCollision( int index, gamevcollisionevent_t *pEvent );
-	virtual void			VPhysicsUpdate( IPhysicsObject *pPhysics );
+	void			VPhysicsShadowCollision_Impl( int index, gamevcollisionevent_t *pEvent );
+	void			VPhysicsUpdate_Impl( IPhysicsObject *pPhysics );
 	float					CalculatePhysicsStressDamage( vphysics_objectstress_t *pStressOut, IPhysicsObject *pPhysics );
 	void					ApplyStressDamage( IPhysicsObject *pPhysics, bool bRequireLargeObject );
 
@@ -348,7 +348,7 @@ public:
 
 	void SetImpactEnergyScale( float fScale ) { m_impactEnergyScale = fScale; }
 
-	virtual void			UpdateOnRemove( void );
+	void			UpdateOnRemove_Impl( void );
 
 	virtual Disposition_t	IRelationType( CBaseEntity *pTarget );
 	virtual int				IRelationPriority( CBaseEntity *pTarget );
@@ -405,7 +405,7 @@ public:
 	int					GetFaction( void ) const { return m_nFaction; }
 	virtual void		ChangeFaction( int nNewFaction );
 
-	virtual void		ChangeTeam( int iTeamNum );
+	void		ChangeTeam_Impl( int iTeamNum );
 
 	// Nav hull type
 	Hull_t	GetHullType() const				{ return m_eHull; }

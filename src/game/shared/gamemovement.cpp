@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -25,7 +22,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -305,7 +301,7 @@ ITraceFilter *CGameMovement::LockTraceFilter( int collisionGroup )
 		return nullptr;
 
 	CTraceFilterSkipTwoEntitiesAndCheckTeamMask *pFilter = &s_TraceFilter[s_nTraceFilterCount++];
-	pFilter->SetPassEntity( mv->m_nPlayerHandle.Get() );
+	pFilter->SetPassEntity( EntityFromHandle( mv->m_nPlayerHandle ) );
 	pFilter->SetCollisionGroup( collisionGroup );
 
 	return pFilter;
@@ -818,7 +814,7 @@ void CGameMovement::SetupMovementBounds( CMoveData *move )
 		return;
 	}
 
-	CBasePlayer *pPlayer = (CBasePlayer *)move->m_nPlayerHandle.Get();
+	CBasePlayer *pPlayer = (CBasePlayer *)EntityFromHandle( move->m_nPlayerHandle );
 
 	Vector moveMins, moveMaxs;
 	ClearBounds( moveMins, moveMaxs );
@@ -3418,7 +3414,7 @@ void CGameMovement::SetGroundEntity( trace_t *pm )
 		player->m_flWaterJumpTime = 0;
 
 		// Standing on an entity other than the world, so signal that we are touching something.
-		if ( !pm->DidHitWorld() )
+		if ( !TraceDidHitWorld( *pm ) )
 		{
 			MoveHelper()->AddToTouched( *pm, mv->m_vecVelocity );
 		}

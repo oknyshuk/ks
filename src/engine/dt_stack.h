@@ -40,9 +40,12 @@ public:
 	
 	int				GetObjectID() const;
 
-	// Derived classes must implement this. The server gets one and the client gets one.
+	// Derived classes must implement RecurseAndCallProxies and bind it to m_RecurseAndCallProxies in their
+	// constructor. The server gets one and the client gets one.
 	// It calls the proxy to move to the next datatable's data.
-	virtual void RecurseAndCallProxies( CSendNode *pNode, unsigned char *pStructBase ) = 0;
+	void RecurseAndCallProxies( CSendNode *pNode, unsigned char *pStructBase ) { m_RecurseAndCallProxies( pNode, pStructBase ); }
+	std::function_ref< void ( CSendNode *, unsigned char * ) > m_RecurseAndCallProxies;
+	static void NoRecurse( CSendNode *, unsigned char * ) {}	// until the derived class binds its own
 
 
 public:
@@ -144,6 +147,7 @@ public:
 						CClientDatatableStack( CRecvDecoder *pDecoder, unsigned char *pStructBase, int objectID ) :
 							CDatatableStack( &pDecoder->m_Precalc, pStructBase, objectID )
 						{
+							m_RecurseAndCallProxies = { std::cw<&CClientDatatableStack::RecurseAndCallProxies>, this };
 							m_pDecoder = pDecoder;
 						}
 
@@ -166,7 +170,7 @@ public:
 		return (unsigned char*)pVal;
 	}
 
-	virtual void RecurseAndCallProxies( CSendNode *pNode, unsigned char *pStructBase )
+	void RecurseAndCallProxies( CSendNode *pNode, unsigned char *pStructBase )
 	{
 		// Remember where the game code pointed us for this datatable's data so 
 		m_pProxies[pNode->GetRecursiveProxyIndex()] = pStructBase;
@@ -224,6 +228,7 @@ public:
 						CServerDatatableStack( CSendTablePrecalc *pPrecalc, unsigned char *pStructBase, int objectID, std::span< CSendProxyRecipients > recipients = {} ) :
 							CDatatableStack( pPrecalc, pStructBase, objectID )
 						{
+							m_RecurseAndCallProxies = { std::cw<&CServerDatatableStack::RecurseAndCallProxies>, this };
 							m_pPrecalc = pPrecalc;
 							m_Recipients = recipients;
 						}
@@ -260,7 +265,7 @@ public:
 		return pRet;
 	}
 
-	virtual void RecurseAndCallProxies( CSendNode *pNode, unsigned char *pStructBase )
+	void RecurseAndCallProxies( CSendNode *pNode, unsigned char *pStructBase )
 	{
 		// Remember where the game code pointed us for this datatable's data so 
 		m_pProxies[pNode->GetRecursiveProxyIndex()] = pStructBase;

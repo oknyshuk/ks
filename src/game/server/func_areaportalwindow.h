@@ -24,8 +24,8 @@ public:
 // Overrides.
 public:
 
-	virtual void	Spawn();
-	virtual void	Activate();
+	void	Spawn_Impl();
+	void	Activate_Impl();
 
 
 // CFuncAreaPortalBase stuff.

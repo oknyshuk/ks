@@ -4,16 +4,12 @@
 
 // Purpose: Client-server neutral effects interface
 
-import std;
-import ks.tier1;
 #include "ipredictionsystem.h"
 #include "shake.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class CGameTrace;
-typedef CGameTrace trace_t;
 
 
 //-----------------------------------------------------------------------------

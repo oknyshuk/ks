@@ -4,12 +4,8 @@
 
 // Purpose: insulates client DLL from dependencies on vphysics
 
-import std;
-import ks.tier1;
 #include "physics_shared.h"
 
-struct objectparams_t;
-struct solid_t;
 
 // HACKHACK: Make this part of IClientSystem somehow???
 extern bool PhysicsDLLInit( CreateInterfaceFn physicsFactory );

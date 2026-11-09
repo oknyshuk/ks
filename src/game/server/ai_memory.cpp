@@ -3,8 +3,6 @@
 
 // Purpose: An NPC's memory of potential enemies
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"

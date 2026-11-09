@@ -516,12 +516,12 @@ Vector RandomVector( vec_t minVal, vec_t maxVal );
 
 float RandomVectorInUnitSphere( Vector *pVector );
 Vector RandomVectorInUnitSphere();
-Vector RandomVectorInUnitSphere( IUniformRandomStream *pRnd );
+Vector RandomVectorInUnitSphere( CUniformRandomStream *pRnd );
 
 float RandomVectorInUnitCircle( Vector2D *pVector );
 
 Vector RandomVectorOnUnitSphere();
-Vector RandomVectorOnUnitSphere( IUniformRandomStream *pRnd );
+Vector RandomVectorOnUnitSphere( CUniformRandomStream *pRnd );
 
 //-----------------------------------------------------------------------------
 // constructors

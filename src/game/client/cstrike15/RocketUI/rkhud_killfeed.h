@@ -27,8 +27,8 @@ public:
     void ShowPanel(bool bShow, bool force);
     void OnLoad();
 
-    // CGameEventListener
-    virtual void FireGameEvent( IGameEvent *event );
+    // Game event handler
+    void FireGameEvent( IGameEvent *event );
 
 
 

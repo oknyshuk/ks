@@ -96,12 +96,10 @@ entities. Each one is useful under different conditions.
    and a particle system at the same time. This gets nasty and is not encouraged anymore.
 
 */
-import ks.tier1;
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialsystem.h"
 #include "iclientrenderable.h"
 #include "clientleafsystem.h"
-import std;
 
 
 //-----------------------------------------------------------------------------
@@ -112,15 +110,11 @@ class IParticleEffect;
 class IClientParticleListener;
 struct Particle;
 class ParticleDraw;
-class CMeshBuilder;
 class CEffectMaterial;
 class CParticleSimulateIterator;
 class CParticleRenderIterator;
-class IThreadPool;
-class CParticleSystemDefinition;
 class CParticleMgr;
 class CNewParticleEffect;
-class CParticleCollection;
 
 inline constexpr auto INVALID_MATERIAL_HANDLE = nullptr;
 
@@ -578,7 +572,6 @@ enum
 };
 
 
-class CParticleCollection;
 
 class CNonDrawingParticleSystem
 {

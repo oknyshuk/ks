@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -54,8 +51,8 @@ class [[= ks::reflect::NetTable{ .name = "DT_TestTraceline", .base = false } ]]
 public:
 	DECLARE_CLASS( CTestTraceline, CPointEntity );
 
-	void	Spawn( void );
-	int  	UpdateTransmitState();
+	void	Spawn_Impl( void );
+	int  	UpdateTransmitState_Impl();
 
 	DECLARE_SERVERCLASS();
 
@@ -71,7 +68,7 @@ LINK_ENTITY_TO_CLASS( test_traceline, CTestTraceline );
 
 
 
-void	CTestTraceline::Spawn( void )
+void	CTestTraceline::Spawn_Impl( void )
 {
 	SetRenderColor( 255, 255, 255 );
 	SetRenderAlpha( 255 );
@@ -98,7 +95,7 @@ void	CTestTraceline::Spin( void )
 	SetNextThink( gpGlobals->curtime );
 }
 
-int CTestTraceline::UpdateTransmitState()
+int CTestTraceline::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }

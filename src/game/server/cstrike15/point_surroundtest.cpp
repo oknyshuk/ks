@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -31,7 +29,7 @@ public:
 	DECLARE_CLASS( CSurroundTest, CPointEntity );
 
 	[[= ks::reflect::Input{ .name = "FireCorrectOutput", .type = FIELD_VOID } ]] void	FireCorrectOutput( inputdata_t &inputdata );
-	void	Spawn( void );
+	void	Spawn_Impl( void );
 
 private:
 	
@@ -77,7 +75,7 @@ void CSurroundTest::FireCorrectOutput( inputdata_t &inputdata )
 	}
 }
 
-void CSurroundTest::Spawn( void )
+void CSurroundTest::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }

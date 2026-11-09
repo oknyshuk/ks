@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "sharedvar.h"
@@ -19,7 +16,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -37,7 +33,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -86,7 +81,7 @@ CEnvDetailController::~CEnvDetailController()
 }
 
 //--------------------------------------------------------------------------------------------------------------
-int CEnvDetailController::UpdateTransmitState()
+int CEnvDetailController::UpdateTransmitState_Impl()
 {
 #ifndef CLIENT_DLL
 	// ALWAYS transmit to all clients.
@@ -98,7 +93,7 @@ int CEnvDetailController::UpdateTransmitState()
 
 #ifndef CLIENT_DLL
 
-	bool CEnvDetailController::KeyValue( const char *szKeyName, const char *szValue )
+	bool CEnvDetailController::KeyValue_Impl( const char *szKeyName, const char *szValue )
 	{
 		if (FStrEq(szKeyName, "fademindist"))
 		{

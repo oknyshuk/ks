@@ -4,8 +4,6 @@
 // Purpose: A blood spray effect to expose successful hits.
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"

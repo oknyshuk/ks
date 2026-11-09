@@ -4,8 +4,6 @@
 // Purpose: Joystick handling function
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -47,10 +45,10 @@ constexpr auto JOY_RELATIVE_AXIS = 0x00000010;
 
 // Set the joystick being force disabled just as we write the config
 // This allows us to chose this option in the menu with a controller without accidentally disabling our only mode of input
-void JoystickForceDisabled_ChangeCallback( IConVar *pConVar, char const *pOldString, float flOldValue );
+void JoystickForceDisabled_ChangeCallback( ConVar *pConVar, char const *pOldString, float flOldValue );
 static ConVar joystick_force_disabled_set_from_options( "joystick_force_disabled_set_from_options", "1", FCVAR_ARCHIVE, "Sets controllers enabled/disabled just before the config is written.", JoystickForceDisabled_ChangeCallback );
 static ConVar joystick_force_disabled( "joystick_force_disabled", "1", FCVAR_ARCHIVE, "Prevents any and all joystick input for cases where a piece of hardware is incorrectly identified as a joystick an sends bad signals." );
-void JoystickForceDisabled_ChangeCallback( IConVar *pConVar, char const *pOldString, float flOldValue )
+void JoystickForceDisabled_ChangeCallback( ConVar *pConVar, char const *pOldString, float flOldValue )
 {
 	ConVarRef var( pConVar );
 	if ( var.IsValid() && !var.GetBool() )
@@ -136,7 +134,7 @@ static ConVar joy_lookspin_default( "joy_lookspin_default", "0.35", FCVAR_NONE )
 
 static ConVar joy_cfg_preset( "joy_cfg_preset", "1", FCVAR_ARCHIVE | FCVAR_ARCHIVE_GAMECONSOLE | FCVAR_SS );
 
-void joy_movement_stick_Callback( IConVar *var, const char *pOldString, float flOldValue )
+void joy_movement_stick_Callback( ConVar *var, const char *pOldString, float flOldValue )
 {
 	if ( engine )
 	{

@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "const.h"
 #include "string_t.h"
 #include "predictable_entity.h"
@@ -27,7 +24,6 @@ import ks.tier1;
 #include "npcevent.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -132,9 +128,9 @@ CWeaponCSBaseGun::CWeaponCSBaseGun()
 #endif
 }
 
-void CWeaponCSBaseGun::Spawn( )
+void CWeaponCSBaseGun::Spawn_Impl( )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	m_bBurstMode = false;
 	m_iBurstShotsRemaining = 0;
@@ -143,10 +139,10 @@ void CWeaponCSBaseGun::Spawn( )
 }
 
 
-void CWeaponCSBaseGun::Precache()
+void CWeaponCSBaseGun::Precache_Impl()
 {
 	m_inPrecache = true;
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 	m_inPrecache = false;
 }
 

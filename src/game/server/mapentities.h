@@ -3,7 +3,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "mapentities_shared.h"
-import std;
 class CBaseEntity;
 
 class CPointTemplate;
@@ -55,9 +54,6 @@ public:
 	void HandleTemplates();
 	void SpawnAndActivate( bool bActivateEntities );
 	void PurgeRemovedEntities();
-
-public:
-	bool m_bFoundryMode;
 
 private:
 

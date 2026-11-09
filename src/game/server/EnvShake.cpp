@@ -4,8 +4,6 @@
 // Purpose: Implements a screen shake effect that can also shake physics objects.
 // NOTE: UTIL_ScreenShake() will only shake players who are on the ground
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -23,7 +21,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -90,9 +87,9 @@ public:
 	DECLARE_CLASS( CEnvShake, CPointEntity );
 
 	virtual ~CEnvShake( void );
-	virtual void	Precache( void );
-	virtual void	Spawn( void );
-	virtual void	OnRestore( void );
+	void	Precache_Impl( void );
+	void	Spawn_Impl( void );
+	void	OnRestore_Impl( void );
 
 	inline	float	Amplitude( void ) { return m_Amplitude; }
 	inline	float	Frequency( void ) { return m_Frequency; }
@@ -103,7 +100,7 @@ public:
 	inline	void	SetDuration( float duration ) { m_Duration = duration; }
 	inline	void	SetRadius( float radius ) { m_Radius = radius; }
 
-	int DrawDebugTextOverlays(void);
+	int DrawDebugTextOverlays_Impl(void);
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "StartShake", .type = FIELD_VOID } ]] void InputStartShake( inputdata_t &inputdata );
@@ -113,7 +110,7 @@ public:
 
 	// Causes the camera/physics shakes to happen:
 	void ApplyShake( ShakeCommand_t command ); 
-	void Think( void );
+	void Think_Impl( void );
 };
 
 LINK_ENTITY_TO_CLASS( env_shake, CEnvShake );
@@ -155,13 +152,13 @@ float CEnvShake::Radius(bool bPlayers)
 //-----------------------------------------------------------------------------
 // Purpose: Sets default member values when spawning.
 //-----------------------------------------------------------------------------
-void CEnvShake::Precache()
+void CEnvShake::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 	CRopeKeyframe::PrecacheShakeRopes();
 }
 
-void CEnvShake::Spawn( void )
+void CEnvShake::Spawn_Impl( void )
 {
 	Precache();
 	SetSolid( SOLID_NONE );
@@ -182,9 +179,9 @@ void CEnvShake::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: Restore the motion controller
 //-----------------------------------------------------------------------------
-void CEnvShake::OnRestore( void )
+void CEnvShake::OnRestore_Impl( void )
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	if ( m_pShakeController )
 	{
@@ -324,7 +321,7 @@ void CEnvShake::InputFrequency( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 // Purpose: Calculates the physics shake values
 //-----------------------------------------------------------------------------
-void CEnvShake::Think( void )
+void CEnvShake::Think_Impl( void )
 {
 	int i;
 
@@ -395,9 +392,9 @@ void CC_Shake( void )
 // Purpose: Draw any debug text overlays
 // Returns current text offset from the top
 //-----------------------------------------------------------------------------
-int CEnvShake::DrawDebugTextOverlays( void ) 
+int CEnvShake::DrawDebugTextOverlays_Impl( void ) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -445,8 +442,8 @@ private:
 public:
 	DECLARE_CLASS( CEnvShake, CPointEntity );
 
-	virtual void	Precache( void );
-	virtual void	Spawn( void );
+	void	Precache_Impl( void );
+	void	Spawn_Impl( void );
 
 	QAngle			TiltAngle( void );
 	inline	float	Duration( void ) { return m_Duration; }
@@ -455,7 +452,7 @@ public:
 	inline	void	SetDuration( float duration ) { m_Duration = duration; }
 	inline	void	SetRadius( float radius ) { m_Radius = radius; }
 
-	int DrawDebugTextOverlays(void);
+	int DrawDebugTextOverlays_Impl(void);
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "StartTilt", .type = FIELD_VOID } ]] void InputStartTilt( inputdata_t &inputdata );
@@ -490,13 +487,13 @@ float CEnvTilt::Radius(bool bPlayers)
 //-----------------------------------------------------------------------------
 // Purpose: Sets default member values when spawning.
 //-----------------------------------------------------------------------------
-void CEnvTilt::Precache()
+void CEnvTilt::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 	CRopeKeyframe::PrecacheShakeRopes();
 }
 
-void CEnvTilt::Spawn( void )
+void CEnvTilt::Spawn_Impl( void )
 {
 	Precache();
 	SetSolid( SOLID_NONE );
@@ -558,9 +555,9 @@ void CEnvTilt::InputStopTilt( inputdata_t &inputdata )
 // Purpose: Draw any debug text overlays
 // Returns current text offset from the top
 //-----------------------------------------------------------------------------
-int CEnvTilt::DrawDebugTextOverlays( void ) 
+int CEnvTilt::DrawDebugTextOverlays_Impl( void ) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT)
 	{

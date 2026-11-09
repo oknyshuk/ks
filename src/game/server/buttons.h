@@ -15,12 +15,13 @@ public:
 	DECLARE_CLASS( CBaseButton, CBaseToggle );
 	DECLARE_SERVERCLASS();
 
-	void Spawn( void );
-	virtual void Precache( void );
-	bool CreateVPhysics();
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	bool CreateVPhysics_Impl();
 	void RotSpawn( void );
-	bool KeyValue( const char *szKeyName, const char *szValue );
-	int DrawDebugTextOverlays();
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	int DrawDebugTextOverlays_Impl();
 
 protected:
 
@@ -46,7 +47,8 @@ protected:
 	[[= ks::reflect::Input{ .name = "PressIn", .type = FIELD_VOID } ]] void InputPressIn( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "PressOut", .type = FIELD_VOID } ]] void InputPressOut( inputdata_t &inputdata );
 
-	virtual int OnTakeDamage( const CTakeDamageInfo &info );
+	public: int OnTakeDamage_Impl( const CTakeDamageInfo &info );
+	protected:
 	
 	enum BUTTON_CODE { BUTTON_NOTHING, BUTTON_ACTIVATE, BUTTON_RETURN, BUTTON_PRESS };
 
@@ -55,7 +57,8 @@ protected:
 	
 	DECLARE_DATADESC();
 
-	virtual int	ObjectCaps(void);
+	public: int	ObjectCaps_Impl(void);
+	protected:
 
 	[[= ks::reflect::Key{ .name = "movedir" } ]] Vector m_vecMoveDir;
 
@@ -94,8 +97,8 @@ class CRotButton : public CBaseButton
 public:
 	DECLARE_CLASS( CRotButton, CBaseButton );
 
-	void Spawn( void );
-	bool CreateVPhysics( void );
+	void Spawn_Impl( void );
+	bool CreateVPhysics_Impl( void );
 
 };
 
@@ -106,10 +109,10 @@ class [[= ks::reflect::KeyFrom<"m_bSolidBsp", ks::reflect::Key{ .name = "solidbs
 	DECLARE_CLASS( CMomentaryRotButton, CRotButton );
 
 public:
-	void	Spawn ( void );
-	bool	CreateVPhysics( void );
-	virtual int	ObjectCaps( void );
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void	Spawn_Impl ( void );
+	bool	CreateVPhysics_Impl( void );
+	int	ObjectCaps_Impl( void );
+	void	Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void	UseMoveDone( void );
 	void	ReturnMoveDone( void );
 	void	OutputMovementComplete(void);
@@ -119,7 +122,7 @@ public:
 	void	PlaySound( void );
 	void	UpdateTarget( float value, CBaseEntity *pActivator );
 
-	int		DrawDebugTextOverlays(void);
+	int		DrawDebugTextOverlays_Impl(void);
 
 	static CMomentaryRotButton *Instance( edict_t *pent ) { return (CMomentaryRotButton *)GetContainingEntity(pent); }
 
@@ -190,7 +193,7 @@ public:
 	virtual void Spawn( void );
 	virtual int	ObjectCaps( void )
 	{
-		const int base_flags = BaseClass::ObjectCaps();
+		const int base_flags = BaseClass::ObjectCaps_Impl();
 		return (base_flags | FCAP_CONTINUOUS_USE | FCAP_USE_IN_RADIUS);
 	}
 

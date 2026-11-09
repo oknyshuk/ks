@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "const.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"
@@ -242,9 +240,9 @@ void CMoveHelperClient::PlaybackEventFull( int flags, int clientindex, unsigned 
 // Surface properties interface
 //-----------------------------------------------------------------------------
 
+extern IPhysicsSurfaceProps *physprops;
 IPhysicsSurfaceProps *CMoveHelperClient::GetSurfaceProps( void )
 {
-	extern IPhysicsSurfaceProps *physprops;
 	return physprops;
 }
 

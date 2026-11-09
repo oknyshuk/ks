@@ -8,8 +8,6 @@
 //
 // this class routes messages through titles.txt for localisation
 //
-import std;
-import ks.core;
 #include "cdll_util.h"
 #include "text_message.h"
 #include "client_textmessage.h"

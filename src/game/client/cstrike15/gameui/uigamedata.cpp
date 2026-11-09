@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2008 Valve Corporation
 
-import std;
 
-import ks.tier1;
 #include "uigamedata.h"
 
 
@@ -119,7 +117,7 @@ CUIGameData::CUIGameData() :
 	m_flTimeLastFrame = Plat_FloatTime();
 	m_bShowConnectionProblemActive = false;
 
-	g_pMatchFramework->GetEventsSubscription()->Subscribe( this );
+	g_pMatchFramework->GetEventsSubscription()->Subscribe( this, [this]( KeyValues *pEvent ) { OnEvent( pEvent ); } );
 
 	m_bXUIOpen = false;
 

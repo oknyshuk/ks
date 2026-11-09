@@ -669,3 +669,7 @@ void JoltPhysicsConstraint::DestroyConstraint()
 		m_pConstraint = nullptr;
 	}
 }
+
+//-------------------------------------------------------------------------------------------------
+#include "facade/iphysicsconstraint.inl"
+#include "facade/iphysicsconstraintgroup.inl"

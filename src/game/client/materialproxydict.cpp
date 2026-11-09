@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2008 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "imaterialproxydict.h"
 #include "materialsystem/imaterialproxy.h"
 

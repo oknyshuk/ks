@@ -8,8 +8,6 @@
   HL2 client/server game specific stuff
 
 */
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -24,7 +22,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -200,7 +197,7 @@ void respawn( CBaseEntity *pEdict, bool fCopyCorpse )
 		if ( fCopyCorpse )
 		{
 			// make a copy of the dead body for appearances sake
-			dynamic_cast< CBasePlayer* >( pEdict )->CreateCorpse();
+			entity_cast<CBasePlayer>( pEdict )->CreateCorpse();
 		}
 
 		// respawn player

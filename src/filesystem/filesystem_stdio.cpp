@@ -8,8 +8,6 @@
 import ks.tier1;
 #include "basefilesystem.h"
 
-#include "filesystemasync.h"
-
 
 import std;
 
@@ -33,101 +31,27 @@ static_assert( k_nSeekEnd == FILESYSTEM_SEEK_TAIL );
 
 //-----------------------------------------------------------------------------
 
-class CFileSystem_Stdio : public CBaseFileSystem
-{
-public:
-	CFileSystem_Stdio();
-	~CFileSystem_Stdio();
-
-	// Used to get at older versions
-	void *QueryInterface( const char *pInterfaceName );
-
-	// Higher level filesystem methods requiring specific behavior
-	virtual void GetLocalCopy( const char *pFileName );
-	virtual int	HintResourceNeed( const char *hintlist, int forgetEverything );
-	virtual bool IsFileImmediatelyAvailable(const char *pFileName);
-	virtual WaitForResourcesHandle_t WaitForResources( const char *resourcelist );
-	virtual bool GetWaitForResourcesProgress( WaitForResourcesHandle_t handle, float *progress /* out */ , bool *complete /* out */ );
-	virtual void CancelWaitForResources( WaitForResourcesHandle_t handle );
-
-	bool GetOptimalIOConstraints( FileHandle_t hFile, unsigned *pOffsetAlign, unsigned *pSizeAlign, unsigned *pBufferAlign );
-	void *AllocOptimalReadBuffer( FileHandle_t hFile, unsigned nSize, unsigned nOffset );
-	void FreeOptimalReadBuffer( void *p );
-
-protected:
-	// implementation of CBaseFileSystem virtual functions
-	virtual std::FILE *FS_fopen( const char *filename, const char *options, unsigned flags, int64 *size, CFileLoadInfo *pInfo );
-	virtual void FS_setbufsize( std::FILE *fp, unsigned nBytes );
-	virtual void FS_fclose( std::FILE *fp );
-	virtual void FS_fseek( std::FILE *fp, int64 pos, int seekType );
-	virtual long FS_ftell( std::FILE *fp );
-	virtual int FS_feof( std::FILE *fp );
-	virtual std::size_t FS_fread( void *dest, std::size_t destSize, std::size_t size, std::FILE *fp );
-	virtual std::size_t FS_fwrite( const void *src, std::size_t size, std::FILE *fp );
-	virtual bool FS_setmode( std::FILE *fp, FileMode_t mode );
-	virtual std::size_t FS_vfprintf( std::FILE *fp, const char *fmt, std::va_list list );
-	virtual int FS_ferror( std::FILE *fp );
-	virtual int FS_fflush( std::FILE *fp );
-	virtual char *FS_fgets( char *dest, int destSize, std::FILE *fp );
-	virtual int FS_stat( const char *path, ks::platform::file_info *buf );
-	virtual bool FS_setwritable( const char *path, bool writable );
-	virtual HANDLE FS_FindFirstFile(const char *findname, WIN32_FIND_DATA *dat);
-	virtual bool FS_FindNextFile(HANDLE handle, WIN32_FIND_DATA *dat);
-	virtual bool FS_FindClose(HANDLE handle);
-	virtual int FS_GetSectorSize( std::FILE * );
-
-private:
-	bool CanAsync() const
-	{
-		return m_bCanAsync;
-	}
-
-	bool m_bMounted;
-	bool m_bCanAsync;
-};
-
-
 //-----------------------------------------------------------------------------
 // Per-file worker classes
 //-----------------------------------------------------------------------------
-class CStdFilesystemFile
-{
-public:
-	virtual ~CStdFilesystemFile() {}
-	virtual void FS_setbufsize( unsigned nBytes ) = 0;
-	virtual void FS_fclose() = 0;
-	virtual void FS_fseek( int64 pos, int seekType ) = 0;
-	virtual long FS_ftell() = 0;
-	virtual int FS_feof() = 0;
-	virtual std::size_t FS_fread( void *dest, std::size_t destSize, std::size_t size ) = 0;
-	virtual std::size_t FS_fwrite( const void *src, std::size_t size ) = 0;
-	virtual bool FS_setmode( FileMode_t mode ) = 0;
-	virtual std::size_t FS_vfprintf( const char *fmt, std::va_list list ) = 0;
-	virtual int FS_ferror() = 0;
-	virtual int FS_fflush() = 0;
-	virtual char *FS_fgets( char *dest, int destSize ) = 0;
-	virtual int FS_GetSectorSize() { return 1; }
-};
-
-//---------------------------------------------------------
-
-class CStdioFile : public CStdFilesystemFile
+class CStdioFile
 {
 public:
 	static CStdioFile *FS_fopen( const char *filename, const char *options, int64 *size );
 
-	virtual void FS_setbufsize( unsigned nBytes );
-	virtual void FS_fclose();
-	virtual void FS_fseek( int64 pos, int seekType );
-	virtual long FS_ftell();
-	virtual int FS_feof();
-	virtual std::size_t FS_fread( void *dest, std::size_t destSize, std::size_t size);
-	virtual std::size_t FS_fwrite( const void *src, std::size_t size );
-	virtual bool FS_setmode( FileMode_t mode );
-	virtual std::size_t FS_vfprintf( const char *fmt, std::va_list list );
-	virtual int FS_ferror();
-	virtual int FS_fflush();
-	virtual char *FS_fgets( char *dest, int destSize );
+	void FS_setbufsize( unsigned nBytes );
+	void FS_fclose();
+	void FS_fseek( int64 pos, int seekType );
+	long FS_ftell();
+	int FS_feof();
+	std::size_t FS_fread( void *dest, std::size_t destSize, std::size_t size);
+	std::size_t FS_fwrite( const void *src, std::size_t size );
+	bool FS_setmode( FileMode_t mode );
+	std::size_t FS_vfprintf( const char *fmt, std::va_list list );
+	int FS_ferror();
+	int FS_fflush();
+	char *FS_fgets( char *dest, int destSize );
+	int FS_GetSectorSize() { return 1; }
 
 	static std::map< int, std::atomic<int> > m_LockedFDMap;
 private:
@@ -150,25 +74,10 @@ std::map< int, std::atomic<int> > CStdioFile::m_LockedFDMap;
 //-----------------------------------------------------------------------------
 // singleton
 //-----------------------------------------------------------------------------
-CFileSystem_Stdio g_FileSystem_Stdio;
-
-CAsyncFileSystem g_FileSystem_Async;
-
- 
-#if defined( DEDICATED ) && defined( LAUNCHERONLY ) // "hack" to allow us to not export a stdio version of the FILESYSTEM_INTERFACE_VERSION anywhere
-
-IFileSystem *g_pFileSystem = &g_FileSystem_Stdio;
-IBaseFileSystem *g_pBaseFileSystem = &g_FileSystem_Stdio;
-
-
-#else
+CBaseFileSystem g_FileSystem_Stdio;
 
 static InterfaceReg s_Reg_CFileSystem_Stdio_IFileSystem( []() -> void * { return static_cast<IFileSystem *>( &g_FileSystem_Stdio ); }, FILESYSTEM_INTERFACE_VERSION );;
 static InterfaceReg s_Reg_CFileSystem_Stdio_IBaseFileSystem( []() -> void * { return static_cast<IBaseFileSystem *>( &g_FileSystem_Stdio ); }, BASEFILESYSTEM_INTERFACE_VERSION );;
-
-#endif
-
-static InterfaceReg s_Reg_CAsyncFileSystem_IAsyncFileSystem( []() -> void * { return static_cast<IAsyncFileSystem *>( &g_FileSystem_Async ); }, ASYNCFILESYSTEM_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------
@@ -187,40 +96,8 @@ ConVar filesystem_report_buffered_io( "filesystem_report_buffered_io", "0" );
 
 
 //-----------------------------------------------------------------------------
-// constructor
 //-----------------------------------------------------------------------------
-CFileSystem_Stdio::CFileSystem_Stdio()
-{
-	m_bMounted = false;
-	m_bCanAsync = true;
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-CFileSystem_Stdio::~CFileSystem_Stdio()
-{
-	contract_assert( !m_bMounted );
-}
-
-
-//-----------------------------------------------------------------------------
-// QueryInterface: 
-//-----------------------------------------------------------------------------
-void *CFileSystem_Stdio::QueryInterface( const char *pInterfaceName )
-{
-	// We also implement the IMatSystemSurface interface
-	if (!V_strncmp(	pInterfaceName, FILESYSTEM_INTERFACE_VERSION, V_strlen(FILESYSTEM_INTERFACE_VERSION) + 1))
-		return (IFileSystem*)this;
-
-	return CBaseFileSystem::QueryInterface( pInterfaceName );
-}
-
-
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-bool CFileSystem_Stdio::GetOptimalIOConstraints( FileHandle_t hFile, unsigned *pOffsetAlign, unsigned *pSizeAlign, unsigned *pBufferAlign )
+bool CBaseFileSystem::GetOptimalIOConstraints( FileHandle_t hFile, unsigned *pOffsetAlign, unsigned *pSizeAlign, unsigned *pBufferAlign )
 {
 	unsigned sectorSize;
 	
@@ -271,11 +148,11 @@ const char* GetGameMode()
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void *CFileSystem_Stdio::AllocOptimalReadBuffer( FileHandle_t hFile, unsigned nSize, unsigned nOffset )
+void *CBaseFileSystem::AllocOptimalReadBuffer( FileHandle_t hFile, unsigned nSize, unsigned nOffset )
 {
 	if ( !UseOptimalBufferAllocation() )
 	{
-		return CBaseFileSystem::AllocOptimalReadBuffer( hFile, nSize, nOffset );
+		return MemAlloc_Alloc( nSize );
 	}
 
 	unsigned sectorSize;
@@ -314,11 +191,11 @@ void *CFileSystem_Stdio::AllocOptimalReadBuffer( FileHandle_t hFile, unsigned nS
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CFileSystem_Stdio::FreeOptimalReadBuffer( void *p )
+void CBaseFileSystem::FreeOptimalReadBuffer( void *p )
 {
 	if ( !UseOptimalBufferAllocation() )
 	{
-		CBaseFileSystem::FreeOptimalReadBuffer( p );
+		g_pMemAlloc->Free( p );
 		return;
 	}
 
@@ -333,12 +210,12 @@ void CFileSystem_Stdio::FreeOptimalReadBuffer( void *p )
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-std::FILE *CFileSystem_Stdio::FS_fopen( const char *filename, const char *options, unsigned flags, int64 *size, CFileLoadInfo *pInfo )
+std::FILE *CBaseFileSystem::FS_fopen( const char *filename, const char *options, unsigned flags, int64 *size, CFileLoadInfo *pInfo )
 {
 	if( ShouldFailIo() )
 		return nullptr;
 
-	CStdFilesystemFile *pFile = nullptr;
+	CStdioFile *pFile = nullptr;
 
 	pFile = CStdioFile::FS_fopen( filename, options, size );
 
@@ -348,18 +225,18 @@ std::FILE *CFileSystem_Stdio::FS_fopen( const char *filename, const char *option
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-void CFileSystem_Stdio::FS_setbufsize( std::FILE *fp, unsigned nBytes )
+void CBaseFileSystem::FS_setbufsize( std::FILE *fp, unsigned nBytes )
 {
-	CStdFilesystemFile *pFile = ((CStdFilesystemFile *)fp);
+	CStdioFile *pFile = ((CStdioFile *)fp);
 	pFile->FS_setbufsize( nBytes );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-void CFileSystem_Stdio::FS_fclose( std::FILE *fp )
+void CBaseFileSystem::FS_fclose( std::FILE *fp )
 {
-	CStdFilesystemFile *pFile = ((CStdFilesystemFile *)fp);
+	CStdioFile *pFile = ((CStdioFile *)fp);
 
 	if ( m_WhitelistFileTrackingEnabled )
 		m_FileTracker2.RecordFileClose( fp );
@@ -371,9 +248,9 @@ void CFileSystem_Stdio::FS_fclose( std::FILE *fp )
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-void CFileSystem_Stdio::FS_fseek( std::FILE *fp, int64 pos, int seekType )
+void CBaseFileSystem::FS_fseek( std::FILE *fp, int64 pos, int seekType )
 {
-	CStdFilesystemFile *pFile = ((CStdFilesystemFile *)fp);
+	CStdioFile *pFile = ((CStdioFile *)fp);
 
 	if ( m_WhitelistFileTrackingEnabled )
 		m_FileTracker2.RecordFileSeek( fp, pos, seekType );
@@ -384,30 +261,30 @@ void CFileSystem_Stdio::FS_fseek( std::FILE *fp, int64 pos, int seekType )
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-long CFileSystem_Stdio::FS_ftell( std::FILE *fp )
+long CBaseFileSystem::FS_ftell( std::FILE *fp )
 {
-	CStdFilesystemFile *pFile = ((CStdFilesystemFile *)fp);
+	CStdioFile *pFile = ((CStdioFile *)fp);
 	return pFile->FS_ftell();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-int CFileSystem_Stdio::FS_feof( std::FILE *fp )
+int CBaseFileSystem::FS_feof( std::FILE *fp )
 {
-	CStdFilesystemFile *pFile = ((CStdFilesystemFile *)fp);
+	CStdioFile *pFile = ((CStdioFile *)fp);
 	return pFile->FS_feof();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-std::size_t CFileSystem_Stdio::FS_fread( void *dest, std::size_t destSize, std::size_t size, std::FILE *fp )
+std::size_t CBaseFileSystem::FS_fread( void *dest, std::size_t destSize, std::size_t size, std::FILE *fp )
 {
 	if( ShouldFailIo() )
 		return 0;
 
-	CStdFilesystemFile *pFile = ((CStdFilesystemFile *)fp);
+	CStdioFile *pFile = ((CStdioFile *)fp);
 	std::size_t nBytesRead = pFile->FS_fread( dest, destSize, size);
 
 	Trace_FRead( nBytesRead, fp );
@@ -421,12 +298,12 @@ std::size_t CFileSystem_Stdio::FS_fread( void *dest, std::size_t destSize, std::
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-std::size_t CFileSystem_Stdio::FS_fwrite( const void *src, std::size_t size, std::FILE *fp )
+std::size_t CBaseFileSystem::FS_fwrite( const void *src, std::size_t size, std::FILE *fp )
 {
 	if( ShouldFailIo() )
 		return 0;
 
-	CStdFilesystemFile *pFile = ((CStdFilesystemFile *)fp);
+	CStdioFile *pFile = ((CStdioFile *)fp);
 
 	std::size_t nBytesWritten = pFile->FS_fwrite(src, size);
 
@@ -436,47 +313,47 @@ std::size_t CFileSystem_Stdio::FS_fwrite( const void *src, std::size_t size, std
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-bool CFileSystem_Stdio::FS_setmode( std::FILE *fp, FileMode_t mode )
+bool CBaseFileSystem::FS_setmode( std::FILE *fp, FileMode_t mode )
 {
-	CStdFilesystemFile *pFile = ((CStdFilesystemFile *)fp);
+	CStdioFile *pFile = ((CStdioFile *)fp);
 	return pFile->FS_setmode( mode );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-std::size_t CFileSystem_Stdio::FS_vfprintf( std::FILE *fp, const char *fmt, std::va_list list )
+std::size_t CBaseFileSystem::FS_vfprintf( std::FILE *fp, const char *fmt, std::va_list list )
 {
 	if( ShouldFailIo() )
 		return 0;
-	CStdFilesystemFile *pFile = ((CStdFilesystemFile *)fp);
+	CStdioFile *pFile = ((CStdioFile *)fp);
 	return pFile->FS_vfprintf(fmt, list);
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-int CFileSystem_Stdio::FS_ferror( std::FILE *fp )
+int CBaseFileSystem::FS_ferror( std::FILE *fp )
 {
-	CStdFilesystemFile *pFile = ((CStdFilesystemFile *)fp);
+	CStdioFile *pFile = ((CStdioFile *)fp);
 	return pFile->FS_ferror();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-int CFileSystem_Stdio::FS_fflush( std::FILE *fp )
+int CBaseFileSystem::FS_fflush( std::FILE *fp )
 {
-	CStdFilesystemFile *pFile = ((CStdFilesystemFile *)fp);
+	CStdioFile *pFile = ((CStdioFile *)fp);
 	return pFile->FS_fflush();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-char *CFileSystem_Stdio::FS_fgets( char *dest, int destSize, std::FILE *fp )
+char *CBaseFileSystem::FS_fgets( char *dest, int destSize, std::FILE *fp )
 {
-	CStdFilesystemFile *pFile = ((CStdFilesystemFile *)fp);
+	CStdioFile *pFile = ((CStdioFile *)fp);
 	return pFile->FS_fgets(dest, destSize);
 }
 
@@ -486,7 +363,7 @@ char *CFileSystem_Stdio::FS_fgets( char *dest, int destSize, std::FILE *fp )
 //			pmode - 
 // Output : int
 //-----------------------------------------------------------------------------
-bool CFileSystem_Stdio::FS_setwritable( const char *path, bool writable )
+bool CBaseFileSystem::FS_setwritable( const char *path, bool writable )
 {
 	if ( !path )
 		return false;
@@ -506,7 +383,7 @@ bool CFileSystem_Stdio::FS_setwritable( const char *path, bool writable )
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-int CFileSystem_Stdio::FS_stat( const char *path, ks::platform::file_info *buf )
+int CBaseFileSystem::FS_stat( const char *path, ks::platform::file_info *buf )
 {
 	if ( !path )
 	{
@@ -528,7 +405,7 @@ int CFileSystem_Stdio::FS_stat( const char *path, ks::platform::file_info *buf )
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-HANDLE CFileSystem_Stdio::FS_FindFirstFile(const char *findname, WIN32_FIND_DATA *dat)
+HANDLE CBaseFileSystem::FS_FindFirstFile(const char *findname, WIN32_FIND_DATA *dat)
 {
 	return ::FindFirstFile(const_cast<char *>(findname), dat);
 }
@@ -536,7 +413,7 @@ HANDLE CFileSystem_Stdio::FS_FindFirstFile(const char *findname, WIN32_FIND_DATA
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-bool CFileSystem_Stdio::FS_FindNextFile(HANDLE handle, WIN32_FIND_DATA *dat)
+bool CBaseFileSystem::FS_FindNextFile(HANDLE handle, WIN32_FIND_DATA *dat)
 {
 	return (::FindNextFile(handle, dat) != 0);
 }
@@ -544,7 +421,7 @@ bool CFileSystem_Stdio::FS_FindNextFile(HANDLE handle, WIN32_FIND_DATA *dat)
 //-----------------------------------------------------------------------------
 // Purpose: low-level filesystem wrapper
 //-----------------------------------------------------------------------------
-bool CFileSystem_Stdio::FS_FindClose(HANDLE handle)
+bool CBaseFileSystem::FS_FindClose(HANDLE handle)
 {
 	return (::FindClose(handle) != 0);
 }
@@ -552,16 +429,16 @@ bool CFileSystem_Stdio::FS_FindClose(HANDLE handle)
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-int CFileSystem_Stdio::FS_GetSectorSize( std::FILE *fp )
+int CBaseFileSystem::FS_GetSectorSize( std::FILE *fp )
 {
-	CStdFilesystemFile *pFile = ((CStdFilesystemFile *)fp);
+	CStdioFile *pFile = ((CStdioFile *)fp);
 	return pFile->FS_GetSectorSize();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: files are always immediately available on disk
 //-----------------------------------------------------------------------------
-bool CFileSystem_Stdio::IsFileImmediatelyAvailable(const char *pFileName)
+bool CBaseFileSystem::IsFileImmediatelyAvailable(const char *pFileName)
 {
 	return true;
 }
@@ -569,7 +446,7 @@ bool CFileSystem_Stdio::IsFileImmediatelyAvailable(const char *pFileName)
 //-----------------------------------------------------------------------------
 // Purpose: unnecessary in stdio
 //-----------------------------------------------------------------------------
-WaitForResourcesHandle_t CFileSystem_Stdio::WaitForResources( const char *resourcelist )
+WaitForResourcesHandle_t CBaseFileSystem::WaitForResources( const char *resourcelist )
 {
 
 	return 1;
@@ -578,7 +455,7 @@ WaitForResourcesHandle_t CFileSystem_Stdio::WaitForResources( const char *resour
 //-----------------------------------------------------------------------------
 // Purpose: unnecessary in stdio
 //-----------------------------------------------------------------------------
-bool CFileSystem_Stdio::GetWaitForResourcesProgress( WaitForResourcesHandle_t handle, float *progress /* out */ , bool *complete /* out */ )
+bool CBaseFileSystem::GetWaitForResourcesProgress( WaitForResourcesHandle_t handle, float *progress /* out */ , bool *complete /* out */ )
 {
 	CVProfScope _( "GetWaitForResourcesProgress (stdio)", 0, VPROF_BUDGETGROUP_OTHER_FILESYSTEM, false, BUDGETFLAG_OTHER );
 
@@ -591,22 +468,14 @@ bool CFileSystem_Stdio::GetWaitForResourcesProgress( WaitForResourcesHandle_t ha
 //-----------------------------------------------------------------------------
 // Purpose: unnecessary in stdio
 //-----------------------------------------------------------------------------
-void CFileSystem_Stdio::CancelWaitForResources( WaitForResourcesHandle_t handle )
+void CBaseFileSystem::CancelWaitForResources( WaitForResourcesHandle_t handle )
 {
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CFileSystem_Stdio::GetLocalCopy( const char *pFileName )
-{
-	// do nothing. . everything is local.
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-int CFileSystem_Stdio::HintResourceNeed( const char *hintlist, int forgetEverything )
+int CBaseFileSystem::HintResourceNeed( const char *hintlist, int forgetEverything )
 {
 	// do nothing. . everything is local.
 	return 0;

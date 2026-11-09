@@ -58,17 +58,18 @@ class [[= ks::reflect::NetTable{ .name = "DT_FuncTrackTrain" } ]]
 public:
 	CFuncTrackTrain();
 
-	void Spawn( void );
-	bool CreateVPhysics( void );
-	void Precache( void );
-	void UpdateOnRemove();
-	void MoveDone();
+	void Spawn_Impl( void );
+	bool CreateVPhysics_Impl( void );
+	void Precache_Impl( void );
+	void UpdateOnRemove_Impl();
+	void MoveDone_Impl();
 
-	void Blocked( CBaseEntity *pOther );
-	bool KeyValue( const char *szKeyName, const char *szValue );
+	void Blocked_Impl( CBaseEntity *pOther );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
 
-	virtual int DrawDebugTextOverlays();
-	void DrawDebugGeometryOverlays();
+	int DrawDebugTextOverlays_Impl();
+	void DrawDebugGeometryOverlays_Impl();
 
 	void Next( void );
 	void Find( void );
@@ -77,7 +78,7 @@ public:
 
 	void SetTrack( CPathTrack *track ) { m_ppath = track->Nearest(GetLocalOrigin()); }
 	void SetControls( CBaseEntity *pControls );
-	bool OnControls( CBaseEntity *pControls );
+	bool OnControls_Impl( CBaseEntity *pControls );
 
 	void SoundStop( void );
 	void SoundUpdate( void );
@@ -88,7 +89,7 @@ public:
 	bool IsDirForward();
 	void SetDirForward( bool bForward );
 	void SetSpeed( float flSpeed, bool bAccel = false );
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "SetSpeed", .type = FIELD_FLOAT } ]] void InputSetSpeed( inputdata_t &inputdata );
@@ -112,15 +113,15 @@ public:
 
 	DECLARE_DATADESC();
 
-	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() | FCAP_DIRECTIONAL_USE | FCAP_USE_ONGROUND; }
+	int	ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() | FCAP_DIRECTIONAL_USE | FCAP_USE_ONGROUND; }
 
-	virtual void	OnRestore( void );
+	void	OnRestore_Impl( void );
 
 	float GetMaxSpeed() const { return m_maxSpeed; }
 	float GetCurrentSpeed() const { return m_flSpeed; }
 	float GetDesiredSpeed() const { return m_flDesiredSpeed;}
 
-	virtual bool IsBaseTrain( void ) const { return true; }
+	bool IsBaseTrain_Impl( void ) const { return true; }
 	Vector ScriptGetFuturePosition( float flSeconds, float flMinSpeed );
 
 private:

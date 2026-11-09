@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "string_t.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"
@@ -26,7 +23,6 @@ import ks.tier1;
 #include "npcevent.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -44,7 +40,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -78,7 +73,6 @@ import ks.math;
 #include "achievements_cs.h"
 
 ConVar	cc_achievement_debug("achievement_debug", "0", FCVAR_CHEAT | FCVAR_REPLICATED, "Turn on achievement debug msgs." );
-const char *COM_GetModDirectory();
 
 // We want to debug getting achievements in various development scenarios (including with cheats enabled). This convar allows bypassing
 // the normal check against the cheats when launched with -dev. We need to be very careful not to ship with this enabled on any platforms.
@@ -185,7 +179,7 @@ bool CAchievementMgr::Init()
 #endif // CLIENT_DLL
 
 
-	g_pMatchFramework->GetEventsSubscription()->Subscribe( this );
+	g_pMatchFramework->GetEventsSubscription()->Subscribe( this, [this]( KeyValues *pEvent ) { OnEvent( pEvent ); } );
 
 	return true;
 }
@@ -963,7 +957,6 @@ void CAchievementMgr::PrintAchievementStatus()
 
 		Msg( "%42s ", pAchievement->GetName() );	
 
-		CFailableAchievement *pFailableAchievement = dynamic_cast<CFailableAchievement *>( pAchievement );
 		if ( pAchievement->IsAchieved() )
 		{
 			CCSBaseAchievement* pCSAchievement = dynamic_cast<CCSBaseAchievement*>(pAchievement);
@@ -980,10 +973,6 @@ void CAchievementMgr::PrintAchievementStatus()
 			{
 				Msg( "%-30s", "ACHIEVED" );
 			}
-		}
-		else if ( pFailableAchievement && pFailableAchievement->IsFailed() )
-		{
-			Msg( "%-30s", "FAILED" );
 		}
 		else 
 		{

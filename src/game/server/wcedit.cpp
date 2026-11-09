@@ -3,8 +3,6 @@
 
 // Purpose: Namespace for functions having to do with WC Edit mode
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -18,7 +16,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -749,7 +746,7 @@ static void hammer_update_entity( const CCommand &args )
 		UTIL_TraceLine(pPlayer->EyePosition(), pPlayer->EyePosition() + forward * MAX_COORD_RANGE,
 			MASK_SHOT_HULL|CONTENTS_GRATE|CONTENTS_DEBRIS, pPlayer, COLLISION_GROUP_NONE, &tr );
 
-		if ( tr.DidHit() && !tr.DidHitWorld() )
+		if ( tr.DidHit() && !TraceDidHitWorld( tr ) )
 		{
 			NWCEdit::UpdateEntityPosition( tr.Ent<CBaseEntity>() );
 		}

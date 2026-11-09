@@ -24,21 +24,25 @@ class CCompositeTexture;
 // and it will be used during rendering of the model(s)
 //
 
-class CCustomMaterial : public ICustomMaterial
+class CCustomMaterial : public ICustomMaterial, public CRefCounted<CCustomMaterial>
 {
 public:
 	CCustomMaterial( KeyValues *pKeyValues );
-	virtual ~CCustomMaterial();
+	~CCustomMaterial();
 
-	// inherited from ICustomMaterial
+	using CRefCounted<CCustomMaterial>::AddRef;
+	using CRefCounted<CCustomMaterial>::Release;
+	using CRefCounted<CCustomMaterial>::GetRefCount;
+
+	// ICustomMaterial implementation
 
 	// returns the actual end result material to be used for drawing the model
-	virtual IMaterial *GetMaterial() { return m_Material; }  // the material reference converts itself into an IMaterial
-	virtual void AddTexture( ICompositeTexture *pTexture );
-	virtual ICompositeTexture *GetTexture( int nIndex );
-	virtual bool IsValid() const { return m_bValid;	}
-	virtual bool CheckRegenerate( int nSize );
-	virtual const char* GetBaseMaterialName( void ) { return m_szBaseMaterialName; }
+	IMaterial *GetMaterial() { return m_Material; }  // the material reference converts itself into an IMaterial
+	void AddTexture( ICompositeTexture *pTexture );
+	ICompositeTexture *GetTexture( int nIndex );
+	bool IsValid() const { return m_bValid;	}
+	bool CheckRegenerate( int nSize );
+	const char* GetBaseMaterialName( void ) { return m_szBaseMaterialName; }
 	
 	// ----
 

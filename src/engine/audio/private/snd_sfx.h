@@ -7,13 +7,21 @@ import ks.tier1;
 
 class CAudioSource;
 
+// What the name of a sound table entry comes from
+enum class SfxKind : unsigned char
+{
+	Named,		// a sound of the sound dictionary: the name its file name handle stands for
+	Dummy,		// the one entry S_DummySfx() hands out (snd_dma.cpp)
+	Voice,		// a voice channel (voice_sound_engine_interface.cpp)
+};
+
 class CSfxTable
 {
 public:
 	CSfxTable();
 
 	// gets sound name, possible decorated with prefixes
-	virtual const char	*getname( char *pBuf, std::size_t bufLen );
+	const char	*getname( char *pBuf, std::size_t bufLen );
 	// gets the filename, the part after the optional prefixes
 	const char			*GetFileName(char *pBuf, std::size_t bufLen );
 	FileNameHandle_t	GetFileNameHandle();
@@ -22,6 +30,7 @@ public:
 	bool				IsPrecachedSound();
 	void				OnNameChanged( const char *pName );
 
+	SfxKind				m_Kind;
 	FileNameHandle_t	m_fnHandle;		// key in the sound dictionary, null until named
 	CAudioSource		*pSource;
 

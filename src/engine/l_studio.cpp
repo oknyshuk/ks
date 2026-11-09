@@ -61,8 +61,8 @@ import std;
 //-----------------------------------------------------------------------------
 void R_StudioInitLightingCache( void );
 float Engine_WorldLightDistanceFalloff( const dworldlight_t *wl, const Vector& delta, bool bNoRadiusCheck = false );
-void SetRootLOD_f( IConVar *var, const char *pOldString, float flOldValue );
-void r_lod_f( IConVar *var, const char *pOldValue, float flOldValue );
+void SetRootLOD_f( ConVar *var, const char *pOldString, float flOldValue );
+void r_lod_f( ConVar *var, const char *pOldValue, float flOldValue );
 void FlushLOD_f();
 
 //-----------------------------------------------------------------------------
@@ -500,27 +500,27 @@ class CPooledVBAllocator_ColorMesh : public IPooledVBAllocator
 public:
 
 	CPooledVBAllocator_ColorMesh();
-	virtual ~CPooledVBAllocator_ColorMesh();
+	~CPooledVBAllocator_ColorMesh();
 
 	// Allocate the shared mesh (vertex buffer)
-	virtual bool			Init( VertexFormat_t format, int numVerts );
+	bool			Init( VertexFormat_t format, int numVerts );
 	// Free the shared mesh (after Deallocate is called for all sub-allocs)
-	virtual void			Clear();
+	void			Clear();
 
 	// Get the shared mesh (vertex buffer) from which sub-allocations are made
-	virtual IMesh			*GetSharedMesh() { return m_pMesh; }
+	IMesh			*GetSharedMesh() { return m_pMesh; }
 
 	// Get a pointer to the start of the vertex buffer data
-	virtual void			*GetVertexBufferBase() { return m_pVertexBufferBase; }
-	virtual int				GetNumVertsAllocated() { return m_totalVerts; } 
+	void			*GetVertexBufferBase() { return m_pVertexBufferBase; }
+	int				GetNumVertsAllocated() { return m_totalVerts; } 
 
 	// Allocate a sub-range of 'numVerts' from free space in the shared vertex buffer
 	// (returns the byte offset from the start of the VB to the new allocation)
-	virtual int				Allocate( int numVerts );
+	int				Allocate( int numVerts );
 	// Deallocate an existing allocation
-	virtual void			Deallocate( int offset, int numVerts );
+	void			Deallocate( int offset, int numVerts );
 
-private:
+public:
 
 	// Assert/warn that the allocator is in a clear/empty state (returns false if not)
 	bool					CheckIsClear( void );
@@ -538,6 +538,9 @@ private:
 	// at which point Allocate() cannot be called again until all
 	// extant allocations have been deallocated.
 };
+
+#include "facade/ipooledvballocator.inl"
+
 
 struct colormeshparams_t
 {
@@ -713,14 +716,14 @@ public:
 //-----------------------------------------------------------------------------
 
 // UNDONE: Move this to hud export code, subsume previous functions
-class CModelRender : public IVModelRender,
-					 public CManagedDataCacheClient< CColorMeshData, colormeshparams_t >
+class CModelRender : public CManagedDataCacheClient< CColorMeshData, colormeshparams_t >,
+					 public IVModelRender
 {
 public:
 	// members of the IVModelRender interface
-	virtual void ForcedMaterialOverride( IMaterial *newMaterial, OverrideType_t nOverrideType = OVERRIDE_NORMAL, int nMaterialIndex = -1 );
-	virtual bool IsForcedMaterialOverride();
-	virtual int DrawModel( 	
+	void ForcedMaterialOverride( IMaterial *newMaterial, OverrideType_t nOverrideType = OVERRIDE_NORMAL, int nMaterialIndex = -1 );
+	bool IsForcedMaterialOverride();
+	int DrawModel( 	
 					int flags, IClientRenderable *cliententity,
 					ModelInstanceHandle_t instance, int entity_index, const model_t *model, 
 					const Vector& origin, QAngle const& angles,
@@ -728,57 +731,57 @@ public:
 					const matrix3x4_t* pModelToWorld,
 					const matrix3x4_t *pLightingOffset );
 
-	virtual void  SetViewTarget( const CStudioHdr *pStudioHdr, int nBodyIndex, const Vector& target );
+	void  SetViewTarget( const CStudioHdr *pStudioHdr, int nBodyIndex, const Vector& target );
 
 	// Creates, destroys instance data to be associated with the model
-	virtual ModelInstanceHandle_t CreateInstance( IClientRenderable *pRenderable, LightCacheHandle_t* pHandle );
-	virtual void SetStaticLighting( ModelInstanceHandle_t handle, LightCacheHandle_t* pCache );
-	virtual LightCacheHandle_t GetStaticLighting( ModelInstanceHandle_t handle );
-	virtual void DestroyInstance( ModelInstanceHandle_t handle );
-	virtual bool ChangeInstance( ModelInstanceHandle_t handle, IClientRenderable *pRenderable );
+	ModelInstanceHandle_t CreateInstance( IClientRenderable *pRenderable, LightCacheHandle_t* pHandle );
+	void SetStaticLighting( ModelInstanceHandle_t handle, LightCacheHandle_t* pCache );
+	LightCacheHandle_t GetStaticLighting( ModelInstanceHandle_t handle );
+	void DestroyInstance( ModelInstanceHandle_t handle );
+	bool ChangeInstance( ModelInstanceHandle_t handle, IClientRenderable *pRenderable );
 
 	// Creates a decal on a model instance by doing a planar projection
 	// along the ray. The material is the decal material, the radius is the
 	// radius of the decal to create.
-	virtual void AddDecal( ModelInstanceHandle_t handle, Ray_t const& ray, 
-		const Vector& decalUp, int decalIndex, int body, bool noPokethru = false, int maxLODToDecal = ADDDECAL_TO_ALL_LODS, IMaterial *pSpecifyMaterial = nullptr, float w=1.0f, float h=1.0f, void *pvProxyUserData = nullptr, int nAdditionalDecalFlags = 0 ) override;
+	void AddDecal( ModelInstanceHandle_t handle, Ray_t const& ray, 
+		const Vector& decalUp, int decalIndex, int body, bool noPokethru = false, int maxLODToDecal = ADDDECAL_TO_ALL_LODS, IMaterial *pSpecifyMaterial = nullptr, float w=1.0f, float h=1.0f, void *pvProxyUserData = nullptr, int nAdditionalDecalFlags = 0 );
 
 	// Removes all the decals on a model instance
-	virtual void RemoveAllDecals( ModelInstanceHandle_t handle );
+	void RemoveAllDecals( ModelInstanceHandle_t handle );
 
 	// Returns true if both the instance handle is valid and has a non-zero decal count
-	virtual bool ModelHasDecals( ModelInstanceHandle_t handle );
+	bool ModelHasDecals( ModelInstanceHandle_t handle );
 
 	// Remove all decals from all models
-	virtual void RemoveAllDecalsFromAllModels( bool bRenderContextValid );
+	void RemoveAllDecalsFromAllModels( bool bRenderContextValid );
 
 	// Shadow rendering (render-to-texture)
-	virtual matrix3x4a_t* DrawModelShadowSetup( IClientRenderable *pRenderable, int body, int skin, DrawModelInfo_t *pInfo, matrix3x4a_t *pBoneToWorld );
-	virtual void DrawModelShadow( IClientRenderable *pRenderable, const DrawModelInfo_t &info, matrix3x4a_t *pBoneToWorld );
+	matrix3x4a_t* DrawModelShadowSetup( IClientRenderable *pRenderable, int body, int skin, DrawModelInfo_t *pInfo, matrix3x4a_t *pBoneToWorld );
+	void DrawModelShadow( IClientRenderable *pRenderable, const DrawModelInfo_t &info, matrix3x4a_t *pBoneToWorld );
 
 	// Used to allow the shadow mgr to manage a list of shadows per model
 	unsigned short& FirstShadowOnModelInstance( ModelInstanceHandle_t handle ) { return m_ModelInstances[handle].m_FirstShadow; }
 
 	// This gets called when overbright, etc gets changed to recompute static prop lighting.
-	virtual bool RecomputeStaticLighting( ModelInstanceHandle_t handle );
+	bool RecomputeStaticLighting( ModelInstanceHandle_t handle );
 
 	// Handlers for alt-tab
-	virtual void ReleaseAllStaticPropColorData( void );
-	virtual void RestoreAllStaticPropColorData( void );
+	void ReleaseAllStaticPropColorData( void );
+	void RestoreAllStaticPropColorData( void );
 
 	// Extended version of drawmodel
-	virtual bool DrawModelSetup( IMatRenderContext *pRenderContext, ModelRenderInfo_t &pInfo, DrawModelState_t *pState, matrix3x4_t **ppBoneToWorldOut );
-	virtual int	DrawModelEx( ModelRenderInfo_t &pInfo );
-	virtual int	DrawModelExStaticProp( IMatRenderContext *pRenderContext, ModelRenderInfo_t &pInfo );
-	virtual int DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int count, bool bShadowDepth );
+	bool DrawModelSetup( IMatRenderContext *pRenderContext, ModelRenderInfo_t &pInfo, DrawModelState_t *pState, matrix3x4_t **ppBoneToWorldOut );
+	int	DrawModelEx( ModelRenderInfo_t &pInfo );
+	int	DrawModelExStaticProp( IMatRenderContext *pRenderContext, ModelRenderInfo_t &pInfo );
+	int DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int count, bool bShadowDepth );
 
 	// Sets up lighting context for a point in space
-	virtual void SetupLighting( const Vector &vecCenter );
-	virtual void SuppressEngineLighting( bool bSuppress );
-	virtual void ComputeLightingState( int nCount, const LightingQuery_t *pQuery, MaterialLightingState_t *pState, ITexture **ppEnvCubemapTexture );
-	virtual void ComputeStaticLightingState( int nCount, const StaticLightingQuery_t *pQuery, MaterialLightingState_t *pState, MaterialLightingState_t *pDecalState, ColorMeshInfo_t **ppStaticLighting, ITexture **ppEnvCubemapTexture, DataCacheHandle_t *pColorMeshHandles );
-	virtual void GetModelDecalHandles( StudioDecalHandle_t *pDecals, int nDecalStride, int nCount, const ModelInstanceHandle_t *pHandles );
-	virtual void CleanupStaticLightingState( int nCount, DataCacheHandle_t *pColorMeshHandles );
+	void SetupLighting( const Vector &vecCenter );
+	void SuppressEngineLighting( bool bSuppress );
+	void ComputeLightingState( int nCount, const LightingQuery_t *pQuery, MaterialLightingState_t *pState, ITexture **ppEnvCubemapTexture );
+	void ComputeStaticLightingState( int nCount, const StaticLightingQuery_t *pQuery, MaterialLightingState_t *pState, MaterialLightingState_t *pDecalState, ColorMeshInfo_t **ppStaticLighting, ITexture **ppEnvCubemapTexture, DataCacheHandle_t *pColorMeshHandles );
+	void GetModelDecalHandles( StudioDecalHandle_t *pDecals, int nDecalStride, int nCount, const ModelInstanceHandle_t *pHandles );
+	void CleanupStaticLightingState( int nCount, DataCacheHandle_t *pColorMeshHandles );
 	void UnlockCacheCacheHandleArray( int nCount, DataCacheHandle_t *pColorMeshHandles )
 	{
 		for ( int i = 0; i < nCount; ++i )
@@ -816,13 +819,13 @@ public:
 	bool IsStaticPropColorDataCached( const char *pName );
 	DataCacheHandle_t GetCachedStaticPropColorData( const char *pName );
 
-	virtual void SetupColorMeshes( int nTotalVerts );
+	void SetupColorMeshes( int nTotalVerts );
 
-	virtual void SetupLightingEx( const Vector &vecCenter, ModelInstanceHandle_t handle );
+	void SetupLightingEx( const Vector &vecCenter, ModelInstanceHandle_t handle );
 
-	virtual bool GetBrightestShadowingLightSource( const Vector &vecCenter, Vector& lightPos, Vector& lightBrightness, bool bAllowNonTaggedLights );
+	bool GetBrightestShadowingLightSource( const Vector &vecCenter, Vector& lightPos, Vector& lightBrightness, bool bAllowNonTaggedLights );
 
-private:
+public:
 	enum
 	{
 		CURRENT_LIGHTING_UNINITIALIZED = -999999
@@ -843,7 +846,7 @@ private:
 		LightingState_t m_CurrentLightingState;
 		LightingState_t	m_AmbientLightingState;
 		Vector m_flLightIntensity[MAXLOCALLIGHTS];
-		private:
+		public:
 			static ks::fixed_pool s_Allocator;
 			friend class ks::pooled< ModelInstanceLightingState_t >;
 	};
@@ -945,6 +948,9 @@ private:
 	// Allocator for static prop color mesh vertex buffers (all are pooled into one VB)
 	CPooledVBAllocator_ColorMesh	m_colorMeshVBAllocator;
 };
+
+#include "facade/ivmodelrender.inl"
+
 
 static CModelRender s_ModelRender;
 static InterfaceReg s_Reg_CModelRender_IVModelRender( []() -> void * { return static_cast<IVModelRender *>( &s_ModelRender ); }, VENGINE_HUDMODEL_INTERFACE_VERSION );;
@@ -4999,7 +5005,7 @@ bool CheckVarRange_r_lod()
 
 // Convar callback to change lod 
 //-----------------------------------------------------------------------------
-void r_lod_f( IConVar *var, const char *pOldValue, float flOldValue )
+void r_lod_f( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	CheckVarRange_r_lod();
 }
@@ -5007,7 +5013,7 @@ void r_lod_f( IConVar *var, const char *pOldValue, float flOldValue )
 //-----------------------------------------------------------------------------
 // Convar callback to change root lod 
 //-----------------------------------------------------------------------------
-void SetRootLOD_f( IConVar *pConVar, const char *pOldString, float flOldValue )
+void SetRootLOD_f( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	// Make sure the variable is in range.
 	if ( CheckVarRange_r_rootlod() )

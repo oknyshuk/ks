@@ -12,7 +12,7 @@ public:
 	std::string m_inputString;
 	bool m_bStop;
 
-	CDebugInputThread()
+	CDebugInputThread() : CThread( [] { return 0; } )
 	{
 		m_bStop = false;
 	}
@@ -25,11 +25,6 @@ public:
 	{
 		m_bStop = true;
 		CThread::Stop();
-	}
-
-	virtual int Run( void )
-	{
-		return 0;
 	}
 };
 

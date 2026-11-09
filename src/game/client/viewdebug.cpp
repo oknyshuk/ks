@@ -2,8 +2,6 @@
 // Copyright (c) 2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -26,7 +24,6 @@ import std;
 #include "view.h"
 #include "smoke_fog_overlay.h"
 #include "materialsystem/imaterialvar.h"
-#include "foundryhelpers_client.h"
 #include "c_env_cascade_light.h"
 #include "materialsystem/icustommaterialmanager.h"
 
@@ -64,6 +61,7 @@ static ConVar cl_custommaterial_debug_graph( "cl_custommaterial_debug_graph", "0
 //-----------------------------------------------------------------------------
 // Lightmap debugging mode view
 //-----------------------------------------------------------------------------
+extern bool s_bCanAccessCurrentView;
 class CLightmapDebugView : public CRendering3dView
 {
 public:
@@ -71,7 +69,6 @@ public:
 
 	void Draw()
 	{
-		extern bool s_bCanAccessCurrentView;
 		AllowCurrentViewAccess( true );
 		Frustum frustum;
 		CMatRenderContextPtr pRenderContext( materials );
@@ -409,9 +406,6 @@ static void DebugOverlayNumActiveCustomMaterialsGraph()
 void CDebugViewRender::Draw3DDebuggingInfo( const CViewSetup &view )
 {
 	CVProfScope _( "CViewRender::Draw3DDebuggingInfo", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
-
-	// Draw anything Foundry wants to.
-	FoundryHelpers_DrawAll();
 
 	if ( cl_csm_debug_3d.GetInt() )
 	{

@@ -4,8 +4,6 @@
 // Purpose: Game-specific impact effect hooks
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "const.h"
 #include "string_t.h"
 #include "predictableid.h"

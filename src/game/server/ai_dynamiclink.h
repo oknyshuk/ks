@@ -57,7 +57,7 @@ public:
 
 	CAI_Link *					FindLink();
 
-	int							ObjectCaps();
+	int							ObjectCaps_Impl();
 
 	// ----------------
 	//	Inputs
@@ -104,8 +104,8 @@ class CAI_RadialLinkController : public CBaseEntity
 	DECLARE_CLASS( CAI_RadialLinkController, CBaseEntity );
 
 public:
-	void	Spawn();
-	void	Activate();
+	void	Spawn_Impl();
+	void	Activate_Impl();
 	void	PollMotionThink();
 	void	ModifyNodeLinks( bool bMakeStale );
 

@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -53,7 +51,6 @@ PMaterialHandle g_Mat_SMG_Muzzleflash[4] = { nullptr, nullptr, nullptr, nullptr 
 PMaterialHandle g_Mat_Combine_Muzzleflash[3] = { nullptr, nullptr, nullptr };
 
 static ConVar fx_drawimpactdebris( "fx_drawimpactdebris", "1", FCVAR_DEVELOPMENTONLY, "Draw impact debris effects." );
-static ConVar fx_drawimpactdust( "fx_drawimpactdust", "1", FCVAR_DEVELOPMENTONLY, "Draw impact dust effects." );
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, FX_CacheMaterialHandles )
 
@@ -103,7 +100,7 @@ void GetColorForSurface( trace_t *trace, Vector *color )
 	Vector	baseColor, diffuseColor;
 	Vector	end = trace->startpos + ( ( Vector )trace->endpos - ( Vector )trace->startpos ) * 1.1f;
 	
-	if ( trace->DidHitWorld() )
+	if ( TraceDidHitWorld( *trace ) )
 	{
 		if ( trace->hitbox == 0 )
 		{
@@ -834,158 +831,6 @@ void FX_Blood( Vector &pos, Vector &dir, float r, float g, float b, float a )
 		sParticle->m_flRoll			= random->RandomInt( 0, 360 );
 		sParticle->m_flRollDelta	= random->RandomFloat( -4.0f, 4.0f );
 	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Dust impact
-// Input  : &origin - position
-//			&tr - trace information
-//-----------------------------------------------------------------------------
-void FX_DustImpact( const Vector &origin, trace_t *tr, int iScale )
-{
-	if ( !fx_drawimpactdust.GetBool() )
-		return;
-
-	FX_DustImpact( origin, tr, (float)iScale );
-}
-
-void FX_DustImpact( const Vector &origin, trace_t *tr, float flScale )
-{
-	//
-	// PC version
-	//
-
-	CVProfScope _( "FX_DustImpact", 0, VPROF_BUDGETGROUP_PARTICLE_RENDERING, false, BUDGETFLAG_OTHER );
-	Vector	offset;
-	float	spread = 0.2f;
-	
-	ks::intrusive_ptr<CDustParticle> pSimple = CDustParticle::Create( "dust" );
-	pSimple->SetSortOrigin( origin );
-
-	SimpleParticle	*pParticle;
-
-	Vector	color;
-	float	colorRamp;
-
-	GetColorForSurface( tr, &color );
-
-	int i;
-	for ( i = 0; i < 4; i++ )
-	{
-		pParticle = (SimpleParticle *) pSimple->AddParticle( sizeof( SimpleParticle ), g_Mat_DustPuff[0], origin );
-
-		if ( pParticle != nullptr )
-		{
-			pParticle->m_flLifetime = 0.0f;
-			pParticle->m_flDieTime	= random->RandomFloat( 0.5f, 1.0f );
-
-			pParticle->m_vecVelocity.Random( -spread, spread );
-			pParticle->m_vecVelocity += ( tr->plane.normal * random->RandomFloat( 1.0f, 6.0f ) );
-			
-			VectorNormalize( pParticle->m_vecVelocity );
-
-			float	fForce = random->RandomFloat( 250, 500 ) * i;
-
-			// scaled
-			pParticle->m_vecVelocity *= fForce * flScale;
-			
-			colorRamp = random->RandomFloat( 0.75f, 1.25f );
-
-			pParticle->m_uchColor[0]	= std::min( 1.0f, color[0] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[1]	= std::min( 1.0f, color[1] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[2]	= std::min( 1.0f, color[2] * colorRamp ) * 255.0f;
-			
-			// scaled
-			pParticle->m_uchStartSize	= ( unsigned char )( flScale * random->RandomInt( 3, 4 ) * (i+1) );
-
-			// scaled
-			pParticle->m_uchEndSize		= ( unsigned char )( flScale * pParticle->m_uchStartSize * 4 );
-			
-			pParticle->m_uchStartAlpha	= random->RandomInt( 32, 255 );
-			pParticle->m_uchEndAlpha	= 0;
-			
-			pParticle->m_flRoll			= random->RandomInt( 0, 360 );
-			pParticle->m_flRollDelta	= random->RandomFloat( -8.0f, 8.0f );
-		}
-	}			
-
-	//Dust specs
-	for ( i = 0; i < 4; i++ )
-	{
-		pParticle = (SimpleParticle *) pSimple->AddParticle( sizeof( SimpleParticle ), g_Mat_BloodPuff[0], origin );
-
-		if ( pParticle != nullptr )
-		{
-			pParticle->m_flLifetime = 0.0f;
-			pParticle->m_flDieTime	= random->RandomFloat( 0.25f, 0.75f );
-
-			pParticle->m_vecVelocity.Random( -spread, spread );
-			pParticle->m_vecVelocity += ( tr->plane.normal * random->RandomFloat( 1.0f, 6.0f ) );
-			
-			VectorNormalize( pParticle->m_vecVelocity );
-
-			float	fForce = random->RandomFloat( 250, 500 ) * i;
-
-			pParticle->m_vecVelocity *= fForce;
-			
-			colorRamp = random->RandomFloat( 0.75f, 1.25f );
-
-			pParticle->m_uchColor[0]	= std::min( 1.0f, color[0] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[1]	= std::min( 1.0f, color[1] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[2]	= std::min( 1.0f, color[2] * colorRamp ) * 255.0f;
-			
-			pParticle->m_uchStartSize	= random->RandomInt( 2, 4 ) * (i+1);
-			pParticle->m_uchEndSize		= pParticle->m_uchStartSize * 2;
-			
-			pParticle->m_uchStartAlpha	= 255;
-			pParticle->m_uchEndAlpha	= 0;
-			
-			pParticle->m_flRoll			= random->RandomInt( 0, 360 );
-			pParticle->m_flRollDelta	= random->RandomFloat( -2.0f, 2.0f );
-		}
-	}
-
-	//Impact hit
-	for ( i = 0; i < 4; i++ )
-	{
-		pParticle = (SimpleParticle *) pSimple->AddParticle( sizeof( SimpleParticle ), g_Mat_DustPuff[0], origin );
-
-		if ( pParticle != nullptr )
-		{
-			offset = origin;
-			offset[0] += random->RandomFloat( -8.0f, 8.0f );
-			offset[1] += random->RandomFloat( -8.0f, 8.0f );
-
-			pParticle->m_flLifetime = 0.0f;
-			pParticle->m_flDieTime	= random->RandomFloat( 0.5f, 1.0f );
-
-			spread = 1.0f;
-
-			pParticle->m_vecVelocity.Random( -spread, spread );
-			pParticle->m_vecVelocity += tr->plane.normal;
-			
-			VectorNormalize( pParticle->m_vecVelocity );
-
-			float	fForce = random->RandomFloat( 0, 50 );
-
-			pParticle->m_vecVelocity *= fForce;
-			
-			colorRamp = random->RandomFloat( 0.75f, 1.25f );
-
-			pParticle->m_uchColor[0]	= std::min( 1.0f, color[0] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[1]	= std::min( 1.0f, color[1] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[2]	= std::min( 1.0f, color[2] * colorRamp ) * 255.0f;
-			
-			pParticle->m_uchStartSize	= random->RandomInt( 1, 4 );
-			pParticle->m_uchEndSize		= pParticle->m_uchStartSize * 4;
-			
-			pParticle->m_uchStartAlpha	= random->RandomInt( 32, 64 );
-			pParticle->m_uchEndAlpha	= 0;
-			
-			pParticle->m_flRoll			= random->RandomInt( 0, 360 );
-			pParticle->m_flRollDelta	= random->RandomFloat( -16.0f, 16.0f );
-		}
-	}			
 }
 
 //-----------------------------------------------------------------------------

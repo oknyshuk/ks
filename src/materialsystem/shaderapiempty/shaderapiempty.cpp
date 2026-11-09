@@ -11,7 +11,9 @@ import ks.tier1;
 #include "materialsystem/imesh.h"
 import std;
 #include "materialsystem/idebugtextureinfo.h"
+#include "materialsystem/ivballoctracker.h"
 #include "materialsystem/deformations.h"
+#include "../cmatqueuedmesh.h"
 
 //-----------------------------------------------------------------------------
 // The empty mesh
@@ -19,26 +21,29 @@ import std;
 class CEmptyMesh : public IMesh
 {
 public:
+	friend class IVertexBuffer;
+	friend class IIndexBuffer;
+	friend class IMesh;
 	CEmptyMesh( bool bIsDynamic );
-	virtual ~CEmptyMesh();
+	~CEmptyMesh();
 
 	// FIXME: Make this work! Unsupported methods of IIndexBuffer + IVertexBuffer
-	virtual bool Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t& desc );
-	virtual void Unlock( int nWrittenIndexCount, IndexDesc_t& desc );
-	virtual void ModifyBegin( bool bReadOnly, int nFirstIndex, int nIndexCount, IndexDesc_t& desc );
-	virtual void ModifyEnd( IndexDesc_t& desc );
-	virtual void Spew( int nIndexCount, const IndexDesc_t & desc );
-	virtual void ValidateData( int nIndexCount, const IndexDesc_t &desc );
-	virtual bool Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc );
-	virtual void Unlock( int nVertexCount, VertexDesc_t &desc );
-	virtual void Spew( int nVertexCount, const VertexDesc_t &desc );
-	virtual void ValidateData( int nVertexCount, const VertexDesc_t & desc );
-	virtual bool IsDynamic() const { return m_bIsDynamic; }
-	virtual void BeginCastBuffer( VertexFormat_t format ) {}
-	virtual void BeginCastBuffer( MaterialIndexFormat_t format ) {}
-	virtual void EndCastBuffer( ) {}
-	virtual int GetRoomRemaining() const { return 0; }
-	virtual MaterialIndexFormat_t IndexFormat() const { return MATERIAL_INDEX_FORMAT_UNKNOWN; }
+	bool Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t& desc );
+	void Unlock( int nWrittenIndexCount, IndexDesc_t& desc );
+	void ModifyBegin( bool bReadOnly, int nFirstIndex, int nIndexCount, IndexDesc_t& desc );
+	void ModifyEnd( IndexDesc_t& desc );
+	void Spew( int nIndexCount, const IndexDesc_t & desc );
+	void ValidateData( int nIndexCount, const IndexDesc_t &desc );
+	bool Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc );
+	void Unlock( int nVertexCount, VertexDesc_t &desc );
+	void Spew( int nVertexCount, const VertexDesc_t &desc );
+	void ValidateData( int nVertexCount, const VertexDesc_t & desc );
+	bool IsDynamic() const { return m_bIsDynamic; }
+	void BeginCastBuffer( VertexFormat_t format ) {}
+	void BeginCastBuffer( MaterialIndexFormat_t format ) {}
+	void EndCastBuffer( ) {}
+	int GetRoomRemaining() const { return 0; }
+	MaterialIndexFormat_t IndexFormat() const { return MATERIAL_INDEX_FORMAT_UNKNOWN; }
 
 	void LockMesh( int numVerts, int numIndices, MeshDesc_t& desc, MeshBuffersAllocationSettings_t *pSettings = 0 );
 	void UnlockMesh( int numVerts, int numIndices, MeshDesc_t& desc );
@@ -60,7 +65,7 @@ public:
 	void Draw(CPrimList *pPrims, int nPrims);
 
 	// Copy verts and/or indices to a mesh builder. This only works for temp meshes!
-	virtual void CopyToMeshBuilder( 
+	void CopyToMeshBuilder( 
 		int iStartVert,		// Which vertices to copy.
 		int nVerts, 
 		int iStartIndex,	// Which indices to copy.
@@ -81,30 +86,30 @@ public:
 	}
 
 
-	virtual int IndexCount() const
+	int IndexCount() const
 	{
 		return 0;
 	}
 
-	virtual void SetFlexMesh( IMesh *pMesh, int nVertexOffset ) {}
+	void SetFlexMesh( IMesh *pMesh, int nVertexOffset ) {}
 
-	virtual void DisableFlexMesh() {}
+	void DisableFlexMesh() {}
 
-	virtual void MarkAsDrawn() {}
+	void MarkAsDrawn() {}
 
-	virtual VertexFormat_t GetVertexFormat() const { return VERTEX_POSITION; }
+	VertexFormat_t GetVertexFormat() const { return VERTEX_POSITION; }
 
-	virtual IMesh *GetMesh()
+	IMesh *GetMesh()
 	{
 		return this;
 	}
 
-	virtual unsigned int ComputeMemoryUsed() { return 0; }
+	unsigned int ComputeMemoryUsed() { return 0; }
 
-	virtual void * AccessRawHardwareDataStream( uint8 nRawStreamIndex, uint32 numBytes, uint32 uiFlags, void *pvContext ) { return nullptr; }
+	void * AccessRawHardwareDataStream( uint8 nRawStreamIndex, uint32 numBytes, uint32 uiFlags, void *pvContext ) { return nullptr; }
 
-	virtual ICachedPerFrameMeshData *GetCachedPerFrameMeshData() { return nullptr; }
-	virtual void ReconstructFromCachedPerFrameMeshData( ICachedPerFrameMeshData *pData ) {}
+	ICachedPerFrameMeshData *GetCachedPerFrameMeshData() { return nullptr; }
+	void ReconstructFromCachedPerFrameMeshData( ICachedPerFrameMeshData *pData ) {}
 
 private:
 	enum
@@ -116,15 +121,17 @@ private:
 	bool m_bIsDynamic;
 };
 
+#include "meshdispatch.inl"
+
 
 //-----------------------------------------------------------------------------
 // The empty shader shadow
 //-----------------------------------------------------------------------------
-class CShaderShadowEmpty : public IShaderShadow
+class CShaderShadowEmpty
 {
 public:
 	CShaderShadowEmpty();
-	virtual ~CShaderShadowEmpty();
+	~CShaderShadowEmpty();
 
 	// Sets the default *shadow* state
 	void SetDefaultState();
@@ -182,33 +189,33 @@ public:
 	{
 	}
 
-	virtual void FogMode( ShaderFogMode_t fogMode, bool bVertexFog )
+	void FogMode( ShaderFogMode_t fogMode, bool bVertexFog )
 	{
 	}
 
-	virtual void DisableFogGammaCorrection( bool bDisable )
+	void DisableFogGammaCorrection( bool bDisable )
 	{
 	}
 
-	virtual void ExecuteCommandBuffer( uint8 *pBuf ) 
+	void ExecuteCommandBuffer( uint8 *pBuf ) 
 	{
 	}
 	
 	// Alpha to coverage
 	void EnableAlphaToCoverage( bool bEnable );
 	
-	virtual void SetShadowDepthFiltering( Sampler_t stage )
+	void SetShadowDepthFiltering( Sampler_t stage )
 	{
 	}
 
-	virtual void BlendOp( ShaderBlendOp_t blendOp )
+	void BlendOp( ShaderBlendOp_t blendOp )
 	{
 	}
 
-	virtual void BlendOpSeparateAlpha( ShaderBlendOp_t blendOp )
+	void BlendOpSeparateAlpha( ShaderBlendOp_t blendOp )
 	{
 	}
-	virtual float GetLightMapScaleFactor( void ) const
+	float GetLightMapScaleFactor( void ) const
 	{
 		return 1.0;
 	}
@@ -225,50 +232,51 @@ public:
 //-----------------------------------------------------------------------------
 // The DX8 implementation of the shader device
 //-----------------------------------------------------------------------------
-class CShaderDeviceEmpty : public IShaderDevice
+class CShaderDeviceEmpty
 {
 public:
 	CShaderDeviceEmpty() : m_DynamicMesh( true ), m_Mesh( false ) {}
 
 	// Methods of IShaderDevice
-	virtual int GetCurrentAdapter() const { return 0; }
-	virtual bool IsUsingGraphics() const { return false; }
-	virtual void SpewDriverInfo() const;
-	virtual ImageFormat GetBackBufferFormat() const { return IMAGE_FORMAT_RGB888; }
-	virtual void GetBackBufferDimensions( int& width, int& height ) const;
-	virtual const AspectRatioInfo_t &GetAspectRatioInfo( void ) const
+	int GetCurrentAdapter() const { return 0; }
+	bool IsUsingGraphics() const { return false; }
+	void SpewDriverInfo() const;
+	ImageFormat GetBackBufferFormat() const { return IMAGE_FORMAT_RGB888; }
+	void GetBackBufferDimensions( int& width, int& height ) const;
+	const AspectRatioInfo_t &GetAspectRatioInfo( void ) const
 	{
 		static AspectRatioInfo_t dummy;
 		return dummy;
 	}
-	virtual int  StencilBufferBits() const { return 0; }
-	virtual bool IsAAEnabled() const { return false; }
-	virtual void Present( ) {}
-	virtual void GetWindowSize( int &width, int &height ) const;
-	virtual bool AddView( void* hwnd );
-	virtual void RemoveView( void* hwnd );
-	virtual void SetView( void* hwnd );
-	virtual void ReleaseResources( bool bReleaseManagedResources = true );
-	virtual void ReacquireResources();
-	virtual IMesh* CreateStaticMesh( VertexFormat_t fmt, const char *pTextureBudgetGroup, IMaterial * pMaterial = nullptr, VertexStreamSpec_t *pStreamSpec = nullptr );
-	virtual void DestroyStaticMesh( IMesh* mesh );
-	virtual IShaderBuffer* CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion ) { return nullptr; }
-	virtual VertexShaderHandle_t CreateVertexShader( IShaderBuffer* pShaderBuffer ) { return VERTEX_SHADER_HANDLE_INVALID; }
-	virtual void DestroyVertexShader( VertexShaderHandle_t hShader ) {}
-	virtual GeometryShaderHandle_t CreateGeometryShader( IShaderBuffer* pShaderBuffer ) { return GEOMETRY_SHADER_HANDLE_INVALID; }
-	virtual void DestroyGeometryShader( GeometryShaderHandle_t hShader ) {}
-	virtual PixelShaderHandle_t CreatePixelShader( IShaderBuffer* pShaderBuffer ) { return PIXEL_SHADER_HANDLE_INVALID; }
-	virtual void DestroyPixelShader( PixelShaderHandle_t hShader ) {}
-	virtual IVertexBuffer *CreateVertexBuffer( ShaderBufferType_t type, VertexFormat_t fmt, int nVertexCount, const char *pBudgetGroup );
-	virtual void DestroyVertexBuffer( IVertexBuffer *pVertexBuffer );
-	virtual IIndexBuffer *CreateIndexBuffer( ShaderBufferType_t bufferType, MaterialIndexFormat_t fmt, int nIndexCount, const char *pBudgetGroup );
-	virtual void DestroyIndexBuffer( IIndexBuffer *pIndexBuffer );
-	virtual IVertexBuffer *GetDynamicVertexBuffer( int streamID, VertexFormat_t vertexFormat, bool bBuffered );
-	virtual IIndexBuffer *GetDynamicIndexBuffer();
-	virtual void SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMin, float fGammaTVRangeMax, float fGammaTVExponent, bool bTVEnabled ) {}
-	virtual void EnableNonInteractiveMode( MaterialNonInteractiveMode_t mode, ShaderNonInteractiveInfo_t *pInfo ) {}
-	virtual void RefreshFrontBufferNonInteractive( ) {}
-	virtual void HandleThreadEvent( uint32 threadEvent ) {}
+	int  StencilBufferBits() const { return 0; }
+	bool IsAAEnabled() const { return false; }
+	void Present( ) {}
+	void GetWindowSize( int &width, int &height ) const;
+	bool AddView( void* hwnd );
+	void RemoveView( void* hwnd );
+	void SetView( void* hwnd );
+	void ReleaseResources( bool bReleaseManagedResources = true );
+	void ReacquireResources();
+	IMesh* CreateStaticMesh( VertexFormat_t fmt, const char *pTextureBudgetGroup, IMaterial * pMaterial = nullptr, VertexStreamSpec_t *pStreamSpec = nullptr );
+	void DestroyStaticMesh( IMesh* mesh );
+	IShaderBuffer* CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion ) { return nullptr; }
+	VertexShaderHandle_t CreateVertexShader( IShaderBuffer* pShaderBuffer ) { return VERTEX_SHADER_HANDLE_INVALID; }
+	void DestroyVertexShader( VertexShaderHandle_t hShader ) {}
+	GeometryShaderHandle_t CreateGeometryShader( IShaderBuffer* pShaderBuffer ) { return GEOMETRY_SHADER_HANDLE_INVALID; }
+	void DestroyGeometryShader( GeometryShaderHandle_t hShader ) {}
+	PixelShaderHandle_t CreatePixelShader( IShaderBuffer* pShaderBuffer ) { return PIXEL_SHADER_HANDLE_INVALID; }
+	void DestroyPixelShader( PixelShaderHandle_t hShader ) {}
+	IVertexBuffer *CreateVertexBuffer( ShaderBufferType_t type, VertexFormat_t fmt, int nVertexCount, const char *pBudgetGroup );
+	void DestroyVertexBuffer( IVertexBuffer *pVertexBuffer );
+	IIndexBuffer *CreateIndexBuffer( ShaderBufferType_t bufferType, MaterialIndexFormat_t fmt, int nIndexCount, const char *pBudgetGroup );
+	void DestroyIndexBuffer( IIndexBuffer *pIndexBuffer );
+	IVertexBuffer *GetDynamicVertexBuffer( int streamID, VertexFormat_t vertexFormat, bool bBuffered );
+	IIndexBuffer *GetDynamicIndexBuffer();
+	void SetHardwareGammaRamp( float fGamma, float fGammaTVRangeMin, float fGammaTVRangeMax, float fGammaTVExponent, bool bTVEnabled ) {}
+	void EnableNonInteractiveMode( MaterialNonInteractiveMode_t mode, ShaderNonInteractiveInfo_t *pInfo ) {}
+	void RefreshFrontBufferNonInteractive( ) {}
+	void HandleThreadEvent( uint32 threadEvent ) {}
+	void OnDebugEvent( const char *pEvent = "" ) {}
 
 
 private:
@@ -282,31 +290,31 @@ static CShaderDeviceEmpty s_ShaderDeviceEmpty;
 //-----------------------------------------------------------------------------
 // The DX8 implementation of the shader device
 //-----------------------------------------------------------------------------
-class CShaderDeviceMgrEmpty : public CBaseAppSystem< IShaderDeviceMgr >
+class CShaderDeviceMgrEmpty
 {
 public:
 	// Methods of IAppSystem
-	virtual bool Connect( CreateInterfaceFn factory );
-	virtual void Disconnect();
-	virtual void *QueryInterface( const char *pInterfaceName );
-	virtual InitReturnVal_t Init();
-	virtual void Shutdown();
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t Init();
+	void Shutdown();
 
 public:
 	// Methods of IShaderDeviceMgr
-	virtual int	 GetAdapterCount() const;
-	virtual void GetAdapterInfo( int adapter, MaterialAdapterInfo_t& info ) const;
-	virtual bool GetRecommendedVideoConfig( int nAdapter, KeyValues *pKeyValues );
-	virtual bool GetRecommendedConfigurationInfo( int nAdapter, int nDXLevel, KeyValues *pKeyValues );
-	virtual int	 GetModeCount( int adapter ) const;
-	virtual void GetModeInfo( ShaderDisplayMode_t *pInfo, int nAdapter, int mode ) const;
-	virtual void GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter ) const;
-	virtual bool SetAdapter( int nAdapter, int nFlags );
-	virtual CreateInterfaceFn SetMode( void *hWnd, int nAdapter, const ShaderDeviceInfo_t& mode );
-	virtual void AddModeChangeCallback( ShaderModeChangeCallbackFunc_t func ) {}
-	virtual void RemoveModeChangeCallback( ShaderModeChangeCallbackFunc_t func ) {}
-	virtual void AddDeviceDependentObject( IShaderDeviceDependentObject *pObject ) {}
-	virtual void RemoveDeviceDependentObject( IShaderDeviceDependentObject *pObject ) {}
+	int	 GetAdapterCount() const;
+	void GetAdapterInfo( int adapter, MaterialAdapterInfo_t& info ) const;
+	bool GetRecommendedVideoConfig( int nAdapter, KeyValues *pKeyValues );
+	bool GetRecommendedConfigurationInfo( int nAdapter, int nDXLevel, KeyValues *pKeyValues );
+	int	 GetModeCount( int adapter ) const;
+	void GetModeInfo( ShaderDisplayMode_t *pInfo, int nAdapter, int mode ) const;
+	void GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter ) const;
+	bool SetAdapter( int nAdapter, int nFlags );
+	CreateInterfaceFn SetMode( void *hWnd, int nAdapter, const ShaderDeviceInfo_t& mode );
+	void AddModeChangeCallback( ShaderModeChangeCallbackFunc_t func ) {}
+	void RemoveModeChangeCallback( ShaderModeChangeCallbackFunc_t func ) {}
+	void AddDeviceDependentObject( IShaderDeviceDependentObject *pObject ) {}
+	void RemoveDeviceDependentObject( IShaderDeviceDependentObject *pObject ) {}
 };
 
 static CShaderDeviceMgrEmpty s_ShaderDeviceMgrEmpty;
@@ -315,60 +323,67 @@ static CShaderDeviceMgrEmpty s_ShaderDeviceMgrEmpty;
 //-----------------------------------------------------------------------------
 // The DX8 implementation of the shader API
 //-----------------------------------------------------------------------------
-class CShaderAPIEmpty : public IShaderAPI, public IHardwareConfigInternal, public IDebugTextureInfo
+class CShaderAPIEmpty
 {
+	// The facades forward to the (partly private) implementation
+	friend class IShaderDynamicAPI;
+	friend class IShaderAPI;
+	friend class IMaterialSystemHardwareConfig;
+	friend class IHardwareConfigInternal;
+	friend class IDebugTextureInfo;
+
 public:
 	// constructor, destructor
 	CShaderAPIEmpty( );
-	virtual ~CShaderAPIEmpty();
+	~CShaderAPIEmpty();
 
 	// IDebugTextureInfo implementation.
 public:
 
-	virtual bool IsDebugTextureListFresh( int numFramesAllowed = 1 ) { return false; }
-	virtual bool SetDebugTextureRendering( bool bEnable ) { return false; }
-	virtual void EnableDebugTextureList( bool bEnable ) {}
-	virtual void EnableGetAllTextures( bool bEnable ) {}
-	virtual KeyValues* LockDebugTextureList( void ) { return nullptr; }
-	virtual void UnlockDebugTextureList( void ) {}
-	virtual KeyValues* GetDebugTextureList() { return nullptr; }
-	virtual int GetTextureMemoryUsed( TextureMemoryType eTextureMemory ) { return 0; }
-	virtual void SetVertexShaderViewProj() {}
-	virtual void UpdateVertexShaderMatrix( int m ) {}
-	virtual void SetVertexShaderModelViewProjAndModelView() {}
-	virtual void SetVertexShaderCameraPos() {}
-	virtual bool SetSkinningMatrices( const MeshInstanceData_t &instance ) { return false; }
-	virtual void BeginGeneratingCSMs() {}
-	virtual void EndGeneratingCSMs() {}
-	virtual void PerpareForCascadeDraw( int cascade, float fShadowSlopeScaleDepthBias, float fShadowDepthBias ) {}
+	bool IsDebugTextureListFresh( int numFramesAllowed = 1 ) { return false; }
+	bool SetDebugTextureRendering( bool bEnable ) { return false; }
+	void EnableDebugTextureList( bool bEnable ) {}
+	void EnableGetAllTextures( bool bEnable ) {}
+	KeyValues* LockDebugTextureList( void ) { return nullptr; }
+	void UnlockDebugTextureList( void ) {}
+	KeyValues* GetDebugTextureList() { return nullptr; }
+	int GetTextureMemoryUsed( IDebugTextureInfo::TextureMemoryType eTextureMemory ) { return 0; }
+	void SetVertexShaderViewProj() {}
+	void UpdateVertexShaderMatrix( int m ) {}
+	void SetVertexShaderModelViewProjAndModelView() {}
+	void SetVertexShaderCameraPos() {}
+	bool SetSkinningMatrices( const MeshInstanceData_t &instance ) { return false; }
+	void BeginGeneratingCSMs() {}
+	void EndGeneratingCSMs() {}
+	void PerpareForCascadeDraw( int cascade, float fShadowSlopeScaleDepthBias, float fShadowDepthBias ) {}
 
 	// Methods of IShaderDynamicAPI
-	virtual void GetBackBufferDimensions( int& width, int& height ) const
+	void GetBackBufferDimensions( int& width, int& height ) const
 	{
 		s_ShaderDeviceEmpty.GetBackBufferDimensions( width, height );
 	}
 
-	virtual const AspectRatioInfo_t &GetAspectRatioInfo( void ) const
+	const AspectRatioInfo_t &GetAspectRatioInfo( void ) const
 	{
 		static AspectRatioInfo_t dummy;
 		return dummy;
 	}
 
 	// Get the dimensions of the current render target
-	virtual void GetCurrentRenderTargetDimensions( int& nWidth, int& nHeight ) const
+	void GetCurrentRenderTargetDimensions( int& nWidth, int& nHeight ) const
 	{
 		s_ShaderDeviceEmpty.GetBackBufferDimensions( nWidth, nHeight );
 	}
 
 	// Get the current viewport
-	virtual void GetCurrentViewport( int& nX, int& nY, int& nWidth, int& nHeight ) const
+	void GetCurrentViewport( int& nX, int& nY, int& nWidth, int& nHeight ) const
 	{
 		nX = 0;
 		nY = 0;
 		s_ShaderDeviceEmpty.GetBackBufferDimensions( nWidth, nHeight );
 	}
 
-	virtual void GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* pInfo )
+	void GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* pInfo )
 	{
 		pInfo->m_bIsEnabled = false;
 		pInfo->m_nLookupCount = 0;
@@ -377,22 +392,22 @@ public:
 
 	// Methods of IShaderAPI
 public:
-	virtual void SetViewports( int nCount, const ShaderViewport_t* pViewports, bool setImmediately = false );
-	virtual int GetViewports( ShaderViewport_t* pViewports, int nMax ) const;
-	virtual void ClearBuffers( bool bClearColor, bool bClearDepth, bool bClearStencil, int renderTargetWidth, int renderTargetHeight );
-	virtual void ClearBuffersEx( bool bClearRed, bool bClearGreen, bool bClearBlue, bool bClearAlpha,
+	void SetViewports( int nCount, const ShaderViewport_t* pViewports, bool setImmediately = false );
+	int GetViewports( ShaderViewport_t* pViewports, int nMax ) const;
+	void ClearBuffers( bool bClearColor, bool bClearDepth, bool bClearStencil, int renderTargetWidth, int renderTargetHeight );
+	void ClearBuffersEx( bool bClearRed, bool bClearGreen, bool bClearBlue, bool bClearAlpha,
 		unsigned char r, unsigned char g, unsigned char b, unsigned char a );	
-	virtual void ClearColor3ub( unsigned char r, unsigned char g, unsigned char b );
-	virtual void ClearColor4ub( unsigned char r, unsigned char g, unsigned char b, unsigned char a );
-	virtual void BindVertexShader( VertexShaderHandle_t hVertexShader ) {}
-	virtual void BindGeometryShader( GeometryShaderHandle_t hGeometryShader ) {}
-	virtual void BindPixelShader( PixelShaderHandle_t hPixelShader ) {}
-	virtual void SetRasterState( const ShaderRasterState_t& state ) {}
-	virtual void MarkUnusedVertexFields( unsigned int nFlags, int nTexCoordCount, bool *pUnusedTexCoords ) {}
-	virtual bool OwnGPUResources( bool bEnable ) { return false; }
-	virtual void OnPresent( void ) {}
+	void ClearColor3ub( unsigned char r, unsigned char g, unsigned char b );
+	void ClearColor4ub( unsigned char r, unsigned char g, unsigned char b, unsigned char a );
+	void BindVertexShader( VertexShaderHandle_t hVertexShader ) {}
+	void BindGeometryShader( GeometryShaderHandle_t hGeometryShader ) {}
+	void BindPixelShader( PixelShaderHandle_t hPixelShader ) {}
+	void SetRasterState( const ShaderRasterState_t& state ) {}
+	void MarkUnusedVertexFields( unsigned int nFlags, int nTexCoordCount, bool *pUnusedTexCoords ) {}
+	bool OwnGPUResources( bool bEnable ) { return false; }
+	void OnPresent( void ) {}
 
-	virtual bool DoRenderTargetsNeedSeparateDepthBuffer() const;
+	bool DoRenderTargetsNeedSeparateDepthBuffer() const;
 
 	// Used to clear the transition table when we know it's become invalid.
 	void ClearSnapshots();
@@ -408,10 +423,10 @@ public:
 	}
 
 	// Called when the dx support level has changed
-	virtual void DXSupportLevelChanged( int nDXLevel ) {}
+	void DXSupportLevelChanged( int nDXLevel ) {}
 
-	virtual void EnableUserClipTransformOverride( bool bEnable ) {}
-	virtual void UserClipTransform( const VMatrix &worldToView ) {}
+	void EnableUserClipTransformOverride( bool bEnable ) {}
+	void UserClipTransform( const VMatrix &worldToView ) {}
 
 	// Sets the default *dynamic* state
 	void SetDefaultState( );
@@ -423,7 +438,7 @@ public:
 	bool IsTranslucent( StateSnapshot_t id ) const;
 	bool IsAlphaTested( StateSnapshot_t id ) const;
 	bool UsesVertexAndPixelShaders( StateSnapshot_t id ) const;
-	virtual bool IsDepthWriteEnabled( StateSnapshot_t id ) const;
+	bool IsDepthWriteEnabled( StateSnapshot_t id ) const;
 
 	// Gets the vertex format for a set of snapshot ids
 	VertexFormat_t ComputeVertexFormat( int numSnapshots, StateSnapshot_t* pIds ) const;
@@ -449,7 +464,6 @@ public:
 	void CopyRenderTargetToTexture( ShaderAPITextureHandle_t texID ){}
 
 	void CopyRenderTargetToTextureEx( ShaderAPITextureHandle_t texID, int nRenderTargetID, Rect_t *pSrcRect, Rect_t *pDstRect ){}
-	void CopyRenderTargetToTextureEx( ShaderAPITextureHandle_t textureHandle, int nRenderTargetID, Rect_t *pSrcRect = nullptr, Rect_t *pDstRect = nullptr, bool bUseBackBuffer = false ) {}
 
 	void CopyTextureToRenderTargetEx( int nRenderTargetID, ShaderAPITextureHandle_t textureHandle, Rect_t *pSrcRect, Rect_t *pDstRect )
 	{
@@ -503,11 +517,11 @@ public:
 	void FogColor3ub( unsigned char r, unsigned char g, unsigned char b );
 	void FogColor3ubv( unsigned char const* rgb );
 
-	virtual void SceneFogColor3ub( unsigned char r, unsigned char g, unsigned char b );
-	virtual void SceneFogMode( MaterialFogMode_t fogMode );
-	virtual void GetSceneFogColor( unsigned char *rgb );
-	virtual MaterialFogMode_t GetSceneFogMode( );
-	virtual int GetPixelFogCombo( );
+	void SceneFogColor3ub( unsigned char r, unsigned char g, unsigned char b );
+	void SceneFogMode( MaterialFogMode_t fogMode );
+	void GetSceneFogColor( unsigned char *rgb );
+	MaterialFogMode_t GetSceneFogMode( );
+	int GetPixelFogCombo( );
 
 	void SetHeightClipZ( float z ); 
 	void SetHeightClipMode( enum MaterialHeightClipMode_t heightClipMode ); 
@@ -519,12 +533,11 @@ public:
 	void EnableFastClip( bool bEnable );
 	
 	// We use smaller dynamic VBs during level transitions, to free up memory
-	virtual int  GetCurrentDynamicVBSize( void );
-	virtual int  GetCurrentDynamicVBSize( int nIndex = 0 );
-	virtual void DestroyVertexBuffers( bool bExitingLevel = false );
+	int  GetCurrentDynamicVBSize( void );
+	void DestroyVertexBuffers( bool bExitingLevel = false );
 
 	// Get stats on GPU memory usage
-	virtual void GetGPUMemoryStats( GPUMemoryStats &stats );
+	void GetGPUMemoryStats( GPUMemoryStats &stats );
 
 	// Sets the vertex and pixel shaders
 	void SetVertexShaderIndex( int vshIndex );
@@ -647,7 +660,7 @@ public:
 	void ReadPixels( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = nullptr );
 	void ReadPixelsAsync( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, ITexture *pRenderTargetTexture = nullptr, CThreadEvent *pPixelsReadEvent = nullptr );
 	void ReadPixelsAsyncGetResult( int x, int y, int width, int height, unsigned char *data, ImageFormat dstFormat, CThreadEvent *pGetResultEvent = nullptr );
-	virtual void ReadPixels( Rect_t *pSrcRect, Rect_t *pDstRect, unsigned char *data, ImageFormat dstFormat, int nDstStride );
+	void ReadPixels( Rect_t *pSrcRect, Rect_t *pDstRect, unsigned char *data, ImageFormat dstFormat, int nDstStride );
 
 	// Selection mode methods
 	int SelectionMode( bool selectionMode );
@@ -663,7 +676,7 @@ public:
 	void SetScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom, const bool bEnableScissor );
 
 	// Can we download textures?
-	virtual bool CanDownloadTextures() const;
+	bool CanDownloadTextures() const;
 
 	// Board-independent calls, here to unify how shaders set state
 	// Implementations should chain back to IShaderUtil->BindTexture(), etc.
@@ -682,9 +695,9 @@ public:
 	// Members of IMaterialSystemHardwareConfig
 	bool HasDestAlphaBuffer() const;
 	bool HasStencilBuffer() const;
-	virtual int  MaxViewports() const;
-	virtual void OverrideStreamOffsetSupport( bool bOverrideEnabled, bool bEnableSupport ) {}
-	virtual ShadowFilterMode_t GetShadowFilterMode( bool bForceLowQualityShadows, bool bPS30 ) const;
+	int  MaxViewports() const;
+	void OverrideStreamOffsetSupport( bool bOverrideEnabled, bool bEnableSupport ) {}
+	ShadowFilterMode_t GetShadowFilterMode( bool bForceLowQualityShadows, bool bPS30 ) const;
 	int  StencilBufferBits() const;
 	int	 GetFrameBufferColorDepth() const;
 	int  GetSamplerCount() const;
@@ -741,20 +754,20 @@ public:
 		return false;
 	}
 	bool SpecifiesFogColorInLinearSpace() const;
-	virtual bool SupportsSRGB() const;
-	virtual bool FakeSRGBWrite() const;
-	virtual bool CanDoSRGBReadFromRTs() const;
-	virtual bool SupportsGLMixedSizeTargets() const;
+	bool SupportsSRGB() const;
+	bool FakeSRGBWrite() const;
+	bool CanDoSRGBReadFromRTs() const;
+	bool SupportsGLMixedSizeTargets() const;
 
 	const char *GetHWSpecificShaderDLLName() const;
 	bool NeedsAAClamp() const
 	{
 		return false;
 	}
-	virtual int MaxHWMorphBatchCount() const { return 0; }
+	int MaxHWMorphBatchCount() const { return 0; }
 
 	// This is the max dx support level supported by the card
-	virtual int	 GetMaxDXSupportLevel() const;
+	int	 GetMaxDXSupportLevel() const;
 
 	bool ReadPixelsFromFrontBuffer() const;
 	bool PreferDynamicTextures() const;
@@ -770,18 +783,18 @@ public:
 	void EvictManagedResources();
 
 	// Gets the lightmap dimensions
-	virtual void GetLightmapDimensions( int *w, int *h );
+	void GetLightmapDimensions( int *w, int *h );
 
-	virtual void SyncToken( const char *pToken );
+	void SyncToken( const char *pToken );
 
 	// Setup standard vertex shader constants (that don't change)
 	// This needs to be called anytime that overbright changes.
-	virtual void SetStandardVertexShaderConstants( float fOverbright )
+	void SetStandardVertexShaderConstants( float fOverbright )
 	{
 	}
 	
 	// Level of anisotropic filtering
-	virtual void SetAnisotropicLevel( int nAnisotropyLevel );
+	void SetAnisotropicLevel( int nAnisotropyLevel );
 
 	bool SupportsHDR() const
 	{
@@ -795,26 +808,26 @@ public:
 	{
 		return HDR_TYPE_NONE;
 	}
-	virtual bool NeedsATICentroidHack() const
+	bool NeedsATICentroidHack() const
 	{
 		return false;
 	}
-	virtual bool SupportsColorOnSecondStream() const
+	bool SupportsColorOnSecondStream() const
 	{
 		return false;
 	}
-	virtual bool SupportsStaticPlusDynamicLighting() const
+	bool SupportsStaticPlusDynamicLighting() const
 	{
 		return false;
 	}
-	virtual bool SupportsStreamOffset() const
+	bool SupportsStreamOffset() const
 	{
 		return false;
 	}
 	void SetDefaultDynamicState()
 	{
 	}
-	virtual void CommitPixelShaderLighting( int pshReg )
+	void CommitPixelShaderLighting( int pshReg )
 	{
 	}
 
@@ -841,144 +854,144 @@ public:
 	}
 
 
-	virtual void AcquireThreadOwnership() {}
-	virtual void ReleaseThreadOwnership() {}
+	void AcquireThreadOwnership() {}
+	void ReleaseThreadOwnership() {}
 
-	virtual bool SupportsBorderColor() const { return false; }
-	virtual bool SupportsFetch4() const { return false; }
-	virtual void EnableBuffer2FramesAhead( bool bEnable ) {}
-	virtual float GetShadowDepthBias() const { return 0.0f; }
-	virtual float GetShadowSlopeScaleDepthBias() const { return 0.0f; }
-	virtual bool PreferZPrepass() const { return false; }
-	virtual bool SuppressPixelShaderCentroidHackFixup() const { return true; }
-	virtual bool PreferTexturesInHWMemory() const { return false; }
-	virtual bool PreferHardwareSync() const { return false; }
-	virtual bool IsUnsupported() const { return false; }
+	bool SupportsBorderColor() const { return false; }
+	bool SupportsFetch4() const { return false; }
+	void EnableBuffer2FramesAhead( bool bEnable ) {}
+	float GetShadowDepthBias() const { return 0.0f; }
+	float GetShadowSlopeScaleDepthBias() const { return 0.0f; }
+	bool PreferZPrepass() const { return false; }
+	bool SuppressPixelShaderCentroidHackFixup() const { return true; }
+	bool PreferTexturesInHWMemory() const { return false; }
+	bool PreferHardwareSync() const { return false; }
+	bool IsUnsupported() const { return false; }
 
-	virtual void SetDepthFeatheringShaderConstants( int iConstant, float fDepthBlendScale ) {}
+	void SetDepthFeatheringShaderConstants( int iConstant, float fDepthBlendScale ) {}
 
-	virtual TessellationMode_t GetTessellationMode() const { return TESSELLATION_MODE_DISABLED; }
+	TessellationMode_t GetTessellationMode() const { return TESSELLATION_MODE_DISABLED; }
 
 	void SetPixelShaderFogParams( int reg )	{}
 
-	virtual bool InFlashlightMode() const
+	bool InFlashlightMode() const
 	{
 		return false;
 	}
-	virtual bool IsRenderingPaint() const
+	bool IsRenderingPaint() const
 	{
 		return false;
 	}
-	virtual bool InEditorMode() const
+	bool InEditorMode() const
 	{
 		return false;
 	}
 
 	// Binds a standard texture
-	virtual void BindStandardTexture( Sampler_t stage, TextureBindFlags_t nBindFlags, StandardTextureId_t id )
+	void BindStandardTexture( Sampler_t stage, TextureBindFlags_t nBindFlags, StandardTextureId_t id )
 	{
 	}
 
-	virtual void BindStandardVertexTexture( VertexTextureSampler_t stage, StandardTextureId_t id )
+	void BindStandardVertexTexture( VertexTextureSampler_t stage, StandardTextureId_t id )
 	{
 	}
 
-	virtual void GetStandardTextureDimensions( int *pWidth, int *pHeight, StandardTextureId_t id )
+	void GetStandardTextureDimensions( int *pWidth, int *pHeight, StandardTextureId_t id )
 	{
 		*pWidth = *pHeight = 0;
 	}
 
-	virtual float GetSubDHeight()
+	float GetSubDHeight()
 	{
 		return 0.0f;
 	}
 
-	virtual bool IsStereoActiveThisFrame() const
+	bool IsStereoActiveThisFrame() const
 	{
 		return false;
 	}
 
-	virtual void SetFlashlightState( const FlashlightState_t &state, const VMatrix &worldToTexture )
+	void SetFlashlightState( const FlashlightState_t &state, const VMatrix &worldToTexture )
 	{
 	}
 
-	virtual void SetFlashlightStateEx( const FlashlightState_t &state, const VMatrix &worldToTexture, ITexture *pFlashlightDepthTexture )
+	void SetFlashlightStateEx( const FlashlightState_t &state, const VMatrix &worldToTexture, ITexture *pFlashlightDepthTexture )
 	{
 	}
 	
-	virtual bool IsCascadedShadowMapping() const
+	bool IsCascadedShadowMapping() const
 	{
 		return false;
 	}
 	
-	virtual void SetCascadedShadowMapping( bool bEnable )
+	void SetCascadedShadowMapping( bool bEnable )
 	{
 		bEnable;
 	}
 
-	virtual void SetCascadedShadowMappingState( const CascadedShadowMappingState_t &state, ITexture *pDepthTextureAtlas )
+	void SetCascadedShadowMappingState( const CascadedShadowMappingState_t &state, ITexture *pDepthTextureAtlas )
 	{
 		state, pDepthTextureAtlas;
 	}
 
-	virtual const CascadedShadowMappingState_t &GetCascadedShadowMappingState( ITexture **pDepthTextureAtlas, bool bLightMapScale = false ) const
+	const CascadedShadowMappingState_t &GetCascadedShadowMappingState( ITexture **pDepthTextureAtlas, bool bLightMapScale = false ) const
 	{
 		static CascadedShadowMappingState_t dummyState;
 		return dummyState;
 	}
 
-	virtual const FlashlightState_t &GetFlashlightState( VMatrix &worldToTexture ) const 
+	const FlashlightState_t &GetFlashlightState( VMatrix &worldToTexture ) const 
 	{
 		static FlashlightState_t  blah;
 		return blah;
 	}
 
-	virtual const FlashlightState_t &GetFlashlightStateEx( VMatrix &worldToTexture, ITexture **pFlashlightDepthTexture ) const 
+	const FlashlightState_t &GetFlashlightStateEx( VMatrix &worldToTexture, ITexture **pFlashlightDepthTexture ) const 
 	{
 		static FlashlightState_t  blah;
 		return blah;
 	}
 
-	virtual void GetFlashlightShaderInfo( bool *pShadowsEnabled, bool *pUberLight ) const
+	void GetFlashlightShaderInfo( bool *pShadowsEnabled, bool *pUberLight ) const
 	{
 		*pShadowsEnabled = false;
 		*pUberLight = false;
 	}
 	
-	virtual float GetFlashlightAmbientOcclusion( ) const { return 1.0f; }
+	float GetFlashlightAmbientOcclusion( ) const { return 1.0f; }
 
-	virtual void ClearVertexAndPixelShaderRefCounts()
+	void ClearVertexAndPixelShaderRefCounts()
 	{
 	}
 
-	virtual void PurgeUnusedVertexAndPixelShaders()
+	void PurgeUnusedVertexAndPixelShaders()
 	{
 	}
 
-	virtual void DrawInstances( int nCount, const MeshInstanceData_t *pInstanceData ) {}
+	void DrawInstances( int nCount, const MeshInstanceData_t *pInstanceData ) {}
 
-	virtual bool IsAAEnabled() const
+	bool IsAAEnabled() const
 	{
 		return false;
 	}
 
-	virtual int GetVertexTextureCount() const
+	int GetVertexTextureCount() const
 	{
 		return 0;
 	}
 
-	virtual int GetMaxVertexTextureDimension() const
+	int GetMaxVertexTextureDimension() const
 	{
 		return 0;
 	}
 
-	virtual int  MaxTextureDepth() const
+	int  MaxTextureDepth() const
 	{
 		return 0;
 	}
 
 	// Sets morph target factors
-	virtual void SetFlexWeights( int nFirstWeight, int nCount, const MorphWeight_t* pWeights )
+	void SetFlexWeights( int nFirstWeight, int nCount, const MorphWeight_t* pWeights )
 	{
 	}
 
@@ -999,16 +1012,16 @@ public:
 	}
 
 	// For dealing with device lost in cases where SwapBuffers isn't called all the time (Hammer)
-	virtual void HandleDeviceLost()
+	void HandleDeviceLost()
 	{
 	}
 
-	virtual void EnableLinearColorSpaceFrameBuffer( bool bEnable )
+	void EnableLinearColorSpaceFrameBuffer( bool bEnable )
 	{
 	}
 
 	// Lets the shader know about the full-screen texture so it can 
-	virtual void SetFullScreenTextureHandle( ShaderAPITextureHandle_t h )
+	void SetFullScreenTextureHandle( ShaderAPITextureHandle_t h )
 	{
 	}
 
@@ -1055,54 +1068,54 @@ public:
 	{
 	}
 
-	virtual void GetMaxToRender( IMesh *pMesh, bool bMaxUntilFlush, int *pMaxVerts, int *pMaxIndices )
+	void GetMaxToRender( IMesh *pMesh, bool bMaxUntilFlush, int *pMaxVerts, int *pMaxIndices )
 	{
 		*pMaxVerts = 32768;
 		*pMaxIndices = 32768;
 	}
 
 	// Returns the max possible vertices + indices to render in a single draw call
-	virtual int GetMaxVerticesToRender( IMaterial *pMaterial )
+	int GetMaxVerticesToRender( IMaterial *pMaterial )
 	{
 		return 32768;
 	}
 
-	virtual int GetMaxIndicesToRender( )
+	int GetMaxIndicesToRender( )
 	{
 		return 32768;
 	}
-	virtual int CompareSnapshots( StateSnapshot_t snapshot0, StateSnapshot_t snapshot1 ) { return 0; }
+	int CompareSnapshots( StateSnapshot_t snapshot0, StateSnapshot_t snapshot1 ) { return 0; }
 
-	virtual void DisableAllLocalLights() {}
+	void DisableAllLocalLights() {}
 
-	virtual bool SupportsMSAAMode( int nMSAAMode ) { return false; }
+	bool SupportsMSAAMode( int nMSAAMode ) { return false; }
 
-	virtual bool SupportsCSAAMode( int nNumSamples, int nQualityLevel ) { return false; }
+	bool SupportsCSAAMode( int nNumSamples, int nQualityLevel ) { return false; }
 
 	// Hooks for firing PIX events from outside the Material System...
-	virtual void BeginPIXEvent( unsigned long color, const char *szName ) {}
-	virtual void EndPIXEvent() {}
-	virtual void SetPIXMarker( unsigned long color, const char *szName ) {}
+	void BeginPIXEvent( unsigned long color, const char *szName ) {}
+	void EndPIXEvent() {}
+	void SetPIXMarker( unsigned long color, const char *szName ) {}
 
-	virtual void ComputeVertexDescription( unsigned char* pBuffer, VertexFormat_t vertexFormat, MeshDesc_t& desc ) const {}
-	virtual int VertexFormatSize( VertexFormat_t vertexFormat ) const { return 0; }
+	void ComputeVertexDescription( unsigned char* pBuffer, VertexFormat_t vertexFormat, MeshDesc_t& desc ) const {}
+	int VertexFormatSize( VertexFormat_t vertexFormat ) const { return 0; }
 
-	virtual bool SupportsShadowDepthTextures() { return false; }
+	bool SupportsShadowDepthTextures() { return false; }
 
-	virtual bool SupportsFetch4() { return false; }
+	bool SupportsFetch4() { return false; }
 
-	virtual int NeedsShaderSRGBConversion(void) const { return 0; }
-	virtual bool UsesSRGBCorrectBlending() const { return false; }
+	int NeedsShaderSRGBConversion(void) const { return 0; }
+	bool UsesSRGBCorrectBlending() const { return false; }
 
-	virtual bool HasFastVertexTextures() const { return false; }
-	virtual bool ActualHasFastVertexTextures() const { return false; }
+	bool HasFastVertexTextures() const { return false; }
+	bool ActualHasFastVertexTextures() const { return false; }
 
-	virtual void SetShadowDepthBiasFactors( float fShadowSlopeScaleDepthBias, float fShadowDepthBias ) {}
+	void SetShadowDepthBiasFactors( float fShadowSlopeScaleDepthBias, float fShadowDepthBias ) {}
 
-	virtual void SetDisallowAccess( bool ) {}
-	virtual void EnableShaderShaderMutex( bool ) {}
-	virtual void ShaderLock() {}
-	virtual void ShaderUnlock() {}
+	void SetDisallowAccess( bool ) {}
+	void EnableShaderShaderMutex( bool ) {}
+	void ShaderLock() {}
+	void ShaderUnlock() {}
 
 // ------------ New Vertex/Index Buffer interface ----------------------------
 	void BindVertexBuffer( int streamID, IVertexBuffer *pVertexBuffer, int nOffsetInBytes, int nFirstVertex, int nVertexCount, VertexFormat_t fmt, int nRepetitions1 )
@@ -1116,17 +1129,17 @@ public:
 	}
 // ------------ End ----------------------------
 
-	virtual int  GetVertexBufferCompression( void ) const { return 0; };
+	int  GetVertexBufferCompression( void ) const { return 0; };
 
-	virtual bool ShouldWriteDepthToDestAlpha( void ) const { return false; };
-	virtual bool SupportsHDRMode( HDRType_t nMode ) const { return false; }
-	virtual bool IsDX10Card() const { return false; };
+	bool ShouldWriteDepthToDestAlpha( void ) const { return false; };
+	bool SupportsHDRMode( HDRType_t nMode ) const { return false; }
+	bool IsDX10Card() const { return false; };
 
 	void PushDeformation( const DeformationBase_t *pDeformation )
 	{
 	}
 
-	virtual void PopDeformation( )
+	void PopDeformation( )
 	{
 	}
 
@@ -1150,47 +1163,47 @@ public:
 	{
 	}
 
-	virtual void ExecuteCommandBuffer( uint8 *pData )
+	void ExecuteCommandBuffer( uint8 *pData )
 	{
 	}
-	virtual bool GetHDREnabled( void ) const { return true; }
-	virtual void SetHDREnabled( bool bEnable ) {}
+	bool GetHDREnabled( void ) const { return true; }
+	void SetHDREnabled( bool bEnable ) {}
 
-	virtual void SetTextureFilterMode( Sampler_t sampler, TextureFilterMode_t nMode )
+	void SetTextureFilterMode( Sampler_t sampler, TextureFilterMode_t nMode )
 	{
 	}
 
-	virtual void SetScreenSizeForVPOS( int pshReg ) {}
-	virtual void SetVSNearAndFarZ( int vshReg ) {}
-	virtual float GetFarZ() { return 1000.0f; }
+	void SetScreenSizeForVPOS( int pshReg ) {}
+	void SetVSNearAndFarZ( int vshReg ) {}
+	float GetFarZ() { return 1000.0f; }
 	
-	virtual void EnableSinglePassFlashlightMode( bool bEnable ) {}
-	virtual bool SinglePassFlashlightModeEnabled( void ) { return false; }
-	virtual void FlipCulling( bool bFlipCulling ) {}
+	void EnableSinglePassFlashlightMode( bool bEnable ) {}
+	bool SinglePassFlashlightModeEnabled( void ) { return false; }
+	void FlipCulling( bool bFlipCulling ) {}
 
-	virtual void UpdateGameTime( float flTime ) {}
+	void UpdateGameTime( float flTime ) {}
 	
-	virtual bool IsStereoSupported() const { return false; }
-	virtual void UpdateStereoTexture( ShaderAPITextureHandle_t texHandle, bool *pStereoActiveThisFrame ) {}
-	virtual void SetSRGBWrite( bool bState ) {}
+	bool IsStereoSupported() const { return false; }
+	void UpdateStereoTexture( ShaderAPITextureHandle_t texHandle, bool *pStereoActiveThisFrame ) {}
+	void SetSRGBWrite( bool bState ) {}
 
 	void PrintfVA( char *fmt, std::va_list vargs ) {}
 	void Printf( char *fmt, ... ) {}
 	float Knob( char *knobname, float *setvalue = nullptr ) { return 0.0f; };
 	void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics ) {}
 	
-	virtual void SpinPresent( uint nFrames ){}
-	virtual void AntiAliasingHint( int nHint ) {}
+	void SpinPresent( uint nFrames ){}
+	void AntiAliasingHint( int nHint ) {}
 
-	virtual bool SupportsCascadedShadowMapping() const { return true; }
-	virtual CSMQualityMode_t GetCSMQuality() const { return CSMQUALITY_VERY_LOW; }
-	virtual bool SupportsBilinearPCFSampling() const { return true; }
-	virtual CSMShaderMode_t GetCSMShaderMode( CSMQualityMode_t nQualityLevel ) const { nQualityLevel; return CSMSHADERMODE_LOW_OR_VERY_LOW; }
-	virtual void SetCSMAccurateBlending( bool bEnable ) {}
-	virtual bool GetCSMAccurateBlending() const { return true; }
+	bool SupportsCascadedShadowMapping() const { return true; }
+	CSMQualityMode_t GetCSMQuality() const { return CSMQUALITY_VERY_LOW; }
+	bool SupportsBilinearPCFSampling() const { return true; }
+	CSMShaderMode_t GetCSMShaderMode( CSMQualityMode_t nQualityLevel ) const { nQualityLevel; return CSMSHADERMODE_LOW_OR_VERY_LOW; }
+	void SetCSMAccurateBlending( bool bEnable ) {}
+	bool GetCSMAccurateBlending() const { return true; }
 
-	virtual bool SupportsResolveDepth() const {	return false; }
-	virtual bool HasFullResolutionDepthTexture() const { return false; }
+	bool SupportsResolveDepth() const {	return false; }
+	bool HasFullResolutionDepthTexture() const { return false; }
 
 private:
 	enum
@@ -1233,38 +1246,42 @@ extern IShaderUtil* g_pShaderUtil;
 
 
 //-----------------------------------------------------------------------------
-// Factory to return from SetMode
+// The shader API interfaces are stateless facades that forward to the one implementation
 //-----------------------------------------------------------------------------
-static void* ShaderInterfaceFactory( const char *pInterfaceName, int *pReturnCode )
-{
-	if ( pReturnCode )
-	{
-		*pReturnCode = IFACE_OK;
-	}
-	if ( !V_stricmp( pInterfaceName, SHADER_DEVICE_INTERFACE_VERSION ) )
-		return static_cast< IShaderDevice* >( &s_ShaderDeviceEmpty );
-	if ( !V_stricmp( pInterfaceName, SHADERAPI_INTERFACE_VERSION ) )
-		return static_cast< IShaderAPI* >( &g_ShaderAPIEmpty );
-	if ( !V_stricmp( pInterfaceName, SHADERSHADOW_INTERFACE_VERSION ) )
-		return static_cast< IShaderShadow* >( &g_ShaderShadow );
-	if ( !V_stricmp( pInterfaceName, SHADER_DEVICE_MGR_INTERFACE_VERSION ) )
-		return static_cast< IShaderDeviceMgr* >( &s_ShaderDeviceMgrEmpty );
-	if ( !V_stricmp( pInterfaceName, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION ) )
-		return static_cast< IMaterialSystemHardwareConfig* >( &g_ShaderAPIEmpty );
-	if ( !V_stricmp( pInterfaceName, DEBUG_TEXTURE_INFO_VERSION ) )
-		return static_cast< IDebugTextureInfo* >( &g_ShaderAPIEmpty );
+static IShaderAPI s_ShaderAPIFacade;
+static IShaderDevice s_ShaderDeviceFacade;
+static IShaderShadow s_ShaderShadowFacade;
+static IShaderDeviceMgr s_ShaderDeviceMgrFacade;
+static IHardwareConfigInternal s_HardwareConfigFacade;
+static IDebugTextureInfo s_DebugTextureInfoFacade;
 
-	if ( pReturnCode )
-	{
-		*pReturnCode = IFACE_FAILED;
-	}
-	return nullptr;
-}
+static CShaderAPIEmpty &ShaderAPIImpl() { return g_ShaderAPIEmpty; }
+static CShaderDeviceEmpty &ShaderDeviceImpl() { return s_ShaderDeviceEmpty; }
+static CShaderShadowEmpty &ShaderShadowImpl() { return g_ShaderShadow; }
+static CShaderDeviceMgrEmpty &ShaderDeviceMgrImpl() { return s_ShaderDeviceMgrEmpty; }
+static CShaderAPIEmpty &HardwareConfigImpl() { return g_ShaderAPIEmpty; }
+static CShaderAPIEmpty &DebugTextureInfoImpl() { return g_ShaderAPIEmpty; }
 
-CreateInterfaceFn ShaderApiEmptyFactory()
-{
-	return ShaderInterfaceFactory;
-}
+#include "../shaderapi_facade/ishaderdynamicapi.inl"
+#include "../shaderapi_facade/ishaderapi.inl"
+#include "../shaderapi_facade/ishaderdevice.inl"
+#include "../shaderapi_facade/ishadershadow.inl"
+#include "../shaderapi_facade/ishaderdevicemgr.inl"
+#include "../shaderapi_facade/hardwareconfig.inl"
+#include "../shaderapi_facade/idebugtextureinfo.inl"
+
+// The empty shader API registers no IVBAllocTracker (callers check for its absence); these definitions
+// only satisfy the linker.
+void IVBAllocTracker::CountVB( void *, bool, int, int, VertexFormat_t ) {}
+void IVBAllocTracker::UnCountVB( void * ) {}
+bool IVBAllocTracker::TrackMeshAllocations( const char * ) { return false; }
+
+static InterfaceReg s_Reg_ShaderDevice( []() -> void * { return &s_ShaderDeviceFacade; }, SHADER_DEVICE_INTERFACE_VERSION );
+static InterfaceReg s_Reg_ShaderAPI( []() -> void * { return &s_ShaderAPIFacade; }, SHADERAPI_INTERFACE_VERSION );
+static InterfaceReg s_Reg_ShaderShadow( []() -> void * { return &s_ShaderShadowFacade; }, SHADERSHADOW_INTERFACE_VERSION );
+static InterfaceReg s_Reg_ShaderDeviceMgr( []() -> void * { return &s_ShaderDeviceMgrFacade; }, SHADER_DEVICE_MGR_INTERFACE_VERSION );
+static InterfaceReg s_Reg_HardwareConfig( []() -> void * { return static_cast< IMaterialSystemHardwareConfig * >( &s_HardwareConfigFacade ); }, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION );
+static InterfaceReg s_Reg_DebugTextureInfo( []() -> void * { return &s_DebugTextureInfoFacade; }, DEBUG_TEXTURE_INFO_VERSION );
 
 
 //-----------------------------------------------------------------------------
@@ -1287,10 +1304,9 @@ void CShaderDeviceMgrEmpty::Disconnect()
 
 void *CShaderDeviceMgrEmpty::QueryInterface( const char *pInterfaceName )
 {
-	if ( !V_stricmp( pInterfaceName, SHADER_DEVICE_MGR_INTERFACE_VERSION ) )
-		return static_cast< IShaderDeviceMgr* >( this );
-	if ( !V_stricmp( pInterfaceName, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION ) )
-		return static_cast< IMaterialSystemHardwareConfig* >( &g_ShaderAPIEmpty );
+	if ( !V_stricmp( pInterfaceName, SHADER_DEVICE_MGR_INTERFACE_VERSION ) ||
+		 !V_stricmp( pInterfaceName, MATERIALSYSTEM_HARDWARECONFIG_INTERFACE_VERSION ) )
+		return Sys_GetFactoryThis()( pInterfaceName, nullptr );
 	return nullptr;
 }
 
@@ -1313,7 +1329,7 @@ bool CShaderDeviceMgrEmpty::SetAdapter( int nAdapter, int nFlags )
 // FIXME: Is this a public interface? Might only need to be private to shaderapi
 CreateInterfaceFn CShaderDeviceMgrEmpty::SetMode( void *hWnd, int nAdapter, const ShaderDeviceInfo_t& mode ) 
 {
-	return ShaderInterfaceFactory;
+	return Sys_GetFactoryThis();
 }
 
 // Gets the number of adapters...
@@ -1459,7 +1475,7 @@ IIndexBuffer *CShaderDeviceEmpty::GetDynamicIndexBuffer()
 // The empty mesh...
 //
 //-----------------------------------------------------------------------------
-CEmptyMesh::CEmptyMesh( bool bIsDynamic ) : m_bIsDynamic( bIsDynamic )
+CEmptyMesh::CEmptyMesh( bool bIsDynamic ) : IMesh( MeshKind::EmptyMesh ), m_bIsDynamic( bIsDynamic )
 {
 	m_pVertexMemory = new unsigned char[VERTEX_BUFFER_SIZE];
 }
@@ -2641,11 +2657,6 @@ bool CShaderAPIEmpty::PreferDynamicTextures() const
 }
 
 int  CShaderAPIEmpty::GetCurrentDynamicVBSize( void )
-{
-	return 0;
-}
-
-int  CShaderAPIEmpty::GetCurrentDynamicVBSize( int nIndex )
 {
 	return 0;
 }

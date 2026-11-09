@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2008 Valve Corporation
 
-import std;
-import ks.core;
 #include "uigamedata.h"
 
 using namespace BaseModUI;

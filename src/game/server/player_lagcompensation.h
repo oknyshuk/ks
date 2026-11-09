@@ -8,7 +8,6 @@
 #include "igamesystem.h"
 #include "ilagcompensationmanager.h"
 
-import std;
 #include "BaseAnimatingOverlay.h"
 #include "studio.h"
 

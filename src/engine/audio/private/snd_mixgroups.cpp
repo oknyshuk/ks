@@ -25,7 +25,6 @@ import ks.tier1;
 #include "client_class.h"
 #include "icliententitylist.h"
 #include "vox_private.h"
-#include "toolframework/itoolframework.h"
 #include "../../client.h"
 #include "../../cl_main.h"
 #include "vphysics_interface.h"		// for surface props

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -96,7 +94,7 @@ void CScriptedTarget::TurnOff( void )
 //------------------------------------------------------------------------------
 // Purpose:
 //------------------------------------------------------------------------------
-void CScriptedTarget::Spawn( void )
+void CScriptedTarget::Spawn_Impl( void )
 {
 	if (g_interactionScriptedTarget == 0)
 	{
@@ -265,10 +263,10 @@ void CScriptedTarget::ScriptThink( void )
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CScriptedTarget::DrawDebugTextOverlays(void) 
+int CScriptedTarget::DrawDebugTextOverlays_Impl(void) 
 {
 	// Skip AIClass debug overlays
-	int text_offset = CBaseEntity::DrawDebugTextOverlays();
+	int text_offset = CBaseEntity::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -327,7 +325,7 @@ int CScriptedTarget::DrawDebugTextOverlays(void)
 //-----------------------------------------------------------------------------
 // Purpose: Override base class to add display of paths
 //-----------------------------------------------------------------------------
-void CScriptedTarget::DrawDebugGeometryOverlays(void) 
+void CScriptedTarget::DrawDebugGeometryOverlays_Impl(void) 
 {
 	// ----------------------------------------------
 	// Draw line to next target is bbox is selected
@@ -356,5 +354,5 @@ void CScriptedTarget::DrawDebugGeometryOverlays(void)
 		}
 
 	}
-	CBaseEntity::DrawDebugGeometryOverlays();
+	CBaseEntity::DrawDebugGeometryOverlays_Impl();
 }

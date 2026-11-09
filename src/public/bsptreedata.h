@@ -15,18 +15,6 @@ struct Ray_t;
 
 
 //-----------------------------------------------------------------------------
-// Handle to an renderable in the client leaf system
-//-----------------------------------------------------------------------------
-
-typedef unsigned short BSPTreeDataHandle_t;
-
-enum
-{
-	TREEDATA_INVALID_HANDLE = (BSPTreeDataHandle_t)~0
-};
-
-
-//-----------------------------------------------------------------------------
 // Interface needed by tree data to do its job
 // 
 // Note that anything that has convex spatial regions with leaves identified
@@ -71,59 +59,3 @@ public:
 	// The caller is expected to have allocated at least nLeafCount pLeafsInSphere to place the results into
 	virtual int ListLeavesInSphereWithFlagSet( int *pLeafsInSphere, const Vector& vecCenter, float flRadius, int nLeafCount, const uint16 *pLeafs, int nLeafStride = sizeof(uint16), int nFlagsCheck = 0xFFFFFFFF ) = 0;
 };
-
-
-//-----------------------------------------------------------------------------
-// Data associated with leaves.
-//
-// This is a parasitic class that attaches data to the leaves specified by the
-// ISpatialQuery sent in to the initialization function. It can't exist without
-// a spatial partition of some sort to hold onto.
-//-----------------------------------------------------------------------------
-
-class IBSPTreeDataEnumerator
-{
-public:
-	// call back with a userId and a context
-	virtual bool EnumerateElement( int userId, intp context ) = 0;
-};
-
-class IBSPTreeData
-{
-public:
-	// Add a virtual destructor so that the derived class destructors will
-	// be called.
-	virtual ~IBSPTreeData() {}
-
-	// Initializes, shuts down
-	virtual void Init( ISpatialQuery* pBSPTree ) = 0;
-	virtual void Shutdown() = 0;
-
-	// Adds and removes data from the leaf lists
-	virtual BSPTreeDataHandle_t Insert( int userId, const Vector& mins, const Vector& maxs ) = 0;
-	virtual void Remove( BSPTreeDataHandle_t handle ) = 0;
-
-	// Call this when a element moves
-	virtual void ElementMoved( BSPTreeDataHandle_t handle, const Vector& mins, const Vector& maxs ) = 0;
-
-	// Enumerate elements in a particular leaf
-	virtual bool EnumerateElementsInLeaf( int leaf, IBSPTreeDataEnumerator* pEnum, intp context ) = 0;
-
-	// Is the element in any leaves at all?
-	virtual bool IsElementInTree( BSPTreeDataHandle_t handle ) const = 0;
-
-	// NOTE: These methods call through to the functions in the attached
-	// ISpatialQuery
-	// For convenience, enumerates the leaves along a ray, box, etc.
-	virtual bool EnumerateLeavesAtPoint( const Vector& pt, ISpatialLeafEnumerator* pEnum, intp context ) = 0;
-	virtual bool EnumerateLeavesInBox( const Vector& mins, const Vector& maxs, ISpatialLeafEnumerator* pEnum, intp context ) = 0;
-	virtual bool EnumerateLeavesInSphere( const Vector& center, float radius, ISpatialLeafEnumerator* pEnum, intp context ) = 0;
-	virtual bool EnumerateLeavesAlongRay( Ray_t const& ray, ISpatialLeafEnumerator* pEnum, intp context ) = 0;
-};
-
-//-----------------------------------------------------------------------------
-// Class factory
-//-----------------------------------------------------------------------------
-
-IBSPTreeData* CreateBSPTreeData();
-void DestroyBSPTreeData( IBSPTreeData* pTreeData );

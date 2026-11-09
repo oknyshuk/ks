@@ -4,8 +4,6 @@
 
 // Purpose: Functionality to render object motion blur
 
-import std;
-import ks.tier1;
 #include "c_baseanimating.h"
 
 //-----------------------------------------------------------------------------

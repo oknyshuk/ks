@@ -13,8 +13,8 @@ public:
 
 	static CEntityFreezing	*Create( CBaseAnimating *pTarget );
 	
-	void	Precache();
-	void	Spawn();
+	void	Precache_Impl();
+	void	Spawn_Impl();
 	void	AttachToEntity( CBaseEntity *pTarget );
 	void	SetFreezingOrigin( Vector vOrigin ) { m_vFreezingOrigin = vOrigin; }
 	Vector	GetFreezingOrigin( void ) { return m_vFreezingOrigin; }

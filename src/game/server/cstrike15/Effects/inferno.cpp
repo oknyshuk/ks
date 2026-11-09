@@ -36,8 +36,6 @@
 #include "engine/IEngineSound.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include <coordsize.h>
-import std;
-import ks.tier1;
 #include "igameevents.h"
 #include "particle_parse.h"
 #include "entityutil.h"
@@ -176,10 +174,10 @@ CInferno::~CInferno()
 
 
 //------------------------------------------------------------------------------------------
-void CInferno::Precache( void )
+void CInferno::Precache_Impl( void )
 {
 	// extend
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	PrecacheScriptSound( "Inferno.Start" );
 	PrecacheScriptSound( "Inferno.Start_IncGrenade" );
@@ -208,7 +206,7 @@ void CInferno::Precache( void )
 }
 
 //------------------------------------------------------------------------------------------
-void CInferno::Spawn( void )
+void CInferno::Spawn_Impl( void )
 {
 	m_fireCount = 0;
 
@@ -348,7 +346,7 @@ class CInfernoLOSTraceFilter : public CTraceFilter
 			return false;
 		
 		// Chickens, hostages, and other 'navigating' objects don't block spread
-		if( dynamic_cast< CImprovLocomotor* >( pEntity ) != nullptr )
+		if( FClassnameIs( pEntity, "chicken" ) || FClassnameIs( pEntity, "hostage_entity" ) || FClassnameIs( pEntity, "info_hostage_spawn" ) )	// the CImprovLocomotor entities
 			return false;
 
 		// Other objects (doors, terrain, etc.) block spread
@@ -1152,8 +1150,8 @@ bool CInferno::IsTouching( const CNavArea *area ) const
 //------------------------------------------------------------------------------------------
 //
 //------------------------------------------------------------------------------------------
-void CFireCrackerBlast::Spawn( void )
+void CFireCrackerBlast::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	SetInfernoType( INFERNO_TYPE_FIREWORKS );
 }

@@ -64,7 +64,7 @@ inline Vector &TangentT( VertexDesc_t const &desc, int vert )
 //-----------------------------------------------------------------------------
 // constructor, destructor
 //-----------------------------------------------------------------------------
-CVertexBufferBase::CVertexBufferBase( const char *pBudgetGroupName )
+CVertexBufferBase::CVertexBufferBase( const char *pBudgetGroupName ) : IVertexBuffer( MeshKind::VertexBuffer )
 {
 	m_pBudgetGroupName = pBudgetGroupName;
 }
@@ -263,7 +263,7 @@ void CVertexBufferBase::ValidateData( int nVertexCount, const VertexDesc_t &spew
 //-----------------------------------------------------------------------------
 // constructor, destructor
 //-----------------------------------------------------------------------------
-CIndexBufferBase::CIndexBufferBase( const char *pBudgetGroupName ) : m_pBudgetGroupName( pBudgetGroupName )
+CIndexBufferBase::CIndexBufferBase( const char *pBudgetGroupName ) : IIndexBuffer( MeshKind::IndexBuffer ), m_pBudgetGroupName( pBudgetGroupName )
 {
 }
 
@@ -319,7 +319,7 @@ void CIndexBufferBase::ValidateData( int nIndexCount, const IndexDesc_t& desc )
 //-----------------------------------------------------------------------------
 // constructor, destructor
 //-----------------------------------------------------------------------------
-CMeshBase::CMeshBase()
+CMeshBase::CMeshBase( MeshKind kind ) : IMesh( kind )
 {
 }
 

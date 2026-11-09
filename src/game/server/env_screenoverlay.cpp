@@ -3,8 +3,6 @@
 
 // Purpose: Entity to control screen overlays on a player
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -61,9 +58,9 @@ public:
 	CEnvScreenOverlay();
 
 	// Always transmit to clients
-	virtual int UpdateTransmitState();
-	virtual void Spawn( void );
-	virtual void Precache( void );
+	int UpdateTransmitState_Impl();
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
 
 	[[= ks::reflect::Input{ .name = "StartOverlays", .type = FIELD_VOID } ]] void	InputStartOverlay( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "StopOverlays", .type = FIELD_VOID } ]] void	InputStopOverlay( inputdata_t &inputdata );
@@ -107,7 +104,7 @@ CEnvScreenOverlay::CEnvScreenOverlay( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvScreenOverlay::Spawn( void )
+void CEnvScreenOverlay::Spawn_Impl( void )
 {
 	Precache();
 }
@@ -115,7 +112,7 @@ void CEnvScreenOverlay::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvScreenOverlay::Precache( void )
+void CEnvScreenOverlay::Precache_Impl( void )
 {
 	for ( int i = 0; i < 10; i++ )
 	{
@@ -153,7 +150,7 @@ void CEnvScreenOverlay::InputStartOverlay( inputdata_t &inputdata )
 	}
 }
 
-int CEnvScreenOverlay::UpdateTransmitState()
+int CEnvScreenOverlay::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
@@ -202,9 +199,9 @@ public:
 
 	// We always want to be sent to the client
 	CEnvScreenEffect( void ) { 	AddEFlags( EFL_FORCE_CHECK_TRANSMIT ); }
-	virtual int UpdateTransmitState( void )	{ return SetTransmitState( FL_EDICT_ALWAYS ); }
-	virtual void Spawn( void );
-	virtual void Precache( void );
+	int UpdateTransmitState_Impl( void )	{ return SetTransmitState( FL_EDICT_ALWAYS ); }
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
 
 private:
 
@@ -222,12 +219,12 @@ IMPLEMENT_REFLECT_DATAMAP( CEnvScreenEffect )
 
 IMPLEMENT_REFLECT_SERVERCLASS( CEnvScreenEffect, DT_EnvScreenEffect )
 
-void CEnvScreenEffect::Spawn( void )
+void CEnvScreenEffect::Spawn_Impl( void )
 {
 	Precache();
 }
 
-void CEnvScreenEffect::Precache( void )
+void CEnvScreenEffect::Precache_Impl( void )
 {
 	PrecacheMaterial( "effects/stun" );
 	PrecacheMaterial( "effects/introblur" );

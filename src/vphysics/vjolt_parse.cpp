@@ -61,17 +61,17 @@ class JoltPhysicsParseKV final : public IVPhysicsKeyParser
 {
 public:
 	JoltPhysicsParseKV( KeyValues *pKV );
-	~JoltPhysicsParseKV() override;
+	~JoltPhysicsParseKV();
 
-	const char* GetCurrentBlockName() override;
-	bool		Finished() override;
-	void		ParseSolid( solid_t *pSolid, IVPhysicsKeyHandler *unknownKeyHandler ) override;
-	void		ParseFluid( fluid_t *pFluid, IVPhysicsKeyHandler *unknownKeyHandler ) override;
-	void		ParseRagdollConstraint( constraint_ragdollparams_t *pConstraint, IVPhysicsKeyHandler *unknownKeyHandler ) override;
-	void		ParseSurfaceTable( int *table, IVPhysicsKeyHandler *unknownKeyHandler ) override;
-	void		ParseCustom( void *pCustom, IVPhysicsKeyHandler *unknownKeyHandler ) override;
-	void		ParseVehicle( vehicleparams_t *pVehicle, IVPhysicsKeyHandler *unknownKeyHandler ) override;
-	void		SkipBlock() override;
+	const char* GetCurrentBlockName();
+	bool		Finished();
+	void		ParseSolid( solid_t *pSolid, IVPhysicsKeyHandler *unknownKeyHandler );
+	void		ParseFluid( fluid_t *pFluid, IVPhysicsKeyHandler *unknownKeyHandler );
+	void		ParseRagdollConstraint( constraint_ragdollparams_t *pConstraint, IVPhysicsKeyHandler *unknownKeyHandler );
+	void		ParseSurfaceTable( int *table, IVPhysicsKeyHandler *unknownKeyHandler );
+	void		ParseCustom( void *pCustom, IVPhysicsKeyHandler *unknownKeyHandler );
+	void		ParseVehicle( vehicleparams_t *pVehicle, IVPhysicsKeyHandler *unknownKeyHandler );
+	void		SkipBlock();
 	void		ParseCollisionRules( ragdollcollisionrules_t *pRules, IVPhysicsKeyHandler *unknownKeyHandler ) ;
 	void		ParseRagdollAnimatedFriction( ragdollanimatedfriction_t *pFriction, IVPhysicsKeyHandler *unknownKeyHandler ) ;	
 
@@ -579,3 +579,6 @@ void DestroyVPhysicsKeyParser( IVPhysicsKeyParser *pParser )
 	JoltPhysicsParseKV *pJoltParser = static_cast< JoltPhysicsParseKV * >( pParser );
 	delete pJoltParser;
 }
+
+//-------------------------------------------------------------------------------------------------
+#include "facade/ivphysicskeyparser.inl"

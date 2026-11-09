@@ -37,12 +37,13 @@ public:
 	DECLARE_CLASS( CBreakable, CBaseEntity );
 
 	// basic functions
-	virtual void Spawn( void );
+	void Spawn_Impl( void );
 	void ParsePropData( void );
-	bool CreateVPhysics( void );
-	virtual void Precache( void );
-	virtual bool KeyValue( const char *szKeyName, const char *szValue );
-	virtual void VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
+	bool CreateVPhysics_Impl( void );
+	void Precache_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	void VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent );
 
 	void BreakTouch( CBaseEntity *pOther );
 	void DamageSound( void );
@@ -57,15 +58,15 @@ public:
 
 
 	// breakables use an overridden takedamage
-	virtual int OnTakeDamage( const CTakeDamageInfo &info );
+	int OnTakeDamage_Impl( const CTakeDamageInfo &info );
 
 	// To spark when hit
-	void TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
+	void TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
 
 	bool IsBreakable( void );
 	bool SparkWhenHit( void );
 
-	char const		*DamageDecal( int bitsDamageType, int gameMaterial );
+	char const		*DamageDecal_Impl( int bitsDamageType, int gameMaterial );
 
 	virtual void	Die( void );
 	void			ResetOnGroundFlags(void);
@@ -78,7 +79,7 @@ public:
 
 	static const char *pSpawnObjects[];
 
-	int DrawDebugTextOverlays(void);
+	int DrawDebugTextOverlays_Impl(void);
 
 	DECLARE_DATADESC();
 
@@ -164,7 +165,7 @@ public:
 	// IPlayerPickupVPhysics
 	virtual void OnPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunPickup_t reason );
 	virtual void OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t Reason );
-	virtual	CBasePlayer *HasPhysicsAttacker( float dt );
+	CBasePlayer *HasPhysicsAttacker_Impl( float dt );
 private:
 	CHandle<CBasePlayer>	m_hPhysicsAttacker;
 	float					m_flLastPhysicsInfluenceTime;

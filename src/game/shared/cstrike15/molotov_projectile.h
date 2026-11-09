@@ -41,8 +41,8 @@ public:
 
 // Overrides.
 public:
-	virtual void Spawn( void );
-	virtual void Precache( void );
+	KS_VIRTUAL void Spawn_Impl( void );
+	KS_VIRTUAL void Precache_Impl( void );
 
 	virtual void BounceTouch( CBaseEntity *other );
 	virtual void BounceSound( void );

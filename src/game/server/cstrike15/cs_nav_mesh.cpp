@@ -5,8 +5,6 @@
 // Implementation of Navigation Mesh interface
 // Author: Michael S. Booth, 2003-2004
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -47,24 +45,25 @@ import ks.tier1;
 #include "mapinfo.h"
 #endif
 
+extern ConVar showtriggers;
 class CFuncBlockDMSpawns : public CFuncBrush
 {
 	DECLARE_CLASS( CFuncBlockDMSpawns, CFuncBrush );
 
-	void Spawn( void )
+	public: void Spawn_Impl( void )
 	{
 		SetSolid( SOLID_BSP );
 		AddSolidFlags( FSOLID_NOT_SOLID );
 
 		SetModel( STRING( GetModelName() ) );    // set size and link into world
 
-		extern ConVar showtriggers;
 
 		if ( !showtriggers.GetInt() )
 		{
 			AddEffects( EF_NODRAW );
 		}
 	}
+	private:
 };
 
 LINK_ENTITY_TO_CLASS( func_block_dm_spawns, CFuncBlockDMSpawns );
@@ -76,81 +75,18 @@ extern ConVar mp_randomspawn;
 ConVar mp_guardian_target_site( "mp_guardian_target_site", "-1", FCVAR_RELEASE | FCVAR_GAMEDLL, "If set to the index of a bombsite, will cause random spawns to be only created near that site." );
 
 //--------------------------------------------------------------------------------------------------------------
-CSNavMesh::CSNavMesh( void )
-{
-	m_desiredChickenCount = 0;
-}
-
-//--------------------------------------------------------------------------------------------------------------
-CSNavMesh::~CSNavMesh()
-{
-}
-
-CNavArea * CSNavMesh::CreateArea( void ) const
-{
-	return new CCSNavArea;
-}
-
-//-------------------------------------------------------------------------
-void CSNavMesh::BeginCustomAnalysis( bool bIncremental )
-{
-
-}
-
-
-//-------------------------------------------------------------------------
-// invoked when custom analysis step is complete
-void CSNavMesh::PostCustomAnalysis( void )
-{
-
-}
-
-
-//-------------------------------------------------------------------------
-void CSNavMesh::EndCustomAnalysis()
-{
-
-}
-
-
-//-------------------------------------------------------------------------
-/**
- * Returns sub-version number of data format used by derived classes
- */
-unsigned int CSNavMesh::GetSubVersionNumber( void ) const
-{
-	// 1: initial implementation - added ApproachArea data
-	return 1;
-}
-
-//-------------------------------------------------------------------------
-/** 
- * Store custom mesh data for derived classes
- */
-void CSNavMesh::SaveCustomData( ks::byte_writer &fileBuffer ) const
-{
-
-}
-
-//-------------------------------------------------------------------------
-/**
- * Load custom mesh data for derived classes
- */
-void CSNavMesh::LoadCustomData( ks::byte_reader &fileBuffer, unsigned int subVersion )
-{
-
-}
+// Counter-Strike extensions of CNavMesh
 
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Reset the Navigation Mesh to initial values
  */
-void CSNavMesh::Reset( void )
+void CNavMesh::Reset( void )
 {
 	m_refreshChickenTimer.Start( 5.0f );
 	m_refreshDMSpawnTimer.Start( 1.0f );
 
-	CNavMesh::Reset();
+	ResetBase();
 }
 
 
@@ -158,11 +94,11 @@ void CSNavMesh::Reset( void )
 /**
  * Zero player counts in all areas
  */
-void CSNavMesh::ClearPlayerCounts( void )
+void CNavMesh::ClearPlayerCounts( void )
 {
 	for ( CNavArea *pNavArea : TheNavAreas )
 	{
-		CCSNavArea *area = (CCSNavArea*)pNavArea;
+		CNavArea *area = pNavArea;
 		area->ClearPlayerCount();
 	}
 }
@@ -170,7 +106,7 @@ void CSNavMesh::ClearPlayerCounts( void )
 
 //--------------------------------------------------------------------------------------------------------------
 // Keep desired number of chickens alive in map
-void CSNavMesh::MaintainChickenPopulation( void )
+void CNavMesh::MaintainChickenPopulation( void )
 {
 	if ( m_desiredChickenCount > 0 && m_refreshChickenTimer.IsElapsed() )
 	{
@@ -249,27 +185,7 @@ void CSNavMesh::MaintainChickenPopulation( void )
 }
 
 
-//--------------------------------------------------------------------------------------------------------------
-void CSNavMesh::Update( void )
-{
-	MaintainChickenPopulation();
-
-	MaintainDMSpawnPopulation();
-
-	CNavMesh::Update();
-}
-
-NavErrorType CSNavMesh::Load( void )
-{
-	return CNavMesh::Load();
-}
-
-bool CSNavMesh::Save( void ) const
-{
-	return CNavMesh::Save();
-}
-
-NavErrorType CSNavMesh::PostLoad( unsigned int version )
+NavErrorType CNavMesh::PostLoad( unsigned int version )
 {
 	if ( CSGameRules()->IsPlayingGunGameDeathmatch() )
 		m_desiredChickenCount = 10;
@@ -289,19 +205,19 @@ NavErrorType CSNavMesh::PostLoad( unsigned int version )
 
 	ResetDMSpawns();
 
-	return CNavMesh::PostLoad(version);
+	return PostLoadBase(version);
 }
 
 static void dm_reset_spawns( const CCommand &args );
 static ConCommand dm_reset_spawns_command( "dm_reset_spawns", dm_reset_spawns, "" );
 static void dm_reset_spawns( const CCommand &args )
 {
-	( dynamic_cast< CSNavMesh* >( TheNavMesh ) )->ResetDMSpawns();
+	TheNavMesh->ResetDMSpawns();
 	DevMsg( "Manually resetting deathmatch spawns.\n");
 
 }
 
-void CSNavMesh::ResetDMSpawns( void )
+void CNavMesh::ResetDMSpawns( void )
 {
 	for ( auto &hDMSpawn : m_DMSpawnVector )
 	{
@@ -314,7 +230,7 @@ void CSNavMesh::ResetDMSpawns( void )
 	MaintainDMSpawnPopulation();
 }
 
-void CSNavMesh::MaintainDMSpawnPopulation( void )
+void CNavMesh::MaintainDMSpawnPopulation( void )
 {
 	if ( mp_randomspawn.GetInt() == 0 )
 		return;
@@ -467,7 +383,7 @@ void CSNavMesh::MaintainDMSpawnPopulation( void )
 
 }
 
-bool CSNavMesh::IsSpawnBlockedByTrigger( Vector pos )
+bool CNavMesh::IsSpawnBlockedByTrigger( Vector pos )
 {
 	CBaseEntity *list[32];
 
@@ -485,7 +401,7 @@ bool CSNavMesh::IsSpawnBlockedByTrigger( Vector pos )
 	return false;
 }
 
-int CSNavMesh::AllEdictsAlongRay( CBaseEntity **pList, int listMax, const Ray_t &ray, int flagMask )
+int CNavMesh::AllEdictsAlongRay( CBaseEntity **pList, int listMax, const Ray_t &ray, int flagMask )
 {
 	CFlaggedEntitiesEnum rayEnum( pList, listMax, flagMask );
 

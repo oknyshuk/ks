@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -21,7 +18,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -1273,7 +1269,7 @@ void CBaseGameStats_Driver::CollectData( StatSendType_t sendType )
 #ifdef GAME_DLL
 	// for server, check with the engine to see if there already a gamestats data container registered.  (There will be if there is a client
 	// running in the same process.)
-	pGamestatsData = engine->GetGamestatsData();
+	pGamestatsData = static_cast<CGamestatsData *>( engine->GetGamestatsData() );
 	if ( pGamestatsData )
 	{
 		// use the registered gamestats container, so free the one we allocated
@@ -1396,6 +1392,7 @@ void CBaseGameStats_Driver::SendData()
 	ResetData();
 }
 
+extern ConVar closecaption;
 bool CBaseGameStats_Driver::AddBaseDataForSend( KeyValues *pKV, StatSendType_t sendType )
 {
 	switch ( sendType )
@@ -1506,7 +1503,6 @@ bool CBaseGameStats_Driver::AddBaseDataForSend( KeyValues *pKV, StatSendType_t s
 			pKV->SetInt( "UsedVoice", m_bDidVoiceChat );
 		}
 
-		extern ConVar closecaption;
 		pKV->SetInt( "Caption", closecaption.GetInt() );
 
 		// Set language to "unknown", then check to see if we can obtain the language.

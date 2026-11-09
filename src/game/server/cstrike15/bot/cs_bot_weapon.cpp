@@ -3,8 +3,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "predictable_entity.h"
 #include "igameevents.h"
@@ -1348,12 +1346,12 @@ void CCSBot::SilencerCheck( void )
  */
 bool CCSBot::BumpWeapon( CBaseCombatWeapon *pWeapon )
 {
-	CWeaponCSBase *droppedGun = dynamic_cast< CWeaponCSBase* >( pWeapon );
+	CWeaponCSBase *droppedGun = static_cast< CWeaponCSBase* >( pWeapon );
 
 	// right now we only care about primary weapons on the ground
 	if ( droppedGun && droppedGun->GetSlot() == WEAPON_SLOT_RIFLE )
 	{
-		CWeaponCSBase *myGun = dynamic_cast< CWeaponCSBase* >( Weapon_GetSlot( WEAPON_SLOT_RIFLE ) );
+		CWeaponCSBase *myGun = static_cast< CWeaponCSBase* >( Weapon_GetSlot( WEAPON_SLOT_RIFLE ) );
 
 		// if the gun on the ground is the same one we have, dont bother
 		if ( myGun && droppedGun->GetCSWeaponID() != myGun->GetCSWeaponID() )
@@ -1407,7 +1405,7 @@ bool CCSBot::IsFriendInLineOfFire( void )
 	trace_t result;
 	UTIL_TraceLine( EyePosition(), EyePosition() + 10000.0f * aimDir, MASK_PLAYERSOLID, this, COLLISION_GROUP_NONE, &result );
 
-	if (result.DidHitNonWorldEntity())
+	if (TraceDidHitNonWorldEntity( result ))
 	{
 		CBaseEntity *victim = result.Ent<CBaseEntity>();
 

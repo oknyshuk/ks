@@ -3,8 +3,6 @@
 
 // Purpose: UNDONE: Rename this to prop_vehicle.cpp !!!
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -71,9 +69,9 @@ CPropVehicle::~CPropVehicle ()
 //-----------------------------------------------------------------------------
 // Precache 
 //-----------------------------------------------------------------------------
-void CPropVehicle::Precache()
+void CPropVehicle::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 	GetPhysics()->Precache();
 }
 
@@ -81,13 +79,13 @@ void CPropVehicle::Precache()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPropVehicle::Spawn( )
+void CPropVehicle::Spawn_Impl( )
 {
 	CFourWheelServerVehicle *pServerVehicle = dynamic_cast<CFourWheelServerVehicle*>(GetServerVehicle());
 	m_VehiclePhysics.SetOuter( this, pServerVehicle );
 
 	// NOTE: The model has to be set before we can spawn vehicle physics
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	SetCollisionGroup( COLLISION_GROUP_VEHICLE );
 
 	m_VehiclePhysics.Spawn();
@@ -119,12 +117,12 @@ static void vehicle_flushscript( const CCommand &args )
 //-----------------------------------------------------------------------------
 // Purpose: Tell the vehicle physics system whenever we teleport, so it can fixup the wheels.
 //-----------------------------------------------------------------------------
-void CPropVehicle::Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts )
+void CPropVehicle::Teleport_Impl( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts )
 {
 	matrix3x4_t startMatrixInv;
 
 	MatrixInvert( EntityToWorldTransform(), startMatrixInv );
-	BaseClass::Teleport( newPosition, newAngles, newVelocity, bUseSlowHighAccuracyContacts );
+	BaseClass::Teleport_Impl( newPosition, newAngles, newVelocity, bUseSlowHighAccuracyContacts );
 
 	// Calculate the relative transform of the teleport
 	matrix3x4_t xform;
@@ -135,21 +133,21 @@ void CPropVehicle::Teleport( const Vector *newPosition, const QAngle *newAngles,
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPropVehicle::DrawDebugGeometryOverlays()
+void CPropVehicle::DrawDebugGeometryOverlays_Impl()
 {
 	if (m_debugOverlays & OVERLAY_BBOX_BIT) 
 	{	
 		m_VehiclePhysics.DrawDebugGeometryOverlays();
 	}
-	BaseClass::DrawDebugGeometryOverlays();
+	BaseClass::DrawDebugGeometryOverlays_Impl();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CPropVehicle::DrawDebugTextOverlays()
+int CPropVehicle::DrawDebugTextOverlays_Impl()
 {
-	int nOffset = BaseClass::DrawDebugTextOverlays();
+	int nOffset = BaseClass::DrawDebugTextOverlays_Impl();
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
 		nOffset = m_VehiclePhysics.DrawDebugTextOverlays( nOffset );
@@ -160,7 +158,7 @@ int CPropVehicle::DrawDebugTextOverlays()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CBasePlayer *CPropVehicle::HasPhysicsAttacker( float dt )
+CBasePlayer *CPropVehicle::HasPhysicsAttacker_Impl( float dt )
 {
 	if (gpGlobals->curtime - dt <= m_flLastPhysicsInfluenceTime)
 	{
@@ -215,7 +213,7 @@ void CPropVehicle::InputHandBrakeOff( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPropVehicle::Think()
+void CPropVehicle::Think_Impl()
 {
 	m_VehiclePhysics.Think();
 
@@ -233,7 +231,7 @@ constexpr auto SMOOTHING_FACTOR = 0.9;
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPropVehicle::VPhysicsUpdate( IPhysicsObject *pPhysics )
+void CPropVehicle::VPhysicsUpdate_Impl( IPhysicsObject *pPhysics )
 {
 	if ( IsMarkedForDeletion() )
 		return;
@@ -248,14 +246,14 @@ void CPropVehicle::VPhysicsUpdate( IPhysicsObject *pPhysics )
 	if (!m_VehiclePhysics.VPhysicsUpdate( pPhysics ))
 		return;
 	
-	BaseClass::VPhysicsUpdate( pPhysics );
+	BaseClass::VPhysicsUpdate_Impl( pPhysics );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Output : const Vector
 //-----------------------------------------------------------------------------
-Vector CPropVehicle::GetSmoothedVelocity( void )
+Vector CPropVehicle::GetSmoothedVelocity_Impl( void )
 {
 	return m_vecSmoothedVelocity;
 }
@@ -320,9 +318,9 @@ void CPropVehicleDriveable::DestroyServerVehicle()
 //------------------------------------------------
 // Precache
 //------------------------------------------------
-void CPropVehicleDriveable::Precache( void )
+void CPropVehicleDriveable::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	// This step is needed because if we're precaching from a templated instance, we'll miss our vehicle 
 	// script sounds unless we do the parse below.  This instance of the vehicle will be nuked when we're actually created.
@@ -342,7 +340,7 @@ void CPropVehicleDriveable::Precache( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPropVehicleDriveable::Spawn( void )
+void CPropVehicleDriveable::Spawn_Impl( void )
 {
 	// Has to be created before Spawn is called (since that causes Precache to be called)
 	DestroyServerVehicle();
@@ -357,7 +355,7 @@ void CPropVehicleDriveable::Spawn( void )
 		return;
 	}
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	m_flMinimumSpeedToEnterExit = 0;
 	m_takedamage = DAMAGE_EVENTS_ONLY;
@@ -367,9 +365,9 @@ void CPropVehicleDriveable::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: Do extra fix-up after restore
 //-----------------------------------------------------------------------------
-void CPropVehicleDriveable::OnRestore( void )
+void CPropVehicleDriveable::OnRestore_Impl( void )
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	// NOTE: This is necessary to prevent overflow of datatables on level transition
 	// since the last exit eyepoint in the last level will have been fixed up
@@ -395,7 +393,7 @@ void CPropVehicleDriveable::OnRestore( void )
 //-----------------------------------------------------------------------------
 // Purpose: Vehicles are permanently oriented off angle for vphysics.
 //-----------------------------------------------------------------------------
-void CPropVehicleDriveable::GetVectors(Vector* pForward, Vector* pRight, Vector* pUp) const
+void CPropVehicleDriveable::GetVectors_Impl(Vector* pForward, Vector* pRight, Vector* pUp) const
 {
 	// This call is necessary to cause m_rgflCoordinateFrame to be recomputed
 	const matrix3x4_t &entityToWorld = EntityToWorldTransform();
@@ -433,7 +431,7 @@ void CPropVehicleDriveable::VehicleAngleVectors( const QAngle &angles, Vector *p
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPropVehicleDriveable::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CPropVehicleDriveable::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	CBasePlayer *pPlayer = ToBasePlayer( pActivator );
 	if ( !pPlayer )
@@ -615,9 +613,9 @@ bool CPropVehicleDriveable::IsOverturned( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPropVehicleDriveable::Think()
+void CPropVehicleDriveable::Think_Impl()
 {
-	BaseClass::Think();
+	BaseClass::Think_Impl();
 
 	if ( ShouldThink() )
 	{
@@ -764,7 +762,7 @@ void CPropVehicleDriveable::StopEngine( void )
 //-----------------------------------------------------------------------------
 // Purpose: // The player takes damage if he hits something going fast enough
 //-----------------------------------------------------------------------------
-void CPropVehicleDriveable::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
+void CPropVehicleDriveable::VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent )
 {
 
 //=============================================================================
@@ -781,7 +779,7 @@ void CPropVehicleDriveable::VPhysicsCollision( int index, gamevcollisionevent_t 
 	if ( pEvent->deltaCollisionTime < 0.5 && (pHitEntity == this) )
 		return;
 
-	BaseClass::VPhysicsCollision( index, pEvent );
+	BaseClass::VPhysicsCollision_Impl( index, pEvent );
 
 	// if this is a bone follower, promote to the owner entity
 	if ( pHitEntity->GetOwnerEntity() && (pHitEntity->GetEffects() & EF_NODRAW) )
@@ -826,7 +824,7 @@ void CPropVehicleDriveable::VPhysicsCollision( int index, gamevcollisionevent_t 
 	}
 }
 
-int CPropVehicleDriveable::VPhysicsGetObjectList( IPhysicsObject **pList, int listMax )
+int CPropVehicleDriveable::VPhysicsGetObjectList_Impl( IPhysicsObject **pList, int listMax )
 {
 	return GetPhysics()->VPhysicsGetObjectList( pList, listMax );
 }
@@ -834,7 +832,7 @@ int CPropVehicleDriveable::VPhysicsGetObjectList( IPhysicsObject **pList, int li
 //-----------------------------------------------------------------------------
 // Purpose: Handle trace attacks from the physcannon
 //-----------------------------------------------------------------------------
-void CPropVehicleDriveable::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
+void CPropVehicleDriveable::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
 	// If we've just been zapped by the physcannon, try and right ourselves
 	if ( info.GetDamageType() & DMG_PHYSGUN )
@@ -867,7 +865,7 @@ void CPropVehicleDriveable::TraceAttack( const CTakeDamageInfo &info, const Vect
 
 	}
 
-	BaseClass::TraceAttack( info, vecDir, ptr );
+	BaseClass::TraceAttack_Impl( info, vecDir, ptr );
 }
 
 //=============================================================================
@@ -939,7 +937,7 @@ bool CPropVehicleDriveable::NPC_RemovePassenger( CAI_BaseNPC *pPassenger )
 // Input  : *pVictim - 
 //			&info - 
 //-----------------------------------------------------------------------------
-void CPropVehicleDriveable::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &info )
+void CPropVehicleDriveable::Event_KilledOther_Impl( CBaseEntity *pVictim, const CTakeDamageInfo &info )
 { 
 	CBaseEntity *pDriver = GetDriver();
 	if ( pDriver != nullptr )
@@ -947,7 +945,7 @@ void CPropVehicleDriveable::Event_KilledOther( CBaseEntity *pVictim, const CTake
 		pDriver->Event_KilledOther( pVictim, info );
 	}
 
-	BaseClass::Event_KilledOther( pVictim, info );
+	BaseClass::Event_KilledOther_Impl( pVictim, info );
 }
 
 //========================================================================================================================================

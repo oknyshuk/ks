@@ -20,136 +20,7 @@ import std;
 #endif
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 
-//-----------------------------------------------------------------------------
-//
-// Server-side implementation of the engine sound interface
-//
-//-----------------------------------------------------------------------------
-class CEngineSoundServer : public IEngineSound
-{
-public:
-	// constructor, destructor
-	CEngineSoundServer();
-	virtual ~CEngineSoundServer();
-
-	virtual bool PrecacheSound( const char *pSample, bool bPreload, bool bIsUISound );
-	virtual bool IsSoundPrecached( const char *pSample );
-	virtual void PrefetchSound( const char *pSample );
-	virtual bool IsLoopingSound( const char *pSample )
-	{
-		Warning( "Can't call IsLoopingSound from server\n" );
-		return false;
-	}
-
-	virtual float GetSoundDuration( const char *pSample );  
-
-	virtual int EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH iSoundEntryHash, const char *pSample, 
-		float flVolume, float flAttenuation, int nSeed, int iFlags, int iPitch, 
-		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
-
-	virtual int EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH iSoundEntryHash, const char *pSample, 
-		float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
-		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
-
-	virtual void EmitSentenceByIndex( IRecipientFilter& filter, int iEntIndex, int iChannel, int iSentenceIndex, 
-		float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch,
-		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
-
-	virtual void StopSound( int iEntIndex, int iChannel, const char *pSample, HSOUNDSCRIPTHASH nSoundEntryHash = SOUNDEMITTER_INVALID_HASH );
-
-	virtual void StopAllSounds( bool bClearBuffers );
-
-	// Set the room type for a player
-	virtual void SetRoomType( IRecipientFilter& filter, int roomType );
-	virtual void SetPlayerDSP( IRecipientFilter& filter, int dspType, bool fastReset );
-
-	// emit an "ambient" sound that isn't spatialized - specify left/right volume
-	// only available on the client, assert on server
-	virtual int EmitAmbientSound( const char *pSample, float flVolume, int iPitch, int flags, float soundtime = 0.0f );
-
-	virtual float GetDistGainFromSoundLevel( soundlevel_t soundlevel, float dist );
-
-	// Client .dll only functions
-	virtual int		GetGuidForLastSoundEmitted()
-	{ 
-		Warning( "Can't call GetGuidForLastSoundEmitted from server\n" );
-		return 0; 
-	}
-	virtual bool	IsSoundStillPlaying( int guid )
-	{ 
-		Warning( "Can't call IsSoundStillPlaying from server\n" );
-		return false; 
-	}
-	virtual void	StopSoundByGuid( int guid, bool bForce )	
-	{ 
-		Warning( "Can't call StopSoundByGuid from server\n" );
-		return; 
-	}
-
-	// Retrieves list of all active sounds
-	virtual void	GetActiveSounds( std::vector< SndInfo_t >& sndlist )
-	{ 
-		Warning( "Can't call GetActiveSounds from server\n" );
-		return; 
-	}
-
-	// Set's master volume (0.0->1.0)
-	virtual void	SetVolumeByGuid( int guid, float fvol )
-	{
-		Warning( "Can't call SetVolumeByGuid from server\n" );
-		return; 
-	}
-	// return's sound's current elapsed time
-	virtual float GetElapsedTimeByGuid( int guid)
-	{
-		Warning( "Can't call GetElapsedTimeByGuid from server\n" );
-		return 0.0; 
-	}
-	virtual void	PrecacheSentenceGroup( const char *pGroupName )
-	{
-		VOX_PrecacheSentenceGroup( this, pGroupName );
-	}
-	virtual void	NotifyBeginMoviePlayback()
-	{
-		contract_assert( false && "Not supported" );
-	}
-
-	virtual void	NotifyEndMoviePlayback()
-	{
-		contract_assert( false && "Not supported" );
-	}
-
-	virtual bool	IsMoviePlaying()
-	{
-		contract_assert( false && "Not supported" );
-		return false;
-	}
-
-	virtual bool	GetSoundChannelVolume( const char* sound, float &flVolumeLeft, float &flVolumeRight )
-	{
-		Warning( "Can't call GetSoundChannelVolume from server\n" );
-		return false;
-	}
-
-	virtual bool GetPreventSound( )
-	{
-		contract_assert( false && "Not supported" );
-		return false;
-	}
-
-
-	virtual void SetReplaySoundFade( float flReplayVolume ) { contract_assert( !"Client-only service" ); }
-	virtual float GetReplaySoundFade()const { contract_assert( !"Client-only service" );  return 0.0f; }
-
-	virtual void SetReplayMusicGain( float flReplayMusicGain ) { contract_assert( !"Client-only service" ); }
-	virtual float GetReplayMusicGain()const { contract_assert( !"Client-only service" );  return 0.0f; }
-
-
-private:
-	void EmitSoundInternal( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH iSoundEntryHash, const char *pSample, 
-		float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
-		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
-};
+#include "enginesoundimpl.h"
 
 
 //-----------------------------------------------------------------------------
@@ -168,7 +39,8 @@ IEngineSound *EngineSoundServer()
 //-----------------------------------------------------------------------------
 // constructor, destructor
 //-----------------------------------------------------------------------------
-CEngineSoundServer::CEngineSoundServer()
+CEngineSoundServer::CEngineSoundServer() :
+	IEngineSound( kind_t::server )
 {
 }
 

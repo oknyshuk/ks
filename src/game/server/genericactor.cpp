@@ -4,8 +4,6 @@
 //=========================================================
 // Generic NPC - purely for scripted sequence work.
 //=========================================================
-import std;
-import ks.vstdlib;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -59,14 +57,14 @@ class CGenericActor : public CAI_BaseActor
 public:
 	DECLARE_CLASS( CGenericActor, CAI_BaseActor );
 
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 	float	MaxYawSpeed( void );
-	Class_T Classify ( void );
+	Class_T Classify_Impl ( void );
 	void	HandleAnimEvent( animevent_t *pEvent );
 	int		GetSoundInterests ( void );
 	
-	virtual int		UpdateTransmitState( void );
+	int		UpdateTransmitState_Impl( void );
 
 	void	TempGunEffect( void );
 
@@ -83,7 +81,7 @@ IMPLEMENT_REFLECT_DATAMAP( CGenericActor )
 // Classify - indicates this NPC's place in the 
 // relationship table.
 //=========================================================
-Class_T	CGenericActor::Classify ( void )
+Class_T	CGenericActor::Classify_Impl ( void )
 {
 	return	CLASS_NONE;
 }
@@ -117,7 +115,7 @@ int CGenericActor::GetSoundInterests ( void )
 //=========================================================
 // Spawn
 //=========================================================
-void CGenericActor::Spawn()
+void CGenericActor::Spawn_Impl()
 {
 	Precache();
 
@@ -181,7 +179,7 @@ void CGenericActor::Spawn()
 //=========================================================
 // Precache - precaches all resources this NPC needs
 //=========================================================
-void CGenericActor::Precache()
+void CGenericActor::Precache_Impl()
 {
 	PrecacheModel( STRING( GetModelName() ) );
 }	
@@ -189,7 +187,7 @@ void CGenericActor::Precache()
 //=========================================================
 // Send to all clients since we need to drive the lighted mouth with this
 //=========================================================
-int CGenericActor::UpdateTransmitState()
+int CGenericActor::UpdateTransmitState_Impl()
 {
 	// ALWAYS transmit to all clients.
 	return SetTransmitState( FL_EDICT_ALWAYS );

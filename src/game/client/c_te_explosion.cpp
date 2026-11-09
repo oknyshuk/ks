@@ -4,8 +4,6 @@
 // Purpose: Client explosions
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -103,10 +101,6 @@ public:
 	virtual void RenderParticles( CParticleRenderIterator *pIterator );
 	virtual void SimulateParticles( CParticleSimulateIterator *pIterator );
 
-private:
-	// Recording 
-	void RecordExplosion( );
-
 public:
 	void			AffectRagdolls( void );
 
@@ -200,51 +194,11 @@ bool CExplosionOverlay::Update( void )
 
 
 //-----------------------------------------------------------------------------
-// Recording 
-//-----------------------------------------------------------------------------
-void C_TEExplosion::RecordExplosion( )
-{
-	if ( !ToolsEnabled() )
-		return;
-
-	if ( clienttools->IsInRecordingMode() )
-	{
-		const model_t* pModel = (m_nModelIndex != 0) ? modelinfo->GetModel( m_nModelIndex ) : nullptr;
-		const char *pModelName = pModel ? modelinfo->GetModelName( pModel ) : "";
-
-		KeyValues *msg = new KeyValues( "TempEntity" );
-
- 		msg->SetInt( "te", TE_EXPLOSION );
- 		msg->SetString( "name", "TE_Explosion" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetFloat( "originx", m_vecOrigin.x );
-		msg->SetFloat( "originy", m_vecOrigin.y );
-		msg->SetFloat( "originz", m_vecOrigin.z );
-		msg->SetFloat( "directionx", m_vecNormal.x );
-		msg->SetFloat( "directiony", m_vecNormal.y );
-		msg->SetFloat( "directionz", m_vecNormal.z );
-  		msg->SetString( "model", pModelName );
-		msg->SetFloat( "scale", m_fScale );
-		msg->SetInt( "framerate", m_nFrameRate );
-		msg->SetInt( "flags", m_nFlags );
-		msg->SetInt( "materialtype", m_chMaterialType );
-		msg->SetInt( "radius", m_nRadius );
-		msg->SetInt( "magnitude", m_nMagnitude );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
-}
-
-
-//-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : bool - 
 //-----------------------------------------------------------------------------
 void C_TEExplosion::PostDataUpdate( DataUpdateType_t updateType )
 {
-	RecordExplosion();
-
 	AffectRagdolls();
 
 	// Filter out a water explosion

@@ -25,8 +25,6 @@
 
 // viewport definitions
 #include <baseviewport.h>
-import ks.tier1;
-import std;
 #include "counterstrikeviewport.h"
 #include "cs_gamerules.h"
 // #include "c_user_message_register.h"
@@ -71,6 +69,8 @@ static void teammenu( const CCommand &args )
 
 static void buymenu( const CCommand &args );
 static ConCommand buymenu_command( "buymenu", buymenu, "Show or hide main buy menu", FCVAR_SERVER_CAN_EXECUTE );
+extern ConVar mp_buy_anywhere;
+extern ConVar mp_buy_during_immunity;
 static void buymenu( const CCommand &args )
 {
 	bool bShowIt = true;
@@ -87,8 +87,6 @@ static void buymenu( const CCommand &args )
 		if ( pPlayer->m_lifeState != LIFE_ALIVE && pPlayer->State_Get() != STATE_ACTIVE )
 			return;
 
-		extern ConVar mp_buy_anywhere;
-		extern ConVar mp_buy_during_immunity;
 		static ConVarRef sv_buy_status_override_ref( "sv_buy_status_override" );
 		// UNUSED: int nGuardianTeam = CSGameRules()->IsHostageRescueMap() ? TEAM_TERRORIST : TEAM_CT;
 

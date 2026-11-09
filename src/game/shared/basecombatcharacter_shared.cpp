@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "const.h"
 #include "predictable_entity.h"
 #include "util_shared.h"
@@ -24,7 +21,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -37,7 +33,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "baseentity_shared.h"
 #include "basetoggle.h"
@@ -165,6 +160,7 @@ CBaseCombatWeapon *CBaseCombatCharacter::GetWeapon( int i ) const
 // Input  : iCount - 
 //			iAmmoIndex - 
 //-----------------------------------------------------------------------------
+extern ConVar sv_infinite_ammo;
 void CBaseCombatCharacter::RemoveAmmo( int iCount, int iAmmoIndex )
 {
 	if (iCount <= 0)
@@ -177,7 +173,6 @@ void CBaseCombatCharacter::RemoveAmmo( int iCount, int iAmmoIndex )
 	if ( GetAmmoDef()->CanCarryInfiniteAmmo( iAmmoIndex ) )
 		return;
 
-	extern ConVar sv_infinite_ammo;
 	if ( sv_infinite_ammo.GetInt() == 2 ) // infinite total ammo but magazine reloads are still required.
 		return;
 
@@ -312,7 +307,7 @@ CBaseCombatWeapon *CBaseCombatCharacter::Weapon_GetPosition( int position ) cons
 
 
 
-int CBaseCombatCharacter::BloodColor()
+int CBaseCombatCharacter::BloodColor_Impl()
 {
 	return m_bloodColor;
 }

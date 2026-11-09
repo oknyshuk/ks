@@ -24,8 +24,6 @@
 #include "localize/ilocalize.h"
 
 #include <rocketui/rmlui.h>
-import ks.tier1;
-import std;
 
 #include "rkpanel_popup.h"
 

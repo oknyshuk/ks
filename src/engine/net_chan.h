@@ -34,7 +34,7 @@ namespace ks::net { struct CNETMsg_SplitScreenUser; }
 class CNetChan : public INetChannel
 {
 
-private: // netchan structurs
+public: // netchan structurs
 
 	typedef struct dataFragments_s
 	{
@@ -196,24 +196,24 @@ public:	// INetChannel interface
 	bool		IsTimedOut( void ) const;
 	bool		HasPendingReliableData( void );
 	void		SetMaxBufferSize(bool bReliable, int nBytes, bool bVoice = false );
-	virtual int		GetNumBitsWritten( bool bReliable );
-	virtual void	SetInterpolationAmount( float flInterpolationAmount );
-	virtual void	SetRemoteFramerate( float flFrameTime, float flFrameTimeStdDeviation, float flFrameStartTimeStdDeviation );
+	int		GetNumBitsWritten( bool bReliable );
+	void	SetInterpolationAmount( float flInterpolationAmount );
+	void	SetRemoteFramerate( float flFrameTime, float flFrameTimeStdDeviation, float flFrameStartTimeStdDeviation );
 
 	// Max # of payload bytes before we must split/fragment the packet
-	virtual void	SetMaxRoutablePayloadSize( int nSplitSize );
-	virtual int	GetMaxRoutablePayloadSize();
-	virtual bool	SetActiveChannel( INetChannel *pNewChannel );
-	virtual void	AttachSplitPlayer( int nSplitPlayerSlot, INetChannel *pChannel );
-	virtual void	DetachSplitPlayer( int nSplitPlayerSlot );
+	void	SetMaxRoutablePayloadSize( int nSplitSize );
+	int	GetMaxRoutablePayloadSize();
+	bool	SetActiveChannel( INetChannel *pNewChannel );
+	void	AttachSplitPlayer( int nSplitPlayerSlot, INetChannel *pChannel );
+	void	DetachSplitPlayer( int nSplitPlayerSlot );
 
 	int			IncrementSplitPacketSequence();
 
-	virtual bool	WasLastMessageReliable() const override; // True if the last (or currently processing) message was sent via the reliable channel
+	bool	WasLastMessageReliable() const; // True if the last (or currently processing) message was sent via the reliable channel
 
-	virtual const unsigned char * GetChannelEncryptionKey() const override;
+	const unsigned char * GetChannelEncryptionKey() const;
 
-	virtual bool	EnqueueVeryLargeAsyncTransfer( INetMessage &msg ) override;	// Enqueues a message for a large async transfer
+	bool	EnqueueVeryLargeAsyncTransfer( INetMessage &msg );	// Enqueues a message for a large async transfer
 
 	bool		IsRemoteDisconnected() const;
 
@@ -236,7 +236,7 @@ public:
 
 	bf_write &GetBuffer( EBufType eBufType );
 
-private:
+public:
 	struct SplitPlayer_t
 	{
 		SplitPlayer_t() : m_nSlot( -1 ), m_pChannel( nullptr ) {}
@@ -290,7 +290,7 @@ private:
 	void	MaybeAppendBuffer( EBufType eBufType, bf_write &out, const SplitPlayer_t &sp, bf_write &src, int *pnCurrentSlot );
 	void	ChangeSplitUser( bf_write &out, int slot );
 
-private:
+public:
 
 	bool NETMsg_NOP( const ks::net::CNETMsg_NOP& msg );
 	bool NETMsg_Disconnect( const ks::net::CNETMsg_Disconnect& msg );

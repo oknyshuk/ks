@@ -3,8 +3,6 @@
 
 // Purpose: Player for HL1.
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -84,7 +82,6 @@ import ks.tier1;
 #include "cs_achievement_constants.h"
 #include "cs_simple_hostage.h"
 #include "cs_weapon_parse.h"
-#include "achievementmgr.h"
 #include "weapon_c4.h"
 #include "cs_shareddefs.h"
 #include "inputsystem/iinputsystem.h"
@@ -113,7 +110,6 @@ import ks.tier1;
 #if defined( CLIENT_DLL )
 
 	#include "custom_material.h"
-	#include "cs_custom_clothing_visualsdata_processor.h"
 
 #endif
 
@@ -213,7 +209,7 @@ ConVar sv_guardian_heavy_all( "sv_guardian_heavy_all", "0", FCVAR_RELEASE | FCVA
 // [Forrest] Allow MVP to be turned off for a server
 // [Forrest] Allow freezecam to be turned off for a server
 // [Forrest] Allow win panel to be turned off for a server
-static void SvNoMVPChangeCallback( IConVar *pConVar, const char *pOldValue, float flOldValue )
+static void SvNoMVPChangeCallback( ConVar *pConVar, const char *pOldValue, float flOldValue )
 {
 	ConVarRef var( pConVar );
 	if ( var.IsValid() && var.GetBool() )
@@ -322,7 +318,7 @@ public:
 	DECLARE_SERVERCLASS();
 
 	// Transmit ragdolls to everyone.
-	virtual int UpdateTransmitState()
+	int UpdateTransmitState_Impl()
 	{
 		return SetTransmitState( FL_EDICT_ALWAYS );
 	}
@@ -742,7 +738,7 @@ CCSPlayer *CCSPlayer::CreatePlayer( const char *className, edict_t *ed )
 }
 
 
-void CCSPlayer::Precache()
+void CCSPlayer::Precache_Impl()
 {
 	Vector mins( -13, -13, -10 );
 	Vector maxs( 13, 13, 75 );
@@ -869,7 +865,7 @@ void CCSPlayer::Precache()
 	PrecacheModel( "models/player/contactshadow/contactshadow_leftfoot.mdl" );
 	PrecacheModel( "models/player/contactshadow/contactshadow_rightfoot.mdl" );
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 
@@ -1133,7 +1129,8 @@ void CCSPlayer::SetCSSpawnLocation( Vector position, QAngle angle )
 	m_storedSpawnAngle = angle;
 }
 
-void CCSPlayer::Spawn()
+extern ConVar mp_guardian_special_weapon_needed;
+void CCSPlayer::Spawn_Impl()
 {
 	m_RateLimitLastCommandTimes.clear();
 
@@ -1197,7 +1194,6 @@ void CCSPlayer::Spawn()
 		}
 
 		int minNumSniperBots = 1;
-		extern ConVar mp_guardian_special_weapon_needed;
 		char const *szWepShortName = mp_guardian_special_weapon_needed.GetString();
 		if ( szWepShortName && *szWepShortName && V_strcmp( szWepShortName, "any" ) )
 		{
@@ -1270,7 +1266,7 @@ void CCSPlayer::Spawn()
 		SetParent( nullptr );
 
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	// After base class spawn strips our last-round items and grants defaults, give us our heavy armor if we've been chosen this round
 	if ( bStartsWithHeavyArmorThisRound )
@@ -2353,7 +2349,7 @@ public:
 	}
 };
 
-void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
+void CCSPlayer::Event_Killed_Impl( const CTakeDamageInfo &info )
 {
 	SetKilledTime( gpGlobals->curtime );
 
@@ -2552,7 +2548,7 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 	CreateRagdollEntity();
 
 	State_Transition( STATE_DEATH_ANIM );	// Transition into the dying state.
-	BaseClass::Event_Killed( subinfo );
+	BaseClass::Event_Killed_Impl( subinfo );
 
 	if ( IsAssassinationTarget() )
 	{
@@ -2755,9 +2751,9 @@ bool CCSPlayer::IsObjectiveKill( CCSPlayer* pCSVictim )
 // [menglish, tj] Update and check any one-off achievements based on the kill
 // Notify that I've killed some entity. (called from Victim's Event_Killed ).
 // (dkorus:  This function appears to be misnamed, it also called for self kills/suicides )
-void CCSPlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &info )
+void CCSPlayer::Event_KilledOther_Impl( CBaseEntity *pVictim, const CTakeDamageInfo &info )
 {
-	BaseClass::Event_KilledOther(pVictim, info );
+	BaseClass::Event_KilledOther_Impl(pVictim, info );
 
 	if ( !CSGameRules() )
 		return;
@@ -3219,12 +3215,12 @@ void CCSPlayer::InitVCollision( const Vector &vecAbsOrigin, const Vector &vecAbs
 	GetPhysicsController()->SetEventHandler( &playerCallback );
 }
 
-void CCSPlayer::VPhysicsShadowUpdate( IPhysicsObject *pPhysics )
+void CCSPlayer::VPhysicsShadowUpdate_Impl( IPhysicsObject *pPhysics )
 {
 	if ( !CanMove() )
 		return;
 
-	BaseClass::VPhysicsShadowUpdate( pPhysics );
+	BaseClass::VPhysicsShadowUpdate_Impl( pPhysics );
 }
 
 bool CCSPlayer::HasShield() const
@@ -3239,6 +3235,7 @@ bool CCSPlayer::IsShieldDrawn() const
 }
 
 
+extern void FE_PlayerDecal( CCSGameRules::ServerPlayerDecalData_t const &data, std::string const &signature );
 void CCSPlayer::SprayPaint( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature const &msg )
 {
 	if ( !m_uiAccountId ) return;
@@ -3345,7 +3342,6 @@ void CCSPlayer::SprayPaint( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature const
 		// Follow through and apply the decal
 		CBroadcastRecipientFilter sprayCanFilter;
 		EmitSound( sprayCanFilter, entindex(), "SprayCan.Paint" );
-		extern void FE_PlayerDecal( CCSGameRules::ServerPlayerDecalData_t const &data, std::string const &signature );
 		FE_PlayerDecal( data, msg.data->signature );
 	}
 
@@ -3422,6 +3418,7 @@ void CCSPlayer::ImpulseCommands()
 	BaseClass::ImpulseCommands();
 }
 
+extern int gEvilImpulse101;
 void CCSPlayer::CheatImpulseCommands( int iImpulse )
 {
 	switch( iImpulse )
@@ -3430,7 +3427,6 @@ void CCSPlayer::CheatImpulseCommands( int iImpulse )
 		{
 			if( sv_cheats->GetBool() )
 			{
-				extern int gEvilImpulse101;
 				gEvilImpulse101 = true;
 
 				InitializeAccount( CSGameRules()->GetMaxMoney() );
@@ -3749,7 +3745,7 @@ void CCSPlayer::UpdateMouseoverHints()
 
 	if ( tr.fraction != 1.0f )
 	{
-		if (tr.DidHitNonWorldEntity() && tr.Ent<CBaseEntity>() )
+		if (TraceDidHitNonWorldEntity( tr ) && tr.Ent<CBaseEntity>() )
 		{
 			CBaseEntity *pObject = tr.Ent<CBaseEntity>();
 			switch ( pObject->Classify() )
@@ -4154,7 +4150,7 @@ void CCSPlayer::PushawayThink()
 }
 
 
-void CCSPlayer::SetModel( const char *szModelName )
+void CCSPlayer::SetModel_Impl( const char *szModelName )
 {
 	m_bUseNewAnimstate = ( V_stristr( szModelName, "custom_player" ) != 0 );
 
@@ -4165,7 +4161,7 @@ void CCSPlayer::SetModel( const char *szModelName )
 
 	}
 
-	BaseClass::SetModel( szModelName );
+	BaseClass::SetModel_Impl( szModelName );
 }
 
 //-----------------------------------------------------------------------------
@@ -4451,7 +4447,7 @@ CCSPlayer::ITakeDamageListener::~ITakeDamageListener()
 	( ks::erase_first( s_arrTakeDamageListeners, this ) );
 }
 
-int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
+int CCSPlayer::OnTakeDamage_Impl( const CTakeDamageInfo &inputInfo )
 {
 	CTakeDamageInfo info = inputInfo;
 	for ( int idxTDL = (int)std::ssize( s_arrTakeDamageListeners ) - 1; idxTDL >= 0; idxTDL-- )
@@ -5089,7 +5085,7 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 
 	gamestats->Event_PlayerDamage( this, info );
 
-	return CBaseCombatCharacter::OnTakeDamage( info );
+	return CBaseCombatCharacter::OnTakeDamage_Impl( info );
 }
 
 
@@ -5140,7 +5136,7 @@ ConVar mp_flinch_punch_scale( "mp_flinch_punch_scale", "3", FCVAR_REPLICATED | F
 
 //ConVar aimpunch_fix( "aimpunch_fix", "0" );
 
-void CCSPlayer::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
+void CCSPlayer::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
 	bool bShouldBleed = true;
 	bool bShouldSpark = false;
@@ -5549,6 +5545,8 @@ void CCSPlayer::AddAccountAward( PlayerCashAward::Type reason )
 }
 
 
+extern ConVar cash_player_killed_enemy_default;
+extern ConVar cash_player_killed_enemy_factor;
 void CCSPlayer::AddAccountAward( PlayerCashAward::Type reason, int amount, const CWeaponCSBase *pWeapon )
 {
 	if ( !AreAccountAwardsEnabled( reason ) )
@@ -5561,8 +5559,6 @@ void CCSPlayer::AddAccountAward( PlayerCashAward::Type reason, int amount, const
 	const char* sign_string = "+$";
 	const char* szWeaponName = nullptr;
 
-	extern ConVar cash_player_killed_enemy_default;
-	extern ConVar cash_player_killed_enemy_factor;
 
 	int currentround = CSGameRules()->GetTotalRoundsPlayed();
 
@@ -5882,6 +5878,8 @@ void CCSPlayer::MarkAsNotReceivingMoneyNextRound( bool bAllowMoneyNextRound /*=f
 	}
 }
 
+extern ConVar cash_player_killed_enemy_default;
+extern ConVar cash_player_killed_enemy_factor;
 void CCSPlayer::ProcessSuicideAsKillReward()
 {
 	// Don't give any rewards during warmup period or freezetime aka buytime
@@ -5935,7 +5933,6 @@ void CCSPlayer::ProcessSuicideAsKillReward()
 				continue;
 
 			// Let's see which guns this player has?
-			extern ConVar cash_player_killed_enemy_default;
 			int numBonusMoney = cash_player_killed_enemy_default.GetInt();
 			int arrSlots[] = { WEAPON_SLOT_RIFLE, WEAPON_SLOT_PISTOL };
 			for ( int k = 0; k < std::size( arrSlots ); ++k )
@@ -5960,7 +5957,6 @@ void CCSPlayer::ProcessSuicideAsKillReward()
 	}
 
 	// Give the player kill reward
-	extern ConVar cash_player_killed_enemy_factor;
 	int numDollarsEarned = RoundFloatToInt( numBestBonusMoney * cash_player_killed_enemy_factor.GetFloat() );
 	if ( pBestEnemy && ( numDollarsEarned > 0 ) )
 	{
@@ -6900,7 +6896,7 @@ void CCSPlayer::TransferInventory( CCSPlayer* pTargetPlayer )
 
 	for (int i = 0; i < MAX_WEAPONS; i++)
 	{
-		CBaseCombatWeapon* pWeapon = dynamic_cast<CBaseCombatWeapon*>(GetWeapon(i));
+		CBaseCombatWeapon* pWeapon = entity_cast<CBaseCombatWeapon>(GetWeapon(i));
 		if (pWeapon && ((pWeapon->GetWpnData().iFlags & ITEM_FLAG_EXHAUSTIBLE) == 0 || pWeapon->HasAmmo()))
 		{
 			// PiMoN: was CEconEntity, changed to CWeaponCSBase for a couple of fixes below
@@ -7544,10 +7540,10 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char * wpnName, int nPo
 	return result;
 }
 
+extern ConVar mp_buy_during_immunity;
 void CCSPlayer::SetBuyMenuOpen( bool bOpen )
 {
 	m_bIsBuyMenuOpen = bOpen;
-	extern ConVar mp_buy_during_immunity;
 
 	if ( CanBuyDuringImmunity() )
 	{
@@ -10768,6 +10764,7 @@ bool CCSPlayer::Weapon_CanUse( CBaseCombatWeapon *pBaseWeapon )
 	return true;
 }
 
+extern int gEvilImpulse101;
 bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 {
 	CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase* >( pBaseWeapon );
@@ -10785,7 +10782,6 @@ bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 	// Can I have this weapon type?
 	if ( pOwner || !Weapon_CanUse( pWeapon ) || !g_pGameRules->CanHavePlayerItem( this, pWeapon ) )
 	{
-		extern int gEvilImpulse101;
 		if ( gEvilImpulse101 || CSGameRules()->IsPlayingGunGameDeathmatch() )
 		{
 			UTIL_Remove( pWeapon );
@@ -11817,7 +11813,7 @@ CBaseEntity *CCSPlayer::FindUseEntity()
 		trace_t result;
 		UTIL_TraceLine( EyePosition(), EyePosition() + MAX_WEAPON_NAME_POPUP_RANGE * aimDir, MASK_ALL, this, COLLISION_GROUP_NONE, &result );
 
-		if ( result.DidHitNonWorldEntity() && result.Ent<CBaseEntity>()->IsBaseCombatWeapon() )
+		if ( TraceDidHitNonWorldEntity( result ) && result.Ent<CBaseEntity>()->IsBaseCombatWeapon() )
 		{
 
 				CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase * >( result.Ent<CBaseEntity>() );
@@ -12076,7 +12072,7 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pchName, int iSubType /*= 0*/
 	pItem->SetLocalOrigin( pos );
 	pItem->AddSpawnFlags( SF_NORESPAWN );
 
-	CBaseCombatWeapon *pWeapon = dynamic_cast<CBaseCombatWeapon*>( pItem );
+	CBaseCombatWeapon *pWeapon = entity_cast<CBaseCombatWeapon>( pItem );
 	if ( pWeapon )
 	{
 		if ( iSubType )
@@ -12600,7 +12596,7 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool killedByEnemy )
 //-----------------------------------------------------------------------------
 // Purpose: Put the player in the specified team
 //-----------------------------------------------------------------------------
-void CCSPlayer::ChangeTeam( int iTeamNum )
+void CCSPlayer::ChangeTeam_Impl( int iTeamNum )
 {
 	if ( !CSGameRules() )
 		return;
@@ -12657,7 +12653,7 @@ void CCSPlayer::ChangeTeam( int iTeamNum )
 	}
 
 	// do the team change:
-	BaseClass::ChangeTeam( iTeamNum );
+	BaseClass::ChangeTeam_Impl( iTeamNum );
 
 	if ( !IsBot() )
 	{
@@ -12812,7 +12808,7 @@ void CCSPlayer::SwitchTeam( int iTeamNum )
 	m_bTeamChanged = true;
 
 	// do the team change:
-	BaseClass::ChangeTeam( iTeamNum );
+	BaseClass::ChangeTeam_Impl( iTeamNum );
 
 	if( HasDefuser() )
 	{
@@ -12835,9 +12831,9 @@ void CCSPlayer::SwitchTeam( int iTeamNum )
 	CSGameRules()->UpdateTeamClanNames( TEAM_CT );
 }
 
-void CCSPlayer::ModifyOrAppendCriteria( AI_CriteriaSet& set )
+void CCSPlayer::ModifyOrAppendCriteria_Impl( AI_CriteriaSet& set )
 {
-	BaseClass::ModifyOrAppendCriteria( set );
+	BaseClass::ModifyOrAppendCriteria_Impl( set );
 
 	// Fix up the model name for rule matching
 	char modelName[MAX_PATH];
@@ -14731,7 +14727,7 @@ int CCSPlayer::GetTotalActualHealthRemovedFromEnemies()
 	return totalDamage;
 }
 
-bool CCSPlayer::ShouldCollide( int collisionGroup, int contentsMask ) const
+bool CCSPlayer::ShouldCollide_Impl( int collisionGroup, int contentsMask ) const
 {
 	if ( collisionGroup == COLLISION_GROUP_PLAYER_MOVEMENT )
 	{
@@ -14746,7 +14742,7 @@ bool CCSPlayer::ShouldCollide( int collisionGroup, int contentsMask ) const
 		}
 	}
 
-	return BaseClass::ShouldCollide( collisionGroup, contentsMask );
+	return BaseClass::ShouldCollide_Impl( collisionGroup, contentsMask );
 }
 
 void CCSPlayer::GiveHealthAndArmorForGuardianMode( bool bAdditive )
@@ -14793,7 +14789,7 @@ void CCSPlayer::GiveHealthAndArmorForGuardianMode( bool bAdditive )
 	SetArmorValue( nArmor );
 }
 
-void CCSPlayer::SetHealth( int amt )
+void CCSPlayer::SetHealth_Impl( int amt )
 {
 	m_iHealth = amt;
 }
@@ -15360,9 +15356,9 @@ void CCSPlayer::UpdateInventory( bool bInit )
 {
 }
 
-void CCSPlayer::UpdateOnRemove( void )
+void CCSPlayer::UpdateOnRemove_Impl( void )
 {
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 
 }
 

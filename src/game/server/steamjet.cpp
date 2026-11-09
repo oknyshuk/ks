@@ -3,8 +3,6 @@
 
 // Purpose: Implements the server side of a steam jet particle system entity.
 
-import std;
-import ks.math;
 #include "edict.h"
 #include "eiface.h"
 #include "iserverentity.h"
@@ -37,7 +35,7 @@ import ks.math;
 IMPLEMENT_REFLECT_SERVERCLASS( CSteamJet, DT_SteamJet )
 
 LINK_ENTITY_TO_CLASS( env_steam, CSteamJet );
-LINK_ENTITY_TO_CLASS( env_steamjet, CSteamJet ); // For support of legacy env_steamjet, which faced left instead of forward.
+LINK_ENTITY_TO_CLASS_ALIAS( env_steamjet, CSteamJet ); // For support of legacy env_steamjet, which faced left instead of forward.
 
 //Save/restore
 IMPLEMENT_REFLECT_DATAMAP( CSteamJet )
@@ -50,7 +48,7 @@ CSteamJet::CSteamJet( void )
 //-----------------------------------------------------------------------------
 // Purpose: Called before spawning, after key values have been set.
 //-----------------------------------------------------------------------------
-void CSteamJet::Spawn( void )
+void CSteamJet::Spawn_Impl( void )
 {
 	Precache();
 
@@ -68,13 +66,13 @@ void CSteamJet::Spawn( void )
 	}
 }
 
-void CSteamJet::Precache( void )
+void CSteamJet::Precache_Impl( void )
 {
 	PrecacheMaterial( "particle/particle_smokegrenade" );
 	PrecacheMaterial( "sprites/heatwave" );
 }
 
- void CSteamJet::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+ void CSteamJet::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
  {
 	if (!pActivator->IsPlayer())
 	{

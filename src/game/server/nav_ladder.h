@@ -5,9 +5,7 @@
 // Navigation ladders
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
-import ks.tier1;
 #include "nav.h"
-import std;
 
 class CNavArea;
 

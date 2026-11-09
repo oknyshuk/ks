@@ -5,8 +5,6 @@
 // Mechanisms for using Hiding Spots in the Navigation Mesh
 // Author: Michael Booth, 2003-2004
 
-import std;
-import ks.core;
 #include "bot.h"
 #include "cs_nav_pathfind.h"
 

@@ -3,8 +3,6 @@
 
 // Purpose: Implements visual effects entities: sprites, beams, bubbles, etc.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -63,9 +60,9 @@ class [[= ks::reflect::KeyFrom<"m_nClipStyle", ks::reflect::Key{ .name = "ClipSt
 public:
 	DECLARE_CLASS( CEnvBeam, CBeam );
 
-	void	Spawn( void );
-	void	Precache( void );
-	void	Activate( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
+	void	Activate_Impl( void );
 
 	void	StrikeThink( void );
 	void	UpdateThink( void );
@@ -147,7 +144,7 @@ IMPLEMENT_REFLECT_DATAMAP( CEnvBeam )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvBeam::Spawn( void )
+void CEnvBeam::Spawn_Impl( void )
 {
 	if ( !m_iszSpriteName )
 	{
@@ -155,7 +152,7 @@ void CEnvBeam::Spawn( void )
 		return;
 	}
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	m_noiseAmplitude = std::min<std::common_type_t<int, float>>(MAX_BEAM_NOISEAMPLITUDE, m_noiseAmplitude);
 
@@ -219,7 +216,7 @@ void CEnvBeam::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvBeam::Precache( void )
+void CEnvBeam::Precache_Impl( void )
 {
 	if ( !V_stristr( STRING(m_iszSpriteName), ".vmt" ) )
 	{
@@ -239,14 +236,14 @@ void CEnvBeam::Precache( void )
 	g_iszPhysicsPropClassname = AllocPooledString( "prop_physics" );
 
 	m_spriteTexture = PrecacheModel( STRING(m_iszSpriteName) );
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvBeam::Activate( void )
+void CEnvBeam::Activate_Impl( void )
 {
 	// Get a handle to my filter entity if there is one
 	if (m_iFilterName != NULL_STRING)
@@ -254,7 +251,7 @@ void CEnvBeam::Activate( void )
 		m_hFilter = dynamic_cast<CBaseFilter *>(gEntList.FindEntityByName( nullptr, m_iFilterName ));
 	}
 
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( ServerSide() )
 		BeamUpdateVars();

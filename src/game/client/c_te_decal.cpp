@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -74,48 +72,11 @@ void C_TEDecal::Precache( void )
 }
 
 //-----------------------------------------------------------------------------
-// Recording 
-//-----------------------------------------------------------------------------
-static inline void RecordDecal( const Vector &pos, const Vector &start, 
-	int entity, int hitbox, int index )
-{
-	if ( !ToolsEnabled() )
-		return;
-
-	if ( clienttools->IsInRecordingMode() )
-	{
-		// FIXME: Can't record on entities yet
-		if ( entity != 0 )
-			return;
-
-		KeyValues *msg = new KeyValues( "TempEntity" );
-
- 		msg->SetInt( "te", TE_DECAL );
- 		msg->SetString( "name", "TE_Decal" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetFloat( "originx", pos.x );
-		msg->SetFloat( "originy", pos.y );
-		msg->SetFloat( "originz", pos.z );
-		msg->SetFloat( "startx", start.x );
-		msg->SetFloat( "starty", start.y );
-		msg->SetFloat( "startz", start.z );
-		msg->SetInt( "hitbox", hitbox );
-		msg->SetString( "decalname", effects->Draw_DecalNameFromIndex( index ) );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		
-		msg->deleteThis();
-	}
-}
-
-
-//-----------------------------------------------------------------------------
 // Tempent 
 //-----------------------------------------------------------------------------
 void TE_Decal( IRecipientFilter& filter, float delay,
 	const Vector* pos, const Vector* start, int entity, int hitbox, int index )
 {
-	RecordDecal( *pos, *start, entity, hitbox, index );
 
 	trace_t tr;
 

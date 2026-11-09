@@ -51,43 +51,43 @@ class CMaterialVar : public IMaterialVar, public ks::pooled< CMaterialVar >
 {
 public:
 	// stuff from IMaterialVar
-	virtual const char *		GetName( void ) const;
-	virtual MaterialVarSym_t	GetNameAsSymbol() const;
-	virtual void				SetFloatValue( float val );
-	virtual void				SetIntValue( int val );
-	virtual void				SetStringValue( const char *val );
-	virtual const char *		GetStringValue( void ) const;
-	virtual void				SetMatrixValue( VMatrix const& matrix );
-	virtual VMatrix const&		GetMatrixValue( );
-	virtual bool				MatrixIsIdentity( void ) const;
-	virtual void				SetVecValue( const float* pVal, int numComps );
-	virtual void				SetVecValue( float x, float y );
-	virtual void				SetVecValue( float x, float y, float z );
-	virtual void				SetVecValue( float x, float y, float z, float w );
+	const char *		GetName( void ) const;
+	MaterialVarSym_t	GetNameAsSymbol() const;
+	void				SetFloatValue( float val );
+	void				SetIntValue( int val );
+	void				SetStringValue( const char *val );
+	const char *		GetStringValue( void ) const;
+	void				SetMatrixValue( VMatrix const& matrix );
+	VMatrix const&		GetMatrixValue( );
+	bool				MatrixIsIdentity( void ) const;
+	void				SetVecValue( const float* pVal, int numComps );
+	void				SetVecValue( float x, float y );
+	void				SetVecValue( float x, float y, float z );
+	void				SetVecValue( float x, float y, float z, float w );
 	void						SetVecValueInternal( const Vector4D &vec, int nComps );
-	virtual void				SetVecComponentValue( float fVal, int nComponent );
-	virtual void				GetLinearVecValue( float *val, int numComps ) const;
-	virtual void				SetFourCCValue( FourCC type, void *pData );
-	virtual void				GetFourCCValue( FourCC *type, void **ppData );
-	virtual int					GetIntValueInternal( void ) const;
-	virtual float				GetFloatValueInternal( void ) const;
-	virtual float const*		GetVecValueInternal( ) const;
-	virtual void				GetVecValueInternal( float *val, int numcomps ) const;
-	virtual int					VectorSizeInternal() const;
+	void				SetVecComponentValue( float fVal, int nComponent );
+	void				GetLinearVecValue( float *val, int numComps ) const;
+	void				SetFourCCValue( FourCC type, void *pData );
+	void				GetFourCCValue( FourCC *type, void **ppData );
+	int					GetIntValueInternal( void ) const;
+	float				GetFloatValueInternal( void ) const;
+	float const*		GetVecValueInternal( ) const;
+	void				GetVecValueInternal( float *val, int numcomps ) const;
+	int					VectorSizeInternal() const;
 
 	// revisit: is this a good interface for textures?
 
-	virtual ITexture *			GetTextureValue( void );
-	virtual bool				IsTextureValueInternalEnvCubemap( void ) const;
-	virtual void				SetTextureValue( ITexture * );
-	virtual IMaterial *			GetMaterialValue( void );
-	virtual void				SetMaterialValue( IMaterial * );
+	ITexture *			GetTextureValue( void );
+	bool				IsTextureValueInternalEnvCubemap( void ) const;
+	void				SetTextureValue( ITexture * );
+	IMaterial *			GetMaterialValue( void );
+	void				SetMaterialValue( IMaterial * );
 
-	virtual 					operator ITexture *() { return GetTextureValue(); }
-	virtual bool				IsDefined() const;
-	virtual void				SetUndefined();
+	operator ITexture *() { return GetTextureValue(); }
+	bool				IsDefined() const;
+	void				SetUndefined();
 
-	virtual void				CopyFrom( IMaterialVar *pMaterialVar );
+	void				CopyFrom( IMaterialVar *pMaterialVar );
 
 	 void Init( void )
 	{
@@ -108,11 +108,11 @@ public:
 	CMaterialVar( IMaterial* pMaterial, const char *key, float val );
 	CMaterialVar( IMaterial* pMaterial, const char *key, int val );
 	CMaterialVar( IMaterial* pMaterial, const char *key );
-	virtual ~CMaterialVar();
+	~CMaterialVar();
 
-	virtual void			SetValueAutodetectType( const char *val );
+	void			SetValueAutodetectType( const char *val );
 
-	virtual IMaterial *		GetOwningMaterial() { return m_pMaterial; }
+	IMaterial *		GetOwningMaterial() { return m_pMaterial; }
 
 	private:
 		static ks::fixed_pool s_Allocator;
@@ -124,7 +124,6 @@ private:
 
 	// NOTE: Dummy vars have no backlink so we have to check the pointer here
 	void VarChanged();
-	void RecordToolMessage();
 
 	// class data
 	static char s_CharBuf[MATERIALVAR_CHAR_BUF_SIZE];
@@ -154,6 +153,8 @@ private:
 typedef CMaterialVar *CMaterialVarPtr;
 
 ks::fixed_pool CMaterialVar::s_Allocator( sizeof(CMaterialVar), 1024, ks::fixed_pool::grow::fast, "CMaterialVar pool", alignof(CMaterialVar) );
+
+#include "facade/imaterialvar.inl"
 
 // Stores symbols for the material vars. Dense 16-bit ids: they are packed into IMaterialVar and
 // the tokencache_t behind FindVarFast.
@@ -622,7 +623,6 @@ void CMaterialVar::SetFloatValue( float val )
 	// Suppress all this if we're not actually changing anything
 	if ((m_Type == MATERIAL_VAR_TYPE_FLOAT) && (m_VecVal[0] == val))
 	{
-		RecordToolMessage();
 		return;
 	}
 
@@ -658,7 +658,6 @@ void CMaterialVar::SetIntValue( int val )
 	// Suppress all this if we're not actually changing anything
 	if ((m_Type == MATERIAL_VAR_TYPE_INT) && (m_intVal == val))
 	{
-		RecordToolMessage();
 		return;
 	}
 
@@ -823,7 +822,6 @@ void CMaterialVar::SetFourCCValue( FourCC type, void *pData )
 	// Suppress all this if we're not actually changing anything
 	if ((m_Type == MATERIAL_VAR_TYPE_FOURCC) && m_pFourCC->m_FourCC == type && m_pFourCC->m_pFourCCData == pData )
 	{
-		RecordToolMessage();
 		return;
 	}
 
@@ -988,7 +986,6 @@ void CMaterialVar::SetTextureValue( ITexture *texture )
 	// Suppress all this if we're not actually changing anything
 	if ((m_Type == MATERIAL_VAR_TYPE_TEXTURE) && (m_pTexture == pTexImp))
 	{
-		RecordToolMessage();
 		return;
 	}
 
@@ -1076,7 +1073,6 @@ void CMaterialVar::SetMaterialValue( IMaterial *pMaterial )
 	// Suppress all this if we're not actually changing anything
 	if ((m_Type == MATERIAL_VAR_TYPE_MATERIAL) && (m_pMaterialValue == pMaterialImp))
 	{
-		RecordToolMessage();
 		return;
 	}
 
@@ -1179,7 +1175,6 @@ void CMaterialVar::SetVecValueInternal( const Vector4D &vec, int nComps )
 	// Suppress all this if we're not actually changing anything
 	if ((m_Type == MATERIAL_VAR_TYPE_VECTOR ) && (m_VecVal == vec ) )
 	{
-		RecordToolMessage();
 		return;
 	}
 
@@ -1257,7 +1252,6 @@ void CMaterialVar::SetVecComponentValue( float fVal, int nComponent )
 	// Suppress all this if we're not actually changing anything
 	if ((m_Type == MATERIAL_VAR_TYPE_VECTOR ) && (m_VecVal[nComponent] == fVal ) )
 	{
-		RecordToolMessage();
 		return;
 	}
 
@@ -1453,105 +1447,6 @@ void CMaterialVar::CopyFrom( IMaterialVar *pMaterialVar )
 	}
 }
 
-// record tool message
-void CMaterialVar::RecordToolMessage()
-{
-	if ( !m_pMaterial )
-		return;
-
-	IClientMaterialSystem *pClientMaterialSystem = MaterialSystem()->GetClientMaterialSystemInterface();
-	if ( !pClientMaterialSystem )
-		return;
-
-	HTOOLHANDLE hEntity = pClientMaterialSystem->GetCurrentRecordingEntity();
-	if ( hEntity == HTOOLHANDLE_INVALID )
-		return;
-
-	KeyValues *msg = new KeyValues( "material_proxy_state" );
-	msg->SetString( "mtlName", m_pMaterial->GetName() );
-	msg->SetString( "groupName", m_pMaterial->GetTextureGroupName() );
-
-	switch ( GetType() )
-	{
-	case MATERIAL_VAR_TYPE_FLOAT:
-		msg->SetFloat( GetName(), GetFloatValue() );
-		break;
-
-	case MATERIAL_VAR_TYPE_INT:
-		msg->SetInt( GetName(), GetIntValue() );
-		break;
-
-	case MATERIAL_VAR_TYPE_STRING:
-		msg->SetString( GetName(), GetStringValue() );
-		break;
-
-	case MATERIAL_VAR_TYPE_VECTOR:
-		{
-			char str[ 256 ];
-			const float *pVal = GetVecValue();
-			int dim = VectorSize();
-			switch ( dim )
-			{
-			case 2:
-				V_snprintf( str, sizeof( str ), "vector2d: %f %f", pVal[ 0 ], pVal[ 1 ] );
-				break;
-			case 3:
-				V_snprintf( str, sizeof( str ), "vector3d: %f %f %f", pVal[ 0 ], pVal[ 1 ], pVal[ 2 ] );
-				break;
-			case 4:
-				V_snprintf( str, sizeof( str ), "vector4d: %f %f %f %f", pVal[ 0 ], pVal[ 1 ], pVal[ 2 ], pVal[ 3 ] );
-				break;
-			default:
-				contract_assert( 0 );
-				*str = 0;
-			}
-			msg->SetString( GetName(), str );
-		}
-		break;
-
-	case MATERIAL_VAR_TYPE_MATRIX:
-		{
-			char str[ 256 ];
-			const VMatrix &matrix = GetMatrixValue();
-			const float *pVal = matrix.Base();
-			V_snprintf( str, sizeof( str ),
-				"matrix: %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
-				pVal[ 0 ],  pVal[ 1 ],  pVal[ 2 ],  pVal[ 3 ],
-				pVal[ 4 ],  pVal[ 5 ],  pVal[ 6 ],  pVal[ 7 ],
-				pVal[ 8 ],  pVal[ 9 ],  pVal[ 10 ], pVal[ 11 ],
-				pVal[ 12 ], pVal[ 13 ], pVal[ 14 ], pVal[ 15 ] );
-			msg->SetString( GetName(), str );
-		}
-		break;
-
-	case MATERIAL_VAR_TYPE_FOURCC:
-		contract_assert( 0 ); // JDTODO
-		// fall-through intentional (until this case is implemented)
-
-	case MATERIAL_VAR_TYPE_TEXTURE:
-		//			V_snprintf( str, sizeof( str ), "texture: %x", pVar->GetTextureValue() );
-		//			msg->SetString( pVarName, str );
-		// fall-through intentional (until this case is implemented)
-
-	case MATERIAL_VAR_TYPE_MATERIAL:
-		//			V_snprintf( str, sizeof( str ), "material: %x", pVar->GetMaterialValue() );
-		//			msg->SetString( pVarName, str );
-		// fall-through intentional (until this case is implemented)
-
-	case MATERIAL_VAR_TYPE_UNDEFINED:
-		//			Assert( 0 ); // these appear to be (mostly? all?) textures, although I don't know why they're not caught by the texture case above...
-		// fall-through intentional (until this case is implemented)
-
-	default:
-		contract_assert( 0 );
-		msg->deleteThis();
-		return;
-	}
-
-	pClientMaterialSystem->PostToolMessage( hEntity, msg );
-	msg->deleteThis();
-}
-
 void CMaterialVar::VarChanged()
 {
 	if ( !m_pMaterial )
@@ -1559,7 +1454,6 @@ void CMaterialVar::VarChanged()
 
 	m_pMaterial->ReportVarChanged( this );
 
-	RecordToolMessage();
 }
 
 //-----------------------------------------------------------------------------

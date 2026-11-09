@@ -3,8 +3,6 @@
 
 // Purpose: Volumetric dust motes.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -65,10 +62,11 @@ public:
 // CBaseEntity overrides.
 public:
 
-	virtual void	Spawn();
-	virtual void	Activate();
-	virtual void	Precache();
-	virtual bool	KeyValue( const char *szKeyName, const char *szValue );
+	void	Spawn_Impl();
+	void	Activate_Impl();
+	void	Precache_Impl();
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
 
 
 // Input handles.
@@ -160,7 +158,7 @@ CFunc_Dust::~CFunc_Dust()
 }
 
 
-void CFunc_Dust::Spawn()
+void CFunc_Dust::Spawn_Impl()
 {
 	Precache();
 
@@ -179,22 +177,22 @@ void CFunc_Dust::Spawn()
 	color32 clr = { m_Color.m_Value.r, m_Color.m_Value.g, m_Color.m_Value.b, (byte)m_iAlpha };
 	m_Color.Set( clr );
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 
-void CFunc_Dust::Precache()
+void CFunc_Dust::Precache_Impl()
 {
 	PrecacheMaterial( "particle/sparkles" );
 }
 
-void CFunc_Dust::Activate()
+void CFunc_Dust::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 }
 
 
-bool CFunc_Dust::KeyValue( const char *szKeyName, const char *szValue )
+bool CFunc_Dust::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if( stricmp( szKeyName, "StartDisabled" ) == 0 )
 	{
@@ -221,7 +219,7 @@ bool CFunc_Dust::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 }
 

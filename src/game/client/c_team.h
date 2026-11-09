@@ -4,10 +4,8 @@
 
 // Purpose: Client side CTeam class
 
-import ks.tier1;
 #include "reflect_annotations.h"
 #include "shareddefs.h"
-import std;
 #include "client_thinklist.h"
 #include "dt_recv.h"
 #include "client_class.h"

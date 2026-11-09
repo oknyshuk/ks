@@ -35,15 +35,6 @@ int idx = 0;
 
 const char *g_pListType;
 
-class CTestOps
-{
-public:
-	virtual void Push( int item ) = 0;
-	virtual bool Pop( int *pResult ) = 0;
-	virtual bool Validate() { return true; }
-	virtual bool IsEmpty() = 0;
-};
-
 bool g_bUseMutex = false;
 
 class CConditionalMutex
@@ -57,19 +48,37 @@ private:
 	std::recursive_mutex m_mutex;
 } g_TestLock;
 
-class CQueueOps : public CTestOps
+// The test runs either against the queue or against the list.
+class CTestOps
 {
+public:
+	enum Kind_t { KIND_QUEUE, KIND_LIST };
+
+	constexpr CTestOps( Kind_t kind ) : m_Kind( kind ) {}
+
 	void Push( int item )
 	{
-		g_TestLock.lock();
-		g_TestQueue.PushItem( item );
-		g_TestLock.unlock();
-		g_nPushes++;
+		switch ( m_Kind )
+		{
+		case KIND_QUEUE:
+			g_TestLock.lock();
+			g_TestQueue.PushItem( item );
+			g_TestLock.unlock();
+			g_nPushes++;
+			break;
+		case KIND_LIST:
+			g_TestLock.lock();
+			g_TestList.PushItem( item );
+			g_nPushes++;
+			break;
+		}
 	}
+
 	bool Pop( int *pResult )
 	{
 		g_TestLock.lock();
-		if ( g_TestQueue.PopItem( pResult ) )
+		const bool bPopped = ( m_Kind == KIND_QUEUE ) ? g_TestQueue.PopItem( pResult ) : g_TestList.PopItem( pResult );
+		if ( bPopped )
 		{
 			g_TestLock.unlock();
 			g_nPops++;
@@ -78,46 +87,23 @@ class CQueueOps : public CTestOps
 		g_TestLock.unlock();
 		return false;
 	}
+
 	bool Validate()
 	{
 		return true; //g_TestQueue.Validate();
 	}
+
 	bool IsEmpty()
 	{
-		return ( g_TestQueue.Count() == 0 );
+		return ( m_Kind == KIND_QUEUE ) ? ( g_TestQueue.Count() == 0 ) : ( g_TestList.Count() == 0 );
 	}
-} g_QueueOps;
 
-class CListOps : public CTestOps
-{
-	void Push( int item )
-	{
-		g_TestLock.lock();
-		g_TestList.PushItem( item );
-		g_nPushes++;
-	}
-	bool Pop( int *pResult )
-	{
-		g_TestLock.lock();
-		if ( g_TestList.PopItem( pResult ) )
-		{
-			g_TestLock.unlock();
-			g_nPops++;
-			return true;
-		}
-		g_TestLock.unlock();
-		return false;
-	}
-	bool Validate()
-	{
-		return true;
-	}
-	bool IsEmpty()
-	{
-		return ( g_TestList.Count() == 0 );
-	}
-} g_ListOps;
+private:
+	Kind_t m_Kind;
+};
 
+CTestOps g_QueueOps( CTestOps::KIND_QUEUE );
+CTestOps g_ListOps( CTestOps::KIND_LIST );
 CTestOps *g_pTestOps;
 
 void ClearBuckets()

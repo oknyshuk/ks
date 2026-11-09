@@ -3,8 +3,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 
-import ks.tier1;
-import std;
 #include "inputsystem/ButtonCode.h"
 
 class CUserCmd;

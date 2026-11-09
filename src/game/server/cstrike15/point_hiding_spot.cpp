@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -48,8 +45,8 @@ public:
 	CPointHidingSpot();
 	DECLARE_DATADESC();
 
-	virtual void Activate() override;
-	virtual void UpdateOnRemove() override;
+	void Activate_Impl() ;
+	void UpdateOnRemove_Impl() ;
 	void PostActivateSetupThink();
 	void DetachFromHidingSpot();
 protected:
@@ -69,9 +66,9 @@ m_pSpot( nullptr )
 {
 }
 
-void CPointHidingSpot::Activate()
+void CPointHidingSpot::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 		
 	// Do setup after all activates have run and we're in game simulation. Nav gets loaded/setup during server
 	// activate so we can't guarantee this ent will be before or after nav load.
@@ -83,7 +80,7 @@ void CPointHidingSpot::DetachFromHidingSpot()
 	m_pSpot = nullptr;
 }
 
-void CPointHidingSpot::UpdateOnRemove()
+void CPointHidingSpot::UpdateOnRemove_Impl()
 {
 	if ( m_pNavArea && m_pSpot )
 	{
@@ -92,7 +89,7 @@ void CPointHidingSpot::UpdateOnRemove()
 		contract_assert( bSuccess );
 		(void)bSuccess;
 	}
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 void CPointHidingSpot::PostActivateSetupThink()

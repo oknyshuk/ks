@@ -36,9 +36,9 @@ class CPathTrack : public CServerOnlyPointEntity
 public:
 	CPathTrack();
 
-	void		Spawn( void );
-	void		Activate( void );
-	void		DrawDebugGeometryOverlays();
+	void		Spawn_Impl( void );
+	void		Activate_Impl( void );
+	void		DrawDebugGeometryOverlays_Impl();
 	
 	void		ToggleAlternatePath( void );
 	void		EnableAlternatePath( void );

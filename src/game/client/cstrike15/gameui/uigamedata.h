@@ -2,15 +2,12 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2008 Valve Corporation
 
-import std;
-import ks.tier1;
 
 
 #include "matchmaking/imatchframework.h"
 #include "matchmaking/imatchsystem.h"
 #include "matchmaking/iplayer.h"
 #include "matchmaking/iplayermanager.h"
-#include "matchmaking/iservermanager.h"
 
 
 #include "engineinterface.h"
@@ -104,7 +101,7 @@ namespace BaseModUI {
 	//
 	// UI game data
 	//
-	class CUIGameData : public IMatchEventsSink
+	class CUIGameData
 	{
 	public:
 		CUIGameData();
@@ -129,7 +126,7 @@ namespace BaseModUI {
 		void OpenInviteUI( char const *szInviteUiType );
 
 		// Listening for match events
-		virtual void OnEvent( KeyValues *pEvent );
+		void OnEvent( KeyValues *pEvent );
 
 		bool SignedInToLive();
 		bool AnyUserSignedInToLiveWithMultiplayerDisabled();

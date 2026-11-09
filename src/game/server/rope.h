@@ -70,12 +70,13 @@ public:
 public:
 	
 	// don't cross transitions
-	virtual int		ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
-	virtual void	Activate();
-	virtual void	Precache();
-	virtual void	Spawn( void );
-	virtual int		OnTakeDamage( const CTakeDamageInfo &info );
-	virtual bool	KeyValue( const char *szKeyName, const char *szValue );
+	int		ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION; }
+	void	Activate_Impl();
+	void	Precache_Impl();
+	void	Spawn_Impl( void );
+	int		OnTakeDamage_Impl( const CTakeDamageInfo &info );
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
 
 	void			PropagateForce(CBaseEntity *pActivator, CBaseEntity *pCaller, CBaseEntity *pFirstLink, float x, float y, float z);
 
@@ -85,9 +86,9 @@ public:
 	// Kill myself when I next come to rest
 	void			DieAtNextRest( void );
 
-	virtual int		UpdateTransmitState(void);
-	virtual void	SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
-	virtual void	SetParent( CBaseEntity *pParentEntity, int iAttachment );
+	int		UpdateTransmitState_Impl(void);
+	void	SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways );
+	void	SetParent_Impl( CBaseEntity *pParentEntity, int iAttachment );
 
 // Input functions.
 public:

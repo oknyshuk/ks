@@ -3,8 +3,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -358,7 +355,7 @@ void CCSBot::Update( void )
 	// where are we
 	if (!m_currentArea || !m_currentArea->Contains( myOrigin ))
 	{
-		m_currentArea = (CCSNavArea *)TheNavMesh->GetNavArea( myOrigin );
+		m_currentArea = (CNavArea *)TheNavMesh->GetNavArea( myOrigin );
 	}
 
 	// track the last known area we were in

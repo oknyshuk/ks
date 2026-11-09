@@ -43,8 +43,8 @@ public:
 public:
 // Overrides.
 public:
-	virtual void Spawn();
-	virtual void Precache();
+	KS_VIRTUAL void Spawn_Impl();
+	KS_VIRTUAL void Precache_Impl();
 	virtual void Detonate();
 	virtual void OnBounced( void );
 	virtual void BounceSound( void );
@@ -58,7 +58,7 @@ public:
 
 	virtual GrenadeType_t GetGrenadeType( void ) { return GRENADE_TYPE_SMOKE; }
 
-	virtual int UpdateTransmitState() { return SetTransmitState( FL_EDICT_ALWAYS ); }
+	KS_VIRTUAL int UpdateTransmitState_Impl() { return SetTransmitState( FL_EDICT_ALWAYS ); }
 
 // Grenade stuff.
 public:

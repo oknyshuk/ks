@@ -1991,15 +1991,15 @@ public:
 	~COcclusionSystem();
 
 	// Inherited from IOcclusionSystem
-	virtual void ActivateOccluder( int nOccluderIndex, bool bActive );
-	virtual void SetView( const Vector &vecCameraPos, float flFOV, const VMatrix &worldToCamera, const VMatrix &cameraToProjection, const VPlane &nearClipPlane );
-	virtual int GetViewId() const;
-	virtual bool IsOccluded( int occlusionViewId, const Vector &vecAbsMins, const Vector &vecAbsMaxs );
-	virtual void SetOcclusionParameters( float flMaxOccludeeArea, float flMinOccluderArea );
-	virtual float MinOccluderArea() const;
-	virtual void DrawDebugOverlays();
+	void ActivateOccluder( int nOccluderIndex, bool bActive );
+	void SetView( const Vector &vecCameraPos, float flFOV, const VMatrix &worldToCamera, const VMatrix &cameraToProjection, const VPlane &nearClipPlane );
+	int GetViewId() const;
+	bool IsOccluded( int occlusionViewId, const Vector &vecAbsMins, const Vector &vecAbsMaxs );
+	void SetOcclusionParameters( float flMaxOccludeeArea, float flMinOccluderArea );
+	float MinOccluderArea() const;
+	void DrawDebugOverlays();
 
-private:
+public:
 	struct AxisAlignedPlane_t
 	{
 		int m_nAxis;
@@ -2050,7 +2050,7 @@ private:
 	// Stitches up clipped vertices
 	void StitchClippedVertices( Vector *pVertices, int nCount );
 
-private:
+public:
 
 	// Per-frame information
 	int			m_nCurrentViewId;
@@ -2068,6 +2068,9 @@ private:
 	int m_nTests;
 	int m_nOccluded;
 };
+
+#include "facade/iocclusionsystem.inl"
+
 
 static COcclusionSystem g_OcclusionSystem;
 

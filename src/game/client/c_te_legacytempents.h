@@ -3,16 +3,13 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 
-import ks.tier1;
 #include "icliententityinternal.h"
 #include "shared_classnames.h"
 #include "particlemgr.h"
 
 class C_BaseEntity;
 class C_LocalTempEntity;
-struct model_t;
 
-import std;
 
 extern color24 white24;
 #if defined( CSTRIKE_DLL ) || defined( SDK_DLL )

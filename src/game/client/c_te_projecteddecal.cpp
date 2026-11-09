@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -74,40 +72,9 @@ void C_TEProjectedDecal::Precache( void )
 }
 
 
-//-----------------------------------------------------------------------------
-// Recording 
-//-----------------------------------------------------------------------------
-static inline void RecordProjectDecal( const Vector &pos, const QAngle &angles, 
-	float flDistance, int index )
-{
-	if ( !ToolsEnabled() )
-		return;
-
-	if ( clienttools->IsInRecordingMode() )
-	{
-		KeyValues *msg = new KeyValues( "TempEntity" );
-
- 		msg->SetInt( "te", TE_PROJECT_DECAL );
- 		msg->SetString( "name", "TE_ProjectDecal" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetFloat( "originx", pos.x );
-		msg->SetFloat( "originy", pos.y );
-		msg->SetFloat( "originz", pos.z );
-		msg->SetFloat( "anglesx", angles.x );
-		msg->SetFloat( "anglesy", angles.y );
-		msg->SetFloat( "anglesz", angles.z );
-		msg->SetFloat( "distance", flDistance );
-		msg->SetString( "decalname", effects->Draw_DecalNameFromIndex( index ) );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
-}
-
 void TE_ProjectDecal( IRecipientFilter& filter, float delay,
 	const Vector* pos, const QAngle *angles, float distance, int index )
 {
-	RecordProjectDecal( *pos, *angles, distance, index );
 
 	trace_t	tr;
 

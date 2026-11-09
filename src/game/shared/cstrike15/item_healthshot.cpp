@@ -7,10 +7,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -23,7 +20,6 @@ import ks.tier1;
 #include "cdll_client_int.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -99,11 +95,11 @@ void CItem_Healthshot::WeaponIdle()
 	SetWeaponIdleTime( gpGlobals->curtime + 20 );
 }
 
-void CItem_Healthshot::Precache( void )
+void CItem_Healthshot::Precache_Impl( void )
 {
 	//PrecacheScriptSound( "Healthshot.Shot" );
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 bool CItem_Healthshot::CanPrimaryAttack( void )

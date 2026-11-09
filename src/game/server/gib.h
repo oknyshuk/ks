@@ -36,11 +36,11 @@ public:
 	void WaitTillLand( void );
 	void DieThink( void );
 	void LimitVelocity( void );
-	virtual bool SUB_AllowedToFade( void );
+	bool SUB_AllowedToFade_Impl( void );
 
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
-	virtual int	ObjectCaps( void ) { return (BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | FCAP_DONT_SAVE | FCAP_IMPULSE_USE; }
+	int	ObjectCaps_Impl( void ) { return (BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION) | FCAP_DONT_SAVE | FCAP_IMPULSE_USE; }
 	static	void SpawnHeadGib( CBaseEntity *pVictim );
 	static	void SpawnRandomGibs( CBaseEntity *pVictim, int cGibs, GibType_e eGibType );
 	static  void SpawnStickyGibs( CBaseEntity *pVictim, Vector vecOrigin, int cGibs );
@@ -49,7 +49,7 @@ public:
 	void SetPhysicsAttacker( CBasePlayer *pEntity, float flTime );
 	virtual void OnPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunPickup_t reason );
 	virtual void OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t reason );
-	virtual	CBasePlayer *HasPhysicsAttacker( float dt );
+	CBasePlayer *HasPhysicsAttacker_Impl( float dt );
 
 	void SetSprite( CBaseEntity *pSprite )
 	{

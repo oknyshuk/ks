@@ -8,7 +8,8 @@ import ks.tier1;
 #include "filesystem.h"
 import std;
 
-CFileLoggingListener::CFileLoggingListener()
+CFileLoggingListener::CFileLoggingListener() :
+	ILoggingListener( [this]( const LoggingContext_t *pContext, const tchar *pMessage ) { Log( pContext, pMessage ); } )
 {
 	for ( int i = 0; i < MAX_SIMULTANEOUS_LOGGING_FILE_COUNT; ++ i )
 	{

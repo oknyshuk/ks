@@ -37,7 +37,6 @@ import ks.tier1;
 #include "sound.h"
 #include "voice.h"
 #include "sv_rcon.h"
-#include "toolframework/itoolframework.h"
 #include "matchmaking/imatchframework.h"
 #include "snd_audio_source.h"
 #include "netconsole.h"
@@ -55,7 +54,7 @@ void PerformKick( cmd_source_t commandSource, int iSearchIndex, char* szSearchSt
 
 ConVar host_name_store( "host_name_store", "1", FCVAR_RELEASE, "Whether hostname is recorded in game events and GOTV." );
 ConVar host_info_show( "host_info_show", "1", FCVAR_RELEASE, "How server info gets disclosed in server queries: 0 - query disabled, 1 - show only general info, 2 - show full info" );
-static void HostnameChanged( IConVar *pConVar, const char *pOldValue, float flOldValue )
+static void HostnameChanged( ConVar *pConVar, const char *pOldValue, float flOldValue )
 {
 	if ( sv.IsActive() && host_name_store.GetBool() )
 	{
@@ -110,9 +109,6 @@ uint GetGameAppID()
 // Globals
 int	gHostSpawnCount = 0;
 
-// If any quit handlers balk, then aborts quit sequence
-bool EngineTool_CheckQuitHandlers();
-
 
 // store arbitrary launch arguments in KeyValues to avoid having to add code for every new
 //   launch parameter (like edit mode, commentary mode, background, etc. do)
@@ -136,13 +132,6 @@ Host_Quit_f
 */
 void Host_Quit_f (void)
 {
-#if !defined(DEDICATED)
-	if ( !EngineTool_CheckQuitHandlers() )
-	{
-		return;
-	}
-#endif
-
 	HostState_Shutdown();
 }
 
@@ -441,8 +430,9 @@ static void hltv_replay_status( const CCommand &args )
 				client->GetUserID(), client->GetClientName(), client->GetNetworkIDString(), state, client->GetHltvReplayStatus() );
 		}
 
-		if ( CGameClient *pClient = dynamic_cast< CGameClient * >( client ) )
+		if ( static_cast< CBaseClient * >( client )->m_client_kind == CBaseClient::client_kind_t::game )
 		{
+			CGameClient *pClient = static_cast< CGameClient * >( client );
 			if ( pClient->m_HltvReplayStats.nStartRequests )
 				hltvStats += pClient->m_HltvReplayStats;
 			if ( pClient->m_nForceWaitForTick > 0 )
@@ -2138,14 +2128,7 @@ static void ss_connect( const CCommand &args )
 {
 	if ( host_state.max_splitscreen_players == 1 )
 	{
-		if ( toolframework->InToolMode() )
-		{
-			Msg( "Can't ss_connect, split screen not supported when running -tools mode.\n" );
-		}
-		else
-		{
-			Msg( "Can't ss_connect, game does not support split screen.\n" );
-		}
+		Msg( "Can't ss_connect, game does not support split screen.\n" );
 		return;
 	}
 

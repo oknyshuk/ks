@@ -4,8 +4,6 @@
 
 // Purpose: Player for HL1.
 
-import std;
-import ks.tier1;
 #include "basemultiplayerplayer.h"
 #include "server_class.h"
 // the SENDPROP_*_PRIORITY constants the Net annotations below name
@@ -23,7 +21,6 @@ class CHintMessageQueue;
 class CNavArea;
 class CCSBot;
 class CEconPersonaDataPublic;
-namespace ks::net { struct CCSUsrMsg_PlayerDecalDigitalSignature; }
 
 #include "matchmaking/cstrike15/imatchext_cstrike15.h"
 #include "matchmaking/iplayerrankingdata.h"
@@ -303,10 +300,10 @@ public:
 	static CCSPlayer *CreatePlayer( const char *className, edict_t *ed );
 	static CCSPlayer* Instance( int iEnt );
 
-	virtual void		Precache();
-	virtual void		Spawn();
+	void		Precache_Impl();
+	void		Spawn_Impl();
 	virtual void		InitialSpawn( void );
-	virtual void		UpdateOnRemove( void );
+	void		UpdateOnRemove_Impl( void );
 	virtual void		PostSpawnPointSelection( void );
 	
 	void SetCSSpawnLocation( Vector position, QAngle angle );
@@ -325,13 +322,13 @@ public:
 		~ITakeDamageListener();
 		virtual void OnTakeDamageListenerCallback( CCSPlayer *pVictim, CTakeDamageInfo &infoTweakable ) = 0;
 	};
-	virtual int			OnTakeDamage( const CTakeDamageInfo &inputInfo );
+	int			OnTakeDamage_Impl( const CTakeDamageInfo &inputInfo );
 	virtual int			OnTakeDamage_Alive( const CTakeDamageInfo &info );
 
-	virtual void		Event_Killed( const CTakeDamageInfo &info );
-	virtual void		Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &info );
+	void		Event_Killed_Impl( const CTakeDamageInfo &info );
+	void		Event_KilledOther_Impl( CBaseEntity *pVictim, const CTakeDamageInfo &info );
 
-	virtual void		TraceAttack( const CTakeDamageInfo &inputInfo, const Vector &vecDir, trace_t *ptr );
+	void		TraceAttack_Impl( const CTakeDamageInfo &inputInfo, const Vector &vecDir, trace_t *ptr );
 
 	void FindMatchingWeaponsForTeamLoadout( const char *pchName, int nTeam, bool bMustBeTeamSpecific, std::vector< CEconItemView* > &matchingWeapons );
 	virtual CBaseEntity	*GiveNamedItem( const char *pchName, int iSubType = 0, CEconItemView *pScriptItem = nullptr, bool bForce = false ) override;
@@ -354,7 +351,7 @@ public:
 	virtual bool		ShouldCheckOcclusion( CBasePlayer *pOtherPlayer ) override;
 
 
-	virtual	bool		ShouldCollide( int collisionGroup, int contentsMask ) const;
+	bool		ShouldCollide_Impl( int collisionGroup, int contentsMask ) const;
 
 	// from CBasePlayer
 	virtual bool		IsValidObserverTarget(CBaseEntity * target);
@@ -425,7 +422,7 @@ public:
 	bool CanMove() const;
 	
 	// Returns the player mask which includes the solid mask plus the team mask.
-	virtual unsigned int PhysicsSolidMaskForEntity( void ) const;
+	unsigned int PhysicsSolidMaskForEntity_Impl( void ) const;
 
 	void OnJump( float fImpulse );
 	void OnLand( float fVelocity );
@@ -463,7 +460,7 @@ public:
 
 	// from cbasecombatcharacter
 	void InitVCollision( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity );
-	void VPhysicsShadowUpdate( IPhysicsObject *pPhysics );
+	void VPhysicsShadowUpdate_Impl( IPhysicsObject *pPhysics );
 	
 	bool HasWeaponOfType( int nWeaponID ) const;
 	bool IsPrimaryOrSecondaryWeapon( CSWeaponType nType );
@@ -672,10 +669,10 @@ public:
 	
 	bool Weapon_CanSwitchTo( CBaseCombatWeapon *pWeapon );
 	virtual void OnSwitchWeapons( CBaseCombatWeapon* pWeapon );
-	void ChangeTeam( int iTeamNum );
+	void ChangeTeam_Impl( int iTeamNum );
 	void SwitchTeam( int iTeamNum );	// Changes teams without penalty - used for auto team balancing
 
-	virtual void ModifyOrAppendCriteria( AI_CriteriaSet& set );
+	void ModifyOrAppendCriteria_Impl( AI_CriteriaSet& set );
 	void ModifyOrAppendPlayerCriteria( AI_CriteriaSet& set );
 
 	virtual void OnDamagedByExplosion( const CTakeDamageInfo &info );
@@ -781,7 +778,7 @@ private:
 public:
 	bool StartHltvReplayEvent( const ClientReplayEventParams_t &params );
 	int		GetHealth() const		{ return m_iHealth; }
-	virtual void	SetHealth( int amt );
+	void	SetHealth_Impl( int amt );
 
 	void				SetDeathPose( const int &iDeathPose ) { m_iDeathPose = iDeathPose; }
 	void				SetDeathPoseFrame( const int &iDeathPoseFrame ) { m_iDeathFrame = iDeathPoseFrame; }
@@ -929,7 +926,7 @@ public:
 	void PlayerUsedGrenade( int nWeaponID );
 	void PlayerUsedKnife( void );
 
-	void ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName );
+	void ImpactTrace_Impl( trace_t *pTrace, int iDamageType, const char *pCustomImpactName );
 
 	bool HasHeavyArmor() const	{return m_bHasHeavyArmor;}
 	CNetworkVar( bool, m_bHasHelmet, [[= ks::reflect::Net{} ]] );				// Does the player have helmet armor
@@ -1013,7 +1010,7 @@ public:
 	CNetworkArray( int, m_iMatchStats_EnemiesFlashed,	MAX_MATCH_STATS_ROUNDS, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_UNSIGNED, .priority = SENDPROP_MATCHSTATS_PRIORITY } ]] );				// Enemies flashed
 
 	bool m_bUseNewAnimstate;
-	virtual void SetModel( const char *szModelName );
+	void SetModel_Impl( const char *szModelName );
 
 	virtual Vector Weapon_ShootPosition();
 

@@ -8,7 +8,6 @@
 #include "player_pickup.h"
 #include "baseanimating.h"
 
-namespace ResponseRules { class IResponseSystem; };
 
 //-----------------------------------------------------------------------------
 // Purpose: entity class for simple ragdoll physics
@@ -24,38 +23,38 @@ public:
 	CRagdollProp( void );
 	~CRagdollProp( void );
 
-	virtual void UpdateOnRemove( void );
+	void UpdateOnRemove_Impl( void );
 
-	void DrawDebugGeometryOverlays();
+	void DrawDebugGeometryOverlays_Impl();
 
-	void Spawn( void );
-	void Precache( void );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
 
 	// Disable auto fading under dx7 or when level fades are specified
 	void DisableAutoFade();
 
-	int ObjectCaps();
+	int ObjectCaps_Impl();
 
 	DECLARE_SERVERCLASS();
 	// Don't treat as a live target
 	virtual bool IsAlive( void ) { return false; }
 	
-	virtual void TraceAttack( const CTakeDamageInfo &info, const Vector &dir, trace_t *ptr );
-	virtual bool TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace );
-	virtual void Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts );
+	void TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &dir, trace_t *ptr );
+	bool TestCollision_Impl( const Ray_t &ray, unsigned int mask, trace_t& trace );
+	void Teleport_Impl( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts );
 	virtual void SetupBones( matrix3x4a_t *pBoneToWorld, int boneMask );
-	virtual void VPhysicsUpdate( IPhysicsObject *pPhysics );
-	virtual int VPhysicsGetObjectList( IPhysicsObject **pList, int listMax );
+	void VPhysicsUpdate_Impl( IPhysicsObject *pPhysics );
+	int VPhysicsGetObjectList_Impl( IPhysicsObject **pList, int listMax );
 
-	virtual int DrawDebugTextOverlays(void);
+	int DrawDebugTextOverlays_Impl(void);
 
 	// Response system stuff
-	virtual ResponseRules::IResponseSystem *GetResponseSystem();
-	virtual void ModifyOrAppendCriteria( AI_CriteriaSet& set );
+	ResponseRules::IResponseSystem *GetResponseSystem_Impl();
+	void ModifyOrAppendCriteria_Impl( AI_CriteriaSet& set );
 	void SetSourceClassName( const char *pClassname );
 
 	// Physics attacker
-	virtual CBasePlayer *HasPhysicsAttacker( float dt );
+	CBasePlayer *HasPhysicsAttacker_Impl( float dt );
 
 	// locals
 	void InitRagdollAnimation( void );
@@ -70,11 +69,11 @@ public:
 
 	// Damage passing
 	virtual void	SetDamageEntity( CBaseEntity *pEntity );
-	virtual int		OnTakeDamage( const CTakeDamageInfo &info );
-	virtual void OnRestore();
+	int		OnTakeDamage_Impl( const CTakeDamageInfo &info );
+	void OnRestore_Impl();
 
 	// Purpose: CDefaultPlayerPickupVPhysics
-	virtual void VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
+	void VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent );
  	virtual void OnPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunPickup_t reason );
 	virtual void OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t Reason );
 	virtual AngularImpulse	PhysGunLaunchAngularImpulse();

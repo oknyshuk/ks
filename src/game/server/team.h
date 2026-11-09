@@ -4,9 +4,7 @@
 
 // Purpose: Team management class. Contains all the details for a specific team
 
-import ks.tier1;
 #include "shareddefs.h"
-import std;
 #include "cs_player.h"
 #include "baseentity.h"
 
@@ -31,10 +29,10 @@ public:
 
 	DECLARE_SERVERCLASS();
 
-	virtual void Precache( void ) { return; };
+	void Precache_Impl( void ) { return; };
 
-	virtual void Think( void );
-	virtual int  UpdateTransmitState( void );
+	void Think_Impl( void );
+	int  UpdateTransmitState_Impl( void );
 
 	//-----------------------------------------------------------------------------
 	// Initialization

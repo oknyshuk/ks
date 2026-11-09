@@ -11,26 +11,26 @@ import ks.math;
 #include "vphysics_interface.h"
 import std;
 
-class JoltPhysicsFluidController final : public IPhysicsFluidController, public IJoltObjectListener, public IJoltPhysicsController
+class JoltPhysicsFluidController final : public IPhysicsFluidController
 {
 public:
 	JoltPhysicsFluidController( JPH::PhysicsSystem *pPhysicsSystem, JoltPhysicsObject *pFluidObject, const fluidparams_t *pParams );
-	~JoltPhysicsFluidController() override;
+	~JoltPhysicsFluidController();
 
-	void	SetGameData( void *pGameData ) override;
-	void *	GetGameData() const override;
+	void	SetGameData( void *pGameData );
+	void *	GetGameData() const;
 
-	void	GetSurfacePlane( Vector *pNormal, float *pDist ) const override;
-	float	GetDensity() const override;
-	void	WakeAllSleepingObjects() override;
-	int		GetContents() const override;
+	void	GetSurfacePlane( Vector *pNormal, float *pDist ) const;
+	float	GetDensity() const;
+	void	WakeAllSleepingObjects();
+	int		GetContents() const;
 
 public:
 
 	// IJoltObjectListener
-	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject ) override;
+	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject );
 	// IJoltPhysicsController
-	void OnPreSimulate( float flDeltaTime ) override;
+	void OnPreSimulate( float flDeltaTime );
 
 private:
 

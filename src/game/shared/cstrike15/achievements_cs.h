@@ -9,8 +9,6 @@
 #if !defined ( ACHIEVEMENTS_CS_H )
 #define ACHIEVEMENTS_CS_H
 
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
 #elif defined(GAME_DLL)
 #endif

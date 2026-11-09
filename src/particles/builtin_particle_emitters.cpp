@@ -35,7 +35,7 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 		return 0;
 	}
 
-	virtual uint64 GetReadControlPointMask() const 
+	uint64 GetReadControlPointMask() const 
 	{
 		uint64 nMask = 0;
 		if ( m_nScaleControlPoint >= 0 )
@@ -45,18 +45,18 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 		return nMask;
 	}
 
-	virtual uint64 GetNonPositionalControlPointMask() const
+	uint64 GetNonPositionalControlPointMask() const
 	{
 		if ( m_nScaleControlPoint >= 0 )
 			return ( 1ULL << m_nScaleControlPoint );
 		return 0; 
 	}
 
-	virtual uint32 Emit( CParticleCollection *pParticles, float flCurStrength, 
+	uint32 Emit( CParticleCollection *pParticles, float flCurStrength, 
 						 void *pContext ) const;
 
 	// unpack structure will be applied by creator. add extra initialization needed here
-	virtual void InitParams( CParticleSystemDefinition *pDef )
+	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		if ( ( m_nMinParticlesToEmit >= 0 ) && ( m_nMinParticlesToEmit > m_nParticlesToEmit ) )
 		{
@@ -71,7 +71,7 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 		m_nSnapshotControlPoint   = clamp( m_nSnapshotControlPoint, -1, MAX_PARTICLE_CONTROL_POINTS );
 	}
 
-	virtual void StopEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
+	void StopEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
 	{
 		InstantaneousEmitterContext_t *pCtx = reinterpret_cast<InstantaneousEmitterContext_t *>( pContext );
 		if ( !bInfiniteOnly )
@@ -80,7 +80,7 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 		}
 	}
 
-	virtual void StartEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
+	void StartEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
 	{
 		InstantaneousEmitterContext_t *pCtx = reinterpret_cast<InstantaneousEmitterContext_t *>( pContext );
 		if ( !bInfiniteOnly )
@@ -93,7 +93,7 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 	}
 
 	// Called when the SFM wants to skip forward in time
-	virtual void SkipToTime( float flTime, CParticleCollection *pParticles, void *pContext ) const
+	void SkipToTime( float flTime, CParticleCollection *pParticles, void *pContext ) const
 	{
 		// NOTE: This is a bit of a hack. We're saying that if we're skipping more than two seconds, that we're
 		//		 probably not going to bother emitting at all.  Really, this would have to know the maximum 
@@ -107,7 +107,7 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 		}
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		InstantaneousEmitterContext_t *pCtx = reinterpret_cast<InstantaneousEmitterContext_t *>( pContext );
 		// Compute the desired number of particles to emit
@@ -133,7 +133,7 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 
 	}
 
-	virtual void Restart( CParticleCollection *pParticles, void *pContext )
+	void Restart( CParticleCollection *pParticles, void *pContext )
 	{
 		InstantaneousEmitterContext_t *pCtx = reinterpret_cast<InstantaneousEmitterContext_t *>( pContext );
 		// Recompute the number of particles to emit (control points may have changed) - this will reset the remaining particle count:
@@ -151,7 +151,7 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 		return sizeof( InstantaneousEmitterContext_t );
 	}
 
-	virtual bool MayCreateMoreParticles( CParticleCollection const *pParticles, void *pContext ) const
+	bool MayCreateMoreParticles( CParticleCollection const *pParticles, void *pContext ) const
 	{
 		InstantaneousEmitterContext_t *pCtx = reinterpret_cast<InstantaneousEmitterContext_t *>( pContext );
 		return ( pCtx->m_bOn && (pCtx->m_nRemainingParticles > 0) );
@@ -288,21 +288,21 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		return 0;
 	}
 
-	virtual uint64 GetReadControlPointMask() const 
+	uint64 GetReadControlPointMask() const 
 	{
 		if ( m_nScaleControlPoint >= 0 )
 			return ( 1ULL << m_nScaleControlPoint );
 		return 0; 
 	}
 
-	virtual uint64 GetNonPositionalControlPointMask() const
+	uint64 GetNonPositionalControlPointMask() const
 	{
 		if ( m_nScaleControlPoint >= 0 )
 			return ( 1ULL << m_nScaleControlPoint );
 		return 0; 
 	}
 
-	virtual void InitParams( CParticleSystemDefinition *pDef )
+	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		if ( m_flEmitRate < 0.0f )
 		{
@@ -315,7 +315,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		m_flEmitRate *= g_nParticle_Multiplier;
 	}
 
-	virtual uint32 Emit( CParticleCollection *pParticles, float flCurStrength,
+	uint32 Emit( CParticleCollection *pParticles, float flCurStrength,
 						 void *pContext ) const ;
 
 	inline bool IsInfinitelyEmitting() const
@@ -323,7 +323,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		return ( m_flEmissionDuration == 0.0f );
 	}
 
-	virtual void StopEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
+	void StopEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
 	{
 		ContinuousEmitterContext_t *pCtx = reinterpret_cast<ContinuousEmitterContext_t *>( pContext );
 		if ( !bInfiniteOnly || IsInfinitelyEmitting() )
@@ -331,7 +331,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 			pCtx->m_bOn = false;
 		}
 	}
-	virtual void StartEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
+	void StartEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
 	{
 		ContinuousEmitterContext_t *pCtx = reinterpret_cast<ContinuousEmitterContext_t *>( pContext );
 		if ( !bInfiniteOnly || IsInfinitelyEmitting() )
@@ -341,7 +341,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		}
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		ContinuousEmitterContext_t *pCtx = reinterpret_cast<ContinuousEmitterContext_t *>( pContext );
 		pCtx->m_flNextEmitTime = m_flStartTime;
@@ -351,7 +351,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		pCtx->m_bOn = true;
 	}
 
-	virtual void Restart( CParticleCollection *pParticles, void *pContext )
+	void Restart( CParticleCollection *pParticles, void *pContext )
 	{
 		if ( !IsInfinitelyEmitting() )
 		{
@@ -366,7 +366,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 	// Called when the SFM wants to skip forward in time
 	// Currently hacked for save/load pre-sim - correct solution is to serialize rather 
 	// than skip-to-time and simulate
-	virtual void SkipToTime( float flTime, CParticleCollection *pParticles, void *pContext ) const
+	void SkipToTime( float flTime, CParticleCollection *pParticles, void *pContext ) const
 	{
 		ContinuousEmitterContext_t *pCtx = reinterpret_cast<ContinuousEmitterContext_t *>( pContext );
 		float flStartTime = m_flStartTime + pCtx->m_flTimeOffset;
@@ -467,7 +467,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		return sizeof( ContinuousEmitterContext_t );
 	}
 
-	virtual bool MayCreateMoreParticles( CParticleCollection const *pParticles, void *pContext ) const
+	bool MayCreateMoreParticles( CParticleCollection const *pParticles, void *pContext ) const
 	{
 		ContinuousEmitterContext_t *pCtx = reinterpret_cast<ContinuousEmitterContext_t *>( pContext );
 		if ( !pCtx->m_bOn )
@@ -486,7 +486,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		return true;
 	}
 
-	virtual bool ShouldRun( bool bApplyingParentKillList ) const
+	bool ShouldRun( bool bApplyingParentKillList ) const
 	{
 		if ( m_bInitFromKilledParentParticles )
 			return bApplyingParentKillList;
@@ -675,7 +675,7 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 		return 0;
 	}
 
-	virtual void InitParams( CParticleSystemDefinition *pDef )
+	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		if ( m_flEmissionDuration < 0.0f )
 		{
@@ -683,7 +683,7 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 		}
 	}
 
-	virtual uint32 Emit( CParticleCollection *pParticles, float flCurStrength,
+	uint32 Emit( CParticleCollection *pParticles, float flCurStrength,
 		void *pContext ) const ;
 
 	inline bool IsInfinitelyEmitting() const
@@ -691,7 +691,7 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 		return ( m_flEmissionDuration == 0.0f );
 	}
 
-	virtual void StopEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
+	void StopEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
 	{
 		NoiseEmitterContext_t *pCtx = reinterpret_cast<NoiseEmitterContext_t *>( pContext );
 		if ( !bInfiniteOnly || IsInfinitelyEmitting() )
@@ -699,7 +699,7 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 			pCtx->m_bOn = false;
 		}
 	}
-	virtual void StartEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
+	void StartEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
 	{
 		NoiseEmitterContext_t *pCtx = reinterpret_cast<NoiseEmitterContext_t *>( pContext );
 		if ( !bInfiniteOnly || IsInfinitelyEmitting() )
@@ -709,7 +709,7 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 		}
 	}
 	 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		NoiseEmitterContext_t *pCtx = reinterpret_cast<NoiseEmitterContext_t *>( pContext );
 		pCtx->m_flNextEmitTime = m_flStartTime;
@@ -719,7 +719,7 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 		pCtx->m_bOn = true;
 	}
 
-	virtual void Restart( CParticleCollection *pParticles, void *pContext )
+	void Restart( CParticleCollection *pParticles, void *pContext )
 	{
 		if ( !IsInfinitelyEmitting() )
 		{
@@ -732,7 +732,7 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 	}
 
 	// Called when the SFM wants to skip forward in time
-	virtual void SkipToTime( float flTime, CParticleCollection *pParticles, void *pContext ) const
+	void SkipToTime( float flTime, CParticleCollection *pParticles, void *pContext ) const
 	{
 		NoiseEmitterContext_t *pCtx = reinterpret_cast<NoiseEmitterContext_t *>( pContext );
 		float flStartTime = m_flStartTime + pCtx->m_flTimeOffset;
@@ -766,7 +766,7 @@ class C_OP_NoiseEmitter : public CParticleOperatorInstance
 		return sizeof( NoiseEmitterContext_t );
 	}
 
-	virtual bool MayCreateMoreParticles( CParticleCollection const *pParticles, void *pContext ) const
+	bool MayCreateMoreParticles( CParticleCollection const *pParticles, void *pContext ) const
 	{
 		NoiseEmitterContext_t *pCtx = reinterpret_cast<NoiseEmitterContext_t *>( pContext );
 		if ( !pCtx->m_bOn )
@@ -987,7 +987,7 @@ class C_OP_MaintainEmitter : public CParticleOperatorInstance
 		return 0;
 	}
 
-	virtual uint64 GetReadControlPointMask() const 
+	uint64 GetReadControlPointMask() const 
 	{
 		uint64 nMask = 0;
 		if ( m_nScaleControlPoint >= 0 )
@@ -997,7 +997,7 @@ class C_OP_MaintainEmitter : public CParticleOperatorInstance
 		return nMask;
 	}
 
-	virtual uint64 GetNonPositionalControlPointMask() const
+	uint64 GetNonPositionalControlPointMask() const
 	{
 		uint64 nMask = 0;
 		if ( m_nScaleControlPoint >= 0 )
@@ -1007,18 +1007,18 @@ class C_OP_MaintainEmitter : public CParticleOperatorInstance
 		return nMask;
 	}
 
-	virtual uint32 Emit( CParticleCollection *pParticles, float flCurStrength, 
+	uint32 Emit( CParticleCollection *pParticles, float flCurStrength, 
 		void *pContext ) const;
 
 	// unpack structure will be applied by creator. add extra initialization needed here
-	virtual void InitParams( CParticleSystemDefinition *pDef )
+	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_nScaleControlPointField = clamp( m_nScaleControlPointField, 0, 2 );
 		m_nScaleControlPoint      = clamp( m_nScaleControlPoint,    -1, MAX_PARTICLE_CONTROL_POINTS );
 		m_nSnapshotControlPoint   = clamp( m_nSnapshotControlPoint, -1, MAX_PARTICLE_CONTROL_POINTS );
 	}
 
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
+	void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
 	{
 		MaintainEmitterContext_t *pCtx = reinterpret_cast<MaintainEmitterContext_t *>( pContext );
 		pCtx->m_flTimeOffset = 0.0f;
@@ -1026,26 +1026,26 @@ class C_OP_MaintainEmitter : public CParticleOperatorInstance
 		pCtx->m_ActualParticlesToMaintain = m_nParticlesToMaintain;
 	}
 
-	virtual void StartEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
+	void StartEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
 	{
 		MaintainEmitterContext_t *pCtx = reinterpret_cast<MaintainEmitterContext_t *>( pContext );
 		pCtx->m_bOn = true;
 	}
 
-	virtual void StopEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
+	void StopEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
 	{
 		MaintainEmitterContext_t *pCtx = reinterpret_cast<MaintainEmitterContext_t *>( pContext );
 		pCtx->m_bOn = false;
 	}
 
-	virtual void Restart( CParticleCollection *pParticles, void *pContext )
+	void Restart( CParticleCollection *pParticles, void *pContext )
 	{
 		MaintainEmitterContext_t *pCtx = reinterpret_cast<MaintainEmitterContext_t *>( pContext );
 		pCtx->m_flTimeOffset = pParticles->m_flCurTime;
 		pCtx->m_bOn = true;
 	}
 
-	virtual bool MayCreateMoreParticles( CParticleCollection const *pParticles, void *pContext ) const
+	bool MayCreateMoreParticles( CParticleCollection const *pParticles, void *pContext ) const
 	{
 		MaintainEmitterContext_t *pCtx = reinterpret_cast<MaintainEmitterContext_t *>( pContext );
 		return pCtx->m_bOn;
@@ -1170,3 +1170,7 @@ void AddBuiltInParticleEmitters( void )
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_EMITTER, C_OP_NoiseEmitter );
 	REGISTER_PARTICLE_OPERATOR( FUNCTION_EMITTER, C_OP_MaintainEmitter );
 }
+
+
+#define KS_PARTICLE_OP_GROUP Emitters
+#include "particle_operator_dispatch.inl"

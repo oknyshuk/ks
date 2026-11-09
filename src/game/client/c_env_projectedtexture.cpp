@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2003 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -157,6 +155,7 @@ bool C_EnvProjectedTexture::ShouldUpdate( void )
 	return true;
 }
 
+extern ConVar r_flashlightdepthres;
 void C_EnvProjectedTexture::UpdateLight( void )
 {
 	if ( !ShouldUpdate() )
@@ -355,7 +354,6 @@ void C_EnvProjectedTexture::UpdateLight( void )
 		state.m_flShadowSlopeScaleDepthBias = g_pMaterialSystemHardwareConfig->GetShadowSlopeScaleDepthBias();
 		state.m_flShadowDepthBias = g_pMaterialSystemHardwareConfig->GetShadowDepthBias();
 		state.m_bEnableShadows = m_bEnableShadows;
-		extern ConVar r_flashlightdepthres;
 		state.m_flShadowMapResolution = r_flashlightdepthres.GetFloat();
 
 		if ( m_bSimpleProjection )

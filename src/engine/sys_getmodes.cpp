@@ -30,7 +30,6 @@ import std;
 #include "gl_shader.h"
 #include "sys_dll.h"
 #include "materialsystem/imaterial.h"
-#include "avi/iavi.h"
 #include "tier2/tier2.h"
 #include "tier2/renderutils.h"
 #include "LoadScreenUpdate.h"
@@ -60,35 +59,43 @@ class CVideoMode_Common : public IVideoMode
 {
 public:
 						CVideoMode_Common( void );
-	virtual 			~CVideoMode_Common( void );
+	~CVideoMode_Common( void );
+	bool Init(  );
+
 
 	// Methods of IVideoMode
-	virtual bool		Init( );
-	virtual void		Shutdown( void );
-	virtual vmode_t		*GetMode( int num );
-	virtual int			GetModeCount( void );
-	virtual bool		IsWindowedMode( void ) const;
-	virtual	bool		NoWindowBorder() const;
-	virtual void		UpdateWindowPosition( void );
-	virtual void		RestoreVideo( void );
-	virtual void		ReleaseVideo( void );
-	virtual void		DrawNullBackground( void *hdc, int w, int h );
-	virtual void		InvalidateWindow();
-	virtual void		DrawStartupGraphic();
-	virtual bool		CreateGameWindow( int nWidth, int nHeight, bool bWindowed, bool bNoWindowBorder );
-	virtual int			GetModeWidth( void ) const;
-	virtual int			GetModeHeight( void ) const;
-	virtual bool		SyncToActualWindowSize();
-	virtual void		OnWindowSizeChanged( int nNewWidth, int nNewHeight );
-	virtual const vrect_t &GetClientViewRect( ) const;
-	virtual void		SetClientViewRect( const vrect_t &viewRect );
-	virtual void		MarkClientViewRectDirty();
-	virtual void		TakeSnapshotTGA( const char *pFileName );
-	virtual void		TakeSnapshotTGARect( const char *pFilename, int x, int y, int w, int h, int resampleWidth, int resampleHeight, bool bPFM, CubeMapFaceIndex_t faceIndex );
-	virtual void		WriteMovieFrame( const MovieInfo_t& info );
-	virtual void		TakeSnapshotJPEG( const char *pFileName, int quality );
-	virtual bool		TakeSnapshotJPEGToBuffer( ks::byte_writer& buf, int quality );
-protected:
+	bool		InitBase( );
+	void Shutdown( void );
+
+	void		ShutdownBase( void );
+	vmode_t		*GetMode( int num );
+	int			GetModeCount( void );
+	bool		IsWindowedMode( void ) const;
+	bool		NoWindowBorder() const;
+	void		UpdateWindowPosition( void );
+	void RestoreVideo( void );
+
+	void		RestoreVideoBase( void );
+	void ReleaseVideo( void );
+
+	void		ReleaseVideoBase( void );
+	void		DrawNullBackground( void *hdc, int w, int h );
+	void		InvalidateWindow();
+	void		DrawStartupGraphic();
+	bool		CreateGameWindow( int nWidth, int nHeight, bool bWindowed, bool bNoWindowBorder );
+	int			GetModeWidth( void ) const;
+	int			GetModeHeight( void ) const;
+	bool		SyncToActualWindowSize();
+	void		OnWindowSizeChanged( int nNewWidth, int nNewHeight );
+	const vrect_t &GetClientViewRect( ) const;
+	void		SetClientViewRect( const vrect_t &viewRect );
+	void		MarkClientViewRectDirty();
+	void		TakeSnapshotTGA( const char *pFileName );
+	void		TakeSnapshotTGARect( const char *pFilename, int x, int y, int w, int h, int resampleWidth, int resampleHeight, bool bPFM, CubeMapFaceIndex_t faceIndex );
+	void		WriteMovieFrame( const MovieInfo_t& info );
+	void		TakeSnapshotJPEG( const char *pFileName, int quality );
+	bool		TakeSnapshotJPEGToBuffer( ks::byte_writer& buf, int quality );
+public:
 	bool				GetInitialized( ) const;
 	void				SetInitialized( bool init );
 	void				AdjustWindow( int nWidth, int nHeight, int nBPP, bool bWindowed, bool bNoWindowBorder );
@@ -107,7 +114,7 @@ protected:
 	vmode_t&			DefaultVideoMode();
 	vmode_t&			RequestedWindowVideoMode();
 
-private:
+public:
     // Purpose: Loads the startup graphic
     bool                SetupStartupGraphic();
     void                CenterEngineWindow(void *hWndCenter, int width, int height);
@@ -116,11 +123,17 @@ private:
     void                BlitGraphicToHDCWithAlpha(HDC hdc, byte *rgba, int imageWidth, int imageHeight, int x0, int y0, int x1, int y1);
     IVTFTexture         *LoadVTF( const char *szFileName );
     void                RecomputeClientViewRect();
+    void ReleaseFullScreen( void );
+
 
     // Overridden by derived classes
-    virtual void        ReleaseFullScreen( void );
-    virtual void        ChangeDisplaySettingsToFullscreen( int nWidth, int nHeight, int nBPP, bool bDesktopFriendlyFullscreen );
-    virtual void        ReadScreenPixels( int x, int y, int w, int h, void *pBuffer, ImageFormat format );
+    void        ReleaseFullScreenBase( void );
+    void ChangeDisplaySettingsToFullscreen( int nWidth, int nHeight, int nBPP, bool bDesktopFriendlyFullscreen );
+
+    void        ChangeDisplaySettingsToFullscreenBase( int nWidth, int nHeight, int nBPP, bool bDesktopFriendlyFullscreen );
+    void ReadScreenPixels( int x, int y, int w, int h, void *pBuffer, ImageFormat format );
+
+    void        ReadScreenPixelsBase( int x, int y, int w, int h, void *pBuffer, ImageFormat format );
 
     // PFM screenshot methods
     ITexture *GetBuildCubemaps16BitTexture( void );
@@ -129,7 +142,7 @@ private:
     void BlitHiLoScreenBuffersTo16Bit( void );
     void TakeSnapshotPFMRect( const char *pFilename, int x, int y, int w, int h, int resampleWidth, int resampleHeight, CubeMapFaceIndex_t faceIndex );
 
-protected:
+public:
 	enum
 	{
 		MAX_MODE_LIST =	512
@@ -400,7 +413,7 @@ static int VideoModeCompare( const void *arg1, const void *arg2 )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-bool CVideoMode_Common::Init( )
+bool CVideoMode_Common::InitBase( )
 {
     return true;
 }
@@ -787,22 +800,10 @@ void CVideoMode_Common::BlitGraphicToHDCWithAlpha(HDC hdc, byte *rgba, int image
 
 void CVideoMode_Common::InvalidateWindow()
 {
-    if ( CommandLine()->FindParm( "-noshaderapi" ) )
-    {
-        ks::desktop::post_expose( reinterpret_cast< ks::desktop::window * >( game->GetMainWindow() ) );
-    }
 }
 
 void CVideoMode_Common::DrawNullBackground( void *hHDC, int w, int h )
 {
-
-	HDC hdc = (HDC)hHDC;
-
-	// Show a message if running without renderer..
-	if ( CommandLine()->FindParm( "-noshaderapi" ) )
-	{
-		std::printf ( "%s\n",  modelloader->GetName( host_state.worldmodel ) );
-	}
 }
 
 
@@ -873,11 +874,11 @@ void CVideoMode_Common::UpdateWindowPosition( void )
     // esp. in Resizing window mode.
 }
 
-void CVideoMode_Common::ChangeDisplaySettingsToFullscreen( int nWidth, int nHeight, int nBPP, bool bDesktopFriendlyFullscreen )
+void CVideoMode_Common::ChangeDisplaySettingsToFullscreenBase( int nWidth, int nHeight, int nBPP, bool bDesktopFriendlyFullscreen )
 {
 }
 
-void CVideoMode_Common::ReleaseFullScreen( void )
+void CVideoMode_Common::ReleaseFullScreenBase( void )
 {
 }
 
@@ -961,7 +962,7 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CVideoMode_Common::Shutdown( void )
+void CVideoMode_Common::ShutdownBase( void )
 {
     ReleaseFullScreen();
     game->DestroyGameWindow();
@@ -1079,11 +1080,11 @@ void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int hei
 //-----------------------------------------------------------------------------
 // Handle alt-tab
 //-----------------------------------------------------------------------------
-void CVideoMode_Common::RestoreVideo( void )
+void CVideoMode_Common::RestoreVideoBase( void )
 {
 }
 
-void CVideoMode_Common::ReleaseVideo( void )
+void CVideoMode_Common::ReleaseVideoBase( void )
 {
 }
 
@@ -1091,7 +1092,7 @@ void CVideoMode_Common::ReleaseVideo( void )
 //-----------------------------------------------------------------------------
 // Read screen pixels
 //-----------------------------------------------------------------------------
-void CVideoMode_Common::ReadScreenPixels( int x, int y, int w, int h, void *pBuffer, ImageFormat format )
+void CVideoMode_Common::ReadScreenPixelsBase( int x, int y, int w, int h, void *pBuffer, ImageFormat format )
 {
     int nBytes = ImageLoader::GetMemRequired( w, h, 1, format, false );
     std::memset( pBuffer, 0, nBytes );
@@ -1416,11 +1417,6 @@ void CVideoMode_Common::WriteMovieFrame( const MovieInfo_t& info )
             GetModeWidth(), GetModeHeight(), (unsigned char*)hp );
     }
 
-    if ( info.DoAVI() )
-    {
-        avi->AppendMovieFrame( g_hCurrentAVI, hp );
-    }
-
     delete[] hp;
 }
 
@@ -1489,19 +1485,22 @@ public:
 
     CVideoMode_MaterialSystem( );
 
-    virtual bool        Init( );
-    virtual void        Shutdown( void );
-    virtual void        SetGameWindow( void *hWnd );
-	virtual bool		SetMode( int nWidth, int nHeight, bool bWindowed, bool bNoWindowBorder );
-    virtual void        ReleaseVideo( void );
-    virtual void        RestoreVideo( void );
-    virtual void        AdjustForModeChange( void );
-    virtual void        ReadScreenPixels( int x, int y, int w, int h, void *pBuffer, ImageFormat format );
+    bool        Init( );
+    void        Shutdown( void );
+    void        SetGameWindow( void *hWnd );
+	bool		SetMode( int nWidth, int nHeight, bool bWindowed, bool bNoWindowBorder );
+    void        ReleaseVideo( void );
+    void        RestoreVideo( void );
+    void        AdjustForModeChange( void );
+    void        ReadScreenPixels( int x, int y, int w, int h, void *pBuffer, ImageFormat format );
 
-private:
-    virtual void        ReleaseFullScreen( void );
-    virtual void        ChangeDisplaySettingsToFullscreen( int nWidth, int nHeight, int nBPP, bool bDesktopFriendlyFullscreen );
+public:
+    void        ReleaseFullScreen( void );
+    void        ChangeDisplaySettingsToFullscreen( int nWidth, int nHeight, int nBPP, bool bDesktopFriendlyFullscreen );
 };
+
+#include "facade/ivideomode.inl"
+
 
 static void VideoMode_AdjustForModeChange( void )
 {
@@ -1606,7 +1605,7 @@ bool CVideoMode_MaterialSystem::Init( )
 void CVideoMode_MaterialSystem::Shutdown()
 {
     materials->RemoveModeChangeCallBack( &VideoMode_AdjustForModeChange );
-    BaseClass::Shutdown();
+    BaseClass::ShutdownBase();
 }
 
 

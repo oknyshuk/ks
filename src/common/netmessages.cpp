@@ -285,7 +285,7 @@ bool CmdEncryptedDataMessageCodec::SVCMsg_EncryptedData_Process( ks::net::CSVCMs
 					{
 						ConDMsg( "CmdEncryptedDataMessageCodec: netchannel failed processing embedded message %s.\n", pEmbeddedMessage->GetName() );
 						contract_assert( 0 );
-						delete pEmbeddedMessage;
+						pEmbeddedMessage->DeleteThis();
 						return false;
 					}
 
@@ -293,7 +293,7 @@ bool CmdEncryptedDataMessageCodec::SVCMsg_EncryptedData_Process( ks::net::CSVCMs
 					pMsgBind = pProcessingChannel->FindMessageBinder( cmd, iMsgHandler++ );
 				} while ( pMsgBind );
 
-				delete pEmbeddedMessage;
+				pEmbeddedMessage->DeleteThis();
 			}
 		}
 	}
@@ -302,3 +302,54 @@ bool CmdEncryptedDataMessageCodec::SVCMsg_EncryptedData_Process( ks::net::CSVCMs
 }
 
 CTSPool< net_scratchbuffer_t::buffer_t > net_scratchbuffer_t::sm_NetScratchBuffers;
+
+
+//-----------------------------------------------------------------------------
+// INetMessage: the operations that depend on the message class dispatch on its kind
+//-----------------------------------------------------------------------------
+namespace
+{
+template< class F >
+decltype( auto ) net_message_visit( unsigned char kind, F &&f )
+{
+	switch ( static_cast< net_message_kind >( kind ) )
+	{
+#define X( Final, ... ) case net_message_kind::Final: return f( std::type_identity< Final >{} );
+	KS_NET_MESSAGE_CLASSES( X )
+#undef X
+	case net_message_kind::count: break;
+	}
+	contract_assert( false );
+	return f( std::type_identity< CNETMsg_NOP_t >{} );
+}
+}
+
+bool INetMessage::ReadFromBuffer( bf_read &buffer )
+{
+	return net_message_visit( m_kind, [&]< class T >( std::type_identity< T > ) { return static_cast< T * >( this )->ReadFromBuffer( buffer ); } );
+}
+
+bool INetMessage::WriteToBuffer( bf_write &buffer ) const
+{
+	return net_message_visit( m_kind, [&]< class T >( std::type_identity< T > ) { return static_cast< const T * >( this )->WriteToBuffer( buffer ); } );
+}
+
+const char *INetMessage::GetName() const
+{
+	return net_message_visit( m_kind, [&]< class T >( std::type_identity< T > ) { return static_cast< const T * >( this )->GetName(); } );
+}
+
+const char *INetMessage::ToString() const
+{
+	return net_message_visit( m_kind, [&]< class T >( std::type_identity< T > ) { return static_cast< const T * >( this )->ToString(); } );
+}
+
+std::size_t INetMessage::GetSize() const
+{
+	return net_message_visit( m_kind, [&]< class T >( std::type_identity< T > ) { return static_cast< const T * >( this )->GetSize(); } );
+}
+
+void INetMessage::DeleteThis()
+{
+	net_message_visit( m_kind, [&]< class T >( std::type_identity< T > ) { delete static_cast< T * >( this ); return 0; } );
+}

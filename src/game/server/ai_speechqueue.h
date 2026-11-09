@@ -8,7 +8,6 @@
 #include "ai_responsesystem.h"
 #include "ai_speechconcept.h"
 #include "baseentity.h"
-import std;
 
 inline constexpr auto AI_RESPONSE_QUEUE_SIZE = 64;
 

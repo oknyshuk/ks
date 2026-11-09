@@ -5,7 +5,6 @@
 
 #include "networkvar.h"
 
-class CViewSetup;
 
 //-----------------------------------------------------------------------------
 // Purpose: Implements the debugging elements of view rendering

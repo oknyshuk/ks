@@ -5,7 +5,6 @@ add_library(filesystem_stdio OBJECT
     basefilesystem.cpp
     basefilesystemasync.cpp
     filetracker.cpp
-    filesystemasync.cpp
     filesystem_stdio.cpp
     ../public/kevvaluescompiler.cpp
     ../public/zip_utils.cpp

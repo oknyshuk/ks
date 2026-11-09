@@ -18,36 +18,36 @@ class CMatchSessionOfflineCustom : public IMatchSessionInternal
 	// Methods of IMatchSession
 public:
 	// Get an internal pointer to session system-specific data
-	virtual KeyValues * GetSessionSystemData() { return nullptr; }
+	KeyValues * GetSessionSystemData() { return nullptr; }
 	
 	// Get an internal pointer to session settings
-	virtual KeyValues * GetSessionSettings();
+	KeyValues * GetSessionSettings();
 
 	// Update session settings, only changing keys and values need
 	// to be passed and they will be updated
-	virtual void UpdateSessionSettings( KeyValues *pSettings );
+	void UpdateSessionSettings( KeyValues *pSettings );
 
-	virtual void UpdateTeamProperties( KeyValues *pTeamProperties );
+	void UpdateTeamProperties( KeyValues *pTeamProperties );
 
-	virtual uint64 GetSessionID();
+	uint64 GetSessionID();
 
 	// Issue a session command
-	virtual void Command( KeyValues *pCommand );
+	void Command( KeyValues *pCommand );
 
 	// Run a frame update
-	virtual void Update();
+	void Update();
 
 	// Destroy the session object
-	virtual void Destroy();
+	void Destroy();
 
 	// Debug print a session object
-	virtual void DebugPrint();
+	void DebugPrint();
 
 	// Check if another session is joinable
-	virtual bool IsAnotherSessionJoinable( char const *pszAnotherSessionInfo ) { return true; }
+	bool IsAnotherSessionJoinable( char const *pszAnotherSessionInfo ) { return true; }
 
 	// Process event
-	virtual void OnEvent( KeyValues *pEvent );
+	void OnEvent( KeyValues *pEvent );
 
 public:
 	explicit CMatchSessionOfflineCustom( KeyValues *pSettings );

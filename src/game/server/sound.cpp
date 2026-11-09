@@ -6,8 +6,6 @@
 //				This tries not to drown out talking NPCs.
 //			env_soundscape: controls what sound script an area uses.
 
-import std;
-import ks.vstdlib;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -22,7 +20,6 @@ import ks.vstdlib;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"

@@ -75,8 +75,6 @@
 #include "c_cs_team.h"
 
 #include <engine/IEngineSound.h>
-import ks.vstdlib;
-import std;
 
 #include "cs_shareddefs.h"
 
@@ -97,8 +95,6 @@ import std;
 
 #include "iviewrender_beams.h"			// flashlight beam
 
-#include "cs_custom_clothing_visualsdata_processor.h"
-#include "cs_custom_epidermis_visualsdata_processor.h"
 
 #include "physpropclientside.h"			// for dropping physics mags
 
@@ -144,7 +140,7 @@ ConVar spec_glow_spike_time( "spec_glow_spike_time", "0.0", FCVAR_CLIENTDLL | FC
 
 ConVar cl_crosshair_sniper_width( "cl_crosshair_sniper_width", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE | FCVAR_SS, "If >1 sniper scope cross lines gain extra width (1 for single-pixel hairline)" );
 
-void BorrowMusicKitChangeCallback( IConVar *var, const char *pOldValue, float flOldValue )
+void BorrowMusicKitChangeCallback( ConVar *var, const char *pOldValue, float flOldValue )
 {
 }
 
@@ -152,7 +148,7 @@ ConVar cl_borrow_music_from_player_index( "cl_borrow_music_from_player_index", "
 	"", false, false, false, false, BorrowMusicKitChangeCallback );
 
 
-static void Spec_Show_Xray_Callback( IConVar *pConVar, const char *pOldString, float flOldValue )
+static void Spec_Show_Xray_Callback( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
 	if ( pLocalPlayer )
@@ -186,7 +182,7 @@ ConVar cl_teammate_colors_show( "cl_teammate_colors_show", "1", FCVAR_CLIENTDLL 
 ConVar cl_hud_playercount_pos( "cl_hud_playercount_pos", "0", FCVAR_CLIENTDLL | FCVAR_RELEASE | FCVAR_ARCHIVE, "0 = default (top), 1 = bottom" );
 ConVar cl_hud_playercount_showcount( "cl_hud_playercount_showcount", "0", FCVAR_CLIENTDLL | FCVAR_RELEASE | FCVAR_ARCHIVE, "0 = show player avatars (default), 1 = just show count number (no avatars)" );
 ConVar cl_hud_color( "cl_hud_color", "0", FCVAR_CLIENTDLL | FCVAR_RELEASE | FCVAR_ARCHIVE, "0 = default, 1 = light blue, 2 = orange, 3 = green, 4 = purple, 5 = white." );
-static void Hud_Radar_Scale_Callback( IConVar *pConVar, const char *pOldString, float flOldValue )
+static void Hud_Radar_Scale_Callback( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	// refresh here
 }
@@ -1525,6 +1521,7 @@ C_CSPlayer::C_CSPlayer() :
 
 }
 
+extern bool SetImmediateEntityRemovesAllowed( bool bAllowed );
 class C_PlayerFootContactShadow : public C_BreakableProp
 {
 public:
@@ -1565,7 +1562,6 @@ public:
 			}
 		}
 
-		extern bool SetImmediateEntityRemovesAllowed( bool bAllowed );
 		bool bTemp = SetImmediateEntityRemovesAllowed( false );
 		UTIL_Remove( this );
 		SetImmediateEntityRemovesAllowed( bTemp );
@@ -2656,16 +2652,16 @@ static void ClientBuyHelperForwardToServer( char const *szCommand, char const *s
 
 static void autobuy( const CCommand &args );
 static ConCommand autobuy_command( "autobuy", autobuy, "Attempt to purchase items with the order listed in cl_autobuy", FCVAR_CLIENTCMD_CAN_EXECUTE );
+extern ConVar cl_autobuy;
 static void autobuy( const CCommand &args )
 {
-	extern ConVar cl_autobuy;
 	ClientBuyHelperForwardToServer( "autobuy", cl_autobuy.GetString() );
 }
 static void rebuy( const CCommand &args );
 static ConCommand rebuy_command( "rebuy", rebuy, "Attempt to repurchase items with the order listed in cl_rebuy", FCVAR_CLIENTCMD_CAN_EXECUTE );
+extern ConVar cl_rebuy;
 static void rebuy( const CCommand &args )
 {
-	extern ConVar cl_rebuy;
 	ClientBuyHelperForwardToServer( "rebuy", cl_rebuy.GetString() );
 }
 
@@ -5058,7 +5054,7 @@ void C_CSPlayer::UpdateIDTarget()
 
 	vecEnd = tr.endpos + (32 * forward);
 
-	if ( !tr.startsolid && !tr.DidHitNonWorldEntity() )
+	if ( !tr.startsolid && !TraceDidHitNonWorldEntity( tr ) )
 	{
 		CTraceFilterSimple filter( GetLocalOrInEyeCSPlayer(), COLLISION_GROUP_NONE );
 
@@ -5067,7 +5063,7 @@ void C_CSPlayer::UpdateIDTarget()
 		UTIL_ClipTraceToPlayers(vecStart, vecEnd + forward * rayExtension, MASK_SOLID|CONTENTS_HITBOX, &filter, &tr );
 	}
 
-	if ( !tr.startsolid && tr.DidHitNonWorldEntity() )
+	if ( !tr.startsolid && TraceDidHitNonWorldEntity( tr ) )
 	{
 		C_BaseEntity *pEntity = tr.Ent<CBaseEntity>();
 
@@ -5133,7 +5129,7 @@ void C_CSPlayer::UpdateTargetedWeapon( void )
 	CTraceFilterOmitPlayers traceFilter; // don't hit players with this trace
 	UTIL_TraceLine( EyePosition(), EyePosition() + MAX_WEAPON_NAME_POPUP_RANGE * aimDir, MASK_SHOT, &traceFilter, &result );
 
-	if ( result.DidHitNonWorldEntity() && result.Ent<CBaseEntity>()->IsBaseCombatWeapon() )
+	if ( TraceDidHitNonWorldEntity( result ) && result.Ent<CBaseEntity>()->IsBaseCombatWeapon() )
 	{
 		if ( LineGoesThroughSmoke( EyePosition(), result.Ent<CBaseEntity>()->WorldSpaceCenter(), 1.0f ) )
 			return;
@@ -7003,12 +6999,12 @@ void C_CSPlayer::InterpolateObserverView( Vector& vOutOrigin, QAngle& vOutAngles
 }
 
 
+extern void UpdateViewmodelVisibility( C_BasePlayer *player );
 void C_CSPlayer::UpdateObserverTargetVisibility( void ) const
 {
 	C_CSPlayer *pObservedPlayer = dynamic_cast < C_CSPlayer* >( GetObserverTarget() );
 	if ( pObservedPlayer )
 	{
-		extern void UpdateViewmodelVisibility( C_BasePlayer *player );
 		UpdateViewmodelVisibility( pObservedPlayer );
 		pObservedPlayer->UpdateVisibility();
 
@@ -7651,7 +7647,7 @@ bool C_CSPlayer::IsCursorOnAutoAimTarget()
 
 	if ( tr.fraction != 1.0f )
 	{
-		if (tr.DidHitNonWorldEntity() && tr.Ent<CBaseEntity>() )
+		if (TraceDidHitNonWorldEntity( tr ) && tr.Ent<CBaseEntity>() )
 		{
 			CBaseEntity *pEntity = tr.Ent<CBaseEntity>();
 			// Autoaim at enemy players or at any entity that specifically requests it.

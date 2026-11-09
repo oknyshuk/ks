@@ -14,21 +14,32 @@ struct SceneCachedData_t
 	int				sceneId;
 };
 
-class ISceneFileCache : public IAppSystem
+class ISceneFileCache
 {
 public:
+	//--------------------------------------------------------
+	// App system protocol. Not an IAppSystem: CAppSystemGroup drives it by kind (see AppSystemRef).
+	//--------------------------------------------------------
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t Init();
+	void Shutdown();
+	const AppSystemInfo_t *GetDependencies() { return nullptr; }
+	void Reconnect( CreateInterfaceFn factory, const char *pInterfaceName ) { ReconnectInterface( factory, pInterfaceName ); }
+
 
 	// async implemenation
-	virtual std::size_t		GetSceneBufferSize( char const *filename ) = 0;
-	virtual bool		GetSceneData( char const *filename, byte *buf, std::size_t bufsize ) = 0;
+	std::size_t		GetSceneBufferSize( char const *filename );
+	bool		GetSceneData( char const *filename, byte *buf, std::size_t bufsize );
 
 	// persisted scene data, returns true if valid, false otherwise
-	virtual bool		GetSceneCachedData( char const *pFilename, SceneCachedData_t *pData ) = 0;
-	virtual short		GetSceneCachedSound( int iScene, int iSound ) = 0;
-	virtual const char	*GetSceneString( short stringId ) = 0;
+	bool		GetSceneCachedData( char const *pFilename, SceneCachedData_t *pData );
+	short		GetSceneCachedSound( int iScene, int iSound );
+	const char	*GetSceneString( short stringId );
 
 	// Physically reloads image from disk
-	virtual void		Reload() = 0;
+	void		Reload();
 };
 
 inline constexpr const char *SCENE_FILE_CACHE_INTERFACE_VERSION = "SceneFileCache002";

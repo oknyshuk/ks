@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -63,12 +61,12 @@ void CServerGameClients::GetPlayerLimits( int& minplayers, int& maxplayers, int 
 // Mod-specific CServerGameDLL implementation.
 // -------------------------------------------------------------------------------------------- //
 
+extern IResponseSystem *g_pResponseSystem;
 void CServerGameDLL::LevelInit_ParseAllEntities( const char *pMapEntities )
 {
 	if ( V_strcmp( STRING(gpGlobals->mapname), "cs_" ) )
 	{
 		// don't precache AI responses (hostages) if it's not a hostage rescure map
-		extern IResponseSystem *g_pResponseSystem;
 		g_pResponseSystem->PrecacheResponses( false );	
 	}
 }
@@ -97,8 +95,6 @@ void CServerGameDLL::GetMatchmakingGameData( char *buf, std::size_t bufSize )
 	char * const bufBase = buf;
 	int len = 0;
 
-	extern ConVar game_type;
-	extern ConVar game_mode;
 
 	// Put the game key
 	V_snprintf( buf, bufSize, "g:csgo,gt:%u,gm:%u,", game_type.GetInt(), game_mode.GetInt() );
@@ -393,13 +389,11 @@ void CServerGameDLL::ApplyGameSettings( KeyValues *pKV )
 				// Set game_type and game_mode convars.
 				g_pGameTypes->SetGameTypeAndMode( pGameType, pGameMode );
 
-				extern ConVar game_online;
 				if ( char const *szOnline = pKV->GetString( "system/network", nullptr ) )
 				{
 					game_online.SetValue( ( !V_stricmp( szOnline, "LIVE" ) ) ? 1 : 0 );
 				}
 				
-				extern ConVar game_public;
 				if ( char const *szAccess = pKV->GetString( "system/access", nullptr ) )
 				{
 					game_public.SetValue( ( !V_stricmp( szAccess, "public" ) ) ? 1 : 0 );
@@ -446,6 +440,7 @@ void CServerGameDLL::ApplyGameSettings( KeyValues *pKV )
 	}
 }
 
+extern CCSPlayer *ToCSPlayer( CBaseEntity *pEntity );
 const char * CServerGameClients::ClientNameHandler( uint64 xuid, const char *pchName )
 {
 	CPlayerId playerUID( xuid );
@@ -469,7 +464,6 @@ const char * CServerGameClients::ClientNameHandler( uint64 xuid, const char *pch
 	}
 
 	// Throttle name changes from clients (hacked clients can set the name convar at any rate)
-	extern CCSPlayer *ToCSPlayer( CBaseEntity *pEntity );
 	if ( CCSPlayer* pPlayer = ToCSPlayer( CBasePlayer::GetPlayerByPlayerID( playerUID ) ) )
 	{
 		if ( !pPlayer->CanChangeName() )

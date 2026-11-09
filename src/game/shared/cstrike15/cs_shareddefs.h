@@ -111,8 +111,6 @@ extern const char *g_pszItemFoundMethodStrings[NUM_ITEM_FOUND_METHODS];
 /*======================*/
 
 #include <game/client/iviewport.h>
-import ks.core;
-import std;
 
 #include "cs_achievementdefs.h"
 

@@ -37,23 +37,5 @@ IMatchVoice * CMatchSystem::GetMatchVoice()
 	return g_pMatchVoice;
 }
 
-
-IServerManager * CMatchSystem::GetUserGroupsServerManager()
-{
-	return nullptr;
-}
-
-ISearchManager * CMatchSystem::CreateGameSearchManager( KeyValues *pParams )
-{
-	return nullptr;
-}
-
-IDatacenter * CMatchSystem::GetDatacenter()
-{
-	return nullptr;
-}
-
-IDlcManager * CMatchSystem::GetDlcManager()
-{
-	return nullptr;
-}
+//-----------------------------------------------------------------------------
+#include "facade/imatchsystem.inl"

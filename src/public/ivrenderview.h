@@ -11,7 +11,6 @@ import ks.tier1;
 // Forward declarations
 //-----------------------------------------------------------------------------
 class CViewSetup;
-class CEngineSprite;
 class IClientEntity;
 class IMaterial;
 struct model_t;
@@ -102,8 +101,13 @@ struct WorldListInfo_t
 	WorldListLeafData_t	*m_pLeafDataList;
 };
 
-class IWorldRenderList : public IRefCounted
+// Reference counted list of visible world surfaces. The only implementation is
+// the engine's CWorldRenderList (gl_rsurf.cpp); the members forward to it.
+class IWorldRenderList
 {
+public:
+	int AddRef();
+	int Release();
 };
 
 //-----------------------------------------------------------------------------
@@ -163,15 +167,15 @@ class IBrushSurface
 {
 public:
 	// Computes texture coordinates + lightmap coordinates given a world position
-	virtual void ComputeTextureCoordinate( Vector const& worldPos, Vector2D& texCoord ) = 0;
-	virtual void ComputeLightmapCoordinate( Vector const& worldPos, Vector2D& lightmapCoord ) = 0;
+	void ComputeTextureCoordinate( Vector const& worldPos, Vector2D& texCoord );
+	void ComputeLightmapCoordinate( Vector const& worldPos, Vector2D& lightmapCoord );
 
 	// Gets the vertex data for this surface
-	virtual int  GetVertexCount() const = 0;
-	virtual void GetVertexData( BrushVertex_t* pVerts ) = 0;
+	int  GetVertexCount() const;
+	void GetVertexData( BrushVertex_t* pVerts );
 
 	// Gets at the material properties for this surface
-	virtual IMaterial* GetMaterial() = 0;
+	IMaterial* GetMaterial();
 };
 
 
@@ -220,111 +224,111 @@ public:
 	// Draw normal brush model.
 	// If pMaterialOverride is non-null, then all the faces of the bmodel will
 	// set this material rather than their regular material.
-	virtual void			DrawBrushModel( 
+	void			DrawBrushModel( 
 		IClientEntity *baseentity, 
 		model_t *model, 
 		const Vector& origin, 
 		const QAngle& angles, 
-		bool bUnused ) = 0;
+		bool bUnused );
 	
 	// Draw brush model that has no origin/angles change ( uses identity transform )
 	// FIXME, Material proxy IClientEntity *baseentity is unused right now, use DrawBrushModel for brushes with
 	//  proxies for now.
-	virtual void			DrawIdentityBrushModel( IWorldRenderList *pList, model_t *model ) = 0;
+	void			DrawIdentityBrushModel( IWorldRenderList *pList, model_t *model );
 
 	// Mark this dynamic light as having changed this frame ( so light maps affected will be recomputed )
-	virtual void			TouchLight( struct dlight_t *light ) = 0;
+	void			TouchLight( struct dlight_t *light );
 	// Draw 3D Overlays
-	virtual void			Draw3DDebugOverlays( void ) = 0;
+	void			Draw3DDebugOverlays( void );
 	// Sets global blending fraction
-	virtual void			SetBlend( float blend ) = 0;
-	virtual float			GetBlend( void ) = 0;
+	void			SetBlend( float blend );
+	float			GetBlend( void );
 
 	// Sets global color modulation
-	virtual void			SetColorModulation( float const* blend ) = 0;
-	virtual void			GetColorModulation( float* blend ) = 0;
+	void			SetColorModulation( float const* blend );
+	void			GetColorModulation( float* blend );
 
 	// Wrap entire scene drawing
-	virtual void			SceneBegin( void ) = 0;
-	virtual void			SceneEnd( void ) = 0;
+	void			SceneBegin( void );
+	void			SceneEnd( void );
 
 	// Gets the fog volume for a particular point
-	virtual void			GetVisibleFogVolume( const Vector& eyePoint, const VisOverrideData_t *pVisOverrideData, VisibleFogVolumeInfo_t *pInfo ) = 0;
+	void			GetVisibleFogVolume( const Vector& eyePoint, const VisOverrideData_t *pVisOverrideData, VisibleFogVolumeInfo_t *pInfo );
 
 	// Wraps world drawing
 	// If iForceViewLeaf is not -1, then it uses the specified leaf as your starting area for setting up area portal culling.
 	// This is used by water since your reflected view origin is often in solid space, but we still want to treat it as though
 	// the first portal we're looking out of is a water portal, so our view effectively originates under the water.
-	virtual IWorldRenderList * CreateWorldList() = 0;
-	virtual void			BuildWorldLists_Epilogue( IWorldRenderList *pList, WorldListInfo_t* pInfo, bool bShadowDepth ) = 0;
-	virtual void			BuildWorldLists( IWorldRenderList *pList, WorldListInfo_t* pInfo, int iForceFViewLeaf, const VisOverrideData_t* pVisData = nullptr, bool bShadowDepth = false, float *pReflectionWaterHeight = nullptr ) = 0;
-	virtual void			DrawWorldLists( IMatRenderContext *pRenderContext, IWorldRenderList *pList, unsigned long flags, float waterZAdjust ) = 0;
-	virtual void			GetWorldListIndicesInfo( WorldListIndicesInfo_t * pIndicesInfoOut, IWorldRenderList *pList, unsigned long nFlags ) = 0;
+	IWorldRenderList * CreateWorldList();
+	void			BuildWorldLists_Epilogue( IWorldRenderList *pList, WorldListInfo_t* pInfo, bool bShadowDepth );
+	void			BuildWorldLists( IWorldRenderList *pList, WorldListInfo_t* pInfo, int iForceFViewLeaf, const VisOverrideData_t* pVisData = nullptr, bool bShadowDepth = false, float *pReflectionWaterHeight = nullptr );
+	void			DrawWorldLists( IMatRenderContext *pRenderContext, IWorldRenderList *pList, unsigned long flags, float waterZAdjust );
+	void			GetWorldListIndicesInfo( WorldListIndicesInfo_t * pIndicesInfoOut, IWorldRenderList *pList, unsigned long nFlags );
 
 	// Optimization for top view
-	virtual void			DrawTopView( bool enable ) = 0;
-	virtual void			TopViewNoBackfaceCulling( bool bDisable ) = 0;
-	virtual void			TopViewNoVisCheck( bool bDisable ) = 0;
-	virtual void			TopViewBounds( Vector2D const& mins, Vector2D const& maxs ) = 0;
-	virtual void			SetTopViewVolumeCuller( const CVolumeCuller *pVolumeCuller ) = 0;
+	void			DrawTopView( bool enable );
+	void			TopViewNoBackfaceCulling( bool bDisable );
+	void			TopViewNoVisCheck( bool bDisable );
+	void			TopViewBounds( Vector2D const& mins, Vector2D const& maxs );
+	void			SetTopViewVolumeCuller( const CVolumeCuller *pVolumeCuller );
 
 	// Draw lights
-	virtual void			DrawLights( void ) = 0;
+	void			DrawLights( void );
 	// FIXME:  This function is a stub, doesn't do anything in the engine right now
-	virtual void			DrawMaskEntities( void ) = 0;
+	void			DrawMaskEntities( void );
 
 	// Draw surfaces with alpha, don't call in shadow depth pass
-	virtual void			DrawTranslucentSurfaces( IMatRenderContext *pRenderContext, IWorldRenderList *pList, int *pSortList, int sortCount, unsigned long flags ) = 0;
+	void			DrawTranslucentSurfaces( IMatRenderContext *pRenderContext, IWorldRenderList *pList, int *pSortList, int sortCount, unsigned long flags );
 
 	// Draw Particles ( just draws the linefine for debugging map leaks )
-	virtual void			DrawLineFile( void ) = 0;
+	void			DrawLineFile( void );
 	// Draw lightmaps
-	virtual void			DrawLightmaps( IWorldRenderList *pList, int pageId ) = 0;
+	void			DrawLightmaps( IWorldRenderList *pList, int pageId );
 	// Wraps view render sequence, sets up a view
-	virtual void			ViewSetupVis( bool novis, int numorigins, const Vector origin[] ) = 0;
+	void			ViewSetupVis( bool novis, int numorigins, const Vector origin[] );
 
 	// Return true if any of these leaves are visible in the current PVS.
-	virtual bool			AreAnyLeavesVisible( int *leafList, int nLeaves ) = 0;
+	bool			AreAnyLeavesVisible( int *leafList, int nLeaves );
 
 	// Sets up view fade parameters
-	virtual void			ViewDrawFade( byte *color, IMaterial *pMaterial, bool mapFullTextureToScreen = true ) = 0;
+	void			ViewDrawFade( byte *color, IMaterial *pMaterial, bool mapFullTextureToScreen = true );
 	// Sets up the projection matrix for the specified field of view
-	virtual void			OLD_SetProjectionMatrix( float fov, float zNear, float zFar ) = 0;
+	void			OLD_SetProjectionMatrix( float fov, float zNear, float zFar );
 	// Determine lighting at specified position
-	virtual colorVec		GetLightAtPoint( Vector& pos ) = 0;
+	colorVec		GetLightAtPoint( Vector& pos );
 	// Whose eyes are we looking through?
-	virtual int				GetViewEntity( void ) = 0;
-	virtual bool			IsViewEntity( int entindex ) = 0;
+	int				GetViewEntity( void );
+	bool			IsViewEntity( int entindex );
 	// Get engine field of view setting
-	virtual float			GetFieldOfView( void ) = 0;
+	float			GetFieldOfView( void );
 	// 1 == ducking, 0 == not
-	virtual unsigned char	**GetAreaBits( void ) = 0;
+	unsigned char	**GetAreaBits( void );
 
 	// Set up fog for a particular leaf
-	virtual void			SetFogVolumeState( int nVisibleFogVolume, bool bUseHeightFog ) = 0;
+	void			SetFogVolumeState( int nVisibleFogVolume, bool bUseHeightFog );
 
 	// Installs a brush surface draw override method, null means use normal renderer
-	virtual void			InstallBrushSurfaceRenderer( IBrushRenderer* pBrushRenderer ) = 0;
+	void			InstallBrushSurfaceRenderer( IBrushRenderer* pBrushRenderer );
 
 	// Draw brush model shadow
-	virtual void			DrawBrushModelShadow( IClientRenderable *pRenderable ) = 0;
+	void			DrawBrushModelShadow( IClientRenderable *pRenderable );
 
 	// Does the leaf contain translucent surfaces?
-	virtual	bool			LeafContainsTranslucentSurfaces( IWorldRenderList *pList, int sortIndex, unsigned long flags ) = 0;
+	bool			LeafContainsTranslucentSurfaces( IWorldRenderList *pList, int sortIndex, unsigned long flags );
 
-	virtual bool			DoesBoxIntersectWaterVolume( const Vector &mins, const Vector &maxs, int leafWaterDataID ) = 0;
+	bool			DoesBoxIntersectWaterVolume( const Vector &mins, const Vector &maxs, int leafWaterDataID );
 
-	virtual void			SetAreaState( 
+	void			SetAreaState( 
 			unsigned char chAreaBits[MAX_AREA_STATE_BYTES],
-			unsigned char chAreaPortalBits[MAX_AREA_PORTAL_STATE_BYTES] ) = 0;
+			unsigned char chAreaPortalBits[MAX_AREA_PORTAL_STATE_BYTES] );
 
 	// Push, pop views (see PushViewFlags_t above for flags)
-	virtual void			Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes ) = 0;
-	virtual void			Push2DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes ) = 0;
-	virtual void			PopView( IMatRenderContext *pRenderContext, Frustum frustumPlanes ) = 0;
+	void			Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes );
+	void			Push2DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes );
+	void			PopView( IMatRenderContext *pRenderContext, Frustum frustumPlanes );
 
 	// Sets the main view
-	virtual void			SetMainView( const Vector &vecOrigin, const QAngle &angles ) = 0;
+	void			SetMainView( const Vector &vecOrigin, const QAngle &angles );
 
 	enum
 	{
@@ -332,28 +336,27 @@ public:
 	};
 
 	// Wraps view render sequence, sets up a view
-	virtual void			ViewSetupVisEx( bool novis, int numorigins, const Vector origin[], unsigned int &returnFlags ) = 0;
+	void			ViewSetupVisEx( bool novis, int numorigins, const Vector origin[], unsigned int &returnFlags );
 
 	//replaces the current view frustum with a rhyming replacement of your choice
-	virtual void			OverrideViewFrustum( Frustum custom ) = 0;
+	void			OverrideViewFrustum( Frustum custom );
 
-	virtual void			DrawBrushModelShadowDepth( IClientEntity *baseentity, model_t *model, const Vector& origin, const QAngle& angles, ERenderDepthMode_t DepthMode ) = 0;
-	virtual void			UpdateBrushModelLightmap( model_t *model, IClientRenderable *pRenderable ) = 0;
-	virtual void			BeginUpdateLightmaps( void ) = 0;
-	virtual void			EndUpdateLightmaps() = 0;
-	virtual void			OLD_SetOffCenterProjectionMatrix( float fov, float zNear, float zFar, float flAspectRatio, float flBottom, float flTop, float flLeft, float flRight ) = 0;
-	virtual void			OLD_SetProjectionMatrixOrtho( float left, float top, float right, float bottom, float zNear, float zFar ) = 0;
-	virtual void			Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes, ITexture* pDepthTexture ) = 0;
-	virtual void			GetMatricesForView( const CViewSetup &view, VMatrix *pWorldToView, VMatrix *pViewToProjection, VMatrix *pWorldToProjection, VMatrix *pWorldToPixels ) = 0;
-	virtual void			DrawBrushModelEx( IClientEntity *baseentity, model_t *model, const Vector& origin, const QAngle& angles, DrawBrushModelMode_t mode ) = 0;
+	void			DrawBrushModelShadowDepth( IClientEntity *baseentity, model_t *model, const Vector& origin, const QAngle& angles, ERenderDepthMode_t DepthMode );
+	void			UpdateBrushModelLightmap( model_t *model, IClientRenderable *pRenderable );
+	void			BeginUpdateLightmaps( void );
+	void			EndUpdateLightmaps();
+	void			OLD_SetOffCenterProjectionMatrix( float fov, float zNear, float zFar, float flAspectRatio, float flBottom, float flTop, float flLeft, float flRight );
+	void			OLD_SetProjectionMatrixOrtho( float left, float top, float right, float bottom, float zNear, float zFar );
+	void			Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes, ITexture* pDepthTexture );
+	void			GetMatricesForView( const CViewSetup &view, VMatrix *pWorldToView, VMatrix *pViewToProjection, VMatrix *pWorldToProjection, VMatrix *pWorldToPixels );
+	void			DrawBrushModelEx( IClientEntity *baseentity, model_t *model, const Vector& origin, const QAngle& angles, DrawBrushModelMode_t mode );
 
-	virtual bool			DoesBrushModelNeedPowerOf2Framebuffer( const model_t *model ) = 0;
+	bool			DoesBrushModelNeedPowerOf2Framebuffer( const model_t *model );
 
 	// draw an array of brush models (see model_types.h for the model type flags, i.e. STUDIO_SHADOWDEPTHTEXTURE)
-	virtual void			DrawBrushModelArray( IMatRenderContext* pContext, int nCount, const BrushArrayInstanceData_t *pInstanceData, int nModelTypeFlags ) = 0;
+	void			DrawBrushModelArray( IMatRenderContext* pContext, int nCount, const BrushArrayInstanceData_t *pInstanceData, int nModelTypeFlags );
 };
 
 // change this when the new version is incompatable with the old
 inline constexpr const char *VENGINE_RENDERVIEW_INTERFACE_VERSION = "VEngineRenderView014";
 
-extern IVRenderView *render;

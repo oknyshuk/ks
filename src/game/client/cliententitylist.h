@@ -2,14 +2,12 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
 #include "icliententitylist.h"
 #include "iclientunknown.h"
 #include "icliententityinternal.h"
 #include "ispatialpartition.h"
 #include "cdll_util.h"
 #include "entitylist_base.h"
-import std;
 
 class C_Beam;
 class C_BaseViewModel;
@@ -233,7 +231,7 @@ private:
 //-----------------------------------------------------------------------------
 inline bool	CClientEntityList::IsHandleValid( ClientEntityHandle_t handle ) const
 {
-	return handle.Get() != nullptr;
+	return EntityFromHandle( handle ) != nullptr;
 }
 
 inline IClientUnknown* CClientEntityList::GetListedEntity( int entnum )

@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -121,7 +119,7 @@ bool CGlowOverlay::Update()
 	return true;
 }
 
-void BuildingCubemapsChanged( IConVar *var, const char *pOldValue, float flOldValue )
+void BuildingCubemapsChanged( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	C_BaseEntity::UpdateVisibilityAllEntities();
 }
@@ -345,9 +343,9 @@ void CGlowOverlay::CalcBasis(
 }
 
 
+extern ConVar	r_drawsprites;
 void CGlowOverlay::Draw( bool bCacheFullSceneState )
 {
-	extern ConVar	r_drawsprites;
 	if( !r_drawsprites.GetBool() )
 		return;
 	

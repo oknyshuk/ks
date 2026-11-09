@@ -5,8 +5,6 @@
 // AI Navigation areas
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
-import std;
-import ks.vstdlib;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -86,7 +84,7 @@ ConVar nav_show_potentially_visible( "nav_show_potentially_visible", "0", FCVAR_
 Color s_selectedSetColor( 255, 255, 200, 96 );
 Color s_selectedSetBorderColor( 100, 100, 0, 255 );
 Color s_dragSelectionSetBorderColor( 50, 50, 50, 255 );
-static void SelectedSetColorChaged( IConVar *var, const char *pOldValue, float flOldValue )
+static void SelectedSetColorChaged( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	ConVarRef colorVar( var->GetName() );
 
@@ -197,6 +195,8 @@ void CNavArea::CompressIDs( void )
  */
 CNavArea::CNavArea( void )
 {
+	m_approachCount = 0;
+
 	m_marker = 0;
 	m_nearNavSearchMarker = 0;
 	m_damagingTickCount = 0;
@@ -4422,7 +4422,7 @@ static ConCommand nav_update_blocked( "nav_update_blocked", CommandNavUpdateBloc
 
 
 //--------------------------------------------------------------------------------------------------------
-bool CNavArea::IsBlocked( int teamID, bool ignoreNavBlockers ) const
+bool CNavArea::IsBlockedBase( int teamID, bool ignoreNavBlockers ) const
 {
 	if ( ignoreNavBlockers && ( m_attributeFlags & NAV_MESH_NAV_BLOCKER ) )
 	{
@@ -4660,7 +4660,7 @@ void CNavArea::UnblockArea( void )
  * Updates the (un)blocked status of the nav area
  * The semantics of this method have gotten very muddled - needs refactoring (MSB 5/7/09)
  */
-void CNavArea::UpdateBlocked( bool force, int teamID )
+void CNavArea::UpdateBlockedBase( bool force, int teamID )
 {
 	CVProfScope _( "CNavArea::UpdateBlocked", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( !force && !m_blockedTimer.IsElapsed() )

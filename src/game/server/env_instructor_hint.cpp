@@ -3,8 +3,6 @@
 
 // Purpose: An entity for creating instructor hints entirely with map logic
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -119,12 +116,12 @@ void CEnvInstructorHint::InputShowHint( inputdata_t &inputdata )
 		CBasePlayer *pActivator = nullptr;
 		bool bFilterByActivator = m_bLocalPlayerOnly;
 		if ( bFilterByActivator )
-			pActivator = dynamic_cast<CBasePlayer*>( inputdata.pActivator );
+			pActivator = entity_cast<CBasePlayer>( inputdata.pActivator );
 
 		if ( inputdata.value.StringID() != NULL_STRING )
 		{
 			CBaseEntity *pTarget = gEntList.FindEntityByName( nullptr, inputdata.value.String() );
-			pActivator = dynamic_cast<CBasePlayer*>( pTarget );
+			pActivator = entity_cast<CBasePlayer>( pTarget );
 			if ( pActivator )
 			{
 				bFilterByActivator = true;
@@ -198,7 +195,7 @@ class CInfoInstructorHintTarget : public CPointEntity
 public:
 	DECLARE_CLASS( CInfoInstructorHintTarget, CPointEntity );
 
-	virtual int UpdateTransmitState( void )	// set transmit filter to transmit always
+	int UpdateTransmitState_Impl( void )	// set transmit filter to transmit always
 	{
 		return SetTransmitState( FL_EDICT_ALWAYS );
 	}

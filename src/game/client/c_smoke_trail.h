@@ -5,7 +5,6 @@
 // This defines the client-side SmokeTrail entity. It can also be used without
 // an entity, in which case you must pass calls to it and set its position each frame.
 
-import ks.tier1;
 #include "reflect_annotations.h"
 
 #include "particlemgr.h"
@@ -16,7 +15,6 @@ import ks.tier1;
 #include "baseparticleentity.h"
 
 #include "fx_trail.h"
-import std;
 
 //
 // Smoke Trail
@@ -48,7 +46,6 @@ public:
 public:
 	virtual	void	OnDataChanged(DataUpdateType_t updateType);
 
-	virtual void	CleanupToolRecordingState( KeyValues *msg );
 
 // IPrototypeAppEffect.
 public:
@@ -382,7 +379,6 @@ public:
 public:
 	virtual	void	OnDataChanged(DataUpdateType_t updateType);
 
-	virtual void	CleanupToolRecordingState( KeyValues *msg );
 
 // IPrototypeAppEffect.
 public:

@@ -201,7 +201,7 @@ void CClientState::PacketEnd()
 
 void CClientState::Disconnect( bool bShowMainMenu )
 {
-	CBaseClientState::Disconnect( bShowMainMenu );
+	CBaseClientState::DisconnectBase( bShowMainMenu );
 
 	if ( m_bSplitScreenUser )
 		return;
@@ -315,7 +315,7 @@ bool CClientState::NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg )
 	// Even though this is just forwarding to the base class, do not remove this function.
 	// There are multiple implementations of CClientState and the one in cl_null.cpp
 	// stubs this function out as a simple 'return true;'.
-	return BaseClass::NETMsg_StringCmd( msg );
+	return BaseClass::NETMsg_StringCmdBase( msg );
 }
 
 bool CClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg )
@@ -323,7 +323,7 @@ bool CClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg )
 	// Reset client state
 	CL_ClearState();
 
-	if ( !CBaseClientState::SVCMsg_ServerInfo( msg ) )
+	if ( !CBaseClientState::SVCMsg_ServerInfoBase( msg ) )
 	{
 		Disconnect(true);
 		return false;
@@ -407,7 +407,7 @@ bool CClientState::SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg )
 	}
 	else
 	{
-		CBaseClientState::SVCMsg_ClassInfo( msg );
+		CBaseClientState::SVCMsg_ClassInfoBase( msg );
 	}
 	
 	bool bAllowMismatches = ( g_pClientDemoPlayer && g_pClientDemoPlayer->IsPlayingBack() );
@@ -427,7 +427,7 @@ bool CClientState::SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg )
 
 bool CClientState::SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg )
 {
-	CBaseClientState::SVCMsg_SetPause( msg );
+	CBaseClientState::SVCMsg_SetPauseBase( msg );
 
 	return true;
 }
@@ -758,7 +758,7 @@ bool CClientState::SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntities 
 	if ( !CL_ProcessPacketEntities( msg ) )
 		return false;
 
-	return CBaseClientState::SVCMsg_PacketEntities( msg );
+	return CBaseClientState::SVCMsg_PacketEntitiesBase( msg );
 }
 
 

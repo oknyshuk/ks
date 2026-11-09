@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -24,7 +21,6 @@ import ks.tier1;
 #include "cdll_client_int.h"
 #include "engine/ivmodelinfo.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -248,7 +244,7 @@ void CBaseGrenade::Smoke( void )
 	SetNextThink( gpGlobals->curtime );
 }
 
-void CBaseGrenade::Event_Killed( const CTakeDamageInfo &info )
+void CBaseGrenade::Event_Killed_Impl( const CTakeDamageInfo &info )
 {
 	Detonate( );
 }
@@ -257,7 +253,7 @@ void CBaseGrenade::Event_Killed( const CTakeDamageInfo &info )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseGrenade::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CBaseGrenade::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	// Support player pickup
 	if ( useType == USE_TOGGLE )
@@ -271,7 +267,7 @@ void CBaseGrenade::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE 
 	}
 
 	// Pass up so we still call any custom Use function
-	BaseClass::Use( pActivator, pCaller, useType, value );
+	BaseClass::Use_Impl( pActivator, pCaller, useType, value );
 }
 #endif
 
@@ -498,9 +494,9 @@ void CBaseGrenade ::TumbleThink( void )
 	}
 }
 
-void CBaseGrenade::Precache( void )
+void CBaseGrenade::Precache_Impl( void )
 {
-	BaseClass::Precache( );
+	BaseClass::Precache_Impl( );
 
 	PrecacheScriptSound( "BaseGrenade.Explode" );
 }

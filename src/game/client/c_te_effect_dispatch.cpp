@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "sharedvar.h"
@@ -117,60 +115,6 @@ void DispatchEffectToCallback( const char *pEffectName, const CEffectData &m_Eff
 
 
 //-----------------------------------------------------------------------------
-// Record effects
-//-----------------------------------------------------------------------------
-static void RecordEffect( const char *pEffectName, const CEffectData &data )
-{
-	if ( !ToolsEnabled() )
-		return;
-
-	if ( clienttools->IsInRecordingMode() && ( (data.m_fFlags & EFFECTDATA_NO_RECORD) == 0 ) )
-	{
-		KeyValues *msg = new KeyValues( "TempEntity" );
-
-		const char *pSurfacePropName = physprops->GetPropName( data.m_nSurfaceProp );
-
-		char pName[1024];
-		V_snprintf( pName, sizeof(pName), "TE_DispatchEffect %s %s", pEffectName, pSurfacePropName );
-
- 		msg->SetInt( "te", TE_DISPATCH_EFFECT );
- 		msg->SetString( "name", pName );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetFloat( "originx", data.m_vOrigin.x );
-		msg->SetFloat( "originy", data.m_vOrigin.y );
-		msg->SetFloat( "originz", data.m_vOrigin.z );
-		msg->SetFloat( "startx", data.m_vStart.x );
-		msg->SetFloat( "starty", data.m_vStart.y );
-		msg->SetFloat( "startz", data.m_vStart.z );
-		msg->SetFloat( "normalx", data.m_vNormal.x );
-		msg->SetFloat( "normaly", data.m_vNormal.y );
-		msg->SetFloat( "normalz", data.m_vNormal.z );
-		msg->SetFloat( "anglesx", data.m_vAngles.x );
-		msg->SetFloat( "anglesy", data.m_vAngles.y );
-		msg->SetFloat( "anglesz", data.m_vAngles.z );
-		msg->SetInt( "flags", data.m_fFlags );
-		msg->SetFloat( "scale", data.m_flScale );
-		msg->SetFloat( "magnitude", data.m_flMagnitude );
-		msg->SetFloat( "radius", data.m_flRadius );
-		msg->SetString( "surfaceprop", pSurfacePropName );
-		msg->SetInt( "color", data.m_nColor );
-		msg->SetInt( "damagetype", data.m_nDamageType );
-		msg->SetInt( "hitbox", data.m_nHitBox );
- 		msg->SetString( "effectname", pEffectName );
-
-		// FIXME: Need to write the attachment name here
- 		msg->SetInt( "attachmentindex", data.m_nAttachmentIndex );
-
-		// NOTE: Ptrs are our way of indicating it's an entindex
-		msg->SetPtr( "entindex", (void*)(intp)data.entindex() );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
-}
-
-
-//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void C_TEEffectDispatch::PostDataUpdate( DataUpdateType_t updateType )
@@ -182,7 +126,6 @@ void C_TEEffectDispatch::PostDataUpdate( DataUpdateType_t updateType )
 	if ( pEffectName )
 	{
 		DispatchEffectToCallback( pEffectName, m_EffectData );
-		RecordEffect( pEffectName, m_EffectData );
 	}
 }
 
@@ -197,7 +140,6 @@ void DispatchEffect( IRecipientFilter& filter, float delay, const char *pName, c
 	if ( !te->SuppressTE( filter ) )
 	{
 		DispatchEffectToCallback( pName, data );
-		RecordEffect( pName, data );
 	}
 }
 
@@ -207,7 +149,6 @@ void DispatchEffect( const char *pName, const CEffectData &data )
 	if ( !te->SuppressTE( filter ) )
 	{
 		DispatchEffectToCallback( pName, data );
-		RecordEffect( pName, data );
 	}
 }
 

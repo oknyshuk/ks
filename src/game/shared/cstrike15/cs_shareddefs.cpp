@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
 #include "cdll_util.h"
 #include "cdll_client_int.h"
 #elif defined(GAME_DLL)
-import ks.tier1;
-import ks.math;
 #include "string_t.h"
 #include "edict.h"
 #include "shareddefs.h"
@@ -20,7 +16,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "baseentity_shared.h"
 #include "basetoggle.h"

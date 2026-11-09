@@ -11,22 +11,22 @@ class CMatchVoice : public IMatchVoice
 	// Methods of IMatchVoice
 public:
 	// Whether remote player talking can be visualized / audible
-	virtual bool CanPlaybackTalker( XUID xuidTalker );
+	bool CanPlaybackTalker( XUID xuidTalker );
 
 	// Whether we are explicitly muting a remote player
-	virtual bool IsTalkerMuted( XUID xuidTalker );
+	bool IsTalkerMuted( XUID xuidTalker );
 
 	// Whether we are muting any player on the player's machine
-	virtual bool IsMachineMuted( XUID xuidPlayer );
+	bool IsMachineMuted( XUID xuidPlayer );
 
 	// Whether voice recording mode is currently active
-	virtual bool IsVoiceRecording();
+	bool IsVoiceRecording();
 
 	// Enable or disable voice recording
-	virtual void SetVoiceRecording( bool bRecordingEnabled );
+	void SetVoiceRecording( bool bRecordingEnabled );
 
 	// Enable or disable voice mute for a given talker
-	virtual void MuteTalker( XUID xuidTalker, bool bMute );
+	void MuteTalker( XUID xuidTalker, bool bMute );
 
 protected:
 	// Check player-player voice privileges for machine blocking purposes

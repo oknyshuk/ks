@@ -3,7 +3,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 // For introspection
-import ks.core;
 #include "predictioncopy.h"
 #include "shared_classnames.h"
 
@@ -15,7 +14,6 @@ import ks.core;
 #include "iclassmap.h"
 #include "recvproxy.h"
 
-class SendTable;
 
 // Game DLL includes
 #else

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -946,7 +944,7 @@ bool CAI_NetworkManager::IsAIFileCurrent ( const char *szMapName )
 
 //------------------------------------------------------------------------------
 
-void CAI_NetworkManager::Spawn ( void )
+void CAI_NetworkManager::Spawn_Impl ( void )
 {
 	SetSolid( SOLID_NONE );
 	SetMoveType( MOVETYPE_NONE );

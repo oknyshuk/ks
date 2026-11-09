@@ -25,8 +25,8 @@ public:
 	
 	CWeaponCSBaseGun();
 
-	virtual void Spawn();
-	virtual void Precache();
+	KS_VIRTUAL void Spawn_Impl();
+	KS_VIRTUAL void Precache_Impl();
 
 	virtual void PrimaryAttack();
 	virtual void SecondaryAttack();

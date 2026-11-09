@@ -5,7 +5,6 @@
 #include "ichoreoeventcallback.h"
 
 #include "reflect_annotations.h"
-import std;
 #include "dt_recv.h"
 #include "shareddefs.h"
 #include "c_baseentity.h"

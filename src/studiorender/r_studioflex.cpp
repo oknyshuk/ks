@@ -414,10 +414,10 @@ void CStudioRender::AddGlint( CPixelWriter &pixelWriter, float x, float y, const
 
 // test/stub code
 
-class CGlintTextureRegenerator : public ITextureRegenerator
+class CGlintTextureRegenerator
 {
 public:
-	virtual void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pRect )
+	void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pRect )
 	{
 		// We don't need to reconstitute the bits after a task switch
 		// since we reconstitute them every frame they are used anyways
@@ -451,9 +451,6 @@ public:
 		}
 	}
 
-	// We've got a global instance, no need to delete it
-	virtual void Release() {}
-
 	const eyeballstate_t *m_pState;
 	const Vector *m_pVRight;
 	const Vector *m_pVUp;
@@ -461,7 +458,9 @@ public:
 	CStudioRender *m_pStudioRender;
 };
 
+// We've got a global instance, no need to delete it
 static CGlintTextureRegenerator s_GlintTextureRegen;
+static ITextureRegenerator s_GlintRegenerator( s_GlintTextureRegen );
 
 static ITexture *s_pProcGlint = nullptr;
 void CStudioRender::PrecacheGlint()
@@ -484,7 +483,7 @@ void CStudioRender::PrecacheGlint()
 		// Get the texture that we are going to be updating procedurally.
 		s_pProcGlint = g_pMaterialSystem->CreateProceduralTexture( 
 			"proc_eyeglint", TEXTURE_GROUP_MODEL, 32, 32, IMAGE_FORMAT_BGRA8888, TEXTUREFLAGS_NOMIP|TEXTUREFLAGS_NOLOD );
-		s_pProcGlint->SetTextureRegenerator( &s_GlintTextureRegen );
+		s_pProcGlint->SetTextureRegenerator( &s_GlintRegenerator );
 
 		// JAY: I don't see this pattern in the code often.  It looks like the material system
 		// would rather than I deal exclusively with IMaterials instead.

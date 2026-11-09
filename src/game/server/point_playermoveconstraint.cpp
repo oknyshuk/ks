@@ -3,8 +3,6 @@
 
 // Purpose: An entity that can be used to constrain the player's movement around it
 
-import std;
-import ks.math;
 #include "edict.h"
 #include "shareddefs.h"
 #include "datamap.h"
@@ -36,8 +34,8 @@ class CPointPlayerMoveConstraint : public CBaseEntity
 public:
 	DECLARE_DATADESC();
 
-	int		UpdateTransmitState( void );
-	void	Activate( void );
+	int		UpdateTransmitState_Impl( void );
+	void	Activate_Impl( void );
 	void	ConstraintThink( void );
 
 	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void	InputTurnOn( inputdata_t &inputdata );
@@ -59,7 +57,7 @@ IMPLEMENT_REFLECT_DATAMAP( CPointPlayerMoveConstraint )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CPointPlayerMoveConstraint::UpdateTransmitState()
+int CPointPlayerMoveConstraint::UpdateTransmitState_Impl()
 {
 	// ALWAYS transmit to all clients.
 	return SetTransmitState( FL_EDICT_ALWAYS );
@@ -68,9 +66,9 @@ int CPointPlayerMoveConstraint::UpdateTransmitState()
 //------------------------------------------------------------------------------
 // Purpose:
 //------------------------------------------------------------------------------
-void CPointPlayerMoveConstraint::Activate( void )
+void CPointPlayerMoveConstraint::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	m_flRadiusSquared = (m_flRadius * m_flRadius);
 }

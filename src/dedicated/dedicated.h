@@ -29,11 +29,11 @@ class CDedicatedAppSystemGroup : public CTier2FSApp
 
 public:
 	// Methods of IApplication
-	virtual bool Create( );
-	virtual bool PreInit( );
-	virtual int Main( );
-	virtual void PostShutdown();
-	virtual void Destroy();
+	bool Create( );
+	bool PreInit( );
+	int Main( );
+	void PostShutdown();
+	void Destroy();
 
 	// Used to chain to base class
 	AppModule_t LoadModule( CreateInterfaceFn factory )

@@ -3,16 +3,12 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 // viewport interface for the rest of the dll
-import ks.tier1;
 #include "game/client/iviewport.h"
 
-import std;
 #include "igameevents.h"
 #include "noopanimcontroller.h"
 #include "GameEventListener.h"
 
-class IBaseFileSystem;
-class IGameUIFuncs;
 class IGameEventManager;
 
 //==============================================================================
@@ -52,8 +48,8 @@ public:
 
 	virtual int GetDeathMessageStartHeight( void );	
 
-public: // IGameEventListener:
-	virtual void FireGameEvent( IGameEvent * event);
+public: // Game event handler
+	void FireGameEvent( IGameEvent * event);
 
 protected:
 

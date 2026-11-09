@@ -13,22 +13,14 @@
 
 class CBaseEntity;
 class IPhysicsMaterial;
-class IPhysicsConstraint;
-class IPhysicsSpring;
-class IPhysicsSurfaceProps;
 class CTakeDamageInfo;
-class ConVar;
 
 extern IPhysicsMaterial		*g_Material;
 extern ConVar phys_pushscale;
 extern ConVar phys_timescale;
 
-struct objectparams_t;
 extern IPhysicsGameTrace	*physgametrace;
 
-class IPhysicsCollisionSolver;
-class IPhysicsCollisionEvent;
-class IPhysicsObjectEvent;
 extern IPhysicsCollisionSolver * const g_pCollisionSolver;
 extern IPhysicsCollisionEvent * const g_pCollisionEventHandler;
 extern IPhysicsObjectEvent * const g_pObjectEventHandler;

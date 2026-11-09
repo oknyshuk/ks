@@ -6,7 +6,6 @@
 #include <igamesystem.h>
 #include <ihltvdirector.h>
 #include <ihltv.h>
-import std;
 #include "ihltvdirector.h"
 #include "igamesystem.h"
 #include "baseentity.h"
@@ -67,8 +66,8 @@ public:
 	void	StartAutoRecording( void );
 		
 
-public: // IGameEventListener Interface
-	virtual void	FireGameEvent( IGameEvent * event );
+public: // game event handling
+	void	FireGameEvent( IGameEvent * event );
 	
 public: // CBaseGameSystem overrides
 

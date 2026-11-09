@@ -2,8 +2,6 @@
 // Copyright (c) Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -367,6 +365,7 @@ float CCSMParallelSplit::ComputeFarPlaneCameraRelativePoints( Vector *pPoints, f
 	return flSubfrustumDiagonalLength;
 }
 
+extern ConVar cl_csm_xlat_continuity;
 void CCSMParallelSplit::CalculateShadowFrustaParallelSplits( 
 	const CFrustum &sceneFrustum,
 	uint &nOutCascadeSize,
@@ -608,7 +607,6 @@ void CCSMParallelSplit::CalculateShadowFrustaParallelSplits(
 		// Eliminate any subpixel offset in the ortho projection parameters.
 		float flWorldUnitsPerTexel = flSubfrustumDiagonalLength / m_nShadowBufferSize;
 		
-		extern ConVar cl_csm_xlat_continuity;
 		if ( cl_csm_xlat_continuity.GetBool() )
 		{
 			vShadowFocusRegionMin.x = ((int)std::floor( vShadowFocusRegionMin.x / flWorldUnitsPerTexel ) & ~1 ) * flWorldUnitsPerTexel;

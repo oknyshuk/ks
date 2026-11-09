@@ -3,8 +3,6 @@
 
 // Purpose: Implements visual effects entities: sprites, beams, bubbles, etc.
 
-import std;
-import ks.tier1;
 #include "edict.h"
 #include "iserverentity.h"
 #include "dt_send.h"
@@ -42,7 +40,7 @@ IMPLEMENT_REFLECT_DATAMAP( CMessage )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CMessage::Spawn( void )
+void CMessage::Spawn_Impl( void )
 {
 	Precache();
 
@@ -81,7 +79,7 @@ void CMessage::Spawn( void )
 }
 
 
-void CMessage::Precache( void )
+void CMessage::Precache_Impl( void )
 {
 	if ( m_sNoise != NULL_STRING )
 	{
@@ -144,7 +142,7 @@ void CMessage::InputShowMessage( inputdata_t &inputdata )
 }
 
 
-void CMessage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CMessage::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	inputdata_t inputdata;
 
@@ -161,7 +159,7 @@ public:
 	DECLARE_CLASS( CMessage, CPointEntity );
 	DECLARE_DATADESC();
 
-	void	Spawn( void );
+	void	Spawn_Impl( void );
 	[[= ks::reflect::Input{ .name = "RollCredits", .type = FIELD_VOID } ]] void	InputRollCredits( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "RollOutroCredits", .type = FIELD_VOID } ]] void	InputRollOutroCredits( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "ShowLogo", .type = FIELD_VOID } ]] void	InputShowLogo( inputdata_t &inputdata );
@@ -169,7 +167,7 @@ public:
 
 	[[= ks::reflect::Key{ .name = "OnCreditsDone" } ]] COutputEvent m_OnCreditsDone;
 
-	virtual void OnRestore();
+	void OnRestore_Impl();
 private:
 
 	void		RollOutroCredits();
@@ -182,7 +180,7 @@ LINK_ENTITY_TO_CLASS( env_credits, CCredits );
 
 IMPLEMENT_REFLECT_DATAMAP( CCredits )
 
-void CCredits::Spawn( void )
+void CCredits::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	SetMoveType( MOVETYPE_NONE );
@@ -204,9 +202,9 @@ static ConCommand creditsdone("creditsdone", CreditsDone_f );
 
 extern ConVar sv_unlockedchapters;
 
-void CCredits::OnRestore()
+void CCredits::OnRestore_Impl()
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	if ( m_bRolledOutroCredits )
 	{
@@ -292,7 +290,7 @@ public:
 	DECLARE_CLASS( COuttroStats, CPointEntity );
 	DECLARE_DATADESC();
 
-	void Spawn( void );
+	void Spawn_Impl( void );
 	[[= ks::reflect::Input{ .name = "RollCredits", .type = FIELD_VOID } ]] void InputRollCredits( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "RollStatsCrawl", .type = FIELD_VOID } ]] void InputRollStatsCrawl( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "SkipStateChanged", .type = FIELD_VOID } ]] void InputSkipStateChanged( inputdata_t &inputdata );
@@ -309,7 +307,7 @@ LINK_ENTITY_TO_CLASS( env_outtro_stats, COuttroStats );
 IMPLEMENT_REFLECT_DATAMAP( COuttroStats )
 
 //-----------------------------------------------------------------------------
-void COuttroStats::Spawn( void )
+void COuttroStats::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	SetMoveType( MOVETYPE_NONE );

@@ -4,8 +4,6 @@
 // Purpose: Entities that capture the player's UI and move it into game design
 //			as outputs.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -19,7 +17,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "baseentity_shared.h"
 #include "basetoggle.h"
@@ -61,7 +58,7 @@ public:
 	[[= ks::reflect::Input{ .name = "Deactivate", .type = FIELD_VOID } ]] void InputDeactivate( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_STRING } ]] void InputActivate( inputdata_t &inputdata );
 
-	void Think( void );
+	void Think_Impl( void );
 	void Deactivate( CBaseEntity *pActivator );
 
 	[[= ks::reflect::Key{ .name = "FieldOfView" } ]] float				m_flFieldOfView;
@@ -242,7 +239,7 @@ void CGameUI::InputActivate( inputdata_t &inputdata )
 // Purpose: Samples the player's inputs and fires outputs based on what buttons
 //			are currently held down.
 //------------------------------------------------------------------------------
-void CGameUI::Think( void )
+void CGameUI::Think_Impl( void )
 {
 	CBasePlayer *pPlayer = m_player;
 

@@ -6,7 +6,6 @@ import ks.core;
 // Purpose: Core types for the response rules -- criteria, responses, rules, and matchers.
 
 #include "filesystem.h"
-class IUniformRandomStream;
 
 namespace ResponseRules
 {
@@ -27,8 +26,8 @@ namespace ResponseRules
 		/// Return a pointer to an IFileSystem we can use to read and process scripts.
 		virtual IFileSystem *GetFilesystem() = 0;
 
-		/// Return a pointer to an instance of an IUniformRandomStream
-		virtual IUniformRandomStream *GetRandomStream() = 0 ;
+		/// Return a pointer to an instance of a CUniformRandomStream
+		virtual CUniformRandomStream *GetRandomStream() = 0 ;
 
 		/// Return a pointer to a tier0 ICommandLine
 		virtual ICommandLine *GetCommandLine() = 0;

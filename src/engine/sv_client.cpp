@@ -197,7 +197,10 @@ void SV_ValidateMinRequiredClients( ValidateMinRequiredClients_t eReason )
 
 
 CGameClient::CGameClient(int slot, CBaseServer *pServer )
+	: CBaseClient( client_kind_t::game )
 {
+	m_GameEventCallback = GameEventCallback_t( std::cw<&CGameClient::FireGameEvent>, this );
+
 	Clear();
 
 	m_nClientSlot = slot;
@@ -221,7 +224,7 @@ CGameClient::~CGameClient()
 
 bool CGameClient::CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg )
 {
-	BaseClass::CLCMsg_ClientInfo( msg );
+	BaseClass::CLCMsg_ClientInfoBase( msg );
 
 	if ( m_bIsHLTV )
 	{
@@ -470,7 +473,7 @@ void CGameClient::DownloadCustomizations()
 
 void CGameClient::Connect(const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars /*= NULL*/)
 {
-	BaseClass::Connect( szName, nUserID, pNetChannel, bFakePlayer, clientPlatform, pVecCvars );
+	BaseClass::ConnectBase( szName, nUserID, pNetChannel, bFakePlayer, clientPlatform, pVecCvars );
 
 	edict = EDICT_NUM( m_nEntityIndex );
 	
@@ -619,7 +622,7 @@ void CGameClient::SetRate(int nRate, bool bForce )
 		nRate = ClampClientRate( nRate );
 	}
 
-	BaseClass::SetRate( nRate, bForce );
+	BaseClass::SetRateBase( nRate, bForce );
 }
 void CGameClient::SetUpdateRate( float fUpdateRate, bool bForce )
 {
@@ -644,7 +647,7 @@ void CGameClient::SetUpdateRate( float fUpdateRate, bool bForce )
 		}
 	}
 
-	BaseClass::SetUpdateRate( fUpdateRate, bForce );
+	BaseClass::SetUpdateRateBase( fUpdateRate, bForce );
 }
 
 
@@ -653,10 +656,10 @@ void CGameClient::UpdateUserSettings()
 	// set voice loopback
 	m_bVoiceLoopback = m_ConVars->GetInt( "voice_loopback", 0 ) != 0;
 
-	BaseClass::UpdateUserSettings();
+	BaseClass::UpdateUserSettingsBase();
 
 	// Give entity dll a chance to look at the changes.
-	// Do this after BaseClass::UpdateUserSettings() so name changes like prepending a (1)
+	// Do this after BaseClass::UpdateUserSettingsBase() so name changes like prepending a (1)
 	// take effect before the server dll sees the name.
 	g_pServerPluginHandler->ClientSettingsChanged( edict );
 }
@@ -746,7 +749,7 @@ void CGameClient::Inactivate( void )
 	m_nHltvReplayStartAt = 0;
 	m_nHltvLastSendTick = 0;	// last send tick, don't send ticks twice
 
-	BaseClass::Inactivate();
+	BaseClass::InactivateBase();
 
 	m_Sounds.clear(); m_Sounds.shrink_to_fit();
 	ConVarRef voice_verbose( "voice_verbose" );
@@ -778,7 +781,7 @@ bool CGameClient::UpdateAcknowledgedFramecount(int tick)
 		}
 	}
 
-	return BaseClass::UpdateAcknowledgedFramecount( tick );
+	return BaseClass::UpdateAcknowledgedFramecountBase( tick );
 }
 
 
@@ -793,7 +796,7 @@ void CGameClient::Clear()
 		}
 	}
 	
-	BaseClass::Clear();
+	BaseClass::ClearBase();
 
 	m_HltvQueuedMessages.clear();
 
@@ -829,7 +832,7 @@ void CGameClient::Reconnect( void )
 	// If the client was connected before, tell the game .dll to disconnect him/her.
 	sv.RemoveClientFromGame( this );
 
-	BaseClass::Reconnect();
+	BaseClass::ReconnectBase();
 }
 
 void CGameClient::PerformDisconnection( const char *pReason )
@@ -851,7 +854,7 @@ void CGameClient::PerformDisconnection( const char *pReason )
 	m_Server->RemoveClientFromGame( this );
 
 	int nDisconnectSignonState = GetSignonState();
-	BaseClass::PerformDisconnection( pReason );
+	BaseClass::PerformDisconnectionBase( pReason );
 	if ( nDisconnectSignonState >= SIGNONSTATE_NEW )
 	{
 		SV_ValidateMinRequiredClients( VALIDATE_DISCONNECT );
@@ -877,7 +880,7 @@ void CGameClient::Disconnect( const char *fmt )
 	m_DisconnectedClientsHltvReplayStats += m_HltvReplayStats;
 	m_HltvReplayStats.Reset();
 
-	BaseClass::Disconnect( fmt );
+	BaseClass::DisconnectBase( fmt );
 }
 
 bool CGameClient::ProcessSignonStateMsg( int state, int spawncount )
@@ -919,7 +922,7 @@ bool CGameClient::ProcessSignonStateMsg( int state, int spawncount )
 		g_pServerPluginHandler->ClientFullyConnect( edict );
 	}
 
-	return BaseClass::ProcessSignonStateMsg( state, spawncount );
+	return BaseClass::ProcessSignonStateMsgBase( state, spawncount );
 }
 
 void CGameClient::SendSound( SoundInfo_t &sound, bool isReliable )
@@ -975,7 +978,7 @@ void CGameClient::SendSound( SoundInfo_t &sound, bool isReliable )
 		SendNetMsg( *sndmsg, true );
 
 		if ( m_nHltvReplayDelay )
-			m_HltvQueuedMessages.push_back( std::move( sndmsg ) );
+			m_HltvQueuedMessages.emplace_back( sndmsg.release() );
 
 		return;
 	}
@@ -1071,12 +1074,12 @@ bool CGameClient::CheckConnect( void )
 		return false;
 	}
 
-	return BaseClass::CheckConnect();
+	return BaseClass::CheckConnectBase();
 }
 
 void CGameClient::ActivatePlayer( void )
 {
-	BaseClass::ActivatePlayer();
+	BaseClass::ActivatePlayerBase();
 
 	COM_TimestampedLog( "CGameClient::ActivatePlayer -start" );
 
@@ -1168,7 +1171,7 @@ bool CGameClient::SendSignonData( void )
 		m_NetChannel->SendNetMsg( classmsg );
 	}
 
-	if ( !BaseClass::SendSignonData()	)
+	if ( !BaseClass::SendSignonDataBase()	)
 		return false;
 
 	m_nSoundSequence = 1; // reset sound sequence numbers after signon block
@@ -1204,7 +1207,7 @@ void CGameClient::SpawnPlayer( void )
 	setView.entity_index = m_nEntityIndex;
 	SendNetMsg( setView );
 
-	BaseClass::SpawnPlayer();
+	BaseClass::SpawnPlayerBase();
 }
 
 CClientFrame *CGameClient::GetDeltaFrame( int nTick )
@@ -1239,7 +1242,7 @@ void CGameClient::WriteViewAngleUpdate()
 		return;
 
 	contract_assert( serverGameClients );
-	CPlayerState *pl = serverGameClients->GetPlayerState( edict );
+	CPlayerState *pl = static_cast<CPlayerState *>( serverGameClients->GetPlayerState( edict ) );
 	contract_assert( pl || IsSplitScreenUser() );
 	if ( !pl )
 		return;
@@ -1326,7 +1329,7 @@ bool CGameClient::SendNetMsg( INetMessage &msg, bool bForceReliable, bool bVoice
 				case 18: // ks::net::CS_UM_RawAudio
 					// mark this message as real-time and send with that flag, to distinguish it from the replay messages
 					userMessageHeader.passthrough = 1;
-					bResult = BaseClass::SendNetMsg( msg, bForceReliable, bVoice );
+					bResult = BaseClass::SendNetMsgBase( msg, bForceReliable, bVoice );
 					userMessageHeader.passthrough.reset();
 					break;
 				}
@@ -1337,7 +1340,7 @@ bool CGameClient::SendNetMsg( INetMessage &msg, bool bForceReliable, bool bVoice
 		contract_assert( bVoice );
 	}
 
-	return BaseClass::SendNetMsg( msg, bForceReliable, bVoice );
+	return BaseClass::SendNetMsgBase( msg, bForceReliable, bVoice );
 }
 
 static constexpr uint32 s_HltvUnskippableEvents[] = {
@@ -1402,7 +1405,7 @@ void CGameClient::FireGameEvent( IGameEvent *event )
 				auto pEventMsg = std::make_unique< CSVCMsg_GameEvent_t >();
 				if ( g_GameEventManager.SerializeEvent( event, pEventMsg.get() ) )
 				{
-					m_HltvQueuedMessages.push_back( std::move( pEventMsg ) );
+					m_HltvQueuedMessages.emplace_back( pEventMsg.release() );
 				}
 			}
 			return;
@@ -1415,7 +1418,7 @@ void CGameClient::FireGameEvent( IGameEvent *event )
 		}
 		else if ( IsInList( eventName, s_HltvPassThroughRealtimeEvents, std::size( s_HltvPassThroughRealtimeEvents ) ) )
 		{
-			return BaseClass::FireGameEvent( event, true ); // mark the event as real-time pass-through so that on the other end the client knows it's happening in real time, and it's not a replayed-back event
+			return BaseClass::SendGameEvent( event, true ); // mark the event as real-time pass-through so that on the other end the client knows it's happening in real time, and it's not a replayed-back event
 		}
 		else
 		{
@@ -1430,7 +1433,7 @@ void CGameClient::FireGameEvent( IGameEvent *event )
 bool CGameClient::ExecuteStringCommand( const char *pCommandString )
 {
 	// first let the baseclass handle it
-	if ( BaseClass::ExecuteStringCommand( pCommandString ) )
+	if ( BaseClass::ExecuteStringCommandBase( pCommandString ) )
 		return true;
 	
 	// Determine whether the command is appropriate
@@ -1568,7 +1571,7 @@ bool CGameClient::SendSnapshot( CClientFrame * pFrame )
 
 	bool bRet;
 
-	bRet = BaseClass::SendSnapshot( pFrame );
+	bRet = BaseClass::SendSnapshotBase( pFrame );
 
 	if ( bRet )
 	{
@@ -2008,7 +2011,7 @@ bool CGameClient::ShouldSendMessages( void )
 			return false;
 	}
 
-	return BaseClass::ShouldSendMessages();
+	return BaseClass::ShouldSendMessagesBase();
 }
 
 void CGameClient::FileReceived( const char *fileName, unsigned int transferID, bool bIsReplayDemoFile /* = false */  )
@@ -2153,7 +2156,7 @@ bool CGameClient::IgnoreTempEntity( CEventInfo *event )
 	if ( m_bIsInReplayMode )
 		return false;
 
-	return BaseClass::IgnoreTempEntity( event );
+	return BaseClass::IgnoreTempEntityBase( event );
 }
 
 

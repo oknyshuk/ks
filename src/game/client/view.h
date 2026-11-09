@@ -3,8 +3,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 
-import std;
-import ks.tier1;
 
 #if _DEBUG
 extern bool g_bRenderingCameraView;		// For debugging (frustum fix for cameras)...

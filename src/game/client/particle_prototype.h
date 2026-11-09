@@ -5,7 +5,6 @@
 // This defines things that allow particle effects to hook into the particle app.
 
 class CParticleMgr;
-class RecvTable;
 
 
 // Command-line args can be passed in to set state or options in the effects.

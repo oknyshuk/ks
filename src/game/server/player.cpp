@@ -3,8 +3,6 @@
 
 // Purpose: Functions dealing with the player.
 
-import std;
-import ks.vstdlib;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -20,7 +18,6 @@ import ks.vstdlib;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -93,7 +90,6 @@ import ks.vstdlib;
 #include "env_debughistory.h"
 #include "fogcontroller.h"
 #include "gameinterface.h"
-#include "toolframework/itoolframework.h"
 #include "sendprop_priorities.h"
 #include "logic_playerproxy.h"
 #include "fogvolume.h"
@@ -500,7 +496,7 @@ CBasePlayer::~CBasePlayer( )
 // Input  : 
 // Output : 
 //-----------------------------------------------------------------------------
-void CBasePlayer::UpdateOnRemove( void )
+void CBasePlayer::UpdateOnRemove_Impl( void )
 {
 	if ( !g_pGameRules->IsMultiplayer() && g_pScriptVM )
 	{
@@ -521,7 +517,7 @@ void CBasePlayer::UpdateOnRemove( void )
 	}
 
 	// Chain at end to mimic destructor unwind order
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 //-----------------------------------------------------------------------------
@@ -557,13 +553,13 @@ void CBasePlayer::SetupVisibility( CBaseEntity *pViewEntity, unsigned char *pvs,
 	}
 }
 
-int	CBasePlayer::UpdateTransmitState()
+int	CBasePlayer::UpdateTransmitState_Impl()
 {
 	// always call ShouldTransmit() for players
 	return SetTransmitState( FL_EDICT_FULLCHECK );
 }
 
-int CBasePlayer::ShouldTransmit( const CCheckTransmitInfo *pInfo )
+int CBasePlayer::ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo )
 {
 	if ( sv_force_transmit_players.GetBool() )
 		return FL_EDICT_ALWAYS;
@@ -598,7 +594,7 @@ int CBasePlayer::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 	if ( m_lifeState == LIFE_DEAD )
 		return FL_EDICT_ALWAYS;
 
-	int iBaseResult = BaseClass::ShouldTransmit( pInfo );
+	int iBaseResult = BaseClass::ShouldTransmit_Impl( pInfo );
 
 	if ( iBaseResult == FL_EDICT_PVSCHECK )
 	{
@@ -733,7 +729,7 @@ void CBasePlayer::SetFogController( CFogController *pFogController )
 // override takehealth
 // bitsDamageType indicates type of damage healed. 
 
-int CBasePlayer::TakeHealth( float flHealth, int bitsDamageType )
+int CBasePlayer::TakeHealth_Impl( float flHealth, int bitsDamageType )
 {
 	// clear out any damage types we healed.
 	// UNDONE: generic health should not heal any
@@ -746,7 +742,7 @@ int CBasePlayer::TakeHealth( float flHealth, int bitsDamageType )
 
 	// I disabled reporting history into the dbghist because it was super spammy.
 	// But, if you need to reenable it, the code is below in the "else" clause.
-	return BaseClass::TakeHealth (flHealth, bitsDamageType);
+	return BaseClass::TakeHealth_Impl (flHealth, bitsDamageType);
 }
 
 //-----------------------------------------------------------------------------
@@ -755,7 +751,7 @@ int CBasePlayer::TakeHealth( float flHealth, int bitsDamageType )
 // Input  :
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-void CBasePlayer::DrawDebugGeometryOverlays(void) 
+void CBasePlayer::DrawDebugGeometryOverlays_Impl(void) 
 {
 	// --------------------------------------------------------
 	// If in buddha mode and dead draw lines to indicate death
@@ -770,13 +766,13 @@ void CBasePlayer::DrawDebugGeometryOverlays(void)
 		NDebugOverlay::Line(eyePos+vSide+vUp, eyePos-vSide-vUp, 255,0,0, false, 0);
 		NDebugOverlay::Line(eyePos+vSide-vUp, eyePos-vSide+vUp, 255,0,0, false, 0);
 	}
-	BaseClass::DrawDebugGeometryOverlays();
+	BaseClass::DrawDebugGeometryOverlays_Impl();
 }
 
 //=========================================================
 // TraceAttack
 //=========================================================
-void CBasePlayer::TraceAttack( const CTakeDamageInfo &inputInfo, const Vector &vecDir, trace_t *ptr )
+void CBasePlayer::TraceAttack_Impl( const CTakeDamageInfo &inputInfo, const Vector &vecDir, trace_t *ptr )
 {
 	if ( m_takedamage )
 	{
@@ -898,7 +894,7 @@ constexpr auto OLD_ARMOR_BONUS = 0.5; // Each Point of Armor is work 1/x points 
 constexpr auto ARMOR_RATIO = 0.2;
 constexpr auto ARMOR_BONUS = 1.0;
 
-int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
+int CBasePlayer::OnTakeDamage_Impl( const CTakeDamageInfo &inputInfo )
 {
 	// have suit diagnose the problem - ie: report damage type
 	int bitsDamage = inputInfo.GetDamageType();
@@ -1035,7 +1031,7 @@ int CBasePlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	// info.SetDamage( (int)info.GetDamage() );
 
 	// Call up to the base class
-	fTookDamage = BaseClass::OnTakeDamage( info );
+	fTookDamage = BaseClass::OnTakeDamage_Impl( info );
 
 	// Early out if the base class took no damage
 	if ( !fTookDamage )
@@ -1484,7 +1480,7 @@ int CBasePlayer::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 }
 
 
-void CBasePlayer::Event_Killed( const CTakeDamageInfo &info )
+void CBasePlayer::Event_Killed_Impl( const CTakeDamageInfo &info )
 {
 	CSound *pSound;
 
@@ -1556,7 +1552,7 @@ void CBasePlayer::Event_Killed( const CTakeDamageInfo &info )
 	// only count alive players
 	ClearLastKnownArea();
 
-	BaseClass::Event_Killed( info );
+	BaseClass::Event_Killed_Impl( info );
 }
 
 void CBasePlayer::Event_Dying()
@@ -2779,7 +2775,7 @@ void CBasePlayer::Duck( )
 //
 // ID's player as such.
 //
-Class_T  CBasePlayer::Classify ( void )
+Class_T  CBasePlayer::Classify_Impl ( void )
 {
 	return CLASS_PLAYER;
 }
@@ -3076,7 +3072,7 @@ void CBasePlayer::RunNullCommand( void )
 //-----------------------------------------------------------------------------
 // Purpose: Note, don't chain to BaseClass::PhysicsSimulate
 //-----------------------------------------------------------------------------
-void CBasePlayer::PhysicsSimulate( void )
+void CBasePlayer::PhysicsSimulate_Impl( void )
 {
 	CVProfScope _( "CBasePlayer::PhysicsSimulate", 0, VPROF_BUDGETGROUP_PLAYER, false, BUDGETFLAG_OTHER );
 
@@ -3294,7 +3290,7 @@ void CBasePlayer::PhysicsSimulate( void )
 	gpGlobals->frametime	= saveframetime;	
 }
 
-unsigned int CBasePlayer::PhysicsSolidMaskForEntity() const
+unsigned int CBasePlayer::PhysicsSolidMaskForEntity_Impl() const
 {
 	return MASK_PLAYERSOLID;
 }
@@ -4531,7 +4527,7 @@ void CBasePlayer::PostThink()
 }
 
 // handles touching physics objects
-void CBasePlayer::Touch( CBaseEntity *pOther )
+void CBasePlayer::Touch_Impl( CBaseEntity *pOther )
 {
 	if ( pOther == GetGroundEntity() )
 		return;
@@ -4546,7 +4542,7 @@ void CBasePlayer::Touch( CBaseEntity *pOther )
 	SetTouchedPhysics( true );
 }
 
-Vector CBasePlayer::GetSmoothedVelocity( void )
+Vector CBasePlayer::GetSmoothedVelocity_Impl( void )
 { 
 	if ( IsInAVehicle() )
 	{
@@ -4704,7 +4700,7 @@ void CBasePlayer::PostSpawnPointSelection( )
 //-----------------------------------------------------------------------------
 // Purpose: Called everytime the player respawns
 //-----------------------------------------------------------------------------
-void CBasePlayer::Spawn( void )
+void CBasePlayer::Spawn_Impl( void )
 {
 	CVProfScope _( "CBasePlayer::Spawn", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
@@ -4881,7 +4877,7 @@ void CBasePlayer::Spawn( void )
 	// track where we are in the nav mesh
 	UpdateLastKnownArea();
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	// track where we are in the nav mesh
 	UpdateLastKnownArea();
@@ -4906,9 +4902,9 @@ void CBasePlayer::UpdateMapEntityPointers( void )
 	InitColorCorrectionController();
 }
 
-void CBasePlayer::Activate( void )
+void CBasePlayer::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	AimTarget_ForceRepopulateList();
 
@@ -4919,11 +4915,11 @@ void CBasePlayer::Activate( void )
 	m_iVehicleAnalogBias = VEHICLE_ANALOG_BIAS_NONE;
 }
 
-void CBasePlayer::Precache( void )
+void CBasePlayer::Precache_Impl( void )
 {
 	CVProfScope _( "CBasePlayer::Precache", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 
 	PrecacheScriptSound( "Player.FallGib" );
@@ -5014,9 +5010,9 @@ public:
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePlayer::OnRestore( void )
+void CBasePlayer::OnRestore_Impl( void )
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	SetViewEntity( m_hViewEntity, m_bShouldDrawPlayerWhileUsingViewEntity );
 	SetDefaultFOV(m_iDefaultFOV);		// force this to reset if zero
@@ -5378,8 +5374,9 @@ public:
 	DECLARE_CLASS( CBloodSplat, CPointEntity );
 
 	void	Spawn ( CBaseEntity *pOwner );
-	void	Think ( void );
+	void	Think_Impl ( void );
 };
+KS_ENTITY_UNSAVED_CLASS( CBloodSplat )
 
 void CBloodSplat::Spawn ( CBaseEntity *pOwner )
 {
@@ -5390,7 +5387,7 @@ void CBloodSplat::Spawn ( CBaseEntity *pOwner )
 	SetNextThink( gpGlobals->curtime + 0.1f );
 }
 
-void CBloodSplat::Think( void )
+void CBloodSplat::Think_Impl( void )
 {
 	trace_t	tr;	
 	
@@ -5434,7 +5431,7 @@ CBaseEntity	*CBasePlayer::GiveNamedItem( const char *pchName, int iSubType /*= 0
 	pent->SetLocalOrigin( GetLocalOrigin() );
 	pent->AddSpawnFlags( SF_NORESPAWN );
 
-	CBaseCombatWeapon *pWeapon = dynamic_cast<CBaseCombatWeapon*>( (CBaseEntity*)pent );
+	CBaseCombatWeapon *pWeapon = entity_cast<CBaseCombatWeapon>( (CBaseEntity*)pent );
 	if ( pWeapon )
 	{
 		pWeapon->SetSubType( iSubType );
@@ -5465,7 +5462,7 @@ CBaseEntity* CBasePlayer::FindEntityClassForward( char *classname )
 	UTIL_TraceLine(EyePosition(),
 		EyePosition() + forward * MAX_COORD_RANGE,
 		MASK_SOLID, this, COLLISION_GROUP_NONE, &tr );
-	if ( tr.fraction != 1.0 && tr.DidHitNonWorldEntity() )
+	if ( tr.fraction != 1.0 && TraceDidHitNonWorldEntity( tr ) )
 	{
 		CBaseEntity *pHit = tr.Ent<CBaseEntity>();
 		if (FClassnameIs( pHit,classname ) )
@@ -5503,7 +5500,7 @@ CBaseEntity* CBasePlayer::FindEntityForward( bool fHull )
 	UTIL_TraceLine(EyePosition(),
 		EyePosition() + forward * MAX_COORD_RANGE,
 		mask, this, COLLISION_GROUP_NONE, &tr );
-	if ( tr.fraction != 1.0 && tr.DidHitNonWorldEntity() )
+	if ( tr.fraction != 1.0 && TraceDidHitNonWorldEntity( tr ) )
 	{
 		return tr.Ent<CBaseEntity>();
 	}
@@ -6548,7 +6545,7 @@ QAngle CBasePlayer::BodyAngles()
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
-Vector CBasePlayer::BodyTarget( const Vector &posSrc, bool bNoisy ) 
+Vector CBasePlayer::BodyTarget_Impl( const Vector &posSrc, bool bNoisy ) 
 { 
 	if ( IsInAVehicle() )
 	{
@@ -7249,7 +7246,7 @@ void CBasePlayer::ChangeTeam( int iTeamNum, bool bAutoTeam, bool bSilent)
 		GetGlobalTeam( iTeamNum )->AddPlayer( this );
 	}
 
-	BaseClass::ChangeTeam( iTeamNum );
+	BaseClass::ChangeTeam_Impl( iTeamNum );
 }
 
 
@@ -7360,7 +7357,7 @@ class CRevertSaved : public CPointEntity
 {
 	DECLARE_CLASS( CRevertSaved, CPointEntity );
 public:
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void	Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void	LoadThink( void );
 
 	DECLARE_DATADESC();
@@ -7405,7 +7402,7 @@ CBaseEntity *CreatePlayerLoadSave( Vector vOrigin, float flDuration, float flHol
 	return pRevertSaved;
 }
 
-void CRevertSaved::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CRevertSaved::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	UTIL_ScreenFadeAll( m_clrRender, Duration(), HoldTime(), FFADE_OUT );
 	SetNextThink( gpGlobals->curtime + LoadTime() );
@@ -7600,7 +7597,7 @@ void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const voi
 
 void* SendProxy_SendLocalDataTable( const SendProp *pProp, const void *pStruct, const void *pVarData, CSendProxyRecipients *pRecipients, int objectID )
 {
-	pRecipients->SetOnly( objectID - 1 );
+	SendProxyRecipients_SetOnly( pRecipients,  objectID - 1 );
 
 	// include the GOTV client in the recipients for local data
 	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
@@ -7619,7 +7616,7 @@ REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendLocalDataTable );
 
 void* SendProxy_SendNonLocalDataTable( const SendProp *pProp, const void *pStruct, const void *pVarData, CSendProxyRecipients *pRecipients, int objectID )
 {
-	pRecipients->ExcludeOnly( objectID - 1 );
+	SendProxyRecipients_ExcludeOnly( pRecipients,  objectID - 1 );
 	return ( void * )pVarData;
 }
 REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendNonLocalDataTable );
@@ -7693,14 +7690,14 @@ void CBasePlayer::SetupVPhysicsShadow( const Vector &vecAbsOrigin, const Vector 
 // Purpose: Empty, just want to keep the baseentity version from being called
 //          current so we don't kick up dust, etc.
 //-----------------------------------------------------------------------------
-void CBasePlayer::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
+void CBasePlayer::VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent )
 {
 }
 
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CBasePlayer::VPhysicsUpdate( IPhysicsObject *pPhysics )
+void CBasePlayer::VPhysicsUpdate_Impl( IPhysicsObject *pPhysics )
 {
 	float savedImpact = m_impactEnergyScale;
 	
@@ -7711,7 +7708,7 @@ void CBasePlayer::VPhysicsUpdate( IPhysicsObject *pPhysics )
 }
 
 // recreate physics on save/load, don't try to save the state!
-bool CBasePlayer::ShouldSavePhysics()
+bool CBasePlayer::ShouldSavePhysics_Impl()
 {
 	return false;
 }
@@ -7735,7 +7732,7 @@ void CBasePlayer::InitVCollision( const Vector &vecAbsOrigin, const Vector &vecA
 }
 
 
-void CBasePlayer::VPhysicsDestroyObject()
+void CBasePlayer::VPhysicsDestroyObject_Impl()
 {
 	// Since CBasePlayer aliases its pointer to the physics object, tell CBaseEntity to 
 	// clear out its physics object pointer so we don't wind up deleting one of
@@ -7763,7 +7760,7 @@ void CBasePlayer::VPhysicsDestroyObject()
 		m_pShadowCrouch = nullptr;
 	}
 
-	BaseClass::VPhysicsDestroyObject();
+	BaseClass::VPhysicsDestroyObject_Impl();
 }
 
 
@@ -8049,7 +8046,7 @@ void CBasePlayer::RemoveSuit( void )
 // Input  : &tr - 
 //			nDamageType - 
 //-----------------------------------------------------------------------------
-void CBasePlayer::DoImpactEffect( trace_t &tr, int nDamageType )
+void CBasePlayer::DoImpactEffect_Impl( trace_t &tr, int nDamageType )
 {
 	if ( GetActiveWeapon() )
 	{
@@ -8057,7 +8054,7 @@ void CBasePlayer::DoImpactEffect( trace_t &tr, int nDamageType )
 		return;
 	}
 
-	BaseClass::DoImpactEffect( tr, nDamageType );
+	BaseClass::DoImpactEffect_Impl( tr, nDamageType );
 }
 
 //-----------------------------------------------------------------------------
@@ -8746,18 +8743,18 @@ CBotCmd CPlayerInfo::GetLastUserCommand()
 }
 
 // Notify that I've killed some other entity. (called from Victim's Event_Killed).
-void CBasePlayer::Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &info )
+void CBasePlayer::Event_KilledOther_Impl( CBaseEntity *pVictim, const CTakeDamageInfo &info )
 {
-	BaseClass::Event_KilledOther( pVictim, info );
+	BaseClass::Event_KilledOther_Impl( pVictim, info );
 	if ( pVictim != this )
 	{
 		gamestats->Event_PlayerKilledOther( this, pVictim, info );
 	}
 }
 
-void CBasePlayer::SetModel( const char *szModelName )
+void CBasePlayer::SetModel_Impl( const char *szModelName )
 {
-	BaseClass::SetModel( szModelName );
+	BaseClass::SetModel_Impl( szModelName );
 
 	MDLCACHE_CRITICAL_SECTION();
 	m_nBodyPitchPoseParam = LookupPoseParameter( "body_pitch" );

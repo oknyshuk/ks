@@ -4,8 +4,6 @@
 
 // Purpose: CHud handles the message, calculation, and drawing the HUD
 
-import ks.tier1;
-import std;
 #include "usermessages.h"
 
 // basic rectangle struct used for drawing

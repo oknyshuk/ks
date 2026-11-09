@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "edict.h"
 #include "iserverentity.h"
 #include "shareddefs.h"
@@ -100,7 +98,7 @@ CSkyCamera::~CSkyCamera()
 	g_SkyList.Remove( this );
 }
 
-void CSkyCamera::Spawn( void ) 
+void CSkyCamera::Spawn_Impl( void ) 
 { 
 	m_skyboxData.origin = GetLocalOrigin();
 	m_skyboxData.area = engine->GetArea( m_skyboxData.origin );
@@ -112,9 +110,9 @@ void CSkyCamera::Spawn( void )
 //-----------------------------------------------------------------------------
 // Activate!
 //-----------------------------------------------------------------------------
-void CSkyCamera::Activate( ) 
+void CSkyCamera::Activate_Impl( ) 
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( m_bUseAngles )
 	{

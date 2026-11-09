@@ -7,27 +7,27 @@
 #include "vjolt_object.h"
 #include "vjolt_environment.h"
 
-class JoltPhysicsMotionController : public IPhysicsMotionController, public IJoltObjectListener, public IJoltPhysicsController
+class JoltPhysicsMotionController : public IPhysicsMotionController
 {
 public:
 	JoltPhysicsMotionController( IMotionEvent *pHandler );
-	~JoltPhysicsMotionController() override;
+	~JoltPhysicsMotionController();
 
-	void SetEventHandler( IMotionEvent *handler ) override;
-	void AttachObject( IPhysicsObject *pObject, bool checkIfAlreadyAttached ) override;
-	void DetachObject( IPhysicsObject *pObject ) override;
+	void SetEventHandler( IMotionEvent *handler );
+	void AttachObject( IPhysicsObject *pObject, bool checkIfAlreadyAttached );
+	void DetachObject( IPhysicsObject *pObject );
 
-	int CountObjects( void ) override;
-	void GetObjects( IPhysicsObject **pObjectList ) override;
-	void ClearObjects( void ) override;
-	void WakeObjects( void ) override;
+	int CountObjects( void );
+	void GetObjects( IPhysicsObject **pObjectList );
+	void ClearObjects( void );
+	void WakeObjects( void );
 
-	void SetPriority( priority_t priority ) override;
+	void SetPriority( priority_t priority );
 
 public:
 
-	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject ) override;
-	void OnPreSimulate( float flDeltaTime ) override;
+	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject );
+	void OnPreSimulate( float flDeltaTime );
 
 private:
 	IMotionEvent *m_pMotionEvent;

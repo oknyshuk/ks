@@ -8,7 +8,7 @@ import std;
 import ks.tier1;
 #include "sound.h"
 
-void DbReferenceChanged( IConVar *var, const char *pOldValue, float flOldValue );
+void DbReferenceChanged( ConVar *var, const char *pOldValue, float flOldValue );
 
 ConVar snd_refdist( "snd_refdist", "36", FCVAR_CHEAT, "Reference distance for snd_refdb" );
 ConVar snd_refdb( "snd_refdb", "60", FCVAR_CHEAT, "Reference dB at snd_refdist", &DbReferenceChanged );
@@ -19,7 +19,7 @@ ConVar snd_gain_max( "snd_gain_max", "1", FCVAR_CHEAT );
 ConVar snd_gain_min( "snd_gain_min", "0.01", FCVAR_CHEAT );
 
 // precomputed Db multipliers
-void DbReferenceChanged( IConVar *var, const char *pOldValue, float flOldValue )
+void DbReferenceChanged( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	snd_refdb_dist_mult = std::pow( 10.0f, snd_refdb.GetFloat() / 20.0f );
 }

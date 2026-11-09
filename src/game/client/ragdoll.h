@@ -1,17 +1,12 @@
 #pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
-import ks.math;
 
 #include "ragdoll_shared.h"
 
 #define RAGDOLL_VISUALIZE	0
 
 class C_BaseEntity;
-class CStudioHdr;
-struct mstudiobone_t;
-class IPhysicsObject;
-class CBoneAccessor;
 
 class IRagdoll
 {

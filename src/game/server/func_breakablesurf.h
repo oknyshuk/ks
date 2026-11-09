@@ -21,8 +21,8 @@ public:
 
 	static CWindowPane* CreateWindowPane(  const Vector &vecOrigin, const QAngle &vecAngles );
 
-	void			Spawn( void );
-	void			Precache( void );
+	void			Spawn_Impl( void );
+	void			Precache_Impl( void );
 	void			PaneTouch( CBaseEntity *pOther );
 	void			Die( void );
 };
@@ -77,15 +77,15 @@ public:
 								 float flWidth,			  float flHeight,
 								 int   nShardSize);
 
-	void			Spawn(void);
-	void			Precache(void);
+	void			Spawn_Impl(void);
+	void			Precache_Impl(void);
 	void			Die( CBaseEntity *pBreaker, const Vector &vAttackDir );
 	void			BreakThink(void);
 	void			Event_Killed( CBaseEntity *pInflictor, CBaseEntity *pAttacker, float flDamage, int bitsDamageType );
-	void			TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
-	int				OnTakeDamage( const CTakeDamageInfo &info );
+	void			TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
+	int				OnTakeDamage_Impl( const CTakeDamageInfo &info );
 	[[= ks::reflect::Input{ .name = "Shatter", .type = FIELD_VECTOR } ]] void			InputShatter( inputdata_t &inputdata );
-	void			VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
+	void			VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent );
 private:
 	// One bit per pane
 	CNetworkArray( bool, m_RawPanelBitVec, MAX_NUM_PANELS * MAX_NUM_PANELS, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );

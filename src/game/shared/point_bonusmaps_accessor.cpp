@@ -1,13 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
 #include "cdll_client_int.h"
 #elif defined(GAME_DLL)
-import ks.tier1;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -25,7 +21,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -67,7 +62,7 @@ public:
 	DECLARE_CLASS( CPointBonusMapsAccessor, CPointEntity );
 	DECLARE_DATADESC();
 
-	virtual void	Activate( void );
+	KS_VIRTUAL void	Activate_Impl( void );
 
 	[[= ks::reflect::Input{ .name = "Unlock", .type = FIELD_VOID } ]] void InputUnlock( inputdata_t& inputdata );
 	[[= ks::reflect::Input{ .name = "Complete", .type = FIELD_VOID } ]] void InputComplete( inputdata_t& inputdata );
@@ -83,9 +78,9 @@ IMPLEMENT_REFLECT_DATAMAP( CPointBonusMapsAccessor )
 
 LINK_ENTITY_TO_CLASS( point_bonusmaps_accessor, CPointBonusMapsAccessor );
 
-void CPointBonusMapsAccessor::Activate( void )
+void CPointBonusMapsAccessor::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	CreateInterfaceFn gameUIFactory = g_GameUI.GetFactory();
 	if ( gameUIFactory )

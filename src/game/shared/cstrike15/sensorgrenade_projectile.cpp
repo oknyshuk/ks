@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -24,7 +21,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -40,7 +36,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -330,16 +325,16 @@ void CSensorGrenadeProjectile::DoDetectWave( void )
 	SetThink( &CSensorGrenadeProjectile::Think_Remove );
 }
 
-void CSensorGrenadeProjectile::Spawn( void )
+void CSensorGrenadeProjectile::Spawn_Impl( void )
 {
 	SetModel( GRENADE_MODEL );
- 	BaseClass::Spawn();
+ 	BaseClass::Spawn_Impl();
 
 	SetSolid( SOLID_BBOX );
 	AddSolidFlags( FSOLID_NOT_STANDABLE );
 }
 
-void CSensorGrenadeProjectile::Precache( void )
+void CSensorGrenadeProjectile::Precache_Impl( void )
 {
 	PrecacheModel( GRENADE_MODEL );
 
@@ -352,7 +347,7 @@ void CSensorGrenadeProjectile::Precache( void )
 	PrecacheParticleSystem( "weapon_sensorgren_detlight" );
 	PrecacheParticleSystem( "weapon_sensorgren_detonate" );
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 void CSensorGrenadeProjectile::BounceTouch( CBaseEntity *other )

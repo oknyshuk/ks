@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -67,9 +64,9 @@ public:
 
 					CLightGlow();
 					
-	virtual void	Spawn( void );
-	virtual void	Activate( void );
-	virtual int		UpdateTransmitState( void );
+	void	Spawn_Impl( void );
+	void	Activate_Impl( void );
+	int		UpdateTransmitState_Impl( void );
 
 	[[= ks::reflect::Input{ .name = "Color", .type = FIELD_COLOR32 } ]] void InputColor(inputdata_t &data);
 
@@ -108,9 +105,9 @@ CLightGlow::CLightGlow( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CLightGlow::Spawn( void )
+void CLightGlow::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	// No model but we still need to force this!
 	AddEFlags( EFL_FORCE_CHECK_TRANSMIT );
@@ -120,7 +117,7 @@ void CLightGlow::Spawn( void )
 // Purpose: Always transmit light glows to clients to avoid spikes as we enter
 //			or leave PVS. Done because we often have many glows in an area.
 //-----------------------------------------------------------------------------
-int CLightGlow::UpdateTransmitState( void )
+int CLightGlow::UpdateTransmitState_Impl( void )
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
@@ -128,9 +125,9 @@ int CLightGlow::UpdateTransmitState( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CLightGlow::Activate()
+void CLightGlow::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( m_nMaxDist > LIGHTGLOW_MAXDIST_MAX_VALUE )
 	{

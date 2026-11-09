@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "bitstring.h"
 #include "baseentity.h"
 #include "ai_hull.h"
@@ -36,8 +34,8 @@ public:
 	CAI_NetworkManager(void);
 	virtual ~CAI_NetworkManager(void);
 	
-	void			Spawn ();
-	virtual	int		ObjectCaps( void ) { return BaseClass::ObjectCaps() | FCAP_DONT_SAVE; }
+	void			Spawn_Impl ();
+	int		ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() | FCAP_DONT_SAVE; }
 	void			RebuildNetworkGraph();			// Used in WC edit mode
 	void			StartRebuild();			// Used in WC edit mode
 	void			LoadNetworkGraph();

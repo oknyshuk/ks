@@ -6,7 +6,6 @@
 
 #include "c_baseentity.h"
 #include "fx.h"
-import std;
 
 class [[= ks::reflect::NetTable{ .name = "DT_Tesla" } ]]
       C_Tesla : public C_BaseEntity

@@ -87,6 +87,7 @@ extern bool g_bServerGameDLLGreaterThanV5;
 //////////////////////////////////////////////////////////////////////
 
 CClientState::CClientState()
+	: CBaseClientState( state_kind_t::game )
 {
 	m_bMarkedCRCsUnverified = false;
 	demonum = -1;
@@ -284,7 +285,7 @@ bool CClientState::SetSignonState ( int state, int count, const ks::net::CNETMsg
 
 	ResetHltvReplayState();
 
-	if ( !CBaseClientState::SetSignonState( state, count, msg ) )
+	if ( !CBaseClientState::SetSignonStateBase( state, count, msg ) )
 	{
 		CL_Retry();
 		return false;
@@ -690,9 +691,8 @@ float CClientState::GetClientInterpAmount()
 	float flInterpRatio = s_cl_interp_ratio->GetFloat();
 	float flInterp = s_cl_interp->GetFloat();
 
-	const ConVar_ServerBounded *pBounded = dynamic_cast<const ConVar_ServerBounded*>( s_cl_interp_ratio );
-	if ( pBounded )
-		flInterpRatio = pBounded->GetFloat();
+	if ( s_cl_interp_ratio->Kind() == ConKind::VarServerBounded )
+		flInterpRatio = static_cast<const ConVar_ServerBounded*>( s_cl_interp_ratio )->GetBoundedValue();
 	//#define FIXME_INTERP_RATIO
 	return std::max( flInterpRatio / cl_updaterate->GetFloat(), flInterp );
 }
@@ -702,7 +702,7 @@ float CClientState::GetClientInterpAmount()
 //-----------------------------------------------------------------------------
 void CClientState::Clear( void )
 {
-	CBaseClientState::Clear();
+	CBaseClientState::ClearBase();
 
 	m_pModelPrecacheTable = nullptr;
 	m_pDynamicModelTable = nullptr;
@@ -767,18 +767,18 @@ bool CClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 {
 	contract_assert( packet );
 
-	return CBaseClientState::ProcessConnectionlessPacket( packet );
+	return CBaseClientState::ProcessConnectionlessPacketBase( packet );
 }
 
 void CClientState::ConnectionStart( INetChannel *chan )
 {
-	CBaseClientState::ConnectionStart( chan );
+	CBaseClientState::ConnectionStartBase( chan );
 	m_SVCMsgHltvReplay.Bind< CSVCMsg_HltvReplay_t >( chan, std::bind_front( &CClientState::SVCMsg_HltvReplay, this ) );
 }
 
 void CClientState::ConnectionStop(  )
 {
-	CBaseClientState::ConnectionStop( );
+	CBaseClientState::ConnectionStopBase( );
 	m_SVCMsgHltvReplay.Unbind();
 }
 
@@ -821,7 +821,7 @@ void CClientState::StopHltvReplay()
 
 void CClientState::FullConnect( const ns_address &adr, int nEncryptionKey )
 {
-	CBaseClientState::FullConnect( adr, nEncryptionKey );
+	CBaseClientState::FullConnectBase( adr, nEncryptionKey );
 	m_NetChannel->SetDemoRecorder( g_pClientDemoRecorder );
 	m_NetChannel->SetDataRate( cl_rate->GetFloat() );
 
@@ -2156,9 +2156,9 @@ unsigned char** CClientState::GetAreaBits_BackwardCompatibility()
 
 void CClientState::RunFrame()
 {
-	CBaseClientState::RunFrame();
+	CBaseClientState::RunFrameBase();
 
-	// Since cl_rate is a virtualized cvar, make sure to pickup changes in it.
+	// Since cl_rate is a server-bounded cvar, make sure to pickup changes in it.
 	if ( m_NetChannel )
 		m_NetChannel->SetDataRate( cl_rate->GetFloat() );
 

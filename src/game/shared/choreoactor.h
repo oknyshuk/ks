@@ -2,12 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 
 class CChoreoChannel;
 class CChoreoScene;
-namespace ks { class byte_reader; class byte_writer; }
 class IChoreoStringPool;
 
 //-----------------------------------------------------------------------------

@@ -5,8 +5,6 @@
 // AI Navigation areas
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -38,39 +36,12 @@ import ks.math;
 #include "point_hiding_spot.h"
 
 //--------------------------------------------------------------------------------------------------------------
-/**
- * Constructor used during normal runtime.
- */
-CCSNavArea::CCSNavArea( void )
-{
-	m_approachCount = 0;
-}
-
-
+// Counter-Strike extensions of CNavArea
 //--------------------------------------------------------------------------------------------------------------
-/**
- * Destructor
- */
-CCSNavArea::~CCSNavArea()
+
+void CNavArea::Save( ks::byte_writer &fileBuffer, unsigned int version ) const
 {
-}
-
-
-void CCSNavArea::OnServerActivate( void )
-{
-	CNavArea::OnServerActivate();
-
-}
-
-void CCSNavArea::OnRoundRestart( void )
-{
-	CNavArea::OnRoundRestart();
-}
-
-
-void CCSNavArea::Save( ks::byte_writer &fileBuffer, unsigned int version ) const
-{
-	CNavArea::Save( fileBuffer, version );
+	SaveBase( fileBuffer, version );
 
 	//
 	// Save the approach areas for this area
@@ -101,13 +72,13 @@ void CCSNavArea::Save( ks::byte_writer &fileBuffer, unsigned int version ) const
 	}
 }
 
-NavErrorType CCSNavArea::Load( ks::byte_reader &fileBuffer, unsigned int version, unsigned int subVersion )
+NavErrorType CNavArea::Load( ks::byte_reader &fileBuffer, unsigned int version, unsigned int subVersion )
 {
 	if ( version < 15 )
 		return LoadLegacy(fileBuffer, version, subVersion);
 
 	// load base class data
-	NavErrorType error = CNavArea::Load( fileBuffer, version, subVersion );
+	NavErrorType error = LoadBase( fileBuffer, version, subVersion );
 
 	switch ( subVersion )
 	{
@@ -147,9 +118,9 @@ NavErrorType CCSNavArea::Load( ks::byte_reader &fileBuffer, unsigned int version
 }
 
 
-NavErrorType CCSNavArea::PostLoad( void )
+NavErrorType CNavArea::PostLoad( void )
 {
-	NavErrorType error = CNavArea::PostLoad();
+	NavErrorType error = PostLoadBase();
 
 	// resolve approach area IDs
 	for ( int a = 0; a < m_approachCount; ++a )
@@ -179,12 +150,7 @@ NavErrorType CCSNavArea::PostLoad( void )
 }
 
 
-void CCSNavArea::Draw( void ) const
-{
-	CNavArea::Draw();
-}
-
-void CCSNavArea::CustomAnalysis( bool isIncremental /*= false */ )
+void CNavArea::CustomAnalysis( bool isIncremental /*= false */ )
 {
 	ComputeApproachAreas();
 }
@@ -192,7 +158,7 @@ void CCSNavArea::CustomAnalysis( bool isIncremental /*= false */ )
 
 //--------------------------------------------------------------------------------------------------------------
 // return danger decay rate per second
-float CCSNavArea::GetDangerDecayRate( void ) const
+float CNavArea::GetDangerDecayRate( void ) const
 {
 	if ( CSGameRules()->IsPlayingGunGameTRBomb() )
 	{
@@ -205,30 +171,30 @@ float CCSNavArea::GetDangerDecayRate( void ) const
 }
 
 
-float CCSNavArea::GetEarliestOccupyTime( int teamID ) const
+float CNavArea::GetEarliestOccupyTime( int teamID ) const
 {
 	if ( CSGameRules()->IsPlayingCoopMission() )
 		return 0.0f;
 
-	return BaseClass::GetEarliestOccupyTime( teamID );
+	return GetEarliestOccupyTimeBase( teamID );
 }
 
-void CCSNavArea::UpdateBlocked( bool force /*= false*/, int teamID /*= TEAM_ANY */ )
+void CNavArea::UpdateBlocked( bool force /*= false*/, int teamID /*= TEAM_ANY */ )
 {
 	if ( CSGameRules() && CSGameRules()->IsPlayingCoopMission() )
-		BaseClass::UpdateBlocked( force, teamID );
+		UpdateBlockedBase( force, teamID );
 }
 
-bool CCSNavArea::IsBlocked( int teamID, bool ignoreNavBlockers /*= false */ ) const
+bool CNavArea::IsBlocked( int teamID, bool ignoreNavBlockers /*= false */ ) const
 {
-	return ( CSGameRules() && CSGameRules()->IsPlayingCoopMission() ) ? BaseClass::IsBlocked( teamID, ignoreNavBlockers ) : false;
+	return ( CSGameRules() && CSGameRules()->IsPlayingCoopMission() ) ? IsBlockedBase( teamID, ignoreNavBlockers ) : false;
 }
 
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Load legacy navigation area from the file
  */
-NavErrorType CCSNavArea::LoadLegacy( ks::byte_reader &fileBuffer, unsigned int version, unsigned int subVersion )
+NavErrorType CNavArea::LoadLegacy( ks::byte_reader &fileBuffer, unsigned int version, unsigned int subVersion )
 {
 	// load ID
 	m_id = fileBuffer.read< unsigned int >();
@@ -498,11 +464,4 @@ NavErrorType CCSNavArea::LoadLegacy( ks::byte_reader &fileBuffer, unsigned int v
 	m_inheritVisibilityFrom.id = fileBuffer.read< unsigned int >();
 
 	return NAV_OK;
-}
-
-
-CCSHidingSpot::~CCSHidingSpot()
-{
-	if ( m_pOwningEntity )
-		m_pOwningEntity->DetachFromHidingSpot();
 }

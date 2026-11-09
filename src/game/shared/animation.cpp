@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "sharedvar.h"
@@ -20,7 +17,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -38,7 +34,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -336,6 +331,8 @@ bool IsInPrediction()
 	return CBaseEntity::GetPredictionPlayer() != nullptr;
 }
 
+static int SelectWeightedSequenceFromMapping( CStudioHdr::CActivityToSequenceMapping &mapping, CStudioHdr *pstudiohdr, int activity, int curSequence );
+
 int SelectWeightedSequence( CStudioHdr *pstudiohdr, int activity, int curSequence )
 {
 	CVProfScope _( "SelectWeightedSequence", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
@@ -359,7 +356,7 @@ int SelectWeightedSequence( CStudioHdr *pstudiohdr, int activity, int curSequenc
 		return ( GetSequenceActivity( pstudiohdr, 0, nullptr ) == activity ) ? 0 : ACTIVITY_NOT_AVAILABLE;
 	}
 
-	return pstudiohdr->SelectWeightedSequence( activity, curSequence );
+	return SelectWeightedSequenceFromMapping( *pstudiohdr->ActivityToSequence(), pstudiohdr, activity, curSequence );
 }
 
 
@@ -367,8 +364,10 @@ int SelectWeightedSequence( CStudioHdr *pstudiohdr, int activity, int curSequenc
 // current activity, and its stored weight is negative (whatever that means), always select
 // it. Otherwise perform a weighted selection -- imagine a large roulette wheel, with each
 // sequence having a number of spaces corresponding to its weight.
-int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequence( CStudioHdr *pstudiohdr, int activity, int curSequence )
+static int SelectWeightedSequenceFromMapping( CStudioHdr::CActivityToSequenceMapping &mapping, CStudioHdr *pstudiohdr, int activity, int curSequence )
 {
+	using SequenceTuple = CStudioHdr::CActivityToSequenceMapping::SequenceTuple;
+	using HashValueType = CStudioHdr::CActivityToSequenceMapping::HashValueType;
 	// is the current sequence appropriate?
 	if (curSequence >= 0)
 	{
@@ -389,19 +388,19 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequence( CStudioHdr *
 		return ACTIVITY_NOT_AVAILABLE;
 	}
 
-	if (!ValidateAgainst(pstudiohdr))
+	if (!mapping.ValidateAgainst(pstudiohdr))
 	{
 		contract_assert( false && "CStudioHdr %s has changed its vmodel pointer without reinitializing its activity mapping! Now performing emergency reinitialization." );
 		ExecuteOnce( [&]{ DebuggerBreakIfDebugging(); } );
-		Reinitialize(pstudiohdr);
+		mapping.Reinitialize(pstudiohdr);
 	}
 
 	// a null m_pSequenceTuples just means that this studio header has no activities.
-	if (!m_pSequenceTuples)
+	if (!mapping.m_pSequenceTuples)
 		return ACTIVITY_NOT_AVAILABLE;
 
 	// get the data for the given activity
-	const HashValueType * __restrict actData = ks::find_ptr( m_ActToSeqHash, activity );
+	const HashValueType * __restrict actData = ks::find_ptr( mapping.m_ActToSeqHash, activity );
 	if (!actData)
 	{
 		return ACTIVITY_NOT_AVAILABLE;
@@ -416,7 +415,7 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequence( CStudioHdr *
 	if ( actData->totalWeight <= 0 )
 	{
 		Warning( "Activity %s has %d sequences with a total weight of %d!", ActivityList_NameForIndex(activity), actData->count, actData->totalWeight );
-		return (m_pSequenceTuples + actData->startingIdx)->seqnum;
+		return (mapping.m_pSequenceTuples + actData->startingIdx)->seqnum;
 	}
 	else if ( actData->totalWeight == 1 )
 	{
@@ -438,7 +437,7 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequence( CStudioHdr *
 
 	// chug through the entries in the list (they are sequential therefore cache-coherent)
 	// until we run out of random juice
-	SequenceTuple * __restrict sequenceInfo = m_pSequenceTuples + actData->startingIdx;
+	SequenceTuple * __restrict sequenceInfo = mapping.m_pSequenceTuples + actData->startingIdx;
 
 	const SequenceTuple *const stopHere = sequenceInfo + actData->count; // this is a backup 
 		// in case the weights are somehow miscalculated -- we don't read or write through
@@ -455,8 +454,11 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequence( CStudioHdr *
 
 }
 
-int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequenceFromModifiers( CStudioHdr *pstudiohdr, int activity, const ActivityModifierSym_t *pActivityModifiers, int iModifierCount )
+int SelectWeightedSequenceFromModifiers( CStudioHdr *pstudiohdr, int activity, const ActivityModifierSym_t *pActivityModifiers, int iModifierCount )
 {
+	using SequenceTuple = CStudioHdr::CActivityToSequenceMapping::SequenceTuple;
+	using HashValueType = CStudioHdr::CActivityToSequenceMapping::HashValueType;
+	CStudioHdr::CActivityToSequenceMapping &mapping = *pstudiohdr->ActivityToSequence();
 	if ( !pstudiohdr->SequencesAvailable() )
 	{
 		return ACTIVITY_NOT_AVAILABLE;
@@ -469,19 +471,19 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequenceFromModifiers(
 		return ( ::GetSequenceActivity( pstudiohdr, 0, nullptr ) == activity ) ? 0 : ACTIVITY_NOT_AVAILABLE;
 	}
 
-	if (!ValidateAgainst(pstudiohdr))
+	if (!mapping.ValidateAgainst(pstudiohdr))
 	{
 		contract_assert( false && "CStudioHdr %s has changed its vmodel pointer without reinitializing its activity mapping! Now performing emergency reinitialization." );
 		ExecuteOnce( [&]{ DebuggerBreakIfDebugging(); } );
-		Reinitialize(pstudiohdr);
+		mapping.Reinitialize(pstudiohdr);
 	}
 
 	// a null m_pSequenceTuples just means that this studio header has no activities.
-	if (!m_pSequenceTuples)
+	if (!mapping.m_pSequenceTuples)
 		return ACTIVITY_NOT_AVAILABLE;
 
 	// get the data for the given activity
-	const HashValueType * __restrict actData = ks::find_ptr( m_ActToSeqHash, activity );
+	const HashValueType * __restrict actData = ks::find_ptr( mapping.m_ActToSeqHash, activity );
 	if (!actData)
 	{
 		return ACTIVITY_NOT_AVAILABLE;
@@ -492,7 +494,7 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequenceFromModifiers(
 	std::vector< int > topScoring; topScoring.reserve( actData->count );
 	for ( int i = 0; i < actData->count; i++ )
 	{
-		SequenceTuple * __restrict sequenceInfo = m_pSequenceTuples + actData->startingIdx + i;
+		SequenceTuple * __restrict sequenceInfo = mapping.m_pSequenceTuples + actData->startingIdx + i;
 		int score = 0;
 
 		int num_seq_modifiers = sequenceInfo->iNumActivityModifiers;

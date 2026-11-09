@@ -56,8 +56,8 @@ public:
 	CFireSmoke( void );
 	virtual	~CFireSmoke( void );
 
-	void	Spawn();
-	void	Precache();
+	void	Spawn_Impl();
+	void	Precache_Impl();
 	void	EnableSmoke( int state = true );
 	void	EnableGlow( int state = true );
 	void	EnableVisibleFromAbove( int state = true );

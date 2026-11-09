@@ -3,8 +3,6 @@
 
 // Purpose: Base combat character with no AI
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"

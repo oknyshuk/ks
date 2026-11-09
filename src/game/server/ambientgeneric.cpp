@@ -3,8 +3,6 @@
 
 // Purpose: ambient_generic: a sound emitter used for one-shot and looping sounds.
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -112,7 +110,7 @@ IMPLEMENT_REFLECT_DATAMAP( CAmbientGeneric )
 //-----------------------------------------------------------------------------
 // Spawn
 //-----------------------------------------------------------------------------
-void CAmbientGeneric::Spawn( void )
+void CAmbientGeneric::Spawn_Impl( void )
 {
 	m_iSoundLevel = ComputeSoundlevel( m_radius, FBitSet( m_spawnflags, SF_AMBIENT_SOUND_EVERYWHERE )?true:false );
 	ComputeMaxAudibleDistance( );
@@ -287,7 +285,7 @@ void CAmbientGeneric::InputFadeOut( inputdata_t &inputdata )
 }
 
 
-void CAmbientGeneric::Precache( void )
+void CAmbientGeneric::Precache_Impl( void )
 {
 	char *szSoundFile = (char *)STRING( m_iszSound );
 	if ( m_iszSound != NULL_STRING && std::strlen( szSoundFile ) > 1 )
@@ -310,9 +308,9 @@ void CAmbientGeneric::Precache( void )
 //------------------------------------------------------------------------------
 // Purpose:
 //------------------------------------------------------------------------------
-void CAmbientGeneric::Activate( void )
+void CAmbientGeneric::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	// Initialize sound source.  If no source was given, or source can't be found
 	// then this is the source
@@ -376,7 +374,7 @@ void CAmbientGeneric::Activate( void )
 //-----------------------------------------------------------------------------
 // Rules about which entities need to transmit along with me
 //-----------------------------------------------------------------------------
-void CAmbientGeneric::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
+void CAmbientGeneric::SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways )
 {
 	// Ambient generics never transmit; this is just a way for us to ensure
 	// the sound source gets transmitted; that's why we don't call pInfo->m_pTransmitEdict->Set
@@ -402,7 +400,7 @@ void CAmbientGeneric::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CAmbientGeneric::UpdateOnRemove( void )
+void CAmbientGeneric::UpdateOnRemove_Impl( void )
 {
 	if ( m_fActive )
 	{
@@ -410,7 +408,7 @@ void CAmbientGeneric::UpdateOnRemove( void )
 		SendSound( SND_STOP );
 	}
 
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 //-----------------------------------------------------------------------------
@@ -860,7 +858,7 @@ void CAmbientGeneric::ToggleSound()
 
 // KeyValue - load keyvalue pairs into member data of the
 // ambient generic. NOTE: called BEFORE spawn!
-bool CAmbientGeneric::KeyValue( const char *szKeyName, const char *szValue )
+bool CAmbientGeneric::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	// NOTE: changing any of the modifiers in this code
 	// NOTE: also requires changing InitModulationParms code.
@@ -1007,7 +1005,7 @@ bool CAmbientGeneric::KeyValue( const char *szKeyName, const char *szValue )
 		if (m_dpv.cspinup < 0) m_dpv.cspinup = 0;
 	}
 	else
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 
 	return true;
 }

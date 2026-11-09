@@ -15,7 +15,6 @@
 #include "cs_player_rank_shared.h"
 #include "GameEventListener.h"
 
-#include "cs_custom_weapon_visualsdata_processor.h"
 
 #include "cs_player_shared.h"
 
@@ -894,7 +893,9 @@ private:
 	// HPE_BEGIN:
 	// [dwenger] Added for auto-buy functionality
 	//=============================================================================
+public:
 	void FireGameEvent( IGameEvent *event );
+private:
 	//=============================================================================
 	// HPE_END
 	//=============================================================================

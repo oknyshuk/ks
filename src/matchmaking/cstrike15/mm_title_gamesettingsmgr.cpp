@@ -40,31 +40,31 @@ class CMatchTitleGameSettingsMgr : public IMatchTitleGameSettingsMgr
 {
 public:
 	// Extends server game details
-	virtual void ExtendServerDetails( KeyValues *pDetails, KeyValues *pRequest );
+	void ExtendServerDetails( KeyValues *pDetails, KeyValues *pRequest );
 
 	// Adds the essential part of game details to be broadcast
-	virtual void ExtendLobbyDetailsTemplate( KeyValues *pDetails, char const *szReason, KeyValues *pFullSettings );
+	void ExtendLobbyDetailsTemplate( KeyValues *pDetails, char const *szReason, KeyValues *pFullSettings );
 
 	// Extends game settings update packet before it gets merged with
 	// session settings and networked to remote clients
-	virtual void ExtendGameSettingsUpdateKeys( KeyValues *pSettings, KeyValues *pUpdateDeleteKeys );
+	void ExtendGameSettingsUpdateKeys( KeyValues *pSettings, KeyValues *pUpdateDeleteKeys );
 
 	// Executes the command on the session settings, this function on host
 	// is allowed to modify Members/Game subkeys and has to fill in modified players KeyValues
 	// When running on a remote client "ppPlayersUpdated" is NULL and players cannot
 	// be modified
-	virtual void ExecuteCommand( KeyValues *pCommand, KeyValues *pSessionSystemData, KeyValues *pSettings, KeyValues **ppPlayersUpdated );
+	void ExecuteCommand( KeyValues *pCommand, KeyValues *pSessionSystemData, KeyValues *pSettings, KeyValues **ppPlayersUpdated );
 
 	// Prepares the lobby for game or adjust settings of new players who
 	// join a game in progress, this function is allowed to modify
 	// Members/Game subkeys and has to fill in modified players KeyValues
-	virtual void PrepareLobbyForGame( KeyValues *pSettings, KeyValues **ppPlayersUpdated );
+	void PrepareLobbyForGame( KeyValues *pSettings, KeyValues **ppPlayersUpdated );
 
 	// Initializes full game settings from potentially abbreviated game settings
-	virtual void InitializeGameSettings( KeyValues *pSettings, char const *szReason );
+	void InitializeGameSettings( KeyValues *pSettings, char const *szReason );
 
 	// Sets the bspname key given a mapgroup
-	virtual void SetBspnameFromMapgroup( KeyValues *pSettings );
+	void SetBspnameFromMapgroup( KeyValues *pSettings );
 };
 
 CMatchTitleGameSettingsMgr g_MatchTitleGameSettingsMgr;
@@ -382,3 +382,6 @@ void CMatchTitleGameSettingsMgr::ExecuteCommand( KeyValues *pCommand, KeyValues 
 		}
 	}
 }
+
+//-----------------------------------------------------------------------------
+#include "../facade/imatchtitlegamesettingsmgr.inl"

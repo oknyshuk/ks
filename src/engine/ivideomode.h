@@ -16,70 +16,69 @@ struct MovieInfo_t;
 class IVideoMode
 {
 public:	
-	virtual					~IVideoMode() {}
-	virtual	bool			Init( ) = 0;
-	virtual void			Shutdown( void ) = 0;
+	bool			Init( );
+	void			Shutdown( void );
 
 	// Shows the start-up graphics based on the mod 
 	// (Filesystem path for the mod must be set up first)
-	virtual void			DrawStartupGraphic() = 0;
+	void			DrawStartupGraphic();
 
 	// Creates the game window, plays the startup movie, starts up the material system
-	virtual bool			CreateGameWindow( int nWidth, int nHeight, bool bWindowed, bool bNoWindowBorder ) = 0;
+	bool			CreateGameWindow( int nWidth, int nHeight, bool bWindowed, bool bNoWindowBorder );
 
 	// Sets the game window in editor mode
-	virtual void			SetGameWindow( void *hWnd ) = 0;
+	void			SetGameWindow( void *hWnd );
 
 	// Sets the video mode, and re-sizes the window
-	virtual bool			SetMode( int nWidth, int nHeight, bool bWindowed, bool bNoWindowBorder ) = 0;
+	bool			SetMode( int nWidth, int nHeight, bool bWindowed, bool bNoWindowBorder );
 
 	// Returns the fullscreen modes for the adapter the game was started on
-	virtual int				GetModeCount( void ) = 0;
-	virtual struct vmode_s	*GetMode( int num ) = 0;
+	int				GetModeCount( void );
+	struct vmode_s	*GetMode( int num );
 
 	// Purpose: This is called in response to a WM_MOVE message
 	// or whatever the equivalent that would be under linux
-	virtual void			UpdateWindowPosition( void ) = 0;
+	void			UpdateWindowPosition( void );
 
 	// Alt-tab handling
-	virtual void			RestoreVideo( void ) = 0;
-	virtual void			ReleaseVideo( void ) = 0;
+	void			RestoreVideo( void );
+	void			ReleaseVideo( void );
 
-	virtual void			DrawNullBackground( void *hdc, int w, int h ) = 0;
-	virtual void			InvalidateWindow() = 0;
+	void			DrawNullBackground( void *hdc, int w, int h );
+	void			InvalidateWindow();
 
 	// Returns the video mode width + height. In the case of windowed mode,
 	// it returns the width and height of the drawable region of the window.
 	// (it doesn't include the window borders)
-	virtual int				GetModeWidth() const = 0;
-	virtual int				GetModeHeight() const = 0;
-	virtual	bool			IsWindowedMode() const = 0;
-	virtual	bool			NoWindowBorder() const = 0;
+	int				GetModeWidth() const;
+	int				GetModeHeight() const;
+	bool			IsWindowedMode() const;
+	bool			NoWindowBorder() const;
 
 	// Returns the subrect to draw the client view into.
 	// Coordinates are measured relative to the drawable region of the window
-	virtual const vrect_t &	GetClientViewRect( ) const = 0;
-	virtual void			SetClientViewRect( const vrect_t &viewRect ) = 0;
+	const vrect_t &	GetClientViewRect( ) const;
+	void			SetClientViewRect( const vrect_t &viewRect );
 
 	// Lazily recomputes client view rect
-	virtual void			MarkClientViewRectDirty() = 0;
+	void			MarkClientViewRectDirty();
 
-	virtual void			TakeSnapshotTGA( const char *pFileName ) = 0;
-	virtual void			TakeSnapshotTGARect( const char *pFilename, int x, int y, int w, int h, int resampleWidth, int resampleHeight, bool bPFM = false, CubeMapFaceIndex_t faceIndex = CUBEMAP_FACE_RIGHT ) = 0;
-	virtual void			WriteMovieFrame( const MovieInfo_t& info ) = 0;
+	void			TakeSnapshotTGA( const char *pFileName );
+	void			TakeSnapshotTGARect( const char *pFilename, int x, int y, int w, int h, int resampleWidth, int resampleHeight, bool bPFM = false, CubeMapFaceIndex_t faceIndex = CUBEMAP_FACE_RIGHT );
+	void			WriteMovieFrame( const MovieInfo_t& info );
 
 	// Takes snapshots
-	virtual void			TakeSnapshotJPEG( const char *pFileName, int quality ) = 0;
-	virtual bool			TakeSnapshotJPEGToBuffer( ks::byte_writer& buf, int quality ) = 0;
+	void			TakeSnapshotJPEG( const char *pFileName, int quality );
+	bool			TakeSnapshotJPEGToBuffer( ks::byte_writer& buf, int quality );
 
 	// Synchronizes cached mode width/height to actual SDL window size.
 	// Call this after window creation, display changes, or when resolution may have changed.
 	// Returns true if the values changed.
-	virtual bool			SyncToActualWindowSize() = 0;
+	bool			SyncToActualWindowSize();
 
 	// Called when the window size changes (e.g., when moving between displays on Wayland).
 	// Syncs all systems atomically and notifies panels.
-	virtual void			OnWindowSizeChanged( int nNewWidth, int nNewHeight ) = 0;
+	void			OnWindowSizeChanged( int nNewWidth, int nNewHeight );
 };
 
 

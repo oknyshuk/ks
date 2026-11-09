@@ -19,8 +19,6 @@
 #include "predicted_viewmodel.h"
 
 #include <rocketui/rmlui.h>
-import ks.tier1;
-import std;
 
 DECLARE_HUDELEMENT_DEPTH( RkHudScope, 70 );
 

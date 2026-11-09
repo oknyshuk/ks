@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -63,10 +60,10 @@ public:
 
 	CEnvParticleScript();
 
-	virtual void Precache();
-	virtual void Spawn();
-	virtual void Activate();
-	virtual int  UpdateTransmitState();
+	void Precache_Impl();
+	void Spawn_Impl();
+	void Activate_Impl();
+	int  UpdateTransmitState_Impl();
 
 	[[= ks::reflect::Input{ .name = "SetSequence", .type = FIELD_STRING } ]] void InputSetSequence( inputdata_t &inputdata );
 
@@ -132,9 +129,9 @@ void CEnvParticleScript::PrecacheAnimationEventMaterials()
 //-----------------------------------------------------------------------------
 // Precache
 //-----------------------------------------------------------------------------
-void CEnvParticleScript::Precache()
+void CEnvParticleScript::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 	PrecacheModel( STRING( GetModelName() ) );
 	
 	// We need a model for its animation sequences even though we don't render it
@@ -147,10 +144,10 @@ void CEnvParticleScript::Precache()
 //-----------------------------------------------------------------------------
 // Spawn
 //-----------------------------------------------------------------------------
-void CEnvParticleScript::Spawn()
+void CEnvParticleScript::Spawn_Impl()
 {
 	Precache();
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	AddEffects( EF_NOSHADOW );
 	// We need a model for its animation sequences even though we don't render it
 	SetModel( STRING( GetModelName() ) );
@@ -160,9 +157,9 @@ void CEnvParticleScript::Spawn()
 //-----------------------------------------------------------------------------
 // Activate
 //-----------------------------------------------------------------------------
-void CEnvParticleScript::Activate()
+void CEnvParticleScript::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	DetectInSkybox();
 	CSkyCamera *pCamera = GetEntitySkybox();
@@ -187,7 +184,7 @@ void CEnvParticleScript::Activate()
 //-----------------------------------------------------------------------------
 // Should we transmit it to the client?
 //-----------------------------------------------------------------------------
-int CEnvParticleScript::UpdateTransmitState()
+int CEnvParticleScript::UpdateTransmitState_Impl()
 {
 	if ( IsEffectActive( EF_NODRAW ) )
 	{

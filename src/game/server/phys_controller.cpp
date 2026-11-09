@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -110,9 +107,9 @@ public:
 
 	DECLARE_DATADESC();
 
-	virtual void OnRestore( );
-	void Spawn( void );
-	void Activate( void );
+	void OnRestore_Impl( );
+	void Spawn_Impl( void );
+	void Activate_Impl( void );
 
 	void ForceOn( void );
 	void ForceOff( void );
@@ -162,7 +159,7 @@ CPhysForce::~CPhysForce()
 	}
 }
 
-void CPhysForce::Spawn( void )
+void CPhysForce::Spawn_Impl( void )
 {
 	if ( m_spawnflags & SF_THRUST_LOCAL_ORIENTATION )
 	{
@@ -174,9 +171,9 @@ void CPhysForce::Spawn( void )
 	}
 }
 
-void CPhysForce::OnRestore( )
+void CPhysForce::OnRestore_Impl( )
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	if ( m_pController )
 	{
@@ -185,9 +182,9 @@ void CPhysForce::OnRestore( )
 	m_wasRestored = true;
 }
 
-void CPhysForce::Activate( void )
+void CPhysForce::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( m_pController )
 	{
@@ -431,7 +428,7 @@ class CPhysTorque : public CPhysForce
 	DECLARE_CLASS( CPhysTorque, CPhysForce );
 public:
 	DECLARE_DATADESC();
-	void Spawn( void );
+	void Spawn_Impl( void );
 	virtual void SetupForces( IPhysicsObject *pPhys, Vector &linear, AngularImpulse &angular );
 private:	
 	[[= ks::reflect::Key{ .name = "axis" } ]] Vector m_axis;
@@ -441,7 +438,7 @@ IMPLEMENT_REFLECT_DATAMAP( CPhysTorque )
 
 LINK_ENTITY_TO_CLASS( phys_torque, CPhysTorque );
 
-void CPhysTorque::Spawn( void )
+void CPhysTorque::Spawn_Impl( void )
 {
 	// force spawnflags to agree with implementation of this class
 	m_spawnflags |= SF_THRUST_TORQUE | SF_THRUST_MASS_INDEPENDENT;
@@ -450,7 +447,7 @@ void CPhysTorque::Spawn( void )
 	m_axis -= GetAbsOrigin();
 	VectorNormalize(m_axis);
 	UTIL_SnapDirectionToAxis( m_axis );
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 void CPhysTorque::SetupForces( IPhysicsObject *pPhys, Vector &linear, AngularImpulse &angular )
@@ -582,13 +579,13 @@ class CPhysMotor : public CLogicalEntity
 public:
 	~CPhysMotor();
 	DECLARE_DATADESC();
-	void Spawn( void );
-	void Activate( void );
-	void Think( void );
+	void Spawn_Impl( void );
+	void Activate_Impl( void );
+	void Think_Impl( void );
 
 	void TurnOn( void );
 	void TargetSpeedChanged( void );
-	void OnRestore();
+	void OnRestore_Impl();
 
 	[[= ks::reflect::Input{ .name = "SetSpeed", .type = FIELD_FLOAT } ]] void InputSetTargetSpeed( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
@@ -684,7 +681,7 @@ CPhysMotor::~CPhysMotor()
 }
 
 
-void CPhysMotor::Spawn( void )
+void CPhysMotor::Spawn_Impl( void )
 {
 	m_motor.m_axis -= GetLocalOrigin();
 	float axisLength = VectorNormalize(m_motor.m_axis);
@@ -723,9 +720,9 @@ void CPhysMotor::TurnOn( void )
 }
 
 
-void CPhysMotor::Activate( void )
+void CPhysMotor::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	
 	// This gets called after all objects spawn and after all objects restore
 	if ( m_attachedObject == nullptr )
@@ -791,9 +788,9 @@ void CPhysMotor::Activate( void )
 	}
 }
 
-void CPhysMotor::OnRestore()
+void CPhysMotor::OnRestore_Impl()
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 	// Need to do this on restore since there's no good way to save this
 	if ( m_pController )
 	{
@@ -801,7 +798,7 @@ void CPhysMotor::OnRestore()
 	}
 }
 
-void CPhysMotor::Think( void )
+void CPhysMotor::Think_Impl( void )
 {
 	// angular acceleration is always positive - it should be treated as a magnitude - the controller 
 	// will apply it in the proper direction
@@ -827,8 +824,8 @@ public:
 
 	CKeepUpright();
 	~CKeepUpright();
-	void Spawn();
-	void Activate();
+	void Spawn_Impl();
+	void Activate_Impl();
 
 	// IMotionEvent
 	virtual simresult_e	Simulate( IPhysicsMotionController *pController, IPhysicsObject *pObject, float deltaTime, Vector &linear, AngularImpulse &angular );
@@ -884,7 +881,7 @@ CKeepUpright::~CKeepUpright()
 	}
 }
 
-void CKeepUpright::Spawn()
+void CKeepUpright::Spawn_Impl()
 {
 	// align the object's local Z axis
 	m_localTestAxis.Init( 0, 0, 1 );
@@ -903,9 +900,9 @@ void CKeepUpright::Spawn()
 	}
 }
 
-void CKeepUpright::Activate()
+void CKeepUpright::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	
 	if ( !m_pController )
 	{

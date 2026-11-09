@@ -16,9 +16,9 @@ public:
 
 	CTesla();
 
-	virtual void Spawn();
-	virtual void Activate();
-	virtual void Precache();
+	void Spawn_Impl();
+	void Activate_Impl();
+	void Precache_Impl();
 
 	[[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputTurnOn( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputTurnOff( inputdata_t &inputdata );

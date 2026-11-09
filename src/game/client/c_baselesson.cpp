@@ -4,8 +4,6 @@
 // Purpose: Client handler implementations for instruction players how to play
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -1523,21 +1521,6 @@ g_pLessonVariableInfo[ LESSON_VARIABLE_START_SOUND ].Init_START_SOUND();
 static ks::idict< LessonVariable > g_NameToTypeMap;
 static ks::idict< fieldtype_t > g_TypeToParamTypeMap;
 ks::idict< int > CScriptedIconLesson::LessonActionMap;
-
-
-//-----------------------------------------------------------------------------
-// Queues up game instructor symbols to save/load
-//-----------------------------------------------------------------------------
-class CGameInstructorSymbolSaveRestoreOps : public CDefSaveRestoreOps
-{
-public:
-};
-
-static CGameInstructorSymbolSaveRestoreOps s_GameInstructorSymbolSaveRestoreOps;
-ISaveRestoreOps *GetGameInstructorSymbolSaveRestoreOps( )
-{
-	return &s_GameInstructorSymbolSaveRestoreOps;
-}
 
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CScriptedIconLesson )

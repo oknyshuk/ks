@@ -3,8 +3,6 @@
 
 // Purpose: Default schedules.
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -181,6 +179,95 @@ void CAI_BaseNPC::InitDefaultScheduleSR(void)
 
 	ADD_DEF_SCHEDULE( "SCHED_SLEEP",					SCHED_SLEEP );
 }
+
+// The schedule texts defined below.
+extern const char * g_pszSCHED_IDLE_STAND;
+extern const char * g_pszSCHED_IDLE_WALK;
+extern const char * g_pszSCHED_IDLE_WANDER;
+extern const char * g_pszSCHED_WAKE_ANGRY;
+extern const char * g_pszSCHED_ALERT_FACE;
+extern const char * g_pszSCHED_ALERT_FACE_BESTSOUND;
+extern const char * g_pszSCHED_ALERT_REACT_TO_COMBAT_SOUND;
+extern const char * g_pszSCHED_ALERT_SCAN;
+extern const char * g_pszSCHED_ALERT_STAND;
+extern const char * g_pszSCHED_ALERT_WALK;
+extern const char * g_pszSCHED_INVESTIGATE_SOUND;
+extern const char * g_pszSCHED_COMBAT_FACE;
+extern const char * g_pszSCHED_COMBAT_SWEEP;
+extern const char * g_pszSCHED_COMBAT_WALK;
+extern const char * g_pszSCHED_FEAR_FACE;
+extern const char * g_pszSCHED_COMBAT_STAND;
+extern const char * g_pszSCHED_CHASE_ENEMY;
+extern const char * g_pszSCHED_CHASE_ENEMY_FAILED;
+extern const char * g_pszSCHED_VICTORY_DANCE;
+extern const char * g_pszSCHED_TARGET_FACE;
+extern const char * g_pszSCHED_TARGET_CHASE;
+extern const char * g_pszSCHED_SMALL_FLINCH;
+extern const char * g_pszSCHED_BIG_FLINCH;
+extern const char * g_pszSCHED_BACK_AWAY_FROM_ENEMY;
+extern const char * g_pszSCHED_MOVE_AWAY_FROM_ENEMY;
+extern const char * g_pszSCHED_BACK_AWAY_FROM_SAVE_POSITION;
+extern const char * g_pszSCHED_TAKE_COVER_FROM_ENEMY;
+extern const char * g_pszSCHED_TAKE_COVER_FROM_BEST_SOUND;
+extern const char * g_pszSCHED_FLEE_FROM_BEST_SOUND;
+extern const char * g_pszSCHED_TAKE_COVER_FROM_ORIGIN;
+extern const char * g_pszSCHED_FAIL_TAKE_COVER;
+extern const char * g_pszSCHED_RUN_FROM_ENEMY;
+extern const char * g_pszSCHED_RUN_FROM_ENEMY_FALLBACK;
+extern const char * g_pszSCHED_MOVE_TO_WEAPON_RANGE;
+extern const char * g_pszSCHED_MOVE_OFF_OF_NPC;
+extern const char * g_pszSCHED_ESTABLISH_LINE_OF_FIRE;
+extern const char * g_pszSCHED_SHOOT_ENEMY_COVER;
+extern const char * g_pszSCHED_ESTABLISH_LINE_OF_FIRE_FALLBACK;
+extern const char * g_pszSCHED_PRE_FAIL_ESTABLISH_LINE_OF_FIRE;
+extern const char * g_pszSCHED_FAIL_ESTABLISH_LINE_OF_FIRE;
+extern const char * g_pszSCHED_COWER;
+extern const char * g_pszSCHED_MELEE_ATTACK1;
+extern const char * g_pszSCHED_MELEE_ATTACK2;
+extern const char * g_pszSCHED_RANGE_ATTACK1;
+extern const char * g_pszSCHED_RANGE_ATTACK2;
+extern const char * g_pszSCHED_SPECIAL_ATTACK1;
+extern const char * g_pszSCHED_SPECIAL_ATTACK2;
+extern const char * g_pszSCHED_STANDOFF;
+extern const char * g_pszSCHED_ARM_WEAPON;
+extern const char * g_pszSCHED_DISARM_WEAPON;
+extern const char * g_pszSCHED_HIDE_AND_RELOAD;
+extern const char * g_pszSCHED_RELOAD;
+extern const char * g_pszSCHED_AMBUSH;
+extern const char * g_pszSCHED_DIE;
+extern const char * g_pszSCHED_DIE_RAGDOLL;
+extern const char * g_pszSCHED_WAIT_FOR_SCRIPT;
+extern const char * g_pszSCHED_SCRIPTED_WALK;
+extern const char * g_pszSCHED_SCRIPTED_RUN;
+extern const char * g_pszSCHED_SCRIPTED_CUSTOM_MOVE;
+extern const char * g_pszSCHED_SCRIPTED_WAIT;
+extern const char * g_pszSCHED_SCRIPTED_FACE;
+extern const char * g_pszSCHED_SCENE_GENERIC;
+extern const char * g_pszSCHED_NEW_WEAPON;
+extern const char * g_pszSCHED_NEW_WEAPON_CHEAT;
+extern const char * g_pszSCHED_SWITCH_TO_PENDING_WEAPON;
+extern const char * g_pszSCHED_GET_HEALTHKIT;
+extern const char * g_pszSCHED_MOVE_AWAY;
+extern const char * g_pszSCHED_MOVE_AWAY_FAIL;
+extern const char * g_pszSCHED_MOVE_AWAY_END;
+extern const char * g_pszSCHED_WAIT_FOR_SPEAK_FINISH;
+extern const char * g_pszSCHED_FORCED_GO;
+extern const char * g_pszSCHED_FORCED_GO_RUN;
+extern const char * g_pszSCHED_PATROL_WALK;
+extern const char * g_pszSCHED_COMBAT_PATROL;
+extern const char * g_pszSCHED_PATROL_RUN;
+extern const char * g_pszSCHED_RUN_RANDOM;
+extern const char * g_pszSCHED_FAIL;
+extern const char * g_pszSCHED_FAIL_NOSTOP;
+extern const char * g_pszSCHED_FALL_TO_GROUND;
+extern const char * g_pszSCHED_DROPSHIP_DUSTOFF;
+extern const char * g_pszSCHED_FLINCH_PHYSICS;
+extern const char * g_pszSCHED_RUN_FROM_ENEMY_MOB;
+extern const char * g_pszSCHED_DUCK_DODGE;
+extern const char * g_pszSCHED_NPC_FREEZE;
+extern const char * g_pszSCHED_INTERACTION_MOVE_TO_PARTNER;
+extern const char * g_pszSCHED_INTERACTION_WAIT_FOR_PARTNER;
+extern const char * g_pszSCHED_SLEEP;
 
 bool CAI_BaseNPC::LoadDefaultSchedules(void)
 {
@@ -460,6 +547,7 @@ const char *CAI_BaseNPC::TaskName(int taskID)
 
 
 // This hooks the main game systems callbacks to allow the AI system to manage memory
+extern float g_AINextDisabledMessageTime;
 class CAI_SystemHook : public CAutoGameSystem
 {
 public:
@@ -470,7 +558,6 @@ public:
 	// UNDONE: Schedule / strings stuff should probably happen once each GAME, not each level
 	void LevelInitPreEntity()
 	{
-		extern float g_AINextDisabledMessageTime;
 		g_AINextDisabledMessageTime = 0;
 	
 		g_AI_SchedulesManager.CreateStringRegistries();
@@ -493,10 +580,8 @@ public:
 		g_AI_SensedObjectsManager.Term();
 		g_pAINetworkManager->DeleteAllAINetworks();
 		g_AI_SchedulesManager.DeleteAllSchedules();
-		g_AI_AgentSchedulesManager.DeleteAllSchedules();
 		g_AI_SquadManager.DeleteAllSquads();
 		g_AI_SchedulesManager.DestroyStringRegistries();
-		g_AI_AgentSchedulesManager.DestroyStringRegistries();
 	}
 };
 

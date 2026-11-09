@@ -300,43 +300,41 @@ struct constraint_lengthparams_t
 class IPhysicsConstraint
 {
 public:
-	virtual ~IPhysicsConstraint( void ) {}
 	
 	// NOTE: Constraints are active when created.  You can temporarily enable/disable them with these functions
-	virtual void			Activate( void ) = 0;
-	virtual void			Deactivate( void ) = 0;
+	void			Activate( void );
+	void			Deactivate( void );
 
 	// set a pointer to the game object
-	virtual void SetGameData( void *gameData ) = 0;
+	void SetGameData( void *gameData );
 
 	// get a pointer to the game object
-	virtual void *GetGameData( void ) const = 0;
+	void *GetGameData( void ) const;
 
 	// Get the parent/referenced object
-	virtual IPhysicsObject *GetReferenceObject( void ) const = 0;
+	IPhysicsObject *GetReferenceObject( void ) const;
 
 	// Get the attached object
-	virtual IPhysicsObject *GetAttachedObject( void ) const = 0;
+	IPhysicsObject *GetAttachedObject( void ) const;
 
-	virtual void			SetLinearMotor( float speed, float maxLinearImpulse ) = 0;
-	virtual void			SetAngularMotor( float rotSpeed, float maxAngularImpulse ) = 0;
+	void			SetLinearMotor( float speed, float maxLinearImpulse );
+	void			SetAngularMotor( float rotSpeed, float maxAngularImpulse );
 
-	virtual void			UpdateRagdollTransforms( const matrix3x4_t &constraintToReference, const matrix3x4_t &constraintToAttached ) = 0;
-	virtual bool			GetConstraintTransform( matrix3x4_t *pConstraintToReference, matrix3x4_t *pConstraintToAttached ) const = 0;
-	virtual bool			GetConstraintParams( constraint_breakableparams_t *pParams ) const = 0;
+	void			UpdateRagdollTransforms( const matrix3x4_t &constraintToReference, const matrix3x4_t &constraintToAttached );
+	bool			GetConstraintTransform( matrix3x4_t *pConstraintToReference, matrix3x4_t *pConstraintToAttached ) const;
+	bool			GetConstraintParams( constraint_breakableparams_t *pParams ) const;
 
-	virtual void			OutputDebugInfo() = 0;
+	void			OutputDebugInfo();
 };
 
 
 class IPhysicsConstraintGroup
 {
 public:
-	virtual ~IPhysicsConstraintGroup( void ) {}
-	virtual void Activate() = 0;
-	virtual bool IsInErrorState() = 0;
-	virtual void ClearErrorState() = 0;
-	virtual void GetErrorParams( constraint_groupparams_t *pParams ) = 0;
-	virtual void SetErrorParams( const constraint_groupparams_t &params ) = 0;
-	virtual void SolvePenetration( IPhysicsObject *pObj0, IPhysicsObject *pObj1 ) = 0;
+	void Activate();
+	bool IsInErrorState();
+	void ClearErrorState();
+	void GetErrorParams( constraint_groupparams_t *pParams );
+	void SetErrorParams( const constraint_groupparams_t &params );
+	void SolvePenetration( IPhysicsObject *pObj0, IPhysicsObject *pObj1 );
 };

@@ -4,7 +4,6 @@
 
 #include "ehandle.h"
 
-class IPhysicsObject;
 class CBaseEntity;
 
 // inherit from this interface to be able to call WatchPositionChanges

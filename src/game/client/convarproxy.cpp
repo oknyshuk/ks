@@ -3,8 +3,6 @@
 
 // Purpose: Material proxy to stuff a convar into a material var.
 
-import std;
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_client_int.h"
 // identifier was truncated to '255' characters in the debug information

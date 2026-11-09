@@ -3,8 +3,6 @@
 
 // Purpose: Material modify control entity.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -68,17 +65,18 @@ public:
 
 	CMaterialModifyControl();
 
-	void Spawn( void );
-	bool KeyValue( const char *szKeyName, const char *szValue );
-	int UpdateTransmitState();
-	int ShouldTransmit( const CCheckTransmitInfo *pInfo );
+	void Spawn_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	int UpdateTransmitState_Impl();
+	int ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo );
 
 	[[= ks::reflect::Input{ .name = "SetMaterialVar", .type = FIELD_STRING } ]] void SetMaterialVar( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "SetMaterialVarToCurrentTime", .type = FIELD_VOID } ]] void SetMaterialVarToCurrentTime( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "StartAnimSequence", .type = FIELD_STRING } ]] void InputStartAnimSequence( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "StartFloatLerp", .type = FIELD_STRING } ]] void InputStartFloatLerp( inputdata_t &inputdata );
 
-	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	int	ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION; }
 
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
@@ -117,7 +115,7 @@ CMaterialModifyControl::CMaterialModifyControl()
 //------------------------------------------------------------------------------
 // Purpose :
 //------------------------------------------------------------------------------
-void CMaterialModifyControl::Spawn( void )
+void CMaterialModifyControl::Spawn_Impl( void )
 {
 	Precache();
 	SetSolid( SOLID_NONE );
@@ -126,7 +124,7 @@ void CMaterialModifyControl::Spawn( void )
 //------------------------------------------------------------------------------
 // Purpose :
 //------------------------------------------------------------------------------
-bool CMaterialModifyControl::KeyValue( const char *szKeyName, const char *szValue )
+bool CMaterialModifyControl::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if ( FStrEq( szKeyName, "materialName" ) )
 	{
@@ -140,13 +138,13 @@ bool CMaterialModifyControl::KeyValue( const char *szKeyName, const char *szValu
 		return true;
 	}
 
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 //------------------------------------------------------------------------------
 // Purpose : Send even though we don't have a model.
 //------------------------------------------------------------------------------
-int CMaterialModifyControl::UpdateTransmitState()
+int CMaterialModifyControl::UpdateTransmitState_Impl()
 {
 	// ALWAYS transmit to all clients.
 	return SetTransmitState( FL_EDICT_FULLCHECK );
@@ -155,7 +153,7 @@ int CMaterialModifyControl::UpdateTransmitState()
 //-----------------------------------------------------------------------------
 // Send if the parent is being sent:
 //-----------------------------------------------------------------------------
-int CMaterialModifyControl::ShouldTransmit( const CCheckTransmitInfo *pInfo )
+int CMaterialModifyControl::ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo )
 {
 	CBaseEntity *pEnt = GetMoveParent();
 	if ( pEnt )

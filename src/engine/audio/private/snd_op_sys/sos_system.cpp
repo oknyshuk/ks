@@ -97,7 +97,7 @@ int CSosOperatorStack::FindOperatorViaOffset( std::size_t nOffset )
 		CSosOperator *pOp = m_vStack[i];
 		if ( pOp )
 		{
-			memOffset += pOp->GetSize();
+			memOffset += SosOps::GetSize( pOp );
 			if( memOffset > nOffset )
 			{
 				break;
@@ -119,7 +119,7 @@ CSosOperator *CSosOperatorStack::FindOperator( const char *pName, void **pStruct
 		CSosOperator *pOp = m_vStack[i];
 		if ( pOp )
 		{
-			memOffset += pOp->GetSize();
+			memOffset += SosOps::GetSize( pOp );
 			char *pStructMem = ((char *)m_pMemPool) + memOffset;
 			*pStructHandle = (void *)pStructMem;
 		}
@@ -158,7 +158,7 @@ int CSosOperatorStack::GetOperatorOffset( int nIndex )
 		CSosOperator *pOp = m_vStack[i];
 		if ( pOp )
 		{
-			memOffset += pOp->GetSize();
+			memOffset += SosOps::GetSize( pOp );
 		}
 	}
 	return memOffset;
@@ -187,8 +187,8 @@ void CSosOperatorStack::Init( )
 		char *pCharMem = ((char *)m_pMemPool) + TotalSize;
 
 		m_vStack[i]->ResolveInputValues( (void *)pCharMem, m_pMemPool );
-		m_vStack[i]->StackInit( (void *)pCharMem, this, i );
-		TotalSize += m_vStack[i]->GetSize();
+		SosOps::StackInit( m_vStack[i], (void *)pCharMem, this, i );
+		TotalSize += SosOps::GetSize( m_vStack[i] );
 	}
 
 
@@ -208,8 +208,8 @@ void CSosOperatorStack::Shutdown( )
 		char *pCharMem = ((char *)m_pMemPool) + TotalSize;
 
 		m_vStack[i]->ResolveInputValues( (void *)pCharMem, m_pMemPool );
-		m_vStack[i]->StackShutdown( (void *)pCharMem, this, i );
-		TotalSize += m_vStack[i]->GetSize();
+		SosOps::StackShutdown( m_vStack[i], (void *)pCharMem, this, i );
+		TotalSize += SosOps::GetSize( m_vStack[i] );
 	}
 }
 
@@ -263,22 +263,22 @@ void CSosOperatorStack::Execute( channel_t *pChannel, CScratchPad *pScratchPad )
 		if( pStructMem->m_flExecute[0] > 0.0 && !( pStructMem->m_bExecuteOnce && pStructMem->m_bHasExecuted ) )
 		{
 			m_pCurrentOperatorName = m_vOperatorNames[ i ];
-			m_vStack[i]->Execute( (void *)pCharMem, pChannel, pScratchPad, this, i );
+			SosOps::Execute( m_vStack[i], (void *)pCharMem, pChannel, pScratchPad, this, i );
 			pStructMem->m_bHasExecuted = true;
 
 			if( ShouldPrintOperatorUpdates( ) )
 			{
-				m_vStack[i]->Print( (void *)pCharMem, this, i, 0 );
+				SosOps::Print( m_vStack[i], (void *)pCharMem, this, i, 0 );
 			}
 			// diagnostics
 	
 		}
 		else if( ShouldPrintOperatorUpdates( ) )
 		{
-			m_vStack[i]->Print( (void *)pCharMem, this, i, 1 );
+			SosOps::Print( m_vStack[i], (void *)pCharMem, this, i, 1 );
 		}
 
-		TotalSize += m_vStack[i]->GetSize();
+		TotalSize += SosOps::GetSize( m_vStack[i] );
 	}
 
 }
@@ -319,13 +319,13 @@ void CSosOperatorStack::ExecuteIterator( channel_t *pChannel, CScratchPad *pScra
 			if( pStructMem->m_flExecute[0] > 0.0 && !( pStructMem->m_bExecuteOnce && pStructMem->m_bHasExecuted ) )
 			{
 				m_pCurrentOperatorName = m_vOperatorNames[ i ];
-				m_vStack[i]->Execute( (void *)pCharMem, pChannel, pScratchPad, this, i );
+				SosOps::Execute( m_vStack[i], (void *)pCharMem, pChannel, pScratchPad, this, i );
 				pStructMem->m_bHasExecuted = true;
 
 				// diagnostics
 				if ( ShouldPrintOperatorUpdates( ) )
 				{
-					m_vStack[i]->Print( (void *)pCharMem, this, i, 0 );
+					SosOps::Print( m_vStack[i], (void *)pCharMem, this, i, 0 );
 				}
 			}
 			else if( ShouldPrintOperatorUpdates( ) )
@@ -334,7 +334,7 @@ void CSosOperatorStack::ExecuteIterator( channel_t *pChannel, CScratchPad *pScra
 				if( pFilterString && pFilterString[0] && 
 					V_stristr( g_pSoundEmitterSystem->GetSoundNameForHash( GetScriptHash() ), pFilterString ) )
 				{
-					m_vStack[i]->Print( (void *)pCharMem, this, i, 1 );
+					SosOps::Print( m_vStack[i], (void *)pCharMem, this, i, 1 );
 				}
 			}
 			if( pCharMem == pStopMemBlock )
@@ -342,7 +342,7 @@ void CSosOperatorStack::ExecuteIterator( channel_t *pChannel, CScratchPad *pScra
 				return;
 			}
 		}
-		TotalSize += m_vStack[i]->GetSize();
+		TotalSize += SosOps::GetSize( m_vStack[i] );
 	}
 }
 
@@ -368,7 +368,7 @@ void CSosOperatorStack::Copy( CSosOperatorStack *pSrcStack, std::size_t nMemOffs
 		AddToTail( pOperator, pName );
 		pOperator->OffsetConnections( (char *)m_pMemPool + nMemOffset + nTotalOffset, nMemOffset );
 
-		nTotalOffset += pOperator->GetSize(); 
+		nTotalOffset += SosOps::GetSize( pOperator ); 
 	}
 }
 
@@ -382,8 +382,8 @@ void CSosOperatorStack::Print( int nLevel )
 	std::size_t TotalSize = 0;
 	for ( int i = 0 ; i < std::ssize( m_vStack ); i++ )
 	{
-		m_vStack[i]->Print( (void *)((char *)m_pMemPool + TotalSize), this, i, nLevel );
-		TotalSize += m_vStack[i]->GetSize();
+		SosOps::Print( m_vStack[i], (void *)((char *)m_pMemPool + TotalSize), this, i, nLevel );
+		TotalSize += SosOps::GetSize( m_vStack[i] );
 	}
 }
 
@@ -440,7 +440,7 @@ void CSosOperatorStack::ParseKV( KeyValues *pOperatorsKV )
 						void *pStructMem;
 						CSosOperator *pNewOp = FindOperator( pOpName, &pStructMem );
 						// only overwriting
-						pNewOp->ParseKV( this, pStructMem, pOperator );
+						SosOps::ParseKV( pNewOp, this, pStructMem, pOperator );
 					}
 				}
 				else if( !( bNewStackOp && i == SND_SOS_MEMORY_ALLOCATION_PASS ) ) // do nothing if override of new op on first memory accumulating pass
@@ -477,11 +477,11 @@ void CSosOperatorStack::ParseKV( KeyValues *pOperatorsKV )
 								// new operator
 								m_pCurrentOperatorName = pOpName;
 								pNewOp->SetBaseDefaults( (void *)(((char *)m_pMemPool) + TotalSize) );
-								pNewOp->SetDefaults( (void *)(((char *)m_pMemPool) + TotalSize) );
-								pNewOp->ParseKV( this, (void *)(((char *)m_pMemPool) + TotalSize), pOperator );
+								SosOps::SetDefaults( pNewOp, (void *)(((char *)m_pMemPool) + TotalSize) );
+								SosOps::ParseKV( pNewOp, this, (void *)(((char *)m_pMemPool) + TotalSize), pOperator );
 								AddToTail( pNewOp, pOperator->GetName() );
 							}
-							TotalSize += pNewOp->GetSize();
+							TotalSize += SosOps::GetSize( pNewOp );
 						}
 					}
 				}

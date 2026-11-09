@@ -14,8 +14,8 @@ class CScriptedTarget : public CAI_BaseNPC
 public:
 	DECLARE_DATADESC();
 
-	void				Spawn( void );
-	virtual int			ObjectCaps( void ) { return (BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION); }
+	void				Spawn_Impl( void );
+	int			ObjectCaps_Impl( void ) { return (BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION); }
 
 
 	void				ScriptThink( void );
@@ -32,8 +32,8 @@ public:
 	float				MoveSpeed(void)			{ return m_nMoveSpeed; };
 	float				EffectDuration(void)	{ return m_flEffectDuration; };
 
-	int					DrawDebugTextOverlays(void);
-	void				DrawDebugGeometryOverlays(void);
+	int					DrawDebugTextOverlays_Impl(void);
+	void				DrawDebugGeometryOverlays_Impl(void);
 	float				PercentComplete(void);
 
 	Vector				m_vLastPosition;	// Last position that's been reached

@@ -35,8 +35,6 @@
 #include "c_rumble.h"
 #include "c_playerresource.h"
 #include <localize/ilocalize.h>
-import ks.tier1;
-import std;
 #include "gameui_interface.h"
 #include "menu.h" // CHudMenu
 #include "clientmode_csnormal.h"

@@ -3,8 +3,6 @@
 
 // Purpose: Shadow control entity.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -57,13 +54,14 @@ public:
 
 	CWaterLODControl();
 
-	void Spawn( void );
-	bool KeyValue( const char *szKeyName, const char *szValue );
-	int  UpdateTransmitState();
+	void Spawn_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	int  UpdateTransmitState_Impl();
 	void SetCheapWaterStartDistance( inputdata_t &inputdata );
 	void SetCheapWaterEndDistance( inputdata_t &inputdata );
 
-	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	int	ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION; }
 
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
@@ -91,14 +89,14 @@ CWaterLODControl::CWaterLODControl()
 //------------------------------------------------------------------------------
 // Purpose : Send even though we don't have a model
 //------------------------------------------------------------------------------
-int CWaterLODControl::UpdateTransmitState()
+int CWaterLODControl::UpdateTransmitState_Impl()
 {
 	// ALWAYS transmit to all clients.
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
 
 
-bool CWaterLODControl::KeyValue( const char *szKeyName, const char *szValue )
+bool CWaterLODControl::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if ( FStrEq( szKeyName, "cheapwaterstartdistance" ) )
 	{
@@ -112,13 +110,13 @@ bool CWaterLODControl::KeyValue( const char *szKeyName, const char *szValue )
 		return true;
 	}
 
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 //------------------------------------------------------------------------------
 // Purpose :
 //------------------------------------------------------------------------------
-void CWaterLODControl::Spawn( void )
+void CWaterLODControl::Spawn_Impl( void )
 {
 	Precache();
 	SetSolid( SOLID_NONE );

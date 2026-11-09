@@ -7,8 +7,6 @@
 //			than a specified length of time.
 //			It also fires an output whenever the target's angles change.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -26,7 +24,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -56,12 +53,13 @@ class CPointAngleSensor : public CPointEntity
 	DECLARE_CLASS(CPointAngleSensor, CPointEntity);
 public:
 
-	bool KeyValue(const char *szKeyName, const char *szValue);
-	void Activate(void);
-	void Spawn(void);
-	void Think(void);
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl(const char *szKeyName, const char *szValue);
+	void Activate_Impl(void);
+	void Spawn_Impl(void);
+	void Think_Impl(void);
 
-	int DrawDebugTextOverlays(void);
+	int DrawDebugTextOverlays_Impl(void);
 
 protected:
 
@@ -107,7 +105,7 @@ IMPLEMENT_REFLECT_DATAMAP( CPointAngleSensor )
 // Purpose: Handles keyvalues that require special processing.
 // Output : Returns true if handled, false if not.
 //-----------------------------------------------------------------------------
-bool CPointAngleSensor::KeyValue(const char *szKeyName, const char *szValue)
+bool CPointAngleSensor::KeyValue_Impl(const char *szKeyName, const char *szValue)
 {
 	if (FStrEq(szKeyName, "tolerance"))
 	{
@@ -116,7 +114,7 @@ bool CPointAngleSensor::KeyValue(const char *szKeyName, const char *szValue)
 	}
 	else
 	{
-		return(BaseClass::KeyValue(szKeyName, szValue));
+		return(BaseClass::KeyValue_Impl(szKeyName, szValue));
 	}
 
 	return(true);
@@ -126,18 +124,18 @@ bool CPointAngleSensor::KeyValue(const char *szKeyName, const char *szValue)
 //-----------------------------------------------------------------------------
 // Purpose: Called when spawning after parsing keyvalues.
 //-----------------------------------------------------------------------------
-void CPointAngleSensor::Spawn(void)
+void CPointAngleSensor::Spawn_Impl(void)
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 
 //-----------------------------------------------------------------------------
 // Purpose: Called after all entities have spawned on new map or savegame load.
 //-----------------------------------------------------------------------------
-void CPointAngleSensor::Activate(void)
+void CPointAngleSensor::Activate_Impl(void)
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if (!m_hTargetEntity)
 	{
@@ -216,7 +214,7 @@ bool CPointAngleSensor::IsFacingWithinTolerance(CBaseEntity *pEntity, CBaseEntit
 //-----------------------------------------------------------------------------
 // Purpose: Called every frame.
 //-----------------------------------------------------------------------------
-void CPointAngleSensor::Think(void)
+void CPointAngleSensor::Think_Impl(void)
 {
 	if (m_hTargetEntity != nullptr)
 	{
@@ -368,9 +366,9 @@ void CPointAngleSensor::Disable()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CPointAngleSensor::DrawDebugTextOverlays(void)
+int CPointAngleSensor::DrawDebugTextOverlays_Impl(void)
 {
-	int nOffset = BaseClass::DrawDebugTextOverlays();
+	int nOffset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -406,11 +404,12 @@ class CPointProximitySensor : public CPointEntity
 
 public:
 
-	virtual void Activate( void );
+	void Activate_Impl( void );
 
 protected:
 
-	void Think( void );
+	public: void Think_Impl( void );
+	protected:
 	void Enable( void );
 	void Disable( void );
 
@@ -437,9 +436,9 @@ IMPLEMENT_REFLECT_DATAMAP( CPointProximitySensor )
 //-----------------------------------------------------------------------------
 // Purpose: Called after all entities have spawned on new map or savegame load.
 //-----------------------------------------------------------------------------
-void CPointProximitySensor::Activate( void )
+void CPointProximitySensor::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( m_hTargetEntity == nullptr )
 	{
@@ -529,7 +528,7 @@ void CPointProximitySensor::Disable( void )
 //-----------------------------------------------------------------------------
 // Purpose: Called every frame
 //-----------------------------------------------------------------------------
-void CPointProximitySensor::Think( void )
+void CPointProximitySensor::Think_Impl( void )
 {
 	if ( m_hTargetEntity != nullptr )
 	{

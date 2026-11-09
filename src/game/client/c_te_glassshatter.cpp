@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "const.h"
 #include "predictable_entity.h"
 #include "util_shared.h"
@@ -58,10 +56,6 @@ public:
 
 	virtual void	PostDataUpdate( DataUpdateType_t updateType );
 
-private:
-	// Recording 
-	void RecordShatterSurface( );
-
 public:
 	[[= ks::reflect::Net{} ]] Vector					m_vecOrigin;
 	[[= ks::reflect::Net{} ]] QAngle					m_vecAngles;
@@ -110,56 +104,11 @@ C_TEShatterSurface::~C_TEShatterSurface()
 
 
 //-----------------------------------------------------------------------------
-// Recording 
-//-----------------------------------------------------------------------------
-void C_TEShatterSurface::RecordShatterSurface( )
-{
-	if ( !ToolsEnabled() )
-		return;
-
-	if ( clienttools->IsInRecordingMode() )
-	{
-		Color front( m_uchFrontColor[0], m_uchFrontColor[1], m_uchFrontColor[2], 255 );
-		Color back( m_uchBackColor[0], m_uchBackColor[1], m_uchBackColor[2], 255 );
-
-		KeyValues *msg = new KeyValues( "TempEntity" );
-
- 		msg->SetInt( "te", TE_SHATTER_SURFACE );
- 		msg->SetString( "name", "TE_ShatterSurface" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetFloat( "originx", m_vecOrigin.x );
-		msg->SetFloat( "originy", m_vecOrigin.y );
-		msg->SetFloat( "originz", m_vecOrigin.z );
-		msg->SetFloat( "anglesx", m_vecAngles.x );
-		msg->SetFloat( "anglesy", m_vecAngles.y );
-		msg->SetFloat( "anglesz", m_vecAngles.z );
-		msg->SetFloat( "forcex", m_vecForce.x );
-		msg->SetFloat( "forcey", m_vecForce.y );
-		msg->SetFloat( "forcez", m_vecForce.z );
-		msg->SetFloat( "forceposx", m_vecForcePos.x );
-		msg->SetFloat( "forceposy", m_vecForcePos.y );
-		msg->SetFloat( "forceposz", m_vecForcePos.z );
-		msg->SetColor( "frontcolor", front );
-		msg->SetColor( "backcolor", back );
-		msg->SetFloat( "width", m_flWidth );
-		msg->SetFloat( "height", m_flHeight );
-		msg->SetFloat( "size", m_flShardSize );
-		msg->SetInt( "surfacetype", m_nSurfaceType );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
-}
-
-
-//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void C_TEShatterSurface::PostDataUpdate( DataUpdateType_t updateType )
 {
 	CVProfScope _( "C_TEShatterSurface::PostDataUpdate", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
-
-	RecordShatterSurface();
 
 	ks::intrusive_ptr<CSimple3DEmitter> pGlassEmitter = CSimple3DEmitter::Create( "C_TEShatterSurface 1" );
 	pGlassEmitter->SetSortOrigin( m_vecOrigin );

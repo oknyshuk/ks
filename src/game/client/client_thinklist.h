@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
 #include "igamesystem.h"
-import std;
 #include "cliententitylist.h"
 #include "iclientthinkable.h"
 
@@ -115,8 +113,8 @@ inline CClientThinkList::ThinkEntry_t* CClientThinkList::GetThinkEntry( ClientTh
 }
 
 
+extern CClientThinkList g_ClientThinkList;
 inline CClientThinkList* ClientThinkList()
 {
-	extern CClientThinkList g_ClientThinkList;
 	return &g_ClientThinkList;
 }

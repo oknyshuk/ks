@@ -244,11 +244,6 @@ void CNetSupportImpl::OnMatchEvent( KeyValues *pEvent )
 #endif
 }
 
-void CNetSupportImpl::ProcessSocket( int sock, IConnectionlessPacketHandler * pHandler )
-{
-	NET_ProcessSocket( sock, pHandler );
-}
-
 // Send a network packet
 int CNetSupportImpl::SendPacket (
 	INetChannel *chan, int sock,  const netadr_t &to,

@@ -37,8 +37,6 @@ import ks.vstdlib;
 #include "con_nprint.h"
 #include "vox_private.h"
 #include "../../traceinit.h"
-#include "toolframework/itoolframework.h"
-#include "vaudio/ivaudio.h"
 #include "../../client.h"
 #include "../../cl_main.h"
 #include "../../enginetrace.h"			// for traceline
@@ -371,7 +369,9 @@ std::recursive_mutex g_SoundMapMutex;
 class CDummySfx : public CSfxTable
 {
 public:
-	virtual const char *getname( char *pBuf, std::size_t bufLen )
+	CDummySfx() { m_Kind = SfxKind::Dummy; }
+
+	const char *getname( char *pBuf, std::size_t bufLen )
 	{
 		V_strncpy( pBuf, name, bufLen );
 		return pBuf;
@@ -405,6 +405,7 @@ bool SND_IsInGame( void )
 
 CSfxTable::CSfxTable()
 {
+	m_Kind = SfxKind::Named;
 	m_fnHandle = nullptr;
 	pSource = nullptr;
 	m_bUseErrorFilename = false;
@@ -463,6 +464,17 @@ void CSfxTable::OnNameChanged( const char *pName )
 //-----------------------------------------------------------------------------
 const char *CSfxTable::getname( char *pBuf, std::size_t bufLen )
 {
+	switch ( m_Kind )
+	{
+	case SfxKind::Dummy:
+		return static_cast< CDummySfx * >( this )->getname( pBuf, bufLen );
+	case SfxKind::Voice:
+		V_strncpy( pBuf, "?VoiceSfx", bufLen );
+		return pBuf;
+	case SfxKind::Named:
+		break;
+	}
+
 	if ( m_fnHandle )
 	{
 		// based on pix capture, prior version using va() causing extra copies, was too costly
@@ -537,7 +549,7 @@ ConVar snd_surround( "snd_surround_speakers", "-1" );
 
 ConVar snd_noextraupdate( "snd_noextraupdate", "0" );
 ConVar snd_show( "snd_show", "0", FCVAR_CHEAT, "Show sounds info");
-void OnSndShowEdgeChanged( IConVar *var, const char *pOldValue, float flOldValue );
+void OnSndShowEdgeChanged( ConVar *var, const char *pOldValue, float flOldValue );
 ConVar snd_show_print( "snd_show_print", "0", FCVAR_CHEAT, "Print to console the sounds that are normally printed on screen only. 1 = print to console and to screen; 2 = print only to console", OnSndShowEdgeChanged );
 ConVar snd_show_filter( "snd_show_filter", "", FCVAR_CHEAT, "Limit debug sounds to those containing this substring" );
 ConVar snd_find_channel( "snd_find_channel", "", 0, "Scan every channel to find the corresponding sound." );
@@ -580,10 +592,6 @@ static ConCommand snd_mixvol("snd_mixvol", MXR_DebugSetMixGroupVolume, "Set name
 
 extern ConVar host_threaded_sound;
 
-// vaudio DLL
-IVAudio *vaudio = nullptr;
-CSysModule *g_pVAudioModule = nullptr;
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -625,7 +633,7 @@ void S_SoundInfo_f(void)
 	}
 }
 
-static void OnSndVarChanged( IConVar *pVar, const char *pOldString, float flOldValue );
+static void OnSndVarChanged( ConVar *pVar, const char *pOldString, float flOldValue );
 ConVar snd_mute_losefocus("snd_mute_losefocus", "1", FCVAR_ARCHIVE);
 static ConVar windows_speaker_config("windows_speaker_config", "-1", FCVAR_RELEASE|FCVAR_ARCHIVE);
 static ConVar sound_device_override( "sound_device_override", "", 0, "ID of the sound device to use" );
@@ -634,7 +642,7 @@ static ConVar sound_device_override( "sound_device_override", "", 0, "ID of the 
 static CAudioDeviceList g_AudioDeviceList;
 static audio_device_init_params_t g_AudioDeviceInitParams;
 static bool g_bRestartAudio = false;
-void OnSndVarChanged( IConVar *pVar, const char *pOldString, float flOldValue )
+void OnSndVarChanged( ConVar *pVar, const char *pOldString, float flOldValue )
 {
 	if ( !g_AudioDevice )
 		return;
@@ -800,19 +808,6 @@ bool IsValidSampleRate( int rate )
 }
 
 
-void VAudioInit()
-{
-	if ( !g_pVAudioModule )
-	{
-		
-		g_pVAudioModule = FileSystem_LoadModule( "vaudio_miles" );
-		if ( g_pVAudioModule )
-		{
-			CreateInterfaceFn vaudioFactory = Sys_GetFactory( g_pVAudioModule );
-			vaudio = (IVAudio *)vaudioFactory( VAUDIO_INTERFACE_VERSION, nullptr );
-		}
-	}
-}
 /*
 ================
 S_Init
@@ -832,8 +827,6 @@ void S_Init( void )
 
 	// KDB: init sentence array
 	TRACEINIT( VOX_Init(), VOX_Shutdown() );	
-
-	VAudioInit();
 
 
 	if ( CommandLine()->CheckParm( "-nosound" ) )
@@ -909,7 +902,7 @@ void S_Shutdown(void)
 		{
 			if ( entry.pSfx )
 			{
-				delete entry.pSfx->pSource;
+				CAudioSource::Delete( entry.pSfx->pSource );
 				entry.pSfx->pSource = nullptr;
 			}
 		}
@@ -926,14 +919,6 @@ void S_Shutdown(void)
 		// release sentences resources
 		TRACESHUTDOWN( VOX_Shutdown() );
 		
-		// shutdown vaudio
-		if ( vaudio )
-			delete vaudio;
-
-		FileSystem_UnloadModule( g_pVAudioModule );
-		g_pVAudioModule = nullptr;
-		vaudio = nullptr;
-
 		MIX_FreeAllPaintbuffers();
 		snd_initialized = false;
 		g_paintedtime = 0;
@@ -1033,6 +1018,7 @@ CAudioSource *S_LoadSound( CSfxTable *pSfx, channel_t *ch, SoundError &soundErro
 
 	const char *pSndFilename = PSkipSoundChars( pSndName );
 
+	SoundError sourceError = SE_NO_SOURCE_SETUP;
 	if ( !pSfx->pSource )
 	{
 
@@ -1059,7 +1045,7 @@ CAudioSource *S_LoadSound( CSfxTable *pSfx, channel_t *ch, SoundError &soundErro
 		if ( bStream )
 		{
 			// setup as a streaming resource
-			pSfx->pSource = Audio_CreateStreamedWave( pSfx );
+			pSfx->pSource = Audio_CreateStreamedWave( pSfx, sourceError );
 		}
 		else
 		{
@@ -1070,7 +1056,7 @@ CAudioSource *S_LoadSound( CSfxTable *pSfx, channel_t *ch, SoundError &soundErro
 			else
 			{
 				// load all into memory directly
-				pSfx->pSource = Audio_CreateMemoryWave( pSfx );
+				pSfx->pSource = Audio_CreateMemoryWave( pSfx, sourceError );
 			}
 		}
 		
@@ -1085,7 +1071,7 @@ CAudioSource *S_LoadSound( CSfxTable *pSfx, channel_t *ch, SoundError &soundErro
 
 	if ( !pSfx->pSource )
 	{
-		soundError = SE_NO_SOURCE_SETUP;
+		soundError = sourceError;
 		return nullptr;
 	}
 
@@ -1140,13 +1126,10 @@ void S_InternalReloadSound( CSfxTable *sfx )
 
 	sfx->pSource->CacheUnload();
 
-	delete sfx->pSource;
+	CAudioSource::Delete( sfx->pSource );
 	sfx->pSource = nullptr;
 
-	char pExt[10];
-	char nameBuf[MAX_PATH];
-	V_ExtractFileExtension( sfx->getname(nameBuf,sizeof(nameBuf)), pExt, sizeof(pExt) );
-	int nSource = !V_stricmp( pExt, "mp3" ) ? CAudioSource::AUDIO_SOURCE_MP3 : CAudioSource::AUDIO_SOURCE_WAV;
+	int nSource = CAudioSource::AUDIO_SOURCE_WAV;
 //	audiosourcecache->RebuildCacheEntry( nSource, sfx->IsPrecachedSound(), sfx );
 	audiosourcecache->GetInfo( nSource, sfx->IsPrecachedSound(), sfx ); // Do a size/date check and rebuild the cache entry if necessary.
 }
@@ -1679,16 +1662,13 @@ bool S_IsMusic( channel_t *pChannel )
 
 	if ( sfx->m_bIsMusic )
 		return true;
-	bool bIsMp3 = ( source->GetType() == CAudioSource::AUDIO_SOURCE_MP3 ) ? true : false;
 
 	for ( int i = 0; i < 8; i++ )
 	{
 		if ( pChannel->mixgroups[i] != -1 )
 		{
 			char *pGroupName = MXR_GetGroupnameFromId( pChannel->mixgroups[i] );
-			// HACK: Consider mp3s playing in the UI as music since the only cases of that 
-			// currently are startup music files e.g. #ui/gamestartup1.mp3
-			if ( !V_strcmp( pGroupName, "Music" ) || (bIsMp3 && !V_stricmp(pGroupName,"UI")))
+			if ( !V_strcmp( pGroupName, "Music" ) )
 			{
 				return true;
 			}
@@ -2090,7 +2070,7 @@ bool SND_GetClosestPoint( channel_t *pChannel, const Vector &vecListenerOrigin, 
 	VectorNormalize( SF );
 	
 	dSLSF = DotProduct( SL, SF );
-	if ( dSLSF <= 0 && !toolframework->IsToolRecording() )
+	if ( dSLSF <= 0 )
 	{
 		// source is pointing away from listener, don't play anything
 		// unless we're recording in the tool, since we may play back from in front of the source
@@ -2502,10 +2482,7 @@ float SND_GetGainObscured( int nSlot, gain_t *gs, const channel_t *ch, const Vec
 
 	if ( !SND_IsInGame() )
 	{
-		if ( !toolframework->InToolMode() )
-		{
-			gain = SND_FadeToNewGain( gs, ch, -1.0 );
-		}
+		gain = SND_FadeToNewGain( gs, ch, -1.0 );
 
 		return gain;
 	}
@@ -4873,7 +4850,7 @@ void SND_ExecuteUpdateOperators( channel_t *ch )
 	ChannelUpdateVolXfade( ch );
 
 	// end of first time spatializing sound
-	if ( SND_IsInGame() || toolframework->InToolMode() )
+	if ( SND_IsInGame() )
 	{
 		ch->flags.bfirstpass = false;
 	}
@@ -4939,7 +4916,7 @@ void SND_Spatialize(channel_t *ch)
 		blended_listener_origin /= (float)count;
 	}
 
-	if ( ch->wavtype == CHAR_RADIO || ( IsSoundSourceViewEntity( ch->soundsource ) && !toolframework->InToolMode() ) || ( ch->sfx && ch->sfx->pSource && ch->sfx->pSource->GetType() == CAudioSource::AUDIO_SOURCE_VOICE))
+	if ( ch->wavtype == CHAR_RADIO || IsSoundSourceViewEntity( ch->soundsource ) || ( ch->sfx && ch->sfx->pSource && ch->sfx->pSource->GetType() == CAudioSource::AUDIO_SOURCE_VOICE))
 	{
 		// sounds coming from listener actually come from a short distance directly in front of listener
 		// in tool mode however, the view entity is meaningless, since we're viewing from arbitrary locations in space
@@ -5033,16 +5010,6 @@ void SND_Spatialize(channel_t *ch)
 		VectorAngles( ch->direction, source_angles );
 	}
 
-	if ( ch->userdata != 0 )
-	{
-		g_pSoundServices->GetToolSpatialization( ch->userdata, ch->guid, si );
-		if ( ch->flags.bUpdatePositions )
-		{
-			AngleVectors( source_angles, &ch->direction );
-			ch->origin = vEntOrigin;
-		}
-	}
-	
 	fdopplerwav = ((ch->wavtype == CHAR_DOPPLER) && !fplayersound);
 	if ( fdopplerwav )
 	{
@@ -5089,8 +5056,7 @@ void SND_Spatialize(channel_t *ch)
 		VectorNormalize( source_vec_DR );
 
 		// don't play doppler if out of range
-		// unless recording in the tool, since we may play back in range
-		if ( dist > DOPPLER_RANGE_MAX && !toolframework->IsToolRecording() )
+		if ( dist > DOPPLER_RANGE_MAX )
 			goto ClearAllVolumes;
 	}
 	else
@@ -5289,7 +5255,7 @@ void SND_Spatialize(channel_t *ch)
 	ChannelUpdateVolXfade( ch );
 
 	// end of first time spatializing sound
-	if ( SND_IsInGame() || toolframework->InToolMode() )
+	if ( SND_IsInGame() )
 	{
 		ch->flags.bfirstpass = false;
 	}
@@ -5318,9 +5284,7 @@ ClearAllVolumes:
 ConVar snd_defer_trace("snd_defer_trace","1");
 void SND_SpatializeFirstFrameNoTrace( channel_t *pChannel)
 {
-	// Don't do this in tools mode since if we are scrubbing time, all of the sounds will come it at a low volume
-	if ( snd_defer_trace.GetBool() && 
-		!toolframework->InToolMode() )
+	if ( snd_defer_trace.GetBool() )
 	{
 		// set up tracing state to be non-obstructed
 		pChannel->flags.bfirstpass = false;
@@ -5668,7 +5632,7 @@ int S_AlterChannelByGuid( StartSoundParams_t &pParams )
 static void S_IsDopplerWave( char const *pchSoundName, int soundsource, bool &bPlayerSound, bool &bDopplerWave )
 {
 	bDopplerWave = false;
-	bPlayerSound = ( IsSoundSourceViewEntity( soundsource ) && !toolframework->InToolMode() );
+	bPlayerSound = IsSoundSourceViewEntity( soundsource );
 	if ( !bPlayerSound )
 	{
 		return;
@@ -6083,13 +6047,6 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 		return 0;
 	}
 
-	
-	if ( toolframework->InToolMode() )
-	{	
-		// If the active tool does not want game sounds to be played, return if the sound did not originate from a tool.
-		if ( !toolframework->ShouldGamePlaySounds() && !params.bToolSound )
-			return 0;
-	}
 
 	if ( snd_filter.GetString()[ 0 ] && !V_stristr( sndname, snd_filter.GetString() ) )
 	{
@@ -6256,11 +6213,6 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 	ch->initialStreamPosition = params.initialStreamPosition;
 	ch->skipInitialSamples = params.skipInitialSamples;
 
-	if ( ch->userdata != 0 )
-	{
-		g_pSoundServices->GetToolSpatialization( ch->userdata, ch->guid, si );
-	}
-
 	CAudioSource *pSource = nullptr;
 
 	ch->flags.isSentence = false;
@@ -6421,7 +6373,7 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 	// If a client can't hear a sound when they FIRST receive the StartSound message,
 	// the client will never be able to hear that sound. This is so that out of 
 	// range sounds don't fill the playback buffer.  For streaming sounds, we bypass this optimization.
-	if ( !params.staticsound && BChannelLowVolume( ch, 0 ) && !toolframework->IsToolRecording() )
+	if ( !params.staticsound && BChannelLowVolume( ch, 0 ) )
 	{
 		// Looping sounds don't use this optimization because they should stick around until they're killed.
 		// Also bypass for speech (GetSentence)
@@ -6472,25 +6424,20 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 		else
 		{
 			int skipSamples = -delaySamples;
-			if ( ch->sfx->pSource->GetType() != CAudioSource::AUDIO_SOURCE_MP3)
+			int totalSamples = ch->sfx->pSource->SampleCount();
+			if ( ch->sfx->pSource->IsLooped() )
 			{
-				// For MP3, SampleCount() is inaccurate (it returns size in bytes of the Mp3 file, not the number of samples).
-				// It makes this whole test incorrect. Also MP3 does not support correctly looping either. Don't optimize for MP3 here.
-				int totalSamples = ch->sfx->pSource->SampleCount();
-				if ( ch->sfx->pSource->IsLooped() )
-				{
-					skipSamples = skipSamples % totalSamples;
-				}
+				skipSamples = skipSamples % totalSamples;
+			}
 
-				if ( skipSamples >= totalSamples )
+			if ( skipSamples >= totalSamples )
+			{
+				if ( snd_report_verbose_error.GetBool() )
 				{
-					if ( snd_report_verbose_error.GetBool() )
-					{
-						Msg( "%s(%d): Negative delay greater than sound length for sound '%s'.\n", __FILE__, __LINE__, sndname );
-					}
-					S_FreeChannel( ch );
-					return 0;
+					Msg( "%s(%d): Negative delay greater than sound length for sound '%s'.\n", __FILE__, __LINE__, sndname );
 				}
+				S_FreeChannel( ch );
+				return 0;
 			}
 
 			ch->pitch = ch->basePitch * 0.01f;
@@ -6561,8 +6508,6 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 			CDebugOverlay::AddTextOverlay( ch->origin, 2.0f, sndname );
 		}
 	}
-
-	g_pSoundServices->OnSoundStarted( ch->guid, params, sndname );
 
 	return ch->guid;
 }
@@ -7539,7 +7484,7 @@ void S_StartQueuedSounds()
 }
 
 static std::unordered_map< HSOUNDSCRIPTHASH, int > s_SoundsPrintedLastUpdate;
-void OnSndShowEdgeChanged( IConVar *var, const char *pOldValue, float flOldValue )
+void OnSndShowEdgeChanged( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	s_SoundsPrintedLastUpdate.clear();
 }
@@ -8487,7 +8432,7 @@ void S_PurgeSoundsDueToLanguageChange()
 			}
 
 			pSfx->pSource->CacheUnload();
-			delete pSfx->pSource;
+			CAudioSource::Delete( pSfx->pSource );
 			pSfx->pSource = nullptr;
 		}
 	}
@@ -8742,7 +8687,7 @@ float S_GetMono16Samples( const char *pszName, std::vector< short >& sampleList 
 		}
 	}
 
-	delete pMixer;
+	CAudioMixer::Delete( pMixer );
 
 	return duration;
 }

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -69,49 +67,6 @@ C_TEBreakModel::~C_TEBreakModel( void )
 
 
 //-----------------------------------------------------------------------------
-// Recording
-//-----------------------------------------------------------------------------
-static inline void RecordBreakModel( const Vector &start, const QAngle &angles, const Vector &size,
-	const Vector &vel, int nModelIndex, int nRandomization, int nCount, float flDuration, int nFlags )
-{
-	if ( !ToolsEnabled() )
-		return;
-
-	if ( clienttools->IsInRecordingMode() )
-	{
-		const model_t* pModel = (nModelIndex != 0) ? modelinfo->GetModel( nModelIndex ) : nullptr;
-		const char *pModelName = pModel ? modelinfo->GetModelName( pModel ) : "";
-
-		KeyValues *msg = new KeyValues( "TempEntity" );
-
- 		msg->SetInt( "te", TE_BREAK_MODEL );
- 		msg->SetString( "name", "TE_BreakModel" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetFloat( "originx", start.x );
-		msg->SetFloat( "originy", start.y );
-		msg->SetFloat( "originz", start.z );
-		msg->SetFloat( "anglesx", angles.x );
-		msg->SetFloat( "anglesy", angles.y );
-		msg->SetFloat( "anglesz", angles.z );
-		msg->SetFloat( "sizex", size.x );
-		msg->SetFloat( "sizey", size.y );
-		msg->SetFloat( "sizez", size.z );
-		msg->SetFloat( "velx", vel.x );
-		msg->SetFloat( "vely", vel.y );
-		msg->SetFloat( "velz", vel.z );
-  		msg->SetString( "model", pModelName );
-		msg->SetInt( "randomization", nRandomization );
-		msg->SetInt( "count", nCount );
-		msg->SetFloat( "duration", flDuration );
-		msg->SetInt( "flags", nFlags );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
-}
-
-
-//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void TE_BreakModel( IRecipientFilter& filter, float delay,
@@ -119,7 +74,6 @@ void TE_BreakModel( IRecipientFilter& filter, float delay,
 	int modelindex, int randomization, int count, float time, int flags )
 {
 	tempents->BreakModel( pos, angles, size, vel, randomization, time, count, modelindex, flags );
-	RecordBreakModel( pos, angles, size, vel, randomization, time, count, modelindex, flags ); 
 }
 
 
@@ -132,8 +86,6 @@ void C_TEBreakModel::PostDataUpdate( DataUpdateType_t updateType )
 
 	tempents->BreakModel( m_vecOrigin, m_angRotation, m_vecSize, m_vecVelocity,
 		m_nRandomization, m_fTime, m_nCount, m_nModelIndex, m_nFlags );
-	RecordBreakModel( m_vecOrigin, m_angRotation, m_vecSize, m_vecVelocity,
-		m_nRandomization, m_fTime, m_nCount, m_nModelIndex, m_nFlags ); 
 }
 
 void TE_BreakModel( IRecipientFilter& filter, float delay, KeyValues *pKeyValues )

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "edict.h"
 #include "eiface.h"
@@ -38,13 +36,13 @@ public:
 
 	DECLARE_CLASS( CItemNvgs, CItem );
 
-	void Spawn( void )
+	void Spawn_Impl( void )
 	{ 
 		Precache( );
-		BaseClass::Spawn( );
+		BaseClass::Spawn_Impl( );
 	}
 	
-	void Precache( void )
+	void Precache_Impl( void )
 	{
 		PrecacheScriptSound( "BaseCombatCharacter.ItemPickup2" );
 	}

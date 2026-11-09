@@ -6,8 +6,6 @@
 //			entities is done through this object.
 //-----------------------------------------------------------------------------
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "const.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"
@@ -189,7 +187,7 @@ void CClientEntityList::RecomputeHighestEntityUsed( void )
 C_BaseEntity* CClientEntityList::GetBaseEntity( int entnum )
 {
 	IClientUnknown *pEnt = GetListedEntity( entnum );
-	return pEnt ? pEnt->GetBaseEntity() : 0;
+	return pEnt ? EntityCast<C_BaseEntity>( pEnt->GetBaseEntity() ) : 0;
 }
 
 
@@ -224,7 +222,7 @@ IClientRenderable* CClientEntityList::GetClientRenderableFromHandle( ClientEntit
 C_BaseEntity* CClientEntityList::GetBaseEntityFromHandle( ClientEntityHandle_t hEnt )
 {
 	IClientUnknown *pEnt = GetClientUnknownFromHandle( hEnt );
-	return pEnt ? pEnt->GetBaseEntity() : 0;
+	return pEnt ? EntityCast<C_BaseEntity>( pEnt->GetBaseEntity() ) : 0;
 }
 
 
@@ -340,7 +338,7 @@ void CClientEntityList::OnAddEntity( IHandleEntity *pEnt, CBaseHandle handle )
 	AddPVSNotifier( pUnknown );
 
 	// Store it in a special list for fast iteration if it's a C_BaseEntity.
-	C_BaseEntity *pBaseEntity = pUnknown->GetBaseEntity();
+	C_BaseEntity *pBaseEntity = EntityCast<C_BaseEntity>( pUnknown->GetBaseEntity() );
 	if ( pBaseEntity )
 	{
 		pCache->m_BaseEntitiesIndex = m_BaseEntities.emplace( pBaseEntity );
@@ -388,7 +386,7 @@ void CClientEntityList::OnRemoveEntity( IHandleEntity *pEnt, CBaseHandle handle 
 	// If this is a PVS notifier, remove it.
 	RemovePVSNotifier( pUnknown );
 
-	C_BaseEntity *pBaseEntity = pUnknown->GetBaseEntity();
+	C_BaseEntity *pBaseEntity = EntityCast<C_BaseEntity>( pUnknown->GetBaseEntity() );
 
 	if ( pBaseEntity )
 	{
@@ -420,7 +418,7 @@ C_BaseEntity* CClientEntityList::FirstBaseEntity() const
 		if ( pList->m_pEntity )
 		{
 			IClientUnknown *pUnk = static_cast<IClientUnknown*>( pList->m_pEntity );
-			C_BaseEntity *pRet = pUnk->GetBaseEntity();
+			C_BaseEntity *pRet = EntityCast<C_BaseEntity>( pUnk->GetBaseEntity() );
 			if ( pRet )
 				return pRet;
 		}
@@ -448,7 +446,7 @@ C_BaseEntity* CClientEntityList::NextBaseEntity( C_BaseEntity *pEnt ) const
 		if ( pList->m_pEntity )
 		{
 			IClientUnknown *pUnk = static_cast<IClientUnknown*>( pList->m_pEntity );
-			C_BaseEntity *pRet = pUnk->GetBaseEntity();
+			C_BaseEntity *pRet = EntityCast<C_BaseEntity>( pUnk->GetBaseEntity() );
 			if ( pRet )
 				return pRet;
 		}

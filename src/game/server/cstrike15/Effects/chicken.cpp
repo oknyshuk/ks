@@ -1,8 +1,6 @@
 // chicken.cpp
 // An interactive, shootable chicken
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -55,7 +53,7 @@ constexpr auto CHICKEN_DISTANCE_RUN = 200.0f;
 constexpr auto CHICKEN_DISTANCE_WALK = 100.0f;
 
 //-----------------------------------------------------------------------
-CChicken::CChicken()
+CChicken::CChicken() : CImprovLocomotor( CImprovLocomotor::Kind::Chicken )
 {
 }
 
@@ -67,11 +65,11 @@ CChicken::~CChicken()
 
 
 //-----------------------------------------------------------------------
-void CChicken::Precache( void )
+void CChicken::Precache_Impl( void )
 {
 	SetModelName( MAKE_STRING( "models/chicken/chicken.mdl" ) );	// prop precache wants this
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	PrecacheModel( "models/chicken/chicken.mdl" );
 	PrecacheModel( "models/chicken/chicken_zombie.mdl" );
@@ -94,12 +92,12 @@ void CChicken::Precache( void )
 }
 
 //-----------------------------------------------------------------------
-void CChicken::Spawn( void )
+void CChicken::Spawn_Impl( void )
 {
 
 	SetModel( "models/chicken/chicken.mdl" );
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	SetNextThink( gpGlobals->curtime );
 	SetThink( &CChicken::ChickenThink );
@@ -323,7 +321,7 @@ void CChicken::FaceTowards( const Vector &target, float deltaT )
 	SetAbsAngles( angles );
 }
 
-int CChicken::OnTakeDamage( const CTakeDamageInfo &info )
+int CChicken::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	/*
 	if ( EconHolidays_IsHolidayActive( kHoliday_Halloween ) )
@@ -393,13 +391,13 @@ int CChicken::OnTakeDamage( const CTakeDamageInfo &info )
 	else
 	*/
 	{
-		return BaseClass::OnTakeDamage( info );
+		return BaseClass::OnTakeDamage_Impl( info );
 	}
 }
 
 
 //-----------------------------------------------------------------------
-void CChicken::Event_Killed( const CTakeDamageInfo &info )
+void CChicken::Event_Killed_Impl( const CTakeDamageInfo &info )
 {
 	EmitSound( "Chicken.Death" );
 
@@ -419,7 +417,7 @@ void CChicken::Event_Killed( const CTakeDamageInfo &info )
 		UTIL_ClientPrintFilter( leaderfilter, HUD_PRINTTALK, "#Pet_Killed", CFmtStr( "%.0f", flFollowDuration ).Get() );
 	}
 
-	BaseClass::Event_Killed( info );
+	BaseClass::Event_Killed_Impl( info );
 }
 
 

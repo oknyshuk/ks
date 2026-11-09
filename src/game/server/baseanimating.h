@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
-import std;
 #include "reflect_annotations.h"
 #include "const.h"
 #include "shareddefs.h"
@@ -17,10 +15,7 @@ import std;
 #include "datacache/idatacache.h"
 
 struct animevent_t;
-class CIKContext;
 class CAnimationLayer;
-struct memhandle_t__;
-using memhandle_t = memhandle_t__ *;
 
 inline constexpr auto BCF_NO_ANIMATION_SKIP = ( 1 << 0 ); // Do not allow PVS animation skipping (mostly for attachments being critical to an entity)
 inline constexpr auto BCF_IS_IN_SPAWN = ( 1 << 1 ); // Is currently inside of spawn, always evaluate animations
@@ -56,18 +51,18 @@ public:
 	DECLARE_SERVERCLASS();
 	DECLARE_ENT_SCRIPTDESC();
 
-	virtual void SetModel( const char *szModelName );
-	virtual void Activate();
-	virtual void Spawn();
-	virtual void Precache();
-	virtual void SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
+	void SetModel_Impl( const char *szModelName );
+	void Activate_Impl();
+	void Spawn_Impl();
+	void Precache_Impl();
+	void SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways );
 
-	virtual void OnRestore();
+	void OnRestore_Impl();
 
 	CStudioHdr *GetModelPtr( void );
 	virtual void InvalidateMdlCache() { UnlockStudioHdr(); delete m_pStudioHdr; m_pStudioHdr = nullptr; }
 
-	virtual CBaseAnimating*	GetBaseAnimating() { return this; }
+	CBaseAnimating*	GetBaseAnimating_Impl() { return this; }
 
 	// Cycle access
 	void ForceCycle( float flCycle );
@@ -152,7 +147,7 @@ public:
 	virtual void GetBoneTransform( int iBone, matrix3x4_t &pBoneToWorld );
 	virtual void SetupBones( matrix3x4a_t *pBoneToWorld, int boneMask );
 	virtual void CalculateIKLocks( float currentTime );
-	virtual void Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts = true );
+	void Teleport_Impl( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts = true );
 
 	bool HasAnimEvent( int nSequence, int nEvent );
 	virtual	void DispatchAnimEvents ( CBaseAnimating *eventHandler ); // Handle events that have happend since last time called up until X seconds into the future
@@ -273,7 +268,7 @@ public:
 	// Maps the angle/position value you specify into the bone's start/end and sets the specified controller to the value.
 	float					SetBoneController ( int iController, float flValue );
 	
-	void					GetVelocity(Vector *vVelocity, AngularImpulse *vAngVelocity);
+	void					GetVelocity_Impl(Vector *vVelocity, AngularImpulse *vAngVelocity);
 
 	// these two need to move somewhere else
 	LocalFlexController_t GetNumFlexControllers( void );
@@ -292,11 +287,11 @@ public:
 	bool HasMovement( int iSequence );
 
 	void ReportMissingActivity( int iActivity );
-	virtual bool TestCollision( const Ray_t &ray, unsigned int fContentsMask, trace_t& tr );
-	virtual bool TestHitboxes( const Ray_t &ray, unsigned int fContentsMask, trace_t& tr );
+	bool TestCollision_Impl( const Ray_t &ray, unsigned int fContentsMask, trace_t& tr );
+	bool TestHitboxes_Impl( const Ray_t &ray, unsigned int fContentsMask, trace_t& tr );
 	class CBoneCache *GetBoneCache( void );
 	virtual void InvalidateBoneCache( void );
-	virtual int DrawDebugTextOverlays( void );
+	int DrawDebugTextOverlays_Impl( void );
 	virtual bool IsViewModel() const { return false; }
 	
 	// See note in code re: bandwidth usage!!!
@@ -319,7 +314,7 @@ public:
 	// for ragdoll vs. car
 	int GetHitboxesFrontside( int *boxList, int boxMax, const Vector &normal, float dist );
 
-	virtual void	ModifyOrAppendCriteria( AI_CriteriaSet& set );
+	void	ModifyOrAppendCriteria_Impl( AI_CriteriaSet& set );
 
 	// Send a muzzle flash event to the client for this entity.
 	void DoMuzzleFlash();
@@ -426,8 +421,8 @@ protected:
 	int					m_iIKCounter;
 
 public:
-	Vector	GetStepOrigin( void ) const;
-	QAngle	GetStepAngles( void ) const;
+	Vector	GetStepOrigin_Impl( void ) const;
+	QAngle	GetStepAngles_Impl( void ) const;
 
 protected:
 	bool				m_bSequenceFinished;// flag set when StudioAdvanceFrame moves across a frame boundry

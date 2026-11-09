@@ -14,35 +14,34 @@ struct democmdinfo_t;
 class IDemoActionManager
 {
 public:
-	virtual				~IDemoActionManager( void ) {}
 
-	virtual void		Init( void ) = 0;
-	virtual void		Shutdown( void ) = 0;
+	void		Init( void );
+	void		Shutdown( void );
 
-	virtual void		StartPlaying( char const *demfilename ) = 0;
-	virtual void		StopPlaying() = 0;
+	void		StartPlaying( char const *demfilename );
+	void		StopPlaying();
 
-	virtual void		Update( bool newframe, int demoframe, float demotime ) = 0;
+	void		Update( bool newframe, int demoframe, float demotime );
 
-	virtual void		SaveToBuffer( ks::text_writer& buf ) = 0;
-	virtual void		SaveToFile( void ) = 0;
+	void		SaveToBuffer( ks::text_writer& buf );
+	void		SaveToFile( void );
 
-	virtual char const	*GetCurrentDemoFile( void ) = 0;
+	char const	*GetCurrentDemoFile( void );
 
-	virtual int			GetActionCount( void ) = 0;
-	virtual CBaseDemoAction *GetAction( int index ) = 0;
-	virtual void		AddAction( CBaseDemoAction *action ) = 0;
-	virtual void		RemoveAction( CBaseDemoAction *action ) = 0;
+	int			GetActionCount( void );
+	CBaseDemoAction *GetAction( int index );
+	void		AddAction( CBaseDemoAction *action );
+	void		RemoveAction( CBaseDemoAction *action );
 
-	virtual bool		IsDirty( void ) const = 0;
-	virtual void		SetDirty( bool dirty ) = 0;
+	bool		IsDirty( void ) const;
+	void		SetDirty( bool dirty );
 
-	virtual void		ReloadFromDisk( void ) = 0;
+	void		ReloadFromDisk( void );
 
-	virtual void		DispatchEvents() = 0;
-	virtual void		InsertFireEvent( CBaseDemoAction *action ) = 0;
+	void		DispatchEvents();
+	void		InsertFireEvent( CBaseDemoAction *action );
 
-	virtual bool		OverrideView( democmdinfo_t& info, int tick ) = 0;
+	bool		OverrideView( democmdinfo_t& info, int tick );
 };
 
 extern IDemoActionManager *demoaction;

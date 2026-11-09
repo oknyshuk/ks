@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2001 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "edict.h"
 #include "eiface.h"
 #include "dt_send.h"
@@ -74,18 +72,18 @@ CAI_Expresser *CBaseMultiplayerPlayer::CreateExpresser( void )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CBaseMultiplayerPlayer::PostConstructor( const char *szClassname )
+void CBaseMultiplayerPlayer::PostConstructor_Impl( const char *szClassname )
 {
-	BaseClass::PostConstructor( szClassname );
+	BaseClass::PostConstructor_Impl( szClassname );
 	CreateExpresser();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CBaseMultiplayerPlayer::ModifyOrAppendCriteria( AI_CriteriaSet& criteriaSet )
+void CBaseMultiplayerPlayer::ModifyOrAppendCriteria_Impl( AI_CriteriaSet& criteriaSet )
 {
-	BaseClass::ModifyOrAppendCriteria( criteriaSet );
+	BaseClass::ModifyOrAppendCriteria_Impl( criteriaSet );
 
 	ModifyOrAppendPlayerCriteria( criteriaSet );
 }
@@ -200,11 +198,11 @@ int	CBaseMultiplayerPlayer::CalculateTeamBalanceScore( void )
 	return iScore;
 }
 
-void CBaseMultiplayerPlayer::Spawn( void )
+void CBaseMultiplayerPlayer::Spawn_Impl( void )
 {
 	ResetPerLifeCounters();
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 void CBaseMultiplayerPlayer::AwardAchievement( int iAchievement, int iCount )

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "gameui_util.h"
 #include "engineinterface.h"
 
@@ -84,23 +82,8 @@ void GameUI_MakeSafeName( const char *oldName, char *newName, int newNameBufSize
 //-----------------------------------------------------------------------------
 // Unused :: char *VarArgs( const char *format, ... );
 
-//-----------------------------------------------------------------------------
-// This version is simply used to make reading convars simpler.
-// Writing convars isn't allowed in this mode
-//-----------------------------------------------------------------------------
-class CEmptyGameUIConVar : public ConVar
-{
-public:
-	CEmptyGameUIConVar() : ConVar( "", "0" ) {}
-	// Used for optimal read access
-	virtual void SetValue( const char *pValue ) {}
-	virtual void SetValue( float flValue ) {}
-	virtual void SetValue( int nValue ) {}
-	virtual const char *GetName( void ) const { return ""; }
-	virtual bool IsFlagSet( int nFlags ) const { return false; }
-};
-
-static CEmptyGameUIConVar s_EmptyConVar;
+// Used to make reading convars simpler; writing convars isn't allowed in this mode
+static CEmptyConVar s_EmptyConVar;
 
 // Helper for splitscreen ConVars
 CGameUIConVarRef::CGameUIConVarRef( const char *pName )
@@ -155,7 +138,7 @@ void CGameUIConVarRef::Init( const char *pName, bool bIgnoreMissing )
 	}
 }
 
-CGameUIConVarRef::CGameUIConVarRef( IConVar *pConVar )
+CGameUIConVarRef::CGameUIConVarRef( ConVar *pConVar )
 {
 	cv_t &info = m_Info[ 0 ];
 	info.m_pConVar = pConVar ? pConVar : &s_EmptyConVar;

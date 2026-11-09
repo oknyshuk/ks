@@ -38,19 +38,6 @@ private:
 	bool	m_bUseClipHeight;
 };
 
-class WaterDebrisEffect : public CSimpleEmitter
-{
-public:
-	explicit WaterDebrisEffect( const char *pDebugName ) : CSimpleEmitter( pDebugName ) {}
-
-	static WaterDebrisEffect* Create( const char *pDebugName );
-
-	virtual float UpdateAlpha( const SimpleParticle *pParticle );
-
-private:
-	WaterDebrisEffect( const WaterDebrisEffect & );
-};
-
 extern void FX_WaterRipple( const Vector &origin, float scale, Vector *pColor, float flLifetime=1.5, float flAlpha=1 );
 extern void FX_GunshotSplash( const Vector &origin, const Vector &normal, float scale );
 extern void FX_GunshotSlimeSplash( const Vector &origin, const Vector &normal, float scale );

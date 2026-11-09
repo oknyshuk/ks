@@ -3,8 +3,6 @@
 
 // Purpose: Precaches and defs for entities and other data that must always be available.
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -90,8 +88,8 @@ private:
 public:
 	DECLARE_CLASS( CInfoGameEventProxy, CPointEntity );
 
-	void Spawn();
-	int UpdateTransmitState();
+	void Spawn_Impl();
+	int UpdateTransmitState_Impl();
 	[[= ks::reflect::Input{ .name = "GenerateGameEvent", .type = FIELD_VOID } ]] void InputGenerateGameEvent( inputdata_t &inputdata );
 
 	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata ) { m_bDisabled = false; }
@@ -105,9 +103,9 @@ public:
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CInfoGameEventProxy::Spawn()
+void CInfoGameEventProxy::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	if( GetSpawnFlags() & SF_GAME_EVENT_PROXY_AUTO_VISIBILITY )
 	{
@@ -119,7 +117,7 @@ void CInfoGameEventProxy::Spawn()
 //-----------------------------------------------------------------------------
 // Purpose: Always transmitted to clients
 //-----------------------------------------------------------------------------
-int CInfoGameEventProxy::UpdateTransmitState()
+int CInfoGameEventProxy::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
@@ -184,11 +182,12 @@ class CDecal : public CPointEntity
 public:
 	DECLARE_CLASS( CDecal, CPointEntity );
 
-	void	Spawn( void );
-	bool	KeyValue( const char *szKeyName, const char *szValue );
+	void	Spawn_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
 
 	// Need to apply static decals here to get them into the signon buffer for the server appropriately
-	virtual void Activate();
+	void Activate_Impl();
 
 	void	TriggerDecal( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
@@ -214,7 +213,7 @@ IMPLEMENT_REFLECT_DATAMAP( CDecal )
 LINK_ENTITY_TO_CLASS( infodecal, CDecal );
 
 // UNDONE:  These won't get sent to joining players in multi-player
-void CDecal::Spawn( void )
+void CDecal::Spawn_Impl( void )
 {
 	if ( m_nTexture < 0 || 
 		(gpGlobals->deathmatch && HasSpawnFlags( SF_DECAL_NOTINDEATHMATCH )) )
@@ -224,9 +223,9 @@ void CDecal::Spawn( void )
 	} 
 }
 
-void CDecal::Activate()
+void CDecal::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( !GetEntityName() )
 	{
@@ -307,7 +306,7 @@ CBaseEntity *CDecal::GetDecalEntityAndPosition( Vector *pPosition, bool bStatic 
 		{
 			UTIL_TraceLine( start, end, MASK_SOLID_BRUSHONLY, this, COLLISION_GROUP_NONE, &trace );
 		}
-		if ( trace.DidHitNonWorldEntity() )
+		if ( TraceDidHitNonWorldEntity( trace ) )
 		{
 			*pPosition = trace.endpos;
 			return trace.Ent<CBaseEntity>();
@@ -373,7 +372,7 @@ void CDecal::StaticDecal( void )
 }
 
 
-bool CDecal::KeyValue( const char *szKeyName, const char *szValue )
+bool CDecal::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "texture"))
 	{
@@ -387,7 +386,7 @@ bool CDecal::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
@@ -401,11 +400,12 @@ class CProjectedDecal : public CPointEntity
 public:
 	DECLARE_CLASS( CProjectedDecal, CPointEntity );
 
-	void	Spawn( void );
-	bool	KeyValue( const char *szKeyName, const char *szValue );
+	void	Spawn_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
 
 	// Need to apply static decals here to get them into the signon buffer for the server appropriately
-	virtual void Activate();
+	void Activate_Impl();
 
 	void	TriggerDecal( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
@@ -429,7 +429,7 @@ IMPLEMENT_REFLECT_DATAMAP( CProjectedDecal )
 LINK_ENTITY_TO_CLASS( info_projecteddecal, CProjectedDecal );
 
 // UNDONE:  These won't get sent to joining players in multi-player
-void CProjectedDecal::Spawn( void )
+void CProjectedDecal::Spawn_Impl( void )
 {
 	if ( m_nTexture < 0 || 
 		(gpGlobals->deathmatch && HasSpawnFlags( SF_DECAL_NOTINDEATHMATCH )) )
@@ -439,9 +439,9 @@ void CProjectedDecal::Spawn( void )
 	} 
 }
 
-void CProjectedDecal::Activate()
+void CProjectedDecal::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( !GetEntityName() )
 	{
@@ -487,7 +487,7 @@ void CProjectedDecal::StaticDecal( void )
 }
 
 
-bool CProjectedDecal::KeyValue( const char *szKeyName, const char *szValue )
+bool CProjectedDecal::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "texture"))
 	{
@@ -501,7 +501,7 @@ bool CProjectedDecal::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
@@ -523,7 +523,8 @@ IMPLEMENT_REFLECT_SERVERCLASS( CWorld, DT_WORLD )
 //
 // Just to ignore the "wad" field.
 //
-bool CWorld::KeyValue( const char *szKeyName, const char *szValue )
+extern void Game_SetOneWayTransition();
+bool CWorld::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if ( FStrEq(szKeyName, "skyname") )
 	{
@@ -536,7 +537,6 @@ bool CWorld::KeyValue( const char *szKeyName, const char *szValue )
 		// Single player only.  Clear save directory if set
 		if ( std::atoi(szValue) )
 		{
-			extern void Game_SetOneWayTransition();
 			Game_SetOneWayTransition();
 		}
 	}
@@ -557,7 +557,7 @@ bool CWorld::KeyValue( const char *szKeyName, const char *szValue )
 		SetTimeOfDay( std::atoi( szValue ) );
 	}
 	else
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 
 	return true;
 }
@@ -610,7 +610,7 @@ CWorld::~CWorld()
 //------------------------------------------------------------------------------
 // Add a decal to the world
 //------------------------------------------------------------------------------
-void CWorld::DecalTrace( trace_t *pTrace, char const *decalName)
+void CWorld::DecalTrace_Impl( trace_t *pTrace, char const *decalName)
 {
 	int index = decalsystem->GetDecalIndexForName( decalName );
 	if ( index < 0 )
@@ -638,7 +638,7 @@ void CWorld::RegisterSharedEvents( void )
 }
 
 
-void CWorld::Spawn( void )
+void CWorld::Spawn_Impl( void )
 {
 	SetLocalOrigin( vec3_origin );
 	SetLocalAngles( vec3_angle );
@@ -704,7 +704,7 @@ const char *GetDefaultLightstyleString( int styleIndex )
 string_t g_iszFuncBrushClassname = NULL_STRING;
 
 
-void CWorld::Precache( void )
+void CWorld::Precache_Impl( void )
 {
 	COM_TimestampedLog( "CWorld::Precache - Start" );
 
@@ -840,9 +840,9 @@ void CWorld::Precache( void )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CWorld::UpdateOnRemove( void )
+void CWorld::UpdateOnRemove_Impl( void )
 {
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 //-----------------------------------------------------------------------------

@@ -5,8 +5,6 @@
 // AI Navigation entities
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -44,6 +42,7 @@ import ks.tier1;
 #include "collisionutils.h"
 #include "team.h"
 #include "nav_entities.h"
+#include "props.h"
 
 //--------------------------------------------------------------------------------------------------------
 IMPLEMENT_REFLECT_DATAMAP( CFuncNavBlocker )
@@ -55,9 +54,9 @@ LINK_ENTITY_TO_CLASS( func_nav_blocker, CFuncNavBlocker );
 std::vector<CFuncNavBlocker *> CFuncNavBlocker::gm_NavBlockers;
 
 //-----------------------------------------------------------------------------------------------------
-int CFuncNavBlocker::DrawDebugTextOverlays( void )
+int CFuncNavBlocker::DrawDebugTextOverlays_Impl( void )
 {
-	int offset = BaseClass::DrawDebugTextOverlays();
+	int offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -118,18 +117,18 @@ void CFuncNavBlocker::UpdateBlocked()
 
 //--------------------------------------------------------------------------------------------------------
 // Forces nav areas to unblock when the nav blocker is deleted (round restart) so flow can compute properly
-void CFuncNavBlocker::UpdateOnRemove( void )
+void CFuncNavBlocker::UpdateOnRemove_Impl( void )
 {
 	UnblockNav();
 
 	ks::erase_first( gm_NavBlockers, this );
 
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 
 //--------------------------------------------------------------------------------------------------------
-void CFuncNavBlocker::Spawn( void )
+void CFuncNavBlocker::Spawn_Impl( void )
 {
 	gm_NavBlockers.push_back( this );
 
@@ -277,17 +276,19 @@ class CFuncNavObstruction : public CBaseEntity, public INavAvoidanceObstacle
 	DECLARE_CLASS( CFuncNavObstruction, CBaseEntity );
 
 public:
-	void Spawn();
-	virtual void UpdateOnRemove( void );
+	CFuncNavObstruction( void ) : INavAvoidanceObstacle( INavAvoidanceObstacle::Kind::FuncNavObstruction ) { }
+
+	void Spawn_Impl();
+	void UpdateOnRemove_Impl( void );
 
 	void InputEnable( inputdata_t &inputdata );
 	void InputDisable( inputdata_t &inputdata );
 
-	virtual bool IsPotentiallyAbleToObstructNavAreas( void ) const { return true; }		// could we at some future time obstruct nav?
-	virtual float GetNavObstructionHeight( void ) const { return JumpCrouchHeight; }	// height at which to obstruct nav areas
-	virtual bool CanObstructNavAreas( void ) const { return !m_bDisabled; }				// can we obstruct nav right this instant?
-	virtual CBaseEntity *GetObstructingEntity( void ) { return this; }
-	virtual void OnNavMeshLoaded( void )
+	bool IsPotentiallyAbleToObstructNavAreas( void ) const { return true; }		// could we at some future time obstruct nav?
+	float GetNavObstructionHeight( void ) const { return JumpCrouchHeight; }	// height at which to obstruct nav areas
+	bool CanObstructNavAreas( void ) const { return !m_bDisabled; }				// can we obstruct nav right this instant?
+	CBaseEntity *GetObstructingEntity( void ) { return this; }
+	void OnNavMeshLoaded( void )
 	{
 		if ( !m_bDisabled )
 		{
@@ -295,7 +296,7 @@ public:
 		}
 	}
 
-	int DrawDebugTextOverlays( void );
+	int DrawDebugTextOverlays_Impl( void );
 
 	bool operator()( CNavArea *area );	// functor that obstructs areas in our extent
 
@@ -308,6 +309,62 @@ private:
 
 
 //--------------------------------------------------------------------------------------------------------
+// INavAvoidanceObstacle methods: forward to the concrete class (CPhysicsProp or CFuncNavObstruction) according to the Kind
+//
+bool INavAvoidanceObstacle::IsPotentiallyAbleToObstructNavAreas( void ) const
+{
+	switch ( m_obstacleKind )
+	{
+	case Kind::PhysicsProp:			return static_cast< const CPhysicsProp * >( this )->IsPotentiallyAbleToObstructNavAreas();
+	case Kind::FuncNavObstruction:	return static_cast< const CFuncNavObstruction * >( this )->IsPotentiallyAbleToObstructNavAreas();
+	}
+
+	std::unreachable();
+}
+
+float INavAvoidanceObstacle::GetNavObstructionHeight( void ) const
+{
+	switch ( m_obstacleKind )
+	{
+	case Kind::PhysicsProp:			return static_cast< const CPhysicsProp * >( this )->GetNavObstructionHeight();
+	case Kind::FuncNavObstruction:	return static_cast< const CFuncNavObstruction * >( this )->GetNavObstructionHeight();
+	}
+
+	std::unreachable();
+}
+
+bool INavAvoidanceObstacle::CanObstructNavAreas( void ) const
+{
+	switch ( m_obstacleKind )
+	{
+	case Kind::PhysicsProp:			return static_cast< const CPhysicsProp * >( this )->CanObstructNavAreas();
+	case Kind::FuncNavObstruction:	return static_cast< const CFuncNavObstruction * >( this )->CanObstructNavAreas();
+	}
+
+	std::unreachable();
+}
+
+CBaseEntity *INavAvoidanceObstacle::GetObstructingEntity( void )
+{
+	switch ( m_obstacleKind )
+	{
+	case Kind::PhysicsProp:			return static_cast< CPhysicsProp * >( this )->GetObstructingEntity();
+	case Kind::FuncNavObstruction:	return static_cast< CFuncNavObstruction * >( this )->GetObstructingEntity();
+	}
+
+	std::unreachable();
+}
+
+void INavAvoidanceObstacle::OnNavMeshLoaded( void )
+{
+	switch ( m_obstacleKind )
+	{
+	case Kind::PhysicsProp:			static_cast< CPhysicsProp * >( this )->OnNavMeshLoaded();			break;
+	case Kind::FuncNavObstruction:	static_cast< CFuncNavObstruction * >( this )->OnNavMeshLoaded();	break;
+	}
+}
+
+//--------------------------------------------------------------------------------------------------------
 IMPLEMENT_REFLECT_DATAMAP( CFuncNavObstruction )
 
 
@@ -315,9 +372,9 @@ LINK_ENTITY_TO_CLASS( func_nav_avoidance_obstacle, CFuncNavObstruction );
 
 
 //-----------------------------------------------------------------------------------------------------
-int CFuncNavObstruction::DrawDebugTextOverlays( void )
+int CFuncNavObstruction::DrawDebugTextOverlays_Impl( void )
 {
-	int offset = BaseClass::DrawDebugTextOverlays();
+	int offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -336,16 +393,16 @@ int CFuncNavObstruction::DrawDebugTextOverlays( void )
 
 
 //--------------------------------------------------------------------------------------------------------
-void CFuncNavObstruction::UpdateOnRemove( void )
+void CFuncNavObstruction::UpdateOnRemove_Impl( void )
 {
 	TheNavMesh->UnregisterAvoidanceObstacle( this );
 
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 
 //--------------------------------------------------------------------------------------------------------
-void CFuncNavObstruction::Spawn( void )
+void CFuncNavObstruction::Spawn_Impl( void )
 {
 	SetMoveType( MOVETYPE_NONE );
 	SetModel( STRING( GetModelName() ) );

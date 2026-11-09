@@ -9,6 +9,7 @@ import ks.vstdlib;
 #include "filesystem.h"
 
 #include "localize/ilocalize.h"
+#include "appframework/apptiers.h"
 #include "UnicodeFileHelpers.h"
 
 
@@ -24,54 +25,53 @@ constexpr auto MAX_LOCALIZED_CHARS = 4096;
 //-----------------------------------------------------------------------------
 // Purpose: Maps token names to localized unicode strings
 //-----------------------------------------------------------------------------
-class CLocalize : public CTier2AppSystem< ILocalize >
+class CLocalize : public ILocalize
 {
-	typedef CTier2AppSystem< ILocalize > BaseClass;
-
-	// Methods of IAppSystem
+	// App system protocol (a tier 2 system)
 public:
-	virtual InitReturnVal_t Init();
+	bool Connect( CreateInterfaceFn factory ) { return AppSystemTier2Connect( factory ); }
+	void Disconnect() { AppSystemTier2Disconnect(); }
+	void *QueryInterface( const char *pInterfaceName ) { return nullptr; }
+	InitReturnVal_t Init();
+	void Shutdown() { AppSystemTier1Shutdown(); }
 
 	// ILocalize overrides
 public:
-	virtual bool AddFile( const char *fileName, const char *pPathID, bool bIncludeFallbackSearchPaths );
-	virtual void RemoveAll();
-	virtual wchar_t *Find(const char *pName);
-	virtual const wchar_t *FindSafe(const char *tokenName);
-	virtual int ConvertANSIToUnicode(const char *ansi, wchar_t *unicode, int unicodeBufferSizeInBytes);
-	virtual int ConvertUnicodeToANSI(const wchar_t *unicode, char *ansi, int ansiBufferSize);
-	virtual LocalizeStringIndex_t FindIndex(const char *pName);
-	virtual const char *GetNameByIndex(LocalizeStringIndex_t index);
-	virtual wchar_t *GetValueByIndex(LocalizeStringIndex_t index);
-	virtual LocalizeStringIndex_t GetFirstStringIndex();
-	virtual LocalizeStringIndex_t GetNextStringIndex(LocalizeStringIndex_t index);
-	virtual void AddString(const char *tokenName, wchar_t *unicodeString, const char *fileName);
-	virtual void SetValueByIndex(LocalizeStringIndex_t index, wchar_t *newValue);
-	virtual bool SaveToFile( const char *fileName );
-	virtual int GetLocalizationFileCount();
-	virtual const char *GetLocalizationFileName(int index);
-	virtual const char *GetFileNameByIndex(LocalizeStringIndex_t index);
-	virtual void ReloadLocalizationFiles( );
-	virtual void ConstructString(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const char *tokenName, KeyValues *dialogVariables);
-	virtual void ConstructString(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, LocalizeStringIndex_t unlocalizedTextSymbol, KeyValues *dialogVariables);
-	virtual void SetTextQuery( ILocalizeTextQuery *pQuery );
-	virtual void InstallChangeCallback( ILocalizationChangeCallback *pCallback );
-	virtual void RemoveChangeCallback( ILocalizationChangeCallback *pCallback );
-	virtual const char *FindAsUTF8( const char *pchTokenName );
-	virtual wchar_t* GetAsianFrequencySequence( const char * pLanguage );
+	bool AddFile( const char *fileName, const char *pPathID, bool bIncludeFallbackSearchPaths );
+	void RemoveAll();
+	wchar_t *Find(const char *pName);
+	const wchar_t *FindSafe(const char *tokenName);
+	int ConvertANSIToUnicode(const char *ansi, wchar_t *unicode, int unicodeBufferSizeInBytes);
+	int ConvertUnicodeToANSI(const wchar_t *unicode, char *ansi, int ansiBufferSize);
+	LocalizeStringIndex_t FindIndex(const char *pName);
+	const char *GetNameByIndex(LocalizeStringIndex_t index);
+	wchar_t *GetValueByIndex(LocalizeStringIndex_t index);
+	LocalizeStringIndex_t GetFirstStringIndex();
+	LocalizeStringIndex_t GetNextStringIndex(LocalizeStringIndex_t index);
+	void AddString(const char *tokenName, wchar_t *unicodeString, const char *fileName);
+	void SetValueByIndex(LocalizeStringIndex_t index, wchar_t *newValue);
+	bool SaveToFile( const char *fileName );
+	int GetLocalizationFileCount();
+	const char *GetLocalizationFileName(int index);
+	const char *GetFileNameByIndex(LocalizeStringIndex_t index);
+	void ReloadLocalizationFiles( );
+	void ConstructString(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const char *tokenName, KeyValues *dialogVariables);
+	void ConstructString(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, LocalizeStringIndex_t unlocalizedTextSymbol, KeyValues *dialogVariables);
+	const char *FindAsUTF8( const char *pchTokenName );
+	wchar_t* GetAsianFrequencySequence( const char * pLanguage );
 
-protected:
-	// internal "interface"
-	virtual void ConstructStringVArgsInternal(char *unicodeOutput, int unicodeBufferSizeInBytes, const char *formatString, int numFormatParameters, std::va_list argList);
-	virtual void ConstructStringVArgsInternal(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const wchar_t *formatString, int numFormatParameters, std::va_list argList);
+public:
+	// internal "interface" (reached through the ILocalize templates)
+	void ConstructStringVArgsInternal(char *unicodeOutput, int unicodeBufferSizeInBytes, const char *formatString, int numFormatParameters, std::va_list argList);
+	void ConstructStringVArgsInternal(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const wchar_t *formatString, int numFormatParameters, std::va_list argList);
 
-	virtual void ConstructStringKeyValuesInternal(char *unicodeOutput, int unicodeBufferSizeInBytes, const char *formatString, KeyValues *localizationVariables);
-	virtual void ConstructStringKeyValuesInternal(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const wchar_t *formatString, KeyValues *localizationVariables);
+	void ConstructStringKeyValuesInternal(char *unicodeOutput, int unicodeBufferSizeInBytes, const char *formatString, KeyValues *localizationVariables);
+	void ConstructStringKeyValuesInternal(wchar_t *unicodeOutput, int unicodeBufferSizeInBytes, const wchar_t *formatString, KeyValues *localizationVariables);
 
 	// Other public methods
 public:
 	CLocalize();
-	virtual ~CLocalize();
+	~CLocalize();
 
 	// returns whether a file has already been loaded
 	bool LocalizationFileIsLoaded( const char *name );
@@ -119,14 +119,11 @@ private:
 	void DiscardFastValueLookup();
 	int FindExistingValueIndex( const wchar_t *value );
 	bool ReadLocalizationFile( const char *pRelativePath, const char *pPathID );
-	void InvokeChangeCallbacks( );
-	virtual int ConvertANSIToUCS2(const char *ansi, ucs2 *unicode, int unicodeBufferSizeInBytes);
-	virtual int ConvertUCS2ToANSI(const ucs2 *unicode, char *ansi, int ansiBufferSize);
-	virtual void AddString(const char *tokenName, ucs2 *unicodeString, const char *fileName);
+	int ConvertANSIToUCS2(const char *ansi, ucs2 *unicode, int unicodeBufferSizeInBytes);
+	int ConvertUCS2ToANSI(const ucs2 *unicode, char *ansi, int ansiBufferSize);
+	void AddString(const char *tokenName, ucs2 *unicodeString, const char *fileName);
 	char m_szLanguage[64];
 	bool m_bUseOnlyLongestLanguageString;
-	bool m_bSuppressChangeCallbacks;
-	bool m_bQueuedChangeCallback;
 
 	// Stores the symbol lookup. String indices are handles given out through ILocalize: stable
 	// until RemoveAll, so they index this vector; m_LookupByName orders them by name. A multimap:
@@ -140,9 +137,7 @@ private:
 	const char *m_CurrentFile = nullptr;	// in ks::global_symbols()
 	std::vector< LocalizationFileInfo_t > m_LocalizationFiles;
 	std::multiset< int, FastValueLess >	m_FastValueLookup{ FastValueLess{ &m_Values } };
-	ILocalizeTextQuery *m_pQuery;
 	static CLocalize *s_pTable;
-	std::vector< ILocalizationChangeCallback* > m_ChangeCallbacks;
 
 	std::vector< std::byte > m_AsianFrequencySequence;
 	bool m_bAsianFrequencySequenceLoaded;
@@ -161,9 +156,6 @@ static InterfaceReg s_Reg_CLocalize_ILocalize( []() -> void * { return static_ca
 CLocalize::CLocalize()
 {
 	m_bUseOnlyLongestLanguageString = false;
-	m_bSuppressChangeCallbacks = false;
-	m_bQueuedChangeCallback = false;
-	m_pQuery = nullptr;
 	m_bAsianFrequencySequenceLoaded = false;
 }
 
@@ -183,41 +175,12 @@ CLocalize::~CLocalize()
 //-----------------------------------------------------------------------------
 InitReturnVal_t CLocalize::Init()
 {
-	InitReturnVal_t nRetVal = BaseClass::Init();
+	InitReturnVal_t nRetVal = AppSystemTier1Init();
 	if ( nRetVal != INIT_OK )
 		return nRetVal;
 
 	m_bUseOnlyLongestLanguageString = ( CommandLine()->FindParm("-all_languages") > 0 );
 	return INIT_OK;
-}
-
-
-//-----------------------------------------------------------------------------
-// Sets the callback used to check length of a localization string
-//-----------------------------------------------------------------------------
-void CLocalize::SetTextQuery( ILocalizeTextQuery *pQuery )
-{
-	m_pQuery = pQuery;
-}
-
-
-//-----------------------------------------------------------------------------
-// Add, remove, invoke localization string change callbacks
-//-----------------------------------------------------------------------------
-void CLocalize::InstallChangeCallback( ILocalizationChangeCallback *pCallback )
-{
-	if ( ks::find_index( m_ChangeCallbacks, pCallback ) != -1 )
-	{
-		Warning( "CLocalize::InstallChangeCallback: Attempted to add the same callback twice!\n" );
-		return;
-	}
-
-	m_ChangeCallbacks.push_back( pCallback );
-}
-
-void CLocalize::RemoveChangeCallback( ILocalizationChangeCallback *pCallback )
-{
-	ks::erase_first( m_ChangeCallbacks, pCallback );
 }
 
 
@@ -233,23 +196,6 @@ const char *CLocalize::FindAsUTF8( const char *pchTokenName )
 	static char rgchT[2048];
 	V_UnicodeToUTF8( pwch, rgchT, sizeof( rgchT ) );
 	return rgchT;
-}
-
-
-void CLocalize::InvokeChangeCallbacks( )
-{
-	// This is to prevent a ton of change callbacks while loading using -all_languages
-	if ( m_bSuppressChangeCallbacks )
-	{
-		m_bQueuedChangeCallback = true;
-		return;
-	}
-
-	int nCount = std::ssize( m_ChangeCallbacks );
-	for ( int i = 0; i < nCount; ++i )
-	{
-		m_ChangeCallbacks[i]->OnLocalizationChanged();
-	}
 }
 
 
@@ -567,10 +513,6 @@ bool CLocalize::AddAllLanguageFiles( const char *baseFileName )
 {
 	bool bSuccess = true;
 
-	// Each new language load could potentially change the string value
-	// This will suppress callbacks until we're done.
-	m_bSuppressChangeCallbacks = true;
-
 	{
 		// work out the path the files are in
 		char szFilePath[MAX_PATH];
@@ -609,13 +551,6 @@ bool CLocalize::AddAllLanguageFiles( const char *baseFileName )
 			file = g_pFullFileSystem->FindNext( hFind );
 		}
 		g_pFullFileSystem->FindClose( hFind );
-	}
-
-	m_bSuppressChangeCallbacks = false;
-	if ( m_bQueuedChangeCallback )
-	{
-		m_bQueuedChangeCallback = false;
-		InvokeChangeCallbacks();
 	}
 
 	return bSuccess;
@@ -815,31 +750,11 @@ void CLocalize::AddString(const char *pString, wchar_t *pValue, const char *file
 	else
 	{
 		// it's already in the table
-		if ( m_bUseOnlyLongestLanguageString )
-		{
-			// check which string is longer
-			wchar_t *newValue = pValue;
-			wchar_t *oldValue = GetValueByIndex( stridx );
-
-			// get the width of the string, using just the first font
-			if ( m_pQuery )
-			{
-				int newWide = m_pQuery->ComputeTextWidth( newValue );
-				int oldWide = m_pQuery->ComputeTextWidth( oldValue );
-				
-				// if the new one is shorter, don't let it be added
-				if (newWide < oldWide)
-					return;
-			}
-		}
-
 		// replace the current item
 		item.nameIndex = GetNameByIndex( stridx ) - &m_Names[ 0 ];
 		item.valueIndex = valueIndex;
 		item.filename = fileName ? ks::global_symbols().intern( fileName ).data() : m_CurrentFile;
 		m_Lookup[ stridx ] = item;
-
-		InvokeChangeCallbacks();
 	}
 }
 
@@ -967,8 +882,6 @@ void CLocalize::SetValueByIndex(LocalizeStringIndex_t index, wchar_t *newValue)
 		// copy the string into the old position
 		std::wcscpy(wstr, newValue);		
 	}
-
-	InvokeChangeCallbacks();
 }
 
 //-----------------------------------------------------------------------------
@@ -1440,3 +1353,9 @@ void CLocalize::ConstructStringKeyValuesInternal(wchar_t *unicodeOutput, int uni
 {
 	ConstructStringKeyValuesInternal_Impl<wchar_t>( unicodeOutput, unicodeBufferSizeInBytes, formatString, localizationVariables );
 }
+
+
+//-----------------------------------------------------------------------------
+// The ILocalize members forward to CLocalize
+//-----------------------------------------------------------------------------
+#include "facade/ilocalize.inl"

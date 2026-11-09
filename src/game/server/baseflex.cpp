@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.vstdlib;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -48,7 +46,6 @@ import ks.vstdlib;
 #include "sceneentity.h"
 #include "ai_baseactor.h"
 #include "datacache/imdlcache.h"
-#include "toolframework/itoolframework.h"
 #include "flexcycler.h"
 
 static ConVar scene_showlook( "scene_showlook", "0", FCVAR_ARCHIVE, "When playing back, show the directions of look events." );
@@ -112,11 +109,11 @@ CBaseFlex::~CBaseFlex( void )
 	m_SceneEvents.clear();
 }
 
-void CBaseFlex::SetModel( const char *szModelName )
+void CBaseFlex::SetModel_Impl( const char *szModelName )
 {
 	MDLCACHE_CRITICAL_SECTION();
 
-	BaseClass::SetModel( szModelName );
+	BaseClass::SetModel_Impl( szModelName );
 
 	for (LocalFlexController_t i = LocalFlexController_t(0); i < GetNumFlexControllers(); i++)
 	{
@@ -124,9 +121,9 @@ void CBaseFlex::SetModel( const char *szModelName )
 	}
 }
 
-CStudioHdr* CBaseFlex::OnNewModel()
+CStudioHdr* CBaseFlex::OnNewModel_Impl()
 {
-	return BaseClass::OnNewModel();
+	return BaseClass::OnNewModel_Impl();
 }
 
 void CBaseFlex::SetViewtarget( const Vector &viewtarget )
@@ -2158,9 +2155,9 @@ bool CBaseFlex::IsSuppressedFlexAnimation( CSceneEventInfo *info )
 // Purpose: Clear out body lean states that are invalidated with Teleport
 //-----------------------------------------------------------------------------
 
-void CBaseFlex::Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts )
+void CBaseFlex::Teleport_Impl( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts )
 {
-	BaseClass::Teleport( newPosition, newAngles, newVelocity, bUseSlowHighAccuracyContacts );
+	BaseClass::Teleport_Impl( newPosition, newAngles, newVelocity, bUseSlowHighAccuracyContacts );
 }
 
 //-----------------------------------------------------------------------------
@@ -2229,7 +2226,7 @@ void CFlexCycler::GenericCyclerSpawn(char *szModel, Vector vecMin, Vector vecMax
 	PrecacheModel( szModel );
 	SetModel( szModel );
 
-	CFlexCycler::Spawn( );
+	CFlexCycler::Spawn_Impl( );
 
 	UTIL_SetSize(this, vecMin, vecMax);
 
@@ -2243,7 +2240,7 @@ void CFlexCycler::GenericCyclerSpawn(char *szModel, Vector vecMin, Vector vecMax
 		Warning( "cycler_flex used on model %s without enough flexes.\n", szModel );
 }
 
-void CFlexCycler::Spawn( )
+void CFlexCycler::Spawn_Impl( )
 {
 	Precache();
 	/*
@@ -2321,7 +2318,7 @@ float predef_flexcontroller_values[7][30] = {
 //-----------------------------------------------------------------------------
 // Purpose: Changes sequences when shot
 //-----------------------------------------------------------------------------
-int CFlexCycler::OnTakeDamage( const CTakeDamageInfo &info )
+int CFlexCycler::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	int nSequence = GetSequence() + 1;
 	if (!IsValidSequence( nSequence ))
@@ -2381,7 +2378,7 @@ LocalFlexController_t CFlexCycler::LookupFlex( const char *szTarget  )
 }
 
 
-void CFlexCycler::Think( void )
+void CFlexCycler::Think_Impl( void )
 {
 	SetNextThink( gpGlobals->curtime + 0.1f );
 

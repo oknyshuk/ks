@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
 #include "hud.h"
 #include "hud_element_helper.h"
 #include "networkvar.h"
 #include "GameEventListener.h"
-import std;
 #undef new
 
 class CHud;
@@ -119,9 +117,9 @@ public:
 
 	virtual void OnSplitScreenStateChanged() {}
 
-public: // IGameEventListener Interface
+public: // Game event handler
 	
-	virtual void FireGameEvent( IGameEvent * event ) {}
+	void FireGameEvent( IGameEvent * event ) {}
 
 protected:
 	void InitCHudElementAfterConstruction( const char* pElementName );

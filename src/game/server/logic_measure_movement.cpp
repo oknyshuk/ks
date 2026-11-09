@@ -4,8 +4,6 @@
 // Purpose: This will measure the movement of a target entity and move
 // another entity to match the movement of the first.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -23,7 +21,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -54,7 +51,7 @@ class CLogicMeasureMovement : public CLogicalEntity
 	DECLARE_CLASS( CLogicMeasureMovement, CLogicalEntity );
 
 public:
-	virtual void Activate();
+	void Activate_Impl();
 
 private:
 	void SetMeasureTarget( const char *pName );
@@ -102,9 +99,9 @@ IMPLEMENT_REFLECT_DATAMAP( CLogicMeasureMovement )
 //-----------------------------------------------------------------------------
 // Methods to change various targets
 //-----------------------------------------------------------------------------
-void CLogicMeasureMovement::Activate()
+void CLogicMeasureMovement::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	SetMeasureTarget( STRING(m_strMeasureTarget) );
 	SetMeasureReference( STRING(m_strMeasureReference) );

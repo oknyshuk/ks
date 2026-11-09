@@ -20,58 +20,12 @@ import std;
 
 #include "audio/private/posix_stubs.h"
 #include "vox_private.h"
+#include "snd_sentence_mixer.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: This replaces the old sentence logic that was integrated with the
 //			sound code.  Now it is a hierarchical mixer.
 //-----------------------------------------------------------------------------
-class CSentenceMixer : public CAudioMixer
-{
-public:
-	CSentenceMixer( voxword_t *pWords );
-	~CSentenceMixer( void );
-
-	// return number of samples mixed
-	virtual int			MixDataToDevice( channel_t *pChannel, int sampleCount, int outputRate, int outputOffset );
-	virtual int			SkipSamples( channel_t *pChannel, int sampleCount, int outputRate, int outputOffset );
-	virtual bool		ShouldContinueMixing( void );
-
-	virtual CAudioSource*	GetSource( void );
-	
-	// get the current position (next sample to be mixed)
-	virtual int			GetSamplePosition( void );
-	virtual float		ModifyPitch( float pitch );
-	virtual float		GetVolumeScale( void );
-
-	// BUGBUG: These are only applied to the current word, not the whole sentence!!!!
-	virtual bool		IsSetSampleStartSupported() const;
-	virtual void		SetSampleStart( int newPosition );
-	virtual void		SetSampleEnd( int newEndPosition );
-
-	virtual void		SetStartupDelaySamples( int delaySamples );
-	virtual int			GetMixSampleSize() { return m_pCurrentWordMixer ? m_pCurrentWordMixer->GetMixSampleSize() : 0; }
-
-	virtual bool		IsReadyToMix();
-
-	virtual int			GetPositionForSave() { return GetSamplePosition(); }
-	virtual void		SetPositionFromSaved( int savedPosition ) { SetSampleStart( savedPosition ); }
-
-private:
-	CAudioMixer			*LoadWord( int nWordIndex );
-	void				FreeWord( int nWordIndex );
-
-	// identifies the active word
-	int					m_currentWordIndex;
-	CAudioMixer			*m_pCurrentWordMixer;
-
-	// set when a transition to a new word occurs
-	bool				m_bNewWord;
-
-	voxword_t			m_VoxWords[CVOXWORDMAX];
-	CAudioMixer			*m_pWordMixers[CVOXWORDMAX];
-	int					m_nNumWords;
-};
-
 CAudioMixer *CreateSentenceMixer( voxword_t *pWords )
 {
 	if ( pWords )
@@ -82,7 +36,7 @@ CAudioMixer *CreateSentenceMixer( voxword_t *pWords )
 	return nullptr;
 }
 
-CSentenceMixer::CSentenceMixer( voxword_t *pWords )
+CSentenceMixer::CSentenceMixer( voxword_t *pWords ) : CAudioMixer( AudioMixerKind::Sentence )
 {
 	// count the expected number of words
 	m_nNumWords = 0;
@@ -253,7 +207,7 @@ void CSentenceMixer::FreeWord( int nWord )
 {
 	if ( m_pWordMixers[nWord] )
 	{
-		delete m_pWordMixers[nWord];
+		CAudioMixer::Delete( m_pWordMixers[nWord] );
 		m_pWordMixers[nWord] = nullptr;
 	}	
 
@@ -266,7 +220,7 @@ void CSentenceMixer::FreeWord( int nWord )
 			if ( m_VoxWords[nWord].sfx->pSource->CanDelete() )
 			{
 				// free the source
-				delete m_VoxWords[nWord].sfx->pSource;
+				CAudioSource::Delete( m_VoxWords[nWord].sfx->pSource );
 				m_VoxWords[nWord].sfx->pSource = nullptr;
 			}
 		}

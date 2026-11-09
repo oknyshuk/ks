@@ -5,13 +5,11 @@
 // Purpose: Global object for storing gameplay hint strings for the UI to display.
 
 
-import ks.tier1;
 #include "igamesystem.h"
 
 #if !defined CS_GAMEPLAY_HINTS_H_ 
 #define CS_GAMEPLAY_HINTS_H_ 
 
-import std;
 
 struct CSGameplayHint_t;
 class CCSGameplayHints : public CAutoGameSystem

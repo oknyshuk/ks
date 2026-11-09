@@ -3,8 +3,6 @@
 
 // Purpose: Projects a texture into the world (like the flashlight)
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -94,7 +91,7 @@ void UTIL_ColorStringToLinearFloatColor( Vector &color, const char *pString )
 	color.z = tmp[2] * ( 1.0f / 255.0f ) * tmp[3];
 }
 
-bool CEnvProjectedTexture::KeyValue( const char *szKeyName, const char *szValue )
+bool CEnvProjectedTexture::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if ( FStrEq( szKeyName, "lightcolor" ) )
 	{
@@ -112,13 +109,13 @@ bool CEnvProjectedTexture::KeyValue( const char *szKeyName, const char *szValue 
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
 }
 
-bool CEnvProjectedTexture::GetKeyValue( const char *szKeyName, char *szValue, int iMaxLen )
+bool CEnvProjectedTexture::GetKeyValue_Impl( const char *szKeyName, char *szValue, int iMaxLen )
 {
 	if ( FStrEq( szKeyName, "lightcolor" ) )
 	{
@@ -130,7 +127,7 @@ bool CEnvProjectedTexture::GetKeyValue( const char *szKeyName, char *szValue, in
 		V_snprintf( szValue, iMaxLen, "%s", m_SpotlightTextureName.Get() );
 		return true;
 	}
-	return BaseClass::GetKeyValue( szKeyName, szValue, iMaxLen );
+	return BaseClass::GetKeyValue_Impl( szKeyName, szValue, iMaxLen );
 }
 
 void CEnvProjectedTexture::InputTurnOn( inputdata_t &inputdata )
@@ -224,7 +221,7 @@ void CEnvProjectedTexture::InputSetSpotlightTexture( inputdata_t &inputdata )
 	//V_strcpy( m_SpotlightTextureName.GetForModify(), inputdata.value.String() );
 }
 
-void CEnvProjectedTexture::Spawn( void )
+void CEnvProjectedTexture::Spawn_Impl( void )
 {
 	m_bState = ( ( GetSpawnFlags() & ENV_PROJECTEDTEXTURE_STARTON ) != 0 );
 	m_bAlwaysUpdate = ( ( GetSpawnFlags() & ENV_PROJECTEDTEXTURE_ALWAYSUPDATE ) != 0 );
@@ -245,7 +242,7 @@ void CEnvProjectedTexture::Spawn( void )
 			engine->LightStyle( m_iStyle, "m" );
 	}
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 void CEnvProjectedTexture::EnforceSingleProjectionRules( bool bWarnOnEnforcement )
@@ -272,12 +269,12 @@ void CEnvProjectedTexture::EnforceSingleProjectionRules( bool bWarnOnEnforcement
 	}
 }
 
-void CEnvProjectedTexture::Activate( void )
+void CEnvProjectedTexture::Activate_Impl( void )
 {
 	SetThink( &CEnvProjectedTexture::InitialThink );
 	SetNextThink( gpGlobals->curtime + 0.1f );
 
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( m_bState )
 	{
@@ -291,7 +288,7 @@ void CEnvProjectedTexture::InitialThink( void )
 	m_hTargetEntity = gEntList.FindEntityByName( nullptr, m_target );
 }
 
-int CEnvProjectedTexture::UpdateTransmitState()
+int CEnvProjectedTexture::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }

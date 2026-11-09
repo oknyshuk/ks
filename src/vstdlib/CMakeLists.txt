@@ -7,7 +7,6 @@ add_library(vstdlib OBJECT
     keyvaluessystem.cpp
     random.cpp
     vcover.cpp
-    eventsystem.cpp
     vstrtools.cpp
     vstdlib_strtools.cpp)
 
@@ -24,8 +23,6 @@ target_sources(ks_vstdlib PUBLIC
           ks.vstdlib-vstrtools.cppm
           ks.vstdlib-jobthread.cppm
           ks.vstdlib-cvar.cppm
-          ks.vstdlib-ieventsystem.cppm
-          ks.vstdlib-iprocessutils.cppm
           ks.vstdlib-callqueue.cppm)
 target_link_libraries(ks_vstdlib PUBLIC ks_tier1 PRIVATE ks_common_base)
 set_property(TARGET ks_vstdlib PROPERTY CXX_SCAN_FOR_MODULES ON)

@@ -3,8 +3,6 @@
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -104,13 +101,13 @@ class CFire : public CBaseEntity
 public:
 	DECLARE_CLASS( CFire, CBaseEntity );
 	
-	int DrawDebugTextOverlays(void);
+	int DrawDebugTextOverlays_Impl(void);
 
 	CFire( void );
 	
-	virtual void UpdateOnRemove( void );
+	void UpdateOnRemove_Impl( void );
 
-	void	Precache( void );
+	void	Precache_Impl( void );
 	void	Init( const Vector &position, float scale, float attackTime, float fuel, int flags, int fireType );
 	bool	GoOut();
 	
@@ -122,7 +119,7 @@ public:
 	
 	void	Scale( float end, float time );
 	void	AddHeat( float heat, bool selfHeat = false );
-	int		OnTakeDamage( const CTakeDamageInfo &info );
+	int		OnTakeDamage_Impl( const CTakeDamageInfo &info );
 
 	bool	IsBurning( void ) const;
 
@@ -133,8 +130,8 @@ public:
 
 	virtual	void Update( float simTime );
 
-	void	Spawn( void );
-	void	Activate( void );
+	void	Spawn_Impl( void );
+	void	Activate_Impl( void );
 	void	StartFire( void );
 	void	Start();
 	void	SetToOutSize()
@@ -144,9 +141,9 @@ public:
 
 	float	GetHeatLevel()	{ return m_flHeatLevel; }
 
-	virtual int UpdateTransmitState();
+	int UpdateTransmitState_Impl();
 
-	void DrawDebugGeometryOverlays(void) 
+	void DrawDebugGeometryOverlays_Impl(void) 
 	{
 		if (m_debugOverlays & OVERLAY_BBOX_BIT) 
 		{	
@@ -173,7 +170,7 @@ public:
 
 
 		}
-		BaseClass::DrawDebugGeometryOverlays();
+		BaseClass::DrawDebugGeometryOverlays_Impl();
 	}
 
 	void Disable();
@@ -580,7 +577,7 @@ CFire::CFire( void )
 //-----------------------------------------------------------------------------
 // UpdateOnRemove
 //-----------------------------------------------------------------------------
-void CFire::UpdateOnRemove( void )
+void CFire::UpdateOnRemove_Impl( void )
 {
 	//Stop any looping sounds that might be playing
 	StopSound( "Fire.Plasma" );
@@ -588,14 +585,14 @@ void CFire::UpdateOnRemove( void )
 	DestroyEffect();
 
 	// Chain at end to mimic destructor unwind order
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CFire::Precache( void )
+void CFire::Precache_Impl( void )
 {
 	if ( m_nFireType == FIRE_NATURAL )
 	{
@@ -705,9 +702,9 @@ void CFire::StartFire( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CFire::Spawn( void )
+void CFire::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	Precache();
 
@@ -732,7 +729,7 @@ void CFire::Spawn( void )
 	}
 }
 
-int CFire::UpdateTransmitState()
+int CFire::UpdateTransmitState_Impl()
 {
 	// Don't want to be FL_EDICT_DONTSEND because our fire entity may make us transmit.
 	return SetTransmitState( FL_EDICT_ALWAYS );
@@ -741,9 +738,9 @@ int CFire::UpdateTransmitState()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CFire::Activate( void )
+void CFire::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	
 	//See if we should start active
 	if ( !m_bDidActivate && ( m_spawnflags & SF_FIRE_START_ON ) )
@@ -1070,7 +1067,7 @@ void CFire::GoOutInSeconds( float seconds )
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
-int CFire::OnTakeDamage( const CTakeDamageInfo &info )
+int CFire::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	return 0;
 }
@@ -1203,8 +1200,8 @@ class CEnvFireSource : public CBaseEntity
 {
 	DECLARE_CLASS( CEnvFireSource, CBaseEntity );
 public:
-	void Spawn();
-	void Think();
+	void Spawn_Impl();
+	void Think_Impl();
 	void TurnOn();
 	void TurnOff();
 	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
@@ -1222,7 +1219,7 @@ IMPLEMENT_REFLECT_DATAMAP( CEnvFireSource )
 
 LINK_ENTITY_TO_CLASS( env_firesource, CEnvFireSource );
 
-void CEnvFireSource::Spawn()
+void CEnvFireSource::Spawn_Impl()
 {
 	if ( m_spawnflags & SF_FIRESOURCE_START_ON )
 	{
@@ -1234,7 +1231,7 @@ void CEnvFireSource::Spawn()
 	}
 }
 
-void CEnvFireSource::Think()
+void CEnvFireSource::Think_Impl()
 {
 	if ( !m_bEnabled )
 		return;
@@ -1284,8 +1281,8 @@ class CEnvFireSensor : public CBaseEntity
 {
 	DECLARE_CLASS( CEnvFireSensor, CBaseEntity );
 public:
-	void Spawn();
-	void Think();
+	void Spawn_Impl();
+	void Think_Impl();
 	void TurnOn();
 	void TurnOff();
 	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
@@ -1309,7 +1306,7 @@ IMPLEMENT_REFLECT_DATAMAP( CEnvFireSensor )
 
 LINK_ENTITY_TO_CLASS( env_firesensor, CEnvFireSensor );
 
-void CEnvFireSensor::Spawn()
+void CEnvFireSensor::Spawn_Impl()
 {
 	if ( m_spawnflags & SF_FIRESENSOR_START_ON )
 	{
@@ -1321,7 +1318,7 @@ void CEnvFireSensor::Spawn()
 	}
 }
 
-void CEnvFireSensor::Think()
+void CEnvFireSensor::Think_Impl()
 {
 	if ( !m_bEnabled )
 		return;
@@ -1402,9 +1399,9 @@ void CEnvFireSensor::InputDisable( inputdata_t &inputdata )
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CFire::DrawDebugTextOverlays( void ) 
+int CFire::DrawDebugTextOverlays_Impl( void ) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{

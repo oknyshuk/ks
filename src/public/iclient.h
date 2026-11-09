@@ -56,89 +56,90 @@ struct HltvReplayParams_t
 class IClient : public INetChannelHandler
 {
 public:
-	virtual	~IClient() {}
+	IClient() : INetChannelHandler( handler_kind_t::client ) {}
+
 
 	// connect client
-	virtual void	Connect( const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars = nullptr ) = 0;
+	void	Connect( const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars = nullptr );
 
 	// set the client in a pending state waiting for a new game
-	virtual void	Inactivate( void ) = 0;
+	void	Inactivate( void );
 	
 	// Reconnect without dropiing the netchannel
-	virtual	void	Reconnect( void ) = 0;				// froce reconnect
+	void	Reconnect( void );				// froce reconnect
 
 	// disconnects a client with a given reason
-	virtual void	Disconnect( const char *reason ) = 0;
+	void	Disconnect( const char *reason );
 
-	virtual bool	ChangeSplitscreenUser( int nSplitScreenUserSlot ) = 0;
+	bool	ChangeSplitscreenUser( int nSplitScreenUserSlot );
 
-	virtual int				GetPlayerSlot() const = 0; // returns client slot (usually entity number-1)
-	virtual int				GetUserID() const = 0; // unique ID on this server 
-	virtual const USERID_t	GetNetworkID() const = 0; // network wide ID
-	virtual const char		*GetClientName() const = 0;	// returns client name
-	virtual INetChannel		*GetNetChannel() = 0; // returns client netchannel
-	virtual IServer			*GetServer() = 0; // returns the object server the client belongs to
-	virtual const char		*GetUserSetting(const char *cvar) const = 0; // returns a clients FCVAR_USERINFO setting
-	virtual const char		*GetNetworkIDString() const = 0; // returns a human readable representation of the network id
+	int				GetPlayerSlot() const; // returns client slot (usually entity number-1)
+	int				GetUserID() const; // unique ID on this server 
+	const USERID_t	GetNetworkID() const; // network wide ID
+	const char		*GetClientName() const;	// returns client name
+	INetChannel		*GetNetChannel(); // returns client netchannel
+	IServer			*GetServer(); // returns the object server the client belongs to
+	const char		*GetUserSetting(const char *cvar) const; // returns a clients FCVAR_USERINFO setting
+	const char		*GetNetworkIDString() const; // returns a human readable representation of the network id
 
 	// set/get client data rate in bytes/second
-	virtual void	SetRate( int nRate, bool bForce ) = 0;
-	virtual int		GetRate( void ) const = 0;
+	void	SetRate( int nRate, bool bForce );
+	int		GetRate( void ) const;
 	
 	// set/get updates/second rate
-	virtual void	SetUpdateRate( float fUpdateRate, bool bForce ) = 0;
-	virtual float	GetUpdateRate( void ) const = 0;	
+	void	SetUpdateRate( float fUpdateRate, bool bForce );
+	float	GetUpdateRate( void ) const;	
 
 	// clear complete object & free all memory 
-	virtual void	Clear( void ) = 0;
+	void	Clear( void );
 
 	// returns the highest world tick number acknowledge by client
-	virtual int		GetMaxAckTickCount() const = 0;
+	int		GetMaxAckTickCount() const;
 	
 	// execute a client command
-	virtual bool	ExecuteStringCommand( const char *s ) = 0;
+	bool	ExecuteStringCommand( const char *s );
 	// send client a network message
-	virtual bool	SendNetMsg(INetMessage &msg, bool bForceReliable = false, bool bVoice = false ) = 0;
+	bool	SendNetMsg(INetMessage &msg, bool bForceReliable = false, bool bVoice = false );
 	// send client a text message
-	virtual void	ClientPrintf (const char *fmt, ...) = 0;
+	void	ClientPrintf (const char *fmt, ...);
 
 		// client has established network channels, nothing else
-	virtual bool	IsConnected( void ) const = 0;
+	bool	IsConnected( void ) const;
 	// client is downloading signon data
-	virtual bool	IsSpawned( void ) const = 0;
+	bool	IsSpawned( void ) const;
 	// client active is ingame, receiving snapshots
-	virtual bool	IsActive( void ) const = 0;
+	bool	IsActive( void ) const;
 	// returns true, if client is not a real player
-	virtual bool	IsFakeClient( void ) const = 0;
+	bool	IsFakeClient( void ) const;
 	// returns true, if client is a HLTV proxy
-	virtual bool	IsHLTV( void ) const = 0;
+	bool	IsHLTV( void ) const;
 	// returns true, if client hears this player
-	virtual bool	IsHearingClient(int index) const = 0;
+	bool	IsHearingClient(int index) const;
 	// returns true, if client hears this player by proximity
-	virtual bool	IsProximityHearingClient(int index) const = 0;
+	bool	IsProximityHearingClient(int index) const;
 
-	virtual void	SetMaxRoutablePayloadSize( int nMaxRoutablePayloadSize ) = 0;
+	void	SetMaxRoutablePayloadSize( int nMaxRoutablePayloadSize );
 
 	// returns true, if client is a split screen user
-	virtual bool	IsSplitScreenUser( void ) const = 0;
+	bool	IsSplitScreenUser( void ) const;
 
-	virtual bool	CheckConnect( void ) = 0;
+	bool	CheckConnect( void );
 
-	virtual	bool	IsLowViolenceClient( void ) const = 0;
+	bool	IsLowViolenceClient( void ) const;
 
-	virtual IClient	*GetSplitScreenOwner() = 0;
+	IClient	*GetSplitScreenOwner();
 
 	// get the number of players on this client's machine
-	virtual int		GetNumPlayers() = 0;
+	int		GetNumPlayers();
 
-	virtual bool	IsHumanPlayer() const = 0;
+	bool	IsHumanPlayer() const;
 
-	virtual CrossPlayPlatform_t GetClientPlatform() const = 0;
+	CrossPlayPlatform_t GetClientPlatform() const;
 
-	virtual bool StartHltvReplay( const HltvReplayParams_t &params ) = 0;
-	virtual void StopHltvReplay() = 0;
-	virtual int GetHltvReplayDelay() = 0;
-	virtual const char * GetHltvReplayStatus()const { return ""; }
-	virtual bool CanStartHltvReplay() = 0;
-	virtual void ResetReplayRequestTime() = 0;
+	bool StartHltvReplay( const HltvReplayParams_t &params );
+	void StopHltvReplay();
+	int GetHltvReplayDelay();
+	const char * GetHltvReplayStatus() const;
+	bool CanStartHltvReplay();
+	void ResetReplayRequestTime();
 };

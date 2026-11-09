@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
-import std;
 #include "c_baseentity.h"
 
 inline constexpr auto VIEWANIM_RELATIVE = (1<<0); // angles in keyframe are relative, add anim to current angles

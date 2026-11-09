@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "precache_register.h"
 #include "cdll_client_int.h"
 #include "clientmode.h"

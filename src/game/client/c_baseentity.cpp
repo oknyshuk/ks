@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -41,7 +39,6 @@ import std;
 #include "c_baseanimatingoverlay.h"
 #include "hltvcamera.h"
 #include "datacache/imdlcache.h"
-#include "toolframework/itoolframework.h"
 #include "toolframework_client.h"
 #include "decals.h"
 #include "cdll_bounded_cvars.h"
@@ -56,7 +53,7 @@ import std;
 static bool g_bWasSkipping = (bool)-1;
 static bool g_bWasThreaded =(bool)-1;
 
-void cc_cl_interp_all_changed( IConVar *pConVar, const char *pOldString, float flOldValue )
+void cc_cl_interp_all_changed( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	ConVarRef var( pConVar );
 	if ( var.GetInt() )
@@ -613,25 +610,6 @@ void SpewInterpolatedVar( CInterpolatedVar< Vector > *pVar, float flNow, float f
 	}
 	Msg( "--------------------------------------------------\n" );
 }
-void SpewInterpolatedVar( CInterpolatedVar< float > *pVar )
-{
-	Msg( "--------------------------------------------------\n" );
-	int i = pVar->GetHead();
-	CApparentVelocity<float> apparent;
-	while ( 1 )
-	{
-		float changetime, vel;
-		float *pVal = pVar->GetHistoryValue( i, changetime );
-		if ( !pVal )
-			break;
-
-		vel = apparent.AddSample( changetime, *pVal );
-		Msg( "%6.6f: (%.2f), vel: %.2f\n", changetime, *pVal, vel );
-		i = pVar->GetNext( i );
-	}
-	Msg( "--------------------------------------------------\n" );
-}
-
 template<class T>
 void GetInterpolatedVarTimeRange( CInterpolatedVar<T> *pVar, float &flMin, float &flMax )
 {
@@ -935,7 +913,7 @@ void C_BaseEntity::CleanUpAlphaProperty()
 {
 	if ( m_pClientAlphaProperty )
 	{
-		g_pClientAlphaPropertyMgr->DestroyClientAlphaProperty( m_pClientAlphaProperty );
+		ClientAlphaPropertyMgr()->DestroyClientAlphaProperty( m_pClientAlphaProperty );
 		m_pClientAlphaProperty = nullptr;
 	}
 }
@@ -972,7 +950,7 @@ void C_BaseEntity::Clear( void )
 	index = -1;
 	m_Collision.Init( this );
 	CleanUpAlphaProperty();
-	m_pClientAlphaProperty = static_cast< CClientAlphaProperty * >( g_pClientAlphaPropertyMgr->CreateClientAlphaProperty( this ) );
+	m_pClientAlphaProperty = static_cast< CClientAlphaProperty * >( ClientAlphaPropertyMgr()->CreateClientAlphaProperty( this ) );
 	SetLocalOrigin( vec3_origin );
 	SetLocalAngles( vec3_angle );
 	model = nullptr;
@@ -3550,7 +3528,6 @@ void C_BaseEntity::ClientThink()
 
 static ConVar hermite( "hermite_fix", "1", FCVAR_DEVELOPMENTONLY, "Don't interpolate previous hermite sample when fixing up times." );
 
-extern bool g_bHermiteFix;
 
 // Defined in engine
 static ConVar cl_interpolate( "cl_interpolate", "1", FCVAR_RELEASE, "Enables or disables interpolation on listen servers or during demo playback" );
@@ -5505,7 +5482,7 @@ CBaseEntity *FindEntityInFrontOfLocalPlayer()
 		Vector forward;
 		pPlayer->EyeVectors( &forward );
 		UTIL_TraceLine( pPlayer->EyePosition(), pPlayer->EyePosition() + forward * MAX_COORD_RANGE,	MASK_SOLID, pPlayer, COLLISION_GROUP_NONE, &tr );
-		if ( tr.fraction != 1.0 && tr.DidHitNonWorldEntity() )
+		if ( tr.fraction != 1.0 && TraceDidHitNonWorldEntity( tr ) )
 		{
 			return tr.Ent<CBaseEntity>();
 		}
@@ -6094,28 +6071,6 @@ void C_BaseEntity::RecordToolMessage()
 	msg->deleteThis();
 
 	m_nLastRecordedFrame = gpGlobals->framecount;
-}
-
-// (static function)
-void C_BaseEntity::ToolRecordEntities()
-{
-	CVProfScope _( "C_BaseEntity::ToolRecordEnties", 0, VPROF_BUDGETGROUP_TOOLS, false, BUDGETFLAG_OTHER );
-
-	if ( !ToolsEnabled() || !clienttools->IsInRecordingMode() )
-		return;
-
-	ACTIVE_SPLITSCREEN_PLAYER_GUARD( 0 );
-
-	// Let non-dormant client created predictables get added, too
-	int c = recordinglist->Count();
-	for ( int i = 0 ; i < c ; i++ )
-	{
-		IClientRenderable *pRenderable = recordinglist->Get( i );
-		if ( !pRenderable )
-			continue;
-
-		pRenderable->RecordToolMessage();
-	}
 }
 
 #ifdef _DEBUG

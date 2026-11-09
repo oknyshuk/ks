@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
 #include "reflect_annotations.h"
 
 #include "weapon_csbase.h"
-import std;
 
 inline constexpr auto NUM_BEEPS = 7;
 
@@ -33,17 +31,17 @@ inline constexpr auto NUM_BEEPS = 7;
 		CPlantedC4();
 		virtual ~CPlantedC4();
 
-		virtual void Spawn();
+		KS_VIRTUAL void Spawn_Impl();
 
-		virtual int  UpdateTransmitState();
-		virtual void SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
-		virtual int  ShouldTransmit( const CCheckTransmitInfo *pInfo );
+		KS_VIRTUAL int  UpdateTransmitState_Impl();
+		KS_VIRTUAL void SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways );
+		KS_VIRTUAL int  ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo );
 
 		static CPlantedC4* ShootSatchelCharge( CCSPlayer *pevOwner, Vector vecStart, QAngle vecAngles );
-		virtual void Precache();
+		KS_VIRTUAL void Precache_Impl();
 		
 		// Set these flags so CTs can use the C4 to disarm it.
-		virtual int	ObjectCaps() { return BaseClass::ObjectCaps() | (FCAP_CONTINUOUS_USE | FCAP_ONOFF_USE); }
+		KS_VIRTUAL int	ObjectCaps_Impl() { return BaseClass::ObjectCaps_Impl() | (FCAP_CONTINUOUS_USE | FCAP_ONOFF_USE); }
 
 		void SetBombSiteIndex( int iIndex ){ m_iBombSiteIndex = iIndex;	}
 
@@ -81,7 +79,8 @@ inline constexpr auto NUM_BEEPS = 7;
 		void DetonateThink();
 		virtual void Explode( trace_t *pTrace, int bitsDamageType );
 
-		void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+		public: void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	private:
 
 		// Replicate timer length to the client for effects
 		CNetworkVar( float, m_flTimerLength, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
@@ -159,7 +158,7 @@ public:
 	CC4();
 	virtual ~CC4();
 	
-	virtual void Spawn();
+	KS_VIRTUAL void Spawn_Impl();
 
 	void ItemPostFrame();
 	virtual void WeaponReset( void );
@@ -189,19 +188,19 @@ public:
 
 		virtual Vector GetGlowColor( void ) { return Vector( (240.0f/255.0f), (225.0f/255.0f), (90.0f/255.0f) ); }
 	#else
-		virtual void Precache();
-		virtual int  UpdateTransmitState();
-		virtual int  ShouldTransmit( const CCheckTransmitInfo *pInfo );
+		KS_VIRTUAL void Precache_Impl();
+		KS_VIRTUAL int  UpdateTransmitState_Impl();
+		KS_VIRTUAL int  ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo );
 		virtual void GetControlPanelInfo( int nPanelIndex, const char *&pPanelName );
-		virtual unsigned int PhysicsSolidMaskForEntity( void ) const;
+		KS_VIRTUAL unsigned int PhysicsSolidMaskForEntity_Impl( void ) const;
 
 		virtual bool ShouldRemoveOnRoundRestart();
 
         void SetDroppedFromDeath (bool droppedFromDeath) { m_bDroppedFromDeath = droppedFromDeath; }
 	
-		void Think( void );
+		void Think_Impl( void );
 		void ResetToLastValidPlayerHeldPosition();
-		virtual void PhysicsTouchTriggers(const Vector *pPrevAbsOrigin = nullptr);
+		KS_VIRTUAL void PhysicsTouchTriggers_Impl(const Vector *pPrevAbsOrigin = nullptr);
 
 private:
 		Vector m_vecLastValidPlayerHeldPosition;

@@ -3,8 +3,6 @@
 
 // Purpose: Muzzle flash temp ent
 
-import std;
-import ks.tier1;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -57,36 +55,6 @@ C_TEMuzzleFlash::~C_TEMuzzleFlash( void )
 }
 
 //-----------------------------------------------------------------------------
-// Recording
-//-----------------------------------------------------------------------------
-static inline void RecordMuzzleFlash( const Vector &start, const QAngle &angles, float scale, int type )
-{
-	if ( !ToolsEnabled() )
-		return;
-
-	if ( clienttools->IsInRecordingMode() )
-	{
-		KeyValues *msg = new KeyValues( "TempEntity" );
-
- 		msg->SetInt( "te", TE_MUZZLE_FLASH );
- 		msg->SetString( "name", "TE_MuzzleFlash" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetFloat( "originx", start.x );
-		msg->SetFloat( "originy", start.y );
-		msg->SetFloat( "originz", start.z );
-		msg->SetFloat( "anglesx", angles.x );
-		msg->SetFloat( "anglesy", angles.y );
-		msg->SetFloat( "anglesz", angles.z );
-		msg->SetFloat( "scale", scale );
-		msg->SetInt( "type", type );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
-}
-
-
-//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void C_TEMuzzleFlash::PostDataUpdate( DataUpdateType_t updateType )
@@ -95,14 +63,12 @@ void C_TEMuzzleFlash::PostDataUpdate( DataUpdateType_t updateType )
 
 	//FIXME: Index is incorrect
 	g_pEffects->MuzzleFlash( m_vecOrigin, m_vecAngles, m_flScale, m_nType );	
-	RecordMuzzleFlash( m_vecOrigin, m_vecAngles, m_flScale, m_nType ); 
 }
 
 void TE_MuzzleFlash( IRecipientFilter& filter, float delay,
 	const Vector &start, const QAngle &angles, float scale, int type )
 {
 	g_pEffects->MuzzleFlash( start, angles, scale, 0 );	
-	RecordMuzzleFlash( start, angles, scale, 0 ); 
 }
 
 IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TEMuzzleFlash, DT_TEMuzzleFlash, CTEMuzzleFlash )

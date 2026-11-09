@@ -69,64 +69,64 @@ class IEngineUIInternal : public IEngineUI
 {
 public:
 
-	virtual void Init() = 0;
-	virtual void Connect() = 0;
-	virtual void Shutdown() = 0;
-	virtual bool SetVGUIDirectories() = 0;
-	virtual bool IsInitialized() const = 0;
-	virtual CreateInterfaceFn GetGameUIFactory() = 0;
-	virtual bool Key_Event( const InputEvent_t &event ) = 0;
-	virtual void UpdateButtonState( const InputEvent_t &event ) = 0;
-	virtual void PostInit() = 0;
+	void Init();
+	void Connect();
+	void Shutdown();
+	bool SetVGUIDirectories();
+	bool IsInitialized() const;
+	CreateInterfaceFn GetGameUIFactory();
+	bool Key_Event( const InputEvent_t &event );
+	void UpdateButtonState( const InputEvent_t &event );
+	void PostInit();
 
 	// handlers for game UI (main menu)
-	virtual void ActivateGameUI() = 0;
-	virtual bool HideGameUI() = 0;
-	virtual bool IsGameUIVisible() = 0;
+	void ActivateGameUI();
+	bool HideGameUI();
+	bool IsGameUIVisible();
 
 	// console
-	virtual void ShowConsole() = 0;
-	virtual void HideConsole() = 0;
-	virtual bool IsConsoleVisible() = 0;
-	virtual void ClearConsole() = 0;
+	void ShowConsole();
+	void HideConsole();
+	bool IsConsoleVisible();
+	void ClearConsole();
 
-	virtual void HideDebugSystem() = 0;
+	void HideDebugSystem();
 
 	// level loading
-	virtual void OnLevelLoadingStarted( const char *levelName, bool bLocalServer ) = 0;
-	virtual void OnLevelLoadingFinished() = 0;
-	virtual void NotifyOfServerConnect(const char *game, int IP, int connectionPort) = 0;
-	virtual void NotifyOfServerDisconnect() = 0;
-	virtual void EnabledProgressBarForNextLoad() = 0;
-	virtual void UpdateProgressBar(LevelLoadingProgress_e progress, bool showDialog = true ) = 0;
-	virtual void UpdateCustomProgressBar( float progress, const wchar_t *desc ) = 0;
-	virtual void StartCustomProgress() = 0;
-	virtual void FinishCustomProgress() = 0;
-	virtual void UpdateSecondaryProgressBarWithFile( float progress, const char *pDesc, int nBytesTotal ) = 0;
-	virtual void UpdateSecondaryProgressBar( float progress, const wchar_t *desc ) = 0;
-	virtual void ShowErrorMessage() = 0;
-	virtual void HideLoadingPlaque() = 0;
-	virtual void StartLoadingScreenForCommand( const char* command ) = 0;
-	virtual void StartLoadingScreenForKeyValues( KeyValues* keyValues ) = 0;
+	void OnLevelLoadingStarted( const char *levelName, bool bLocalServer );
+	void OnLevelLoadingFinished();
+	void NotifyOfServerConnect(const char *game, int IP, int connectionPort);
+	void NotifyOfServerDisconnect();
+	void EnabledProgressBarForNextLoad();
+	void UpdateProgressBar(LevelLoadingProgress_e progress, bool showDialog = true );
+	void UpdateCustomProgressBar( float progress, const wchar_t *desc );
+	void StartCustomProgress();
+	void FinishCustomProgress();
+	void UpdateSecondaryProgressBarWithFile( float progress, const char *pDesc, int nBytesTotal );
+	void UpdateSecondaryProgressBar( float progress, const wchar_t *desc );
+	void ShowErrorMessage();
+	void HideLoadingPlaque();
+	void StartLoadingScreenForCommand( const char* command );
+	void StartLoadingScreenForKeyValues( KeyValues* keyValues );
 
 	// Should pause?
-	virtual bool ShouldPause() = 0;
-	virtual void SetGameDLLPanelsVisible( bool show ) = 0;
+	bool ShouldPause();
+	void SetGameDLLPanelsVisible( bool show );
 	// Allows the level loading progress to show map-specific info
-	virtual void SetProgressLevelName( const char *levelName ) = 0;
+	void SetProgressLevelName( const char *levelName );
 
-	virtual void Simulate() = 0;
+	void Simulate();
 
-	virtual void SetNotAllowedToHideGameUI( bool bNotAllowedToHide ) = 0;
-	virtual void SetNotAllowedToShowGameUI( bool bNotAllowedToShow ) = 0;
+	void SetNotAllowedToHideGameUI( bool bNotAllowedToHide );
+	void SetNotAllowedToShowGameUI( bool bNotAllowedToShow );
 
-	virtual void NeedConnectionProblemWaitScreen() = 0;
-	virtual void ShowPasswordUI( char const *pchCurrentPW ) = 0;
-	virtual void OnToolModeChanged( bool bGameMode ) = 0;
+	void NeedConnectionProblemWaitScreen();
+	void ShowPasswordUI( char const *pchCurrentPW );
+	void OnToolModeChanged( bool bGameMode );
 
-	virtual InputContextHandle_t GetGameUIInputContext() = 0;
+	InputContextHandle_t GetGameUIInputContext();
 
-	virtual bool IsPlayingFullScreenVideo() = 0;
+	bool IsPlayingFullScreenVideo();
 };
 
 // Purpose: singleton accessor

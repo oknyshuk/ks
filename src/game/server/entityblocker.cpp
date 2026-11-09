@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -67,7 +64,7 @@ CEntityBlocker *CEntityBlocker::Create( const Vector &origin, const Vector &mins
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEntityBlocker::Spawn( void )
+void CEntityBlocker::Spawn_Impl( void )
 {
 	SetSolid( SOLID_BBOX );
 	AddSolidFlags( FSOLID_CUSTOMRAYTEST );
@@ -76,7 +73,7 @@ void CEntityBlocker::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: Entity blockers don't block tracelines so they don't screw up weapon fire, etc
 //-----------------------------------------------------------------------------
-bool CEntityBlocker::TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace )
+bool CEntityBlocker::TestCollision_Impl( const Ray_t &ray, unsigned int mask, trace_t& trace )
 {
 	return false;
 }

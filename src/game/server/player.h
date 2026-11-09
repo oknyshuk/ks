@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import std;
-import ks.core;
 #include "reflect_annotations.h"
 #include "sendprop_priorities.h"
 
@@ -78,7 +76,6 @@ public:
 class CBaseCombatWeapon;
 class CBaseViewModel;
 class CTeam;
-class IPhysicsPlayerController;
 class IServerVehicle;
 class CUserCmd;
 class CFuncLadder;
@@ -92,7 +89,6 @@ class CTonemapTrigger;
 class CColorCorrection;
 
 // for step sounds
-struct surfacedata_t;
 
 // !!!set this bit on guns and stuff that should never respawn.
 inline constexpr auto SF_NORESPAWN = ( 1 << 30 );
@@ -261,10 +257,10 @@ public:
 	IPlayerInfo *GetPlayerInfo() { return &m_PlayerInfo; }
 	IBotController *GetBotController() { return &m_PlayerInfo; }
 
-	virtual void			SetModel( const char *szModelName );
+	void			SetModel_Impl( const char *szModelName );
 	void					SetBodyPitch( float flPitch );
 
-	virtual void			UpdateOnRemove( void );
+	void			UpdateOnRemove_Impl( void );
 
 	static CBasePlayer		*CreatePlayer( const char *className, edict_t *ed );
 
@@ -276,17 +272,17 @@ public:
 	CPlayerState			*PlayerData( void ) { return pl.Get(); }
 	const CPlayerState		*PlayerData( void ) const { return pl.Get(); }
 	
-	int						RequiredEdictIndex( void ) { return ENTINDEX(edict()); } 
+	int						RequiredEdictIndex_Impl( void ) { return ENTINDEX(edict()); } 
 
 	void					LockPlayerInPlace( void );
 	void					UnlockPlayer( void );
 
-	virtual void			DrawDebugGeometryOverlays(void);
+	void			DrawDebugGeometryOverlays_Impl(void);
 	
 	// Networking is about to update this entity, let it override and specify it's own pvs
 	virtual void			SetupVisibility( CBaseEntity *pViewEntity, unsigned char *pvs, int pvssize );
-	virtual int				UpdateTransmitState();
-	virtual int				ShouldTransmit( const CCheckTransmitInfo *pInfo );
+	int				UpdateTransmitState_Impl();
+	int				ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo );
 	virtual bool			ShouldCheckOcclusion( CBasePlayer *pOtherPlayer ) { return false;  }
 
 	// Returns true if this player wants pPlayer to be moved back in time when this player runs usercmds.
@@ -294,8 +290,8 @@ public:
 	// (like team members, entities out of our PVS, etc).
 	virtual bool			WantsLagCompensationOnEntity( const CBaseEntity *entity, const CUserCmd *pCmd, const std::bitset<MAX_EDICTS> *pEntityTransmitBits ) const;
 
-	virtual void			Spawn( void );
-	virtual void			Activate( void );
+	void			Spawn_Impl( void );
+	void			Activate_Impl( void );
 	virtual void			SharedSpawn(); // Shared between client and server.
 	virtual void			ForceRespawn( void );
 	virtual void			PostSpawnPointSelection( void );
@@ -314,9 +310,9 @@ public:
 	virtual void			Jump( void );
 	virtual void			Duck( void );
 
-	const char				*GetTracerType( void );
-	void					MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );
-	void					DoImpactEffect( trace_t &tr, int nDamageType );
+	const char				*GetTracerType_Impl( void );
+	void					MakeTracer_Impl( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );
+	void					DoImpactEffect_Impl( trace_t &tr, int nDamageType );
 
 	// If a map clean up has been done after a respawn, this function will reassign the entity pointers to those map entities that were deleted.
 	void					UpdateMapEntityPointers( void );
@@ -327,22 +323,22 @@ public:
 	void					ClearPlayerSimulationList( void );
 
 	// Physics simulation (player executes it's usercmd's here)
-	virtual void			PhysicsSimulate( void );
+	void			PhysicsSimulate_Impl( void );
 
 	// Forces processing of usercmds (e.g., even if game is paused, etc.)
 	void					ForceSimulation();
 
-	virtual unsigned int	PhysicsSolidMaskForEntity( void ) const;
+	unsigned int	PhysicsSolidMaskForEntity_Impl( void ) const;
 
 	// Move us a bit to ensure we're spawning somewhere we can actually move around.
 	void					EnsureValidSpawnLocation();
 
 	virtual void			PreThink( void );
 	virtual void			PostThink( void );
-	virtual int				TakeHealth( float flHealth, int bitsDamageType );
-	virtual void			TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
+	int				TakeHealth_Impl( float flHealth, int bitsDamageType );
+	void			TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
 	bool					ShouldTakeDamageInCommentaryMode( const CTakeDamageInfo &inputInfo );
-	virtual int				OnTakeDamage( const CTakeDamageInfo &info );
+	int				OnTakeDamage_Impl( const CTakeDamageInfo &info );
 	virtual void			DamageEffect(float flDamage, int fDamageType);
 
 	virtual void			OnSwitchWeapons( CBaseCombatWeapon* pWeapon ){}
@@ -357,10 +353,10 @@ public:
 	int						GetBonusProgress() const { return m_iBonusProgress; }
 	int						GetBonusChallenge() const { return m_iBonusChallenge; }
 
-	virtual Vector			EyePosition( );			// position of eyes
-	const QAngle			&EyeAngles( );
+	Vector			EyePosition_Impl( );			// position of eyes
+	const QAngle			&EyeAngles_Impl( );
 	void					EyePositionAndVectors( Vector *pPosition, Vector *pForward, Vector *pRight, Vector *pUp );
-	virtual const QAngle	&LocalEyeAngles();		// Direction of eyes
+	const QAngle	&LocalEyeAngles_Impl();		// Direction of eyes
 	void					EyeVectors( Vector *pForward, Vector *pRight = nullptr, Vector *pUp = nullptr );
 	void					CacheVehicleView( void );	// Calculate and cache the position of the player in the vehicle
 
@@ -368,21 +364,21 @@ public:
 	void					SnapEyeAngles( const QAngle &viewAngles );
 
 	virtual QAngle			BodyAngles();
-	virtual Vector			BodyTarget( const Vector &posSrc, bool bNoisy);
+	Vector			BodyTarget_Impl( const Vector &posSrc, bool bNoisy);
 	virtual bool			ShouldFadeOnDeath( void ) { return false; }
 	
 	virtual const impactdamagetable_t &GetPhysicsImpactDamageTable();
 	virtual int				OnTakeDamage_Alive( const CTakeDamageInfo &info );
-	virtual void			Event_Killed( const CTakeDamageInfo &info );
+	void			Event_Killed_Impl( const CTakeDamageInfo &info );
 	// Notifier that I've killed some other entity. (called from Victim's Event_Killed).
-	virtual void			Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &info );
+	void			Event_KilledOther_Impl( CBaseEntity *pVictim, const CTakeDamageInfo &info );
 
 	void					Event_Dying( void );
 
 	bool					IsHLTV( void ) const { return pl.hltv; }
 	bool					IsReplay( void ) const { return pl.replay; }
-	virtual	bool			IsPlayer( void ) const { return true; }			// Spectators return true for this, use IsObserver to seperate cases
-	virtual bool			IsNetClient( void ) const { return true; }		// Bots should return false for this, they can't receive NET messages
+	bool			IsPlayer_Impl( void ) const { return true; }			// Spectators return true for this, use IsObserver to seperate cases
+	bool			IsNetClient_Impl( void ) const { return true; }		// Bots should return false for this, they can't receive NET messages
 																			// Spectators should return true for this
 
 	virtual bool			IsFakeClient( void ) const;
@@ -391,7 +387,7 @@ public:
 	int						GetClientIndex()	{ return ENTINDEX( edict() ) - 1; }
 
 	// returns the player name
-	const char *			GetPlayerName() const { return m_szNetname; }
+	const char *			GetPlayerName_Impl() const { return m_szNetname; }
 		
 	void					SetPlayerName( const char *name );
 
@@ -423,8 +419,8 @@ public:
 	virtual void			CalcViewBob( Vector& eyeOrigin );
 	virtual void			CalcAddViewmodelCameraAnimation( Vector& eyeOrigin, QAngle& eyeAngles );
 
-	virtual bool			ShouldSavePhysics();
-	virtual void			OnRestore( void );
+	bool			ShouldSavePhysics_Impl();
+	void			OnRestore_Impl( void );
 
 	virtual void			PackDeadPlayerItems( void );
 	virtual void			RemoveAllItems( bool removeSuit );
@@ -459,8 +455,8 @@ public:
 	virtual void			RumbleEffect( unsigned char index, unsigned char rumbleData, unsigned char rumbleFlags );
 	
 	// Player is moved across the transition by other means
-	virtual int				ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
-	virtual void			Precache( void );
+	int				ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION; }
+	void			Precache_Impl( void );
 	bool					IsOnLadder( void );
 	virtual void			ExitLadder() {}
 	virtual surfacedata_t	*GetLadderSurface( const Vector &origin );
@@ -486,7 +482,7 @@ public:
 	// return the entity used for soundscape radius checks
 	virtual CBaseEntity		*GetSoundscapeListener();
 
-	Class_T					Classify ( void );
+	Class_T					Classify_Impl ( void );
 	virtual void			SetAnimation( PLAYER_ANIM playerAnim );
 	virtual void			OnMainActivityComplete( Activity newActivity, Activity oldActivity ) {}
 	virtual void			OnMainActivityInterrupted( Activity newActivity, Activity oldActivity ) {}
@@ -634,8 +630,9 @@ public:
 	void					RunNullCommand();
 
 	// Team Handling
-	virtual void			ChangeTeam( int iTeamNum ) { ChangeTeam(iTeamNum,false, false); }
-	virtual void			ChangeTeam( int iTeamNum, bool bAutoTeam, bool bSilent );
+	void			ChangeTeam_Impl( int iTeamNum ) { ChangeTeam(iTeamNum,false, false); }
+	using BaseClass::ChangeTeam;
+	virtual void	ChangeTeam( int iTeamNum, bool bAutoTeam, bool bSilent );
 
 	// say/sayteam allowed?
 	virtual bool			CanHearAndReadChatFrom( CBasePlayer *pPlayer ) { return true; }
@@ -737,20 +734,20 @@ public:
 	// Player Physics Shadow
 	void					SetupVPhysicsShadow( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity, CPhysCollide *pStandModel, const char *pStandHullName, CPhysCollide *pCrouchModel, const char *pCrouchHullName );
 	IPhysicsPlayerController* GetPhysicsController() { return m_pPhysicsController; }
-	virtual void			VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
-	void					VPhysicsUpdate( IPhysicsObject *pPhysics );
-	virtual void			VPhysicsShadowUpdate( IPhysicsObject *pPhysics );
+	void			VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent );
+	void					VPhysicsUpdate_Impl( IPhysicsObject *pPhysics );
+	void			VPhysicsShadowUpdate_Impl( IPhysicsObject *pPhysics );
 	virtual bool			IsFollowingPhysics( void ) { return false; }
 	bool					IsRideablePhysics( IPhysicsObject *pPhysics );
 	IPhysicsObject			*GetGroundVPhysics();
 
-	virtual void			Touch( CBaseEntity *pOther );
+	void			Touch_Impl( CBaseEntity *pOther );
 	void					SetTouchedPhysics( bool bTouch );
 	bool					TouchedPhysics( void );
-	Vector					GetSmoothedVelocity( void );
+	Vector					GetSmoothedVelocity_Impl( void );
 
 	virtual void			InitVCollision( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity );
-	virtual void			VPhysicsDestroyObject();
+	void			VPhysicsDestroyObject_Impl();
 	void					SetVCollisionState( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity, int collisionState );
 	void					PostThinkVPhysics( void );
 	virtual void			UpdatePhysicsShadowToCurrentPosition();
@@ -1562,7 +1559,7 @@ inline CBasePlayer *ToBasePlayer( CBaseEntity *pEntity )
 		return nullptr;
 
 #if _DEBUG
-	contract_assert( static_cast< CBasePlayer* >( pEntity ) == dynamic_cast< CBasePlayer* >( pEntity ) );
+	contract_assert( static_cast< CBasePlayer* >( pEntity ) == entity_cast<CBasePlayer>( pEntity ) );
 #endif
 
 	return static_cast<CBasePlayer *>( pEntity );
@@ -1574,7 +1571,7 @@ inline const CBasePlayer *ToBasePlayer( const CBaseEntity *pEntity )
 		return nullptr;
 
 #if _DEBUG
-	contract_assert( static_cast< const CBasePlayer* >( pEntity ) == dynamic_cast< const CBasePlayer* >( pEntity ) );
+	contract_assert( static_cast< const CBasePlayer* >( pEntity ) == entity_cast<const CBasePlayer>( pEntity ) );
 #endif
 
 	return static_cast< const CBasePlayer * >( pEntity );

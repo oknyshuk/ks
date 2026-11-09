@@ -9,6 +9,7 @@ import ks.tier1;
 #include "tier2/interval.h"
 #include "datamap.h"
 #include "soundflags.h"
+#include "ihandleentity.h"
 
 namespace ResponseRules 
 {
@@ -164,7 +165,7 @@ namespace ResponseRules
 		void		Merge( const char *modifiers ); // add criteria parsed from a text string
 
 		/// add all of the contexts herein onto an entity. all durations are infinite.
-		void		WriteToEntity( CBaseEntity *pEntity );
+		void		WriteToEntity( IHandleEntity *pEntity );
 
 		// Accessors to things that need only be done under unusual circumstances.
 		inline void EnsureCapacity( int num );
@@ -389,6 +390,13 @@ namespace ResponseRules
     }
 
 }
+
+// Console variables of the response rules library.
+class ConVar;
+extern ConVar rr_debugresponses;
+extern ConVar rr_debugrule;
+extern ConVar rr_dumpresponses;
+extern ConVar rr_debugresponseconcept;
 
 #include "rr_speechconcept.h"
 #include "response_host_interface.h"

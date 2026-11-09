@@ -45,8 +45,8 @@ public:
 
 	// Is the trail in the skybox?
 	bool IsInSkybox() const;
-	void Spawn( void );
-	void Precache( void );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
 
 #if defined( CLIENT_DLL ) 
 	// Client only code

@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -372,90 +370,6 @@ void FX_MuzzleEffectAttached(
 		pParticle->m_flRollDelta	= 0.0f;
 	}
 
-
-	if ( !ToolsEnabled() )
-		return;
-
-	if ( !clienttools->IsInRecordingMode() )
-		return;
-
-	C_BaseEntity *pEnt = ClientEntityList().GetBaseEntityFromHandle( hEntity );
-	if ( pEnt )
-	{
-		pEnt->RecordToolMessage();
-	}
-
-	// NOTE: Particle system destruction message will be sent by the particle effect itself.
-	int nId = pSimple->AllocateToolParticleEffectId();
-
-	KeyValues *msg = new KeyValues( "OldParticleSystem_Create" );
-	msg->SetString( "name", "FX_MuzzleEffectAttached" );
-	msg->SetInt( "id", nId );
-	msg->SetFloat( "time", gpGlobals->curtime );
-
-	KeyValues *pEmitter = msg->FindKey( "DmeSpriteEmitter", true );
-	pEmitter->SetInt( "count", 9 );
-	pEmitter->SetFloat( "duration", 0 );
-	pEmitter->SetString( "material", "effects/muzzleflash2" ); // FIXME - create DmeMultiMaterialSpriteEmitter to support the 4 materials of muzzleflash
-	pEmitter->SetInt( "active", true );
-
-	KeyValues *pInitializers = pEmitter->FindKey( "initializers", true );
-
-	KeyValues *pPosition = pInitializers->FindKey( "DmeLinearAttachedPositionInitializer", true );
-	pPosition->SetPtr( "entindex", (void*)pEnt->entindex() );
-	pPosition->SetInt( "attachmentIndex", attachmentIndex );
-	pPosition->SetFloat( "linearOffsetX", 2.0f * scale );
-
-	// TODO - create a DmeConstantLifetimeInitializer
-	KeyValues *pLifetime = pInitializers->FindKey( "DmeRandomLifetimeInitializer", true );
-	pLifetime->SetFloat( "minLifetime", bOneFrame ? 1.0f / 24.0f : 0.1f );
-	pLifetime->SetFloat( "maxLifetime", bOneFrame ? 1.0f / 24.0f : 0.1f );
-
-	KeyValues *pVelocity = pInitializers->FindKey( "DmeConstantVelocityInitializer", true );
-	pVelocity->SetFloat( "velocityX", 0.0f );
-	pVelocity->SetFloat( "velocityY", 0.0f );
-	pVelocity->SetFloat( "velocityZ", 0.0f );
-
-	KeyValues *pRoll = pInitializers->FindKey( "DmeRandomRollInitializer", true );
-	pRoll->SetFloat( "minRoll", 0.0f );
-	pRoll->SetFloat( "maxRoll", 360.0f );
-
-	// TODO - create a DmeConstantRollSpeedInitializer
-	KeyValues *pRollSpeed = pInitializers->FindKey( "DmeRandomRollSpeedInitializer", true );
-	pRollSpeed->SetFloat( "minRollSpeed", 0.0f );
-	pRollSpeed->SetFloat( "maxRollSpeed", 0.0f );
-
-	// TODO - create a DmeConstantColorInitializer
-	KeyValues *pColor = pInitializers->FindKey( "DmeRandomInterpolatedColorInitializer", true );
-	Color color( pFlashColor ? pFlashColor[ 0 ] : 255, pFlashColor ? pFlashColor[ 1 ] : 255, pFlashColor ? pFlashColor[ 2 ] : 255, 255 );
-	pColor->SetColor( "color1", color );
-	pColor->SetColor( "color2", color );
-
-	// TODO - create a DmeConstantAlphaInitializer
-	KeyValues *pAlpha = pInitializers->FindKey( "DmeRandomAlphaInitializer", true );
-	pAlpha->SetInt( "minStartAlpha", 255 );
-	pAlpha->SetInt( "maxStartAlpha", 255 );
-	pAlpha->SetInt( "minEndAlpha", 128 );
-	pAlpha->SetInt( "maxEndAlpha", 128 );
-
-	// size = rand(6..9) * indexed(12/9..4/9) * flScale = rand(6..9) * ( 4f + f * i )
-	KeyValues *pSize = pInitializers->FindKey( "DmeMuzzleFlashSizeInitializer", true );
-	float f = flScale / 9.0f;
-	pSize->SetFloat( "indexedBase", 4.0f * f );
-	pSize->SetFloat( "indexedDelta", f );
-	pSize->SetFloat( "minRandomFactor", 6.0f );
-	pSize->SetFloat( "maxRandomFactor", 9.0f );
-
-/*
-	KeyValues *pUpdaters = pEmitter->FindKey( "updaters", true );
-
-	pUpdaters->FindKey( "DmePositionVelocityUpdater", true );
-	pUpdaters->FindKey( "DmeRollUpdater", true );
-	pUpdaters->FindKey( "DmeAlphaLinearUpdater", true );
-	pUpdaters->FindKey( "DmeSizeUpdater", true );
-*/
-	ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-	msg->deleteThis();
 }
 
 //-----------------------------------------------------------------------------

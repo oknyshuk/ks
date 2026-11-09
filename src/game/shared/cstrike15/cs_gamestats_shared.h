@@ -6,14 +6,11 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "shareddefs.h"
 #include "util.h"
 #include "predictable_entity.h"

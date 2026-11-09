@@ -81,91 +81,86 @@ static int ModelFrameCount( model_t *model )
 class CModelInfo : public IVModelInfoClient
 {
 public:
-	virtual const model_t *FindOrLoadModel( const char *name ) const;
-	virtual const char *GetModelName( const model_t *model ) const;
-	virtual void GetModelBounds( const model_t *model, Vector& mins, Vector& maxs ) const;
-	virtual void GetModelRenderBounds( const model_t *model, Vector& mins, Vector& maxs ) const;
-	virtual int GetModelFrameCount( const model_t *model ) const;
-	virtual int GetModelType( const model_t *model ) const;
-	virtual void *GetModelExtraData( const model_t *model );
-	virtual bool ModelHasMaterialProxy( const model_t *model ) const;
-	virtual bool IsTranslucent( const model_t *model ) const;
-	virtual bool IsModelVertexLit( const model_t *model ) const;
-	virtual bool UsesEnvCubemap( const model_t *model ) const;
-	virtual bool UsesStaticLighting( const model_t *model ) const;
-	virtual bool IsTranslucentTwoPass( const model_t *model ) const;
-	virtual RenderableTranslucencyType_t ComputeTranslucencyType( const model_t *model, int nSkin, int nBody );
-	virtual int	GetModelMaterialCount( const model_t *model ) const;
-	virtual int GetModelMaterials( const model_t *model, int count, IMaterial** ppMaterials );
-	virtual void GetIlluminationPoint( const model_t *model, IClientRenderable *pRenderable, const Vector& origin, 
+	explicit CModelInfo( kind_t kind ) : IVModelInfoClient( kind ) {}
+
+	const model_t *FindOrLoadModel( const char *name ) const;
+	const char *GetModelName( const model_t *model ) const;
+	void GetModelBounds( const model_t *model, Vector& mins, Vector& maxs ) const;
+	void GetModelRenderBounds( const model_t *model, Vector& mins, Vector& maxs ) const;
+	int GetModelFrameCount( const model_t *model ) const;
+	int GetModelType( const model_t *model ) const;
+	void *GetModelExtraData( const model_t *model );
+	bool ModelHasMaterialProxy( const model_t *model ) const;
+	bool IsTranslucent( const model_t *model ) const;
+	bool IsModelVertexLit( const model_t *model ) const;
+	bool UsesEnvCubemap( const model_t *model ) const;
+	bool UsesStaticLighting( const model_t *model ) const;
+	bool IsTranslucentTwoPass( const model_t *model ) const;
+	RenderableTranslucencyType_t ComputeTranslucencyType( const model_t *model, int nSkin, int nBody );
+	int	GetModelMaterialCount( const model_t *model ) const;
+	int GetModelMaterials( const model_t *model, int count, IMaterial** ppMaterials );
+	void GetIlluminationPoint( const model_t *model, IClientRenderable *pRenderable, const Vector& origin, 
 		const QAngle& angles, Vector* pLightingOrigin );
-	virtual int GetModelContents( int modelIndex ) const;
+	int GetModelContents( int modelIndex ) const;
 	vcollide_t *GetVCollide( const model_t *model ) const;
 	vcollide_t *GetVCollide( int modelIndex ) const;
 
-	virtual const char *GetModelKeyValueText( const model_t *model );
-	virtual bool GetModelKeyValue( const model_t *model, ks::text_writer &buf );
-	virtual KeyValues *GetModelKeyValues( const model_t *pModel );
-	virtual float GetModelRadius( const model_t *model );
-	virtual studiohdr_t *GetStudiomodel( const model_t *mod );
-	virtual int GetModelSpriteWidth( const model_t *model ) const;
-	virtual int GetModelSpriteHeight( const model_t *model ) const;
+	const char *GetModelKeyValueText( const model_t *model );
+	bool GetModelKeyValue( const model_t *model, ks::text_writer &buf );
+	KeyValues *GetModelKeyValues( const model_t *pModel );
+	float GetModelRadius( const model_t *model );
+	studiohdr_t *GetStudiomodel( const model_t *mod );
+	int GetModelSpriteWidth( const model_t *model ) const;
+	int GetModelSpriteHeight( const model_t *model ) const;
 
-	virtual const studiohdr_t *FindModel( const studiohdr_t *pStudioHdr, void **cache, char const *modelname ) const;
-	virtual const studiohdr_t *FindModel( void *cache ) const;
-	virtual virtualmodel_t *GetVirtualModel( const studiohdr_t *pStudioHdr ) const;
-	virtual byte *GetAnimBlock( const studiohdr_t *pStudioHdr, int nBlock, bool bPreloadIfMissing ) const;
-	virtual bool HasAnimBlockBeenPreloaded( const studiohdr_t *pStudioHdr, int nBlock ) const;
+	const studiohdr_t *FindModel( const studiohdr_t *pStudioHdr, void **cache, char const *modelname ) const;
+	const studiohdr_t *FindModel( void *cache ) const;
+	virtualmodel_t *GetVirtualModel( const studiohdr_t *pStudioHdr ) const;
+	byte *GetAnimBlock( const studiohdr_t *pStudioHdr, int nBlock, bool bPreloadIfMissing ) const;
+	bool HasAnimBlockBeenPreloaded( const studiohdr_t *pStudioHdr, int nBlock ) const;
 
 	byte *LoadAnimBlock( model_t *model, const studiohdr_t *pStudioHdr, int iBlock, cache_user_t *cache ) const;
 
 	// NOTE: These aren't in the server version, but putting them here makes this code easier to write
 	// Sets/gets a map-specified fade range
-	virtual void					SetLevelScreenFadeRange( float flMinSize, float flMaxSize ) {}
-	virtual void					GetLevelScreenFadeRange( float *pMinArea, float *pMaxArea ) const { *pMinArea = 0; *pMaxArea = 0; }
+	void					SetLevelScreenFadeRange( float flMinSize, float flMaxSize ) {}
+	void					GetLevelScreenFadeRange( float *pMinArea, float *pMaxArea ) const { *pMinArea = 0; *pMaxArea = 0; }
 
 	// Sets/gets a map-specified per-view fade range
-	virtual void					SetViewScreenFadeRange( float flMinSize, float flMaxSize ) {}
+	void					SetViewScreenFadeRange( float flMinSize, float flMaxSize ) {}
 
 	// Computes fade alpha based on distance fade + screen fade
-	virtual unsigned char			ComputeLevelScreenFade( const Vector &vecAbsOrigin, float flRadius, float flFadeScale ) const { return 0; }
-	virtual unsigned char			ComputeViewScreenFade( const Vector &vecAbsOrigin, float flRadius, float flFadeScale ) const { return 0; }
+	unsigned char			ComputeLevelScreenFade( const Vector &vecAbsOrigin, float flRadius, float flFadeScale ) const { return 0; }
+	unsigned char			ComputeViewScreenFade( const Vector &vecAbsOrigin, float flRadius, float flFadeScale ) const { return 0; }
 
 	int GetAutoplayList( const studiohdr_t *pStudioHdr, unsigned short **pAutoplayList ) const;
 	CPhysCollide *GetCollideForVirtualTerrain( int index );
-	virtual int GetSurfacepropsForVirtualTerrain( int index ) { return CM_SurfacepropsForDisp(index); }
+	int GetSurfacepropsForVirtualTerrain( int index ) { return CM_SurfacepropsForDisp(index); }
 
-	virtual bool IsUsingFBTexture( const model_t *model, int nSkin, int nBody, void /*IClientRenderable*/ *pClientRenderable ) const;
+	bool IsUsingFBTexture( const model_t *model, int nSkin, int nBody, void /*IClientRenderable*/ *pClientRenderable ) const;
 
-	virtual MDLHandle_t	GetCacheHandle( const model_t *model ) const { return ( model->type == mod_studio ) ? model->studio : MDLHANDLE_INVALID; }
+	MDLHandle_t	GetCacheHandle( const model_t *model ) const { return ( model->type == mod_studio ) ? model->studio : MDLHANDLE_INVALID; }
 
 	// Returns planes of non-nodraw brush model surfaces
-	virtual int GetBrushModelPlaneCount( const model_t *model ) const;
-	virtual void GetBrushModelPlane( const model_t *model, int nIndex, cplane_t &plane, Vector *pOrigin ) const;
+	int GetBrushModelPlaneCount( const model_t *model ) const;
+	void GetBrushModelPlane( const model_t *model, int nIndex, cplane_t &plane, Vector *pOrigin ) const;
 
 public:
-	virtual int						GetModelIndex( const char *name ) const;
-	virtual int						GetModelClientSideIndex( const char *name ) const;
-	virtual int						RegisterDynamicModel( const char *name, bool bClientSide ) = 0;
-	virtual int						RegisterCombinedDynamicModel( const char *pszName, MDLHandle_t Handle ) = 0;
-	virtual void					UpdateCombinedDynamicModel( int nModelIndex, MDLHandle_t Handle ) = 0;
-	virtual int						BeginCombinedModel( const char *pszName, bool bReuseExisting ) = 0;
-	virtual bool					SetCombineModels( int nModelIndex, const std::vector< SCombinerModelInput_t > &vecModelsToCombine ) = 0;
-	virtual bool					FinishCombinedModel( int nModelIndex, CombinedModelLoadedCallback pFunc, void *pUserData ) = 0;
-	virtual void					ReleaseCombinedModel( int nModelIndex ) = 0;
-	virtual bool					IsDynamicModelLoading( int modelIndex );
-	virtual void					AddRefDynamicModel( int modelIndex );
-	virtual void					ReleaseDynamicModel( int modelIndex );
-	virtual bool					RegisterModelLoadCallback( int modelindex, IModelLoadCallback* pCallback, bool bCallImmediatelyIfLoaded = true );
-	virtual void					UnregisterModelLoadCallback( int modelindex, IModelLoadCallback* pCallback );
-	virtual void					OnLevelChange();
-	virtual void					OnDynamicModelStringTableChanged( int nStringIndex, const char *pString, const void *pData ) { contract_assert( false ); }
+	int						GetModelIndex( const char *name ) const;
+	int						GetModelClientSideIndex( const char *name ) const;
+	bool					IsDynamicModelLoading( int modelIndex );
+	void					AddRefDynamicModel( int modelIndex );
+	void					ReleaseDynamicModel( int modelIndex );
+	bool					RegisterModelLoadCallback( int modelindex, IModelLoadCallback* pCallback, bool bCallImmediatelyIfLoaded = true );
+	void					UnregisterModelLoadCallback( int modelindex, IModelLoadCallback* pCallback );
+	void					OnLevelChange();
+	void					OnDynamicModelStringTableChanged( int nStringIndex, const char *pString, const void *pData ) { contract_assert( false ); }
 
-	virtual model_t					*ReferenceModel( const char *name ) { return nullptr; }
-	virtual void					UnreferenceModel( model_t *model ) {}
-	virtual void					UnloadUnreferencedModels( void ) {}
+	model_t					*ReferenceModel( const char *name ) { return nullptr; }
+	void					UnreferenceModel( model_t *model ) {}
+	void					UnloadUnreferencedModels( void ) {}
 
-protected:
+public:
 	static int CLIENTSIDE_TO_MODEL( int i ) { return i >= 0 ? (-2 - (i*2 + 1)) : -1; }
 	static int NETDYNAMIC_TO_MODEL( int i ) { return i >= 0 ? (-2 - (i*2)) : -1; }
 	static int MODEL_TO_CLIENTSIDE( int i ) { return ( i <= -2 && (i & 1) ) ? (-2 - i) >> 1 : -1; }
@@ -173,8 +168,9 @@ protected:
 
 	model_t *LookupDynamicModel( int i );
 
-	virtual INetworkStringTable *GetDynamicModelStringTable() const = 0;
-	virtual int LookupPrecachedModelIndex( const char *name ) const = 0;
+	// Implemented by CModelInfoServer / CModelInfoClient: dispatch on the kind (see the end of this file)
+	INetworkStringTable *GetDynamicModelStringTable() const;
+	int LookupPrecachedModelIndex( const char *name ) const;
 
 	void GrowNetworkedDynamicModels( int netidx )
 	{
@@ -887,22 +883,24 @@ void CModelInfo::OnLevelChange()
 class CModelInfoServer : public CModelInfo
 {
 public:
-	virtual const model_t *GetModel( int modelindex ) const;
-	virtual int LookupPrecachedModelIndex( const char *name ) const;
-	virtual void GetModelMaterialColorAndLighting( const model_t *model, const Vector& origin,
+	CModelInfoServer() : CModelInfo( kind_t::server ) {}
+
+	const model_t *GetModel( int modelindex ) const;
+	int LookupPrecachedModelIndex( const char *name ) const;
+	void GetModelMaterialColorAndLighting( const model_t *model, const Vector& origin,
 		const QAngle& angles, trace_t* pTrace, Vector& lighting, Vector& matColor );
 
-	virtual INetworkStringTable *GetDynamicModelStringTable() const { return sv.m_pDynamicModelTable; }
-	virtual int RegisterDynamicModel( const char *name, bool bClientSide );
-	virtual int	RegisterCombinedDynamicModel( const char *pszName, MDLHandle_t Handle );
-	virtual void UpdateCombinedDynamicModel( int nModelIndex, MDLHandle_t Handle );
-	virtual int		BeginCombinedModel( const char *pszName, bool bReuseExisting );
-	virtual bool	SetCombineModels( int nModelIndex, const std::vector< SCombinerModelInput_t > &vecModelsToCombine );
-	virtual bool	FinishCombinedModel( int nModelIndex, CombinedModelLoadedCallback pFunc, void *pUserData );
-	virtual void	ReleaseCombinedModel( int nModelIndex );
+	INetworkStringTable *GetDynamicModelStringTable() const { return sv.m_pDynamicModelTable; }
+	int RegisterDynamicModel( const char *name, bool bClientSide );
+	int	RegisterCombinedDynamicModel( const char *pszName, MDLHandle_t Handle );
+	void UpdateCombinedDynamicModel( int nModelIndex, MDLHandle_t Handle );
+	int		BeginCombinedModel( const char *pszName, bool bReuseExisting );
+	bool	SetCombineModels( int nModelIndex, const std::vector< SCombinerModelInput_t > &vecModelsToCombine );
+	bool	FinishCombinedModel( int nModelIndex, CombinedModelLoadedCallback pFunc, void *pUserData );
+	void	ReleaseCombinedModel( int nModelIndex );
 
-	virtual void UpdateViewWeaponModelCache( const char **ppWeaponModels, int nWeaponModels ) {}
-	virtual void TouchWorldWeaponModelCache( const char **ppWeaponModels, int nWeaponModels ) {}
+	void UpdateViewWeaponModelCache( const char **ppWeaponModels, int nWeaponModels ) {}
+	void TouchWorldWeaponModelCache( const char **ppWeaponModels, int nWeaponModels ) {}
 };
 
 const model_t *CModelInfoServer::GetModel( int modelindex ) const
@@ -1014,41 +1012,43 @@ IVModelInfo *modelinfo = &g_ModelInfoServer;
 class CModelInfoClient : public CModelInfo
 {
 public:
+	CModelInfoClient() : CModelInfo( kind_t::client ) {}
+
 	// Sets/gets a map-specified fade range
-	virtual void	SetLevelScreenFadeRange( float flMinSize, float flMaxSize );
-	virtual void	GetLevelScreenFadeRange( float *pMinArea, float *pMaxArea ) const;
+	void	SetLevelScreenFadeRange( float flMinSize, float flMaxSize );
+	void	GetLevelScreenFadeRange( float *pMinArea, float *pMaxArea ) const;
 
 	// Sets/gets a map-specified per-view fade range
-	virtual void	SetViewScreenFadeRange( float flMinSize, float flMaxSize );
+	void	SetViewScreenFadeRange( float flMinSize, float flMaxSize );
 
 	// Computes fade alpha based on distance fade + screen fade
-	virtual unsigned char ComputeLevelScreenFade( const Vector &vecAbsOrigin, float flRadius, float flFadeScale ) const;
-	virtual unsigned char ComputeViewScreenFade( const Vector &vecAbsOrigin, float flRadius, float flFadeScale ) const;
+	unsigned char ComputeLevelScreenFade( const Vector &vecAbsOrigin, float flRadius, float flFadeScale ) const;
+	unsigned char ComputeViewScreenFade( const Vector &vecAbsOrigin, float flRadius, float flFadeScale ) const;
 
-	virtual const model_t *GetModel( int modelindex ) const;
-	virtual int LookupPrecachedModelIndex( const char *name ) const;
-	virtual void GetModelMaterialColorAndLighting( const model_t *model, const Vector& origin,
+	const model_t *GetModel( int modelindex ) const;
+	int LookupPrecachedModelIndex( const char *name ) const;
+	void GetModelMaterialColorAndLighting( const model_t *model, const Vector& origin,
 		const QAngle& angles, trace_t* pTrace, Vector& lighting, Vector& matColor );
 
 	INetworkStringTable *GetDynamicModelStringTable() const { return GetBaseLocalClient().m_pDynamicModelTable; }
-	virtual int RegisterDynamicModel( const char *name, bool bClientSide );
-	virtual int	RegisterCombinedDynamicModel( const char *pszName, MDLHandle_t Handle );
-	virtual void UpdateCombinedDynamicModel( int nModelIndex, MDLHandle_t Handle );
-	virtual int		BeginCombinedModel( const char *pszName, bool bReuseExisting );
-	virtual bool	SetCombineModels( int nModelIndex, const std::vector< SCombinerModelInput_t > &vecModelsToCombine );
-	virtual bool	FinishCombinedModel( int nModelIndex, CombinedModelLoadedCallback pFunc, void *pUserData );
-	virtual void	ReleaseCombinedModel( int nModelIndex );
-	virtual void OnDynamicModelStringTableChanged( int nStringIndex, const char *pString, const void *pData );
+	int RegisterDynamicModel( const char *name, bool bClientSide );
+	int	RegisterCombinedDynamicModel( const char *pszName, MDLHandle_t Handle );
+	void UpdateCombinedDynamicModel( int nModelIndex, MDLHandle_t Handle );
+	int		BeginCombinedModel( const char *pszName, bool bReuseExisting );
+	bool	SetCombineModels( int nModelIndex, const std::vector< SCombinerModelInput_t > &vecModelsToCombine );
+	bool	FinishCombinedModel( int nModelIndex, CombinedModelLoadedCallback pFunc, void *pUserData );
+	void	ReleaseCombinedModel( int nModelIndex );
+	void OnDynamicModelStringTableChanged( int nStringIndex, const char *pString, const void *pData );
 
-	virtual void UpdateViewWeaponModelCache( const char **ppWeaponModels, int nWeaponModels );
-	virtual void TouchWorldWeaponModelCache( const char **ppWeaponModels, int nWeaponModels );
+	void UpdateViewWeaponModelCache( const char **ppWeaponModels, int nWeaponModels );
+	void TouchWorldWeaponModelCache( const char **ppWeaponModels, int nWeaponModels );
 
 	// Referencing
-	virtual model_t	*ReferenceModel( const char *name );
-	virtual void UnreferenceModel( model_t *model );
-	virtual void UnloadUnreferencedModels( void );
+	model_t	*ReferenceModel( const char *name );
+	void UnreferenceModel( model_t *model );
+	void UnloadUnreferencedModels( void );
 
-private:
+public:
 	struct ScreenFadeInfo_t
 	{
 		float	m_flMinScreenWidth;	
@@ -1432,3 +1432,23 @@ static InterfaceReg s_Reg_CModelInfoClient_IVModelInfoClient( []() -> void * { r
 // Expose IVModelInfo to the engine
 IVModelInfoClient *modelinfoclient = &g_ModelInfoClient;
 #endif
+
+
+//-----------------------------------------------------------------------------
+// Calls of the shared implementation to the server / client specific one
+//-----------------------------------------------------------------------------
+INetworkStringTable *CModelInfo::GetDynamicModelStringTable() const
+{
+	if ( m_kind == kind_t::server )
+		return static_cast<const CModelInfoServer *>( this )->GetDynamicModelStringTable();
+	return static_cast<const CModelInfoClient *>( this )->GetDynamicModelStringTable();
+}
+
+int CModelInfo::LookupPrecachedModelIndex( const char *name ) const
+{
+	if ( m_kind == kind_t::server )
+		return static_cast<const CModelInfoServer *>( this )->LookupPrecachedModelIndex( name );
+	return static_cast<const CModelInfoClient *>( this )->LookupPrecachedModelIndex( name );
+}
+
+#include "facade/ivmodelinfo.inl"

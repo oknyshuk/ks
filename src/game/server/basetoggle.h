@@ -24,9 +24,9 @@ class [[= ks::reflect::NetTable{ .name = "DT_BaseToggle" } ]]
 public:
 	CBaseToggle();
 
-	virtual bool		KeyValue( const char *szKeyName, const char *szValue );
-	virtual bool		KeyValue( const char *szKeyName, Vector vec ) { return BaseClass::KeyValue( szKeyName, vec ); };
-	virtual bool		KeyValue( const char *szKeyName, float flValue ) { return BaseClass::KeyValue( szKeyName, flValue ); };
+	using BaseClass::KeyValue_Impl;
+	bool		KeyValue_Impl( const char *szKeyName, const char *szValue );
+	bool		KeyValue_Impl( const char *szKeyName, float flValue ) { return BaseClass::KeyValue_Impl( szKeyName, flValue ); };
 
 	TOGGLE_STATE		m_toggle_state;
 	float				m_flMoveDistance;// how far a door should slide or rotate
@@ -51,17 +51,17 @@ public:
 
 	DECLARE_DATADESC();
 
-	virtual float	GetDelay( void ) { return m_flWait; }
+	float	GetDelay_Impl( void ) { return m_flWait; }
 
 	// common member functions
 	void LinearMove( const Vector &vecDest, float flSpeed );
 	void LinearMoveDone( void );
 	void AngularMove( const QAngle &vecDestAngle, float flSpeed );
 	void AngularMoveDone( void );
-	bool IsLockedByMaster( void );
-	virtual void MoveDone( void );
+	bool IsLockedByMaster_Impl( void );
+	void MoveDone_Impl( void );
 
-	virtual void GetGroundVelocityToApply( Vector &vecGroundVel );
+	void GetGroundVelocityToApply_Impl( Vector &vecGroundVel );
 
 	static float AxisValue( int flags, const QAngle &angles );
 	void AxisDir( void );

@@ -228,7 +228,7 @@ static void logaddress_add_ex( const CCommand &args )
 }
 
 static uint64 s_ullLogaddressTokenSecret = 0;
-void FnChangeCallback_logaddress_token_secret( IConVar *var, const char *pOldValue, float flOldValue )
+void FnChangeCallback_logaddress_token_secret( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	ConVarRef cv( var );
 	char const *szstring = cv.GetString();
@@ -342,12 +342,10 @@ static void logaddress_list( const CCommand &args )
 CLog::CLog()
 {
 	Reset();
-	m_nDebugID = EVENT_DEBUG_ID_INIT;
 }
 
 CLog::~CLog()
 {
-	m_nDebugID = EVENT_DEBUG_ID_SHUTDOWN;
 }
 
 void CLog::Reset( void )	// reset all logging streams
@@ -369,12 +367,12 @@ void CLog::Init( void )
 	Reset();
 
 	// listen to these events
-	g_GameEventManager.AddListener( this, "server_spawn", true );
-	g_GameEventManager.AddListener( this, "server_shutdown", true );
-	g_GameEventManager.AddListener( this, "server_cvar", true );
-	g_GameEventManager.AddListener( this, "server_message", true );
-	g_GameEventManager.AddListener( this, "server_addban", true );
-	g_GameEventManager.AddListener( this, "server_removeban", true );
+	g_GameEventManager.AddListener( this, GameEventCallback_t( std::cw<&CLog::FireGameEvent>, this ), "server_spawn", true );
+	g_GameEventManager.AddListener( this, GameEventCallback_t( std::cw<&CLog::FireGameEvent>, this ), "server_shutdown", true );
+	g_GameEventManager.AddListener( this, GameEventCallback_t( std::cw<&CLog::FireGameEvent>, this ), "server_cvar", true );
+	g_GameEventManager.AddListener( this, GameEventCallback_t( std::cw<&CLog::FireGameEvent>, this ), "server_message", true );
+	g_GameEventManager.AddListener( this, GameEventCallback_t( std::cw<&CLog::FireGameEvent>, this ), "server_addban", true );
+	g_GameEventManager.AddListener( this, GameEventCallback_t( std::cw<&CLog::FireGameEvent>, this ), "server_removeban", true );
 }
 
 void CLog::Shutdown()
@@ -734,11 +732,6 @@ void CLog::FireGameEvent( IGameEvent *event )
 			}
 		}		
 	}
-}
-
-int CLog::GetEventDebugID( void )
-{
-	return m_nDebugID;
 }
 
 /*

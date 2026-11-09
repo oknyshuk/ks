@@ -4,13 +4,12 @@
 add_library(materialsystem OBJECT
     CColorCorrection.cpp
     cmaterial.cpp
+    imaterialdispatch.cpp
     cmaterial_queuefriendly.cpp
     CMaterialSubRect.cpp
     cmaterialvar.cpp
-    cmatnullrendercontext.cpp
     colorspace.cpp
     ctexture.cpp
-    mat_stub.cpp
     materialsystem_global.cpp
     morph.cpp
     SubdMgr.cpp
@@ -25,6 +24,7 @@ add_library(materialsystem OBJECT
     cmatlightmaps.cpp
     cmatpaintmaps.cpp
     cmatrendercontext.cpp
+    cmatrendercontextdispatch.cpp
     cmatqueuedrendercontext.cpp
 )
 target_link_libraries(materialsystem PRIVATE ks_common ks_desktop tier0 memoverride public_common bitmap tier1 tier2 tier3 interfaces vstdlib mathlib shaderlib vtf videocfg)

@@ -36,14 +36,14 @@ class JoltPhysicsConstraintGroup final : public IPhysicsConstraintGroup
 {
 public:
 	JoltPhysicsConstraintGroup();
-	~JoltPhysicsConstraintGroup() override;
+	~JoltPhysicsConstraintGroup();
 
-	void Activate() override;
-	bool IsInErrorState() override;
-	void ClearErrorState() override;
-	void GetErrorParams( constraint_groupparams_t *pParams ) override;
-	void SetErrorParams( const constraint_groupparams_t &params ) override;
-	void SolvePenetration( IPhysicsObject *pObj0, IPhysicsObject *pObj1 ) override;
+	void Activate();
+	bool IsInErrorState();
+	void ClearErrorState();
+	void GetErrorParams( constraint_groupparams_t *pParams );
+	void SetErrorParams( const constraint_groupparams_t &params );
+	void SolvePenetration( IPhysicsObject *pObj0, IPhysicsObject *pObj1 );
 
 	void AddConstraint( JoltPhysicsConstraint *pConstraint );
 	void RemoveConstraint( JoltPhysicsConstraint *pConstraint );
@@ -56,33 +56,33 @@ private:
 	constraint_groupparams_t				m_ErrorParams = {};
 };
 
-class JoltPhysicsConstraint final : public IPhysicsConstraint, public IJoltObjectListener
+class JoltPhysicsConstraint final : public IPhysicsConstraint
 {
 public:
 	JoltPhysicsConstraint( JoltPhysicsEnvironment *pPhysicsEnvironment, IPhysicsObject *pReferenceObject, IPhysicsObject *pAttachedObject, constraintType_t Type = CONSTRAINT_UNKNOWN, JPH::Constraint* pConstraint = nullptr, void *pGameData = nullptr );
-	~JoltPhysicsConstraint() override;
+	~JoltPhysicsConstraint();
 
-	void			Activate() override;
-	void			Deactivate() override;
+	void			Activate();
+	void			Deactivate();
 
-	void			SetGameData( void *gameData ) override;
-	void *			GetGameData() const override;
+	void			SetGameData( void *gameData );
+	void *			GetGameData() const;
 
-	IPhysicsObject *GetReferenceObject() const override;
-	IPhysicsObject *GetAttachedObject() const override;
+	IPhysicsObject *GetReferenceObject() const;
+	IPhysicsObject *GetAttachedObject() const;
 
-	void			SetLinearMotor( float speed, float maxLinearImpulse ) override;
-	void			SetAngularMotor( float rotSpeed, float maxAngularImpulse ) override;
+	void			SetLinearMotor( float speed, float maxLinearImpulse );
+	void			SetAngularMotor( float rotSpeed, float maxAngularImpulse );
 
-	void			UpdateRagdollTransforms( const matrix3x4_t &constraintToReference, const matrix3x4_t &constraintToAttached ) override;
-	bool			GetConstraintTransform( matrix3x4_t *pConstraintToReference, matrix3x4_t *pConstraintToAttached ) const override;
-	bool			GetConstraintParams( constraint_breakableparams_t *pParams ) const override;
+	void			UpdateRagdollTransforms( const matrix3x4_t &constraintToReference, const matrix3x4_t &constraintToAttached );
+	bool			GetConstraintTransform( matrix3x4_t *pConstraintToReference, matrix3x4_t *pConstraintToAttached ) const;
+	bool			GetConstraintParams( constraint_breakableparams_t *pParams ) const;
 
-	void			OutputDebugInfo() override;
+	void			OutputDebugInfo();
 
 	// IJoltObjectListener
-	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject ) override;
-	void OnJoltPhysicsObjectTeleported( JoltPhysicsObject *pObject ) override;
+	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject );
+	void OnJoltPhysicsObjectTeleported( JoltPhysicsObject *pObject );
 
 public:
 	bool InitialiseHingeFromRagdoll( IPhysicsConstraintGroup* pGroup, const constraint_ragdollparams_t& ragdoll );
@@ -112,3 +112,33 @@ private:
 	JoltPhysicsEnvironment		*m_pPhysicsEnvironment = nullptr;
 	JPH::PhysicsSystem			*m_pPhysicsSystem = nullptr;
 };
+
+namespace JPH { class DistanceConstraint; }
+
+// A spring between two objects.
+class JoltPhysicsSpring final : public IPhysicsSpring
+{
+public:
+	JoltPhysicsSpring( JPH::PhysicsSystem *pPhysicsSystem, JoltPhysicsObject *pObjectStart, JoltPhysicsObject *pObjectEnd, springparams_t *pParams );
+	~JoltPhysicsSpring();
+
+	void GetEndpoints( Vector *worldPositionStart, Vector *worldPositionEnd );
+	void SetSpringConstant( float flSpringConstant );
+	void SetSpringDamping( float flSpringDamping );
+	void SetSpringLength( float flSpringLength );
+
+	IPhysicsObject *GetStartObject();
+	IPhysicsObject *GetEndObject();
+
+	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject );
+
+private:
+	JPH::PhysicsSystem *m_pPhysicsSystem = nullptr;
+
+	JoltPhysicsObject *m_pObjectStart = nullptr;
+	JoltPhysicsObject *m_pObjectEnd = nullptr;
+
+	JPH::DistanceConstraint *m_pConstraint = nullptr;
+	bool m_OnlyStretch = false;
+};
+

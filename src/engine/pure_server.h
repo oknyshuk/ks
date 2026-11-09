@@ -13,8 +13,6 @@ import std;
 class CPureServerWhitelist
 {
 public:
-	friend class CAllowFromDiskList;
-	friend class CForceMatchList;
 	friend class CPureFileTracker;
 
 	// Call this to free it.
@@ -53,22 +51,9 @@ private:
 
 private:
 
-	class CAllowFromDiskList : public IFileList
-	{
-	public:
-		virtual bool			IsFileInList( const char *pFilename );
-		virtual void			Release();
-
-		CPureServerWhitelist	*m_pWhitelist;
-	};
-	class CForceMatchList : public IFileList
-	{
-	public:
-		virtual bool			IsFileInList( const char *pFilename );
-		virtual void			Release();
-	
-		CPureServerWhitelist	*m_pWhitelist;
-	};
+	friend class IFileList;
+	bool				IsAllowedFromDisk( const char *pFilename );
+	bool				IsInForceMatchList( const char *pFilename );
 
 	class CCommand
 	{
@@ -112,8 +97,8 @@ private:
 	CommandDict_t	m_NonRecursiveDirCommands;	// *.* commands
 	IFileSystem *m_pFileSystem;
 	
-	CAllowFromDiskList m_AllowFromDiskList;
-	CForceMatchList m_ForceMatchList;
+	IFileList m_AllowFromDiskList;
+	IFileList m_ForceMatchList;
 	
 	// In this mode, no files are allowed from disk.
 	bool m_bFullyPureMode;

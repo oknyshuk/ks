@@ -580,3 +580,6 @@ void JoltPhysicsVehicleController::DetachObject()
 		m_pCarBodyObject = nullptr;
 	}
 }
+
+//-------------------------------------------------------------------------------------------------
+#include "facade/iphysicsvehiclecontroller.inl"

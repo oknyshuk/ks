@@ -49,7 +49,7 @@ public:
 };
 
 
-class CBaseClient : public IGameEventListener2, public IClient
+class CBaseClient : public IClient
 {
 	typedef struct CustomFile_s
 	{
@@ -58,8 +58,13 @@ class CBaseClient : public IGameEventListener2, public IClient
 	} CustomFile_t;
 
 public:
-	CBaseClient();
-	virtual ~CBaseClient();
+	enum class client_kind_t : unsigned char { game, hltv };
+
+	explicit CBaseClient( client_kind_t kind );
+	~CBaseClient();
+
+	// Deletes the object as the class it really is
+	void DeleteThis();
 
 public:
 
@@ -76,69 +81,116 @@ public:
 	uint64			GetClientXuid() const;
 	const char		*GetFriendsName() const { return m_FriendsName; }
 	void			UpdateName( const char *pszDefault );
+	void Connect( const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars = nullptr );
 
-	virtual	void	Connect(const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars = nullptr );
-	virtual	void	Inactivate( void )override;
-	virtual	void	Reconnect( void )override;
-	virtual	void	Disconnect( const char *reason ) override;
-	virtual bool	CheckConnect( void );
-	virtual bool	ChangeSplitscreenUser( int nSplitScreenUserSlot );
 
-	virtual	void	SetRate( int nRate, bool bForce );
-	virtual	int		GetRate( void ) const;
+	void	ConnectBase(const char * szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars = nullptr );
+	void Inactivate( void );
+
+	void	InactivateBase( void );
+	void Reconnect( void );
+
+	void	ReconnectBase( void );
+	void Disconnect( const char *reason );
+
+	void	DisconnectBase( const char *reason );
+	bool CheckConnect( void );
+
+	bool	CheckConnectBase( void );
+	bool	ChangeSplitscreenUser( int nSplitScreenUserSlot );
+	void SetRate( int nRate, bool bForce );
+
+
+	void	SetRateBase( int nRate, bool bForce );
+	int		GetRate( void ) const;
+	void SetUpdateRate( float fUpdateRate, bool bForce );
+
 	
-	virtual void	SetUpdateRate( float fUpdateRate, bool bForce ); // override;
-	virtual float	GetUpdateRate( void ) const; // override;
+	void	SetUpdateRateBase( float fUpdateRate, bool bForce ); // override;
+	float	GetUpdateRate( void ) const;
+	void Clear( void );
+ // override;
 
-	virtual void	Clear( void );
-	virtual void	DemoRestart( void ); // called when client started demo recording
+	void	ClearBase( void );
+	void	DemoRestart( void ); // called when client started demo recording
 
-	virtual	int		GetMaxAckTickCount() const;
+	int		GetMaxAckTickCount() const;
+	bool ExecuteStringCommand( const char *s );
 
-	virtual bool	ExecuteStringCommand( const char *s );
-	virtual bool	SendNetMsg( INetMessage &msg, bool bForceReliable = false, bool bVoice = false );
+
+	bool	ExecuteStringCommandBase( const char *s );
+	bool SendNetMsg( INetMessage &msg, bool bForceReliable = false, bool bVoice = false );
+
+	bool	SendNetMsgBase( INetMessage &msg, bool bForceReliable = false, bool bVoice = false );
 	
-	[[gnu::format(printf, 2, 3)]] virtual void	ClientPrintf ( const char *fmt, ...);
+	[[gnu::format(printf, 2, 3)]] void	ClientPrintf ( const char *fmt, ...);
+	void	ClientPrintfV ( const char *fmt, std::va_list argptr );
 
-	virtual	bool	IsConnected( void ) const { return m_nSignonState >= SIGNONSTATE_CONNECTED; };	
-	virtual	bool	IsSpawned( void ) const { return m_nSignonState >= SIGNONSTATE_NEW; };	
-	virtual	bool	IsActive( void ) const { return m_nSignonState == SIGNONSTATE_FULL; };
-	virtual	bool	IsFakeClient( void ) const { return m_bFakePlayer; };
-	virtual	bool	IsHLTV( void ) const { return m_bIsHLTV; }
-	virtual bool	IsReplay( void ) const { return false; }
+	bool	IsConnected( void ) const { return m_nSignonState >= SIGNONSTATE_CONNECTED; };	
+	bool	IsSpawned( void ) const { return m_nSignonState >= SIGNONSTATE_NEW; };	
+	bool	IsActive( void ) const { return m_nSignonState == SIGNONSTATE_FULL; };
+	bool	IsFakeClient( void ) const { return m_bFakePlayer; };
+	bool	IsHLTV( void ) const { return m_bIsHLTV; }
+	bool	IsReplay( void ) const { return false; }
 	// Is an actual human player or splitscreen player (not a bot and not a HLTV slot)
-	virtual bool	IsHumanPlayer() const;
-	virtual	bool	IsHearingClient( int index ) const { return false; };
-	virtual	bool	IsProximityHearingClient( int index ) const { return false; };
-	virtual	bool	IsLowViolenceClient( void ) const { return m_bLowViolence; }
+	bool	IsHumanPlayer() const;
+	bool IsHearingClient( int index ) const;
 
-	virtual void	SetMaxRoutablePayloadSize( int nMaxRoutablePayloadSize );
+	bool	IsHearingClientBase( int index ) const { return false; };
+	bool IsProximityHearingClient( int index ) const;
 
-	virtual bool	IsSplitScreenUser( void ) const { return m_bSplitScreenUser; }
-	virtual CrossPlayPlatform_t GetClientPlatform() const { return m_ClientPlatform; }
+	bool	IsProximityHearingClientBase( int index ) const { return false; };
+	bool	IsLowViolenceClient( void ) const { return m_bLowViolence; }
+
+	void	SetMaxRoutablePayloadSize( int nMaxRoutablePayloadSize );
+
+	bool	IsSplitScreenUser( void ) const { return m_bSplitScreenUser; }
+	CrossPlayPlatform_t GetClientPlatform() const { return m_ClientPlatform; }
 
 public: // Message Handlers
 	
 	bool NETMsg_Tick( const ks::net::CNETMsg_Tick& msg );
 	bool NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg );
 	bool NETMsg_SignonState( const ks::net::CNETMsg_SignonState& msg );
-	virtual bool NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg );
-	virtual bool NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg );
+	bool NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg );
 
-	virtual bool CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg );
-	virtual bool CLCMsg_Move( const ks::net::CCLCMsg_Move& msg ) { contract_assert( 0 ); return true; }
-	virtual bool CLCMsg_VoiceData( const ks::net::CCLCMsg_VoiceData& msg ) { contract_assert( 0 ); return true; }
+	bool NETMsg_PlayerAvatarDataBase( const ks::net::CNETMsg_PlayerAvatarData& msg );
+	bool NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg );
+
+	bool NETMsg_SetConVarBase( const ks::net::CNETMsg_SetConVar& msg );
+	bool CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg );
+
+
+	bool CLCMsg_ClientInfoBase( const ks::net::CCLCMsg_ClientInfo& msg );
+	bool CLCMsg_Move( const ks::net::CCLCMsg_Move& msg );
+
+	bool CLCMsg_MoveBase( const ks::net::CCLCMsg_Move& msg ) { contract_assert( 0 ); return true; }
+	bool CLCMsg_VoiceData( const ks::net::CCLCMsg_VoiceData& msg );
+
+	bool CLCMsg_VoiceDataBase( const ks::net::CCLCMsg_VoiceData& msg ) { contract_assert( 0 ); return true; }
 
 	bool CLCMsg_BaselineAck( const ks::net::CCLCMsg_BaselineAck& msg );
-	virtual bool CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg );
-	virtual bool CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg ) { contract_assert( 0 ); return true; }
+	bool CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg );
+
+	bool CLCMsg_ListenEventsBase( const ks::net::CCLCMsg_ListenEvents& msg );
+	bool CLCMsg_RespondCvarValue( const ks::net::CCLCMsg_RespondCvarValue& msg );
+
+	bool CLCMsg_RespondCvarValueBase( const ks::net::CCLCMsg_RespondCvarValue& msg ) { contract_assert( 0 ); return true; }
 	bool CLCMsg_LoadingProgress( const ks::net::CCLCMsg_LoadingProgress& msg );	
 	bool CLCMsg_SplitPlayerConnect( const ks::net::CCLCMsg_SplitPlayerConnect& msg );
-	virtual bool CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg ) { contract_assert( 0 ); return true; }
-	virtual bool CLCMsg_CmdKeyValues( const ks::net::CCLCMsg_CmdKeyValues& msg );
-	virtual bool CLCMsg_HltvReplay( const ks::net::CCLCMsg_HltvReplay &msg ) { return false; }
+	bool CLCMsg_FileCRCCheck( const ks::net::CCLCMsg_FileCRCCheck& msg );
 
-	virtual bool SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage &msg ) { return true; }
+	bool CLCMsg_FileCRCCheckBase( const ks::net::CCLCMsg_FileCRCCheck& msg ) { contract_assert( 0 ); return true; }
+	bool CLCMsg_CmdKeyValues( const ks::net::CCLCMsg_CmdKeyValues& msg );
+
+	bool CLCMsg_CmdKeyValuesBase( const ks::net::CCLCMsg_CmdKeyValues& msg );
+	bool CLCMsg_HltvReplay( const ks::net::CCLCMsg_HltvReplay &msg );
+
+	bool CLCMsg_HltvReplayBase( const ks::net::CCLCMsg_HltvReplay &msg ) { return false; }
+	bool SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage &msg );
+
+
+	bool SVCMsg_UserMessageBase( const ks::net::CSVCMsg_UserMessage &msg ) { return true; }
 
 
 	enum
@@ -164,37 +216,68 @@ public: // Message Handlers
 	};
 
 	std::array< CNetMessageBinder, NETMSG_Max > m_NetMessages;
+	void ConnectionClosing( const char *reason );
+	void ConnectionCrashed( const char *reason );
+	void PacketStart( int incoming_sequence, int outgoing_acknowledged );
+	void PacketEnd( void );
+	void FileRequested( const char *fileName, unsigned int transferID, bool isReplayDemoFile );
+	void FileReceived( const char *fileName, unsigned int transferID, bool isReplayDemoFile );
+	void FileDenied( const char *fileName, unsigned int transferID, bool isReplayDemoFile );
+	void FileSent( const char *fileName, unsigned int transferID, bool isReplayDemoFile );
+	const char * GetHltvReplayStatus(  ) const;
 
-	virtual void	ConnectionStart(INetChannel *chan) override;
-	virtual void	ConnectionStop()override;
+	const char *GetHltvReplayStatusBase() const { return ""; }
 
-public: // IGameEventListener
-	virtual void	FireGameEvent( IGameEvent *event ) override { FireGameEvent( event, false ); }
-	void FireGameEvent( IGameEvent *event, bool bPassthrough );
-	int				m_nDebugID;
-	virtual int		GetEventDebugID( void );
+	void	ConnectionStart(INetChannel *chan);
+	void	ConnectionStop();
+
+public: // game event listener
+	void	FireGameEvent( IGameEvent *event ) { SendGameEvent( event, false ); }
+	void	SendGameEvent( IGameEvent *event, bool bPassthrough );
+	// What the event manager calls for this client; CGameClient rebinds it to its own FireGameEvent.
+	GameEventCallback_t	m_GameEventCallback;
 
 public:
+	bool UpdateAcknowledgedFramecount( int tick );
 
-	virtual	bool	UpdateAcknowledgedFramecount(int tick);
-	virtual bool	ShouldSendMessages( void );
-	virtual void	UpdateSendState( void );
+
+	bool	UpdateAcknowledgedFramecountBase(int tick);
+	bool ShouldSendMessages( void );
+
+	bool	ShouldSendMessagesBase( void );
+	void	UpdateSendState( void );
 			void	ForceFullUpdate( void ) { UpdateAcknowledgedFramecount(-1); }
 	
-	virtual bool	FillUserInfo( player_info_s &userInfo );
-	virtual void	UpdateUserSettings();
-	virtual void	WriteGameSounds(bf_write &buf, int nMaxSounds);
+	bool	FillUserInfo( player_info_s &userInfo );
+	void UpdateUserSettings(  );
+
+	void	UpdateUserSettingsBase();
+	void WriteGameSounds( bf_write &buf, int nMaxSounds );
+
+	void	WriteGameSoundsBase(bf_write &buf, int nMaxSounds);
+	CClientFrame * GetDeltaFrame( int nTick );
+
 	
-	virtual CClientFrame *GetDeltaFrame( int nTick );
-	virtual bool	SendSnapshot( CClientFrame *pFrame );
-	virtual bool	SendServerInfo( void );
-	virtual bool	SendSignonData( void );
-	virtual void	SpawnPlayer( void );
-	virtual void	ActivatePlayer( void );
-	virtual void	SetName( const char * name );
-	virtual void	SetUserCVar( const char *cvar, const char *value);
-	virtual void	FreeBaselines();
-	virtual bool	IgnoreTempEntity( CEventInfo *event );
+	CClientFrame *GetDeltaFrameBase( int nTick );
+	bool SendSnapshot( CClientFrame *pFrame );
+
+	bool	SendSnapshotBase( CClientFrame *pFrame );
+	bool	SendServerInfo( void );
+	bool SendSignonData( void );
+
+	bool	SendSignonDataBase( void );
+	void SpawnPlayer( void );
+
+	void	SpawnPlayerBase( void );
+	void ActivatePlayer( void );
+
+	void	ActivatePlayerBase( void );
+	void	SetName( const char * name );
+	void	SetUserCVar( const char *cvar, const char *value);
+	void	FreeBaselines();
+	bool IgnoreTempEntity( CEventInfo *event );
+
+	bool	IgnoreTempEntityBase( CEventInfo *event );
 	
 	void			SetPlayerID( const CPlayerId &playerUID );
 
@@ -217,28 +300,46 @@ public:
 	
 	void			FillSignOnFullServerInfo( class CNETMsg_SignonState_t& state );
 	bool			IsSplitScreenPartner( const CBaseClient *pOther ) const;
-	virtual IClient	*GetSplitScreenOwner() { return m_pAttachedTo; }
+	IClient	*GetSplitScreenOwner() { return m_pAttachedTo; }
 	
-	virtual int		GetNumPlayers();
-	virtual bool	StartHltvReplay( const HltvReplayParams_t &params ) override { return false; } // not implemented for most clients
-	virtual void	StopHltvReplay() override { }
-	virtual int		GetHltvReplayDelay() override { return 0; }
-	virtual bool	CanStartHltvReplay() override { return false; }
-	virtual void	ResetReplayRequestTime() override { }
-	virtual CBaseClient *GetPropCullClient() { return this; }
+	int		GetNumPlayers();
+	bool StartHltvReplay( const HltvReplayParams_t &params );
+
+	bool	StartHltvReplayBase( const HltvReplayParams_t &params ) { return false; }
+	void StopHltvReplay(  );
+ // not implemented for most clients
+	void	StopHltvReplayBase() { }
+	int GetHltvReplayDelay(  );
+
+	int		GetHltvReplayDelayBase() { return 0; }
+	bool CanStartHltvReplay(  );
+
+	bool	CanStartHltvReplayBase() { return false; }
+	void ResetReplayRequestTime(  );
+
+	void	ResetReplayRequestTimeBase() { }
+	CBaseClient * GetPropCullClient(  );
+
+	CBaseClient *GetPropCullClientBase() { return this; }
 	void			OverrideSignonStateTransparent( int nState ){ m_nSignonState = nState; }
-protected:
-	virtual bool	ProcessSignonStateMsg(int state, int spawncount);
-	virtual void	PerformDisconnection( const char *pReason );
+public:
+	bool ProcessSignonStateMsg( int state, int spawncount );
+
+	bool	ProcessSignonStateMsgBase(int state, int spawncount);
+	void PerformDisconnection( const char *pReason );
+
+	void	PerformDisconnectionBase( const char *pReason );
 
 	void			OnPlayerAvatarDataChanged();
 
-private:	
+public:	
 	void			OnRequestFullUpdate( char const *pchReason );
 	int				GetAvailableSplitScreenSlot() const;
 	void			SendFullConnectEvent();
 
 public:
+
+	client_kind_t	m_client_kind;		// the class this object really is (see facade/baseclient.inl)
 
 	// One of the subservient split screen users?
 	bool			m_bSplitScreenUser;
@@ -281,7 +382,7 @@ public:
 	//===== NETWORK ============
 	INetChannel		*m_NetChannel;		// The client's net connection.
 
-private:
+public:
 	int				m_nSignonState;		// connection state
 
 public:
@@ -329,7 +430,7 @@ public:
 	CSVCMsg_TempEntities_t m_tempentsmsg;
 	CSVCMsg_PacketEntities_t m_packetmsg;
 
-private:
+public:
 	void				StartTrace( bf_write &msg );
 	void				EndTrace( bf_write &msg );
 

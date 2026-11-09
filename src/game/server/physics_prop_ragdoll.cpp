@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -78,7 +76,7 @@ constexpr auto SF_RAGDOLLPROP_STARTASLEEP = 0x10000;
 // Networking
 //-----------------------------------------------------------------------------
 LINK_ENTITY_TO_CLASS( physics_prop_ragdoll, CRagdollProp );
-LINK_ENTITY_TO_CLASS( prop_ragdoll, CRagdollProp );
+LINK_ENTITY_TO_CLASS_ALIAS( prop_ragdoll, CRagdollProp );
 EXTERN_SEND_TABLE(DT_Ragdoll)
 
 IMPLEMENT_REFLECT_SERVERCLASS( CRagdollProp, DT_Ragdoll )
@@ -96,7 +94,7 @@ void CRagdollProp::DisableAutoFade()
 }
 
 	
-void CRagdollProp::Spawn( void )
+void CRagdollProp::Spawn_Impl( void )
 {
 	// Starts out as the default fade scale value
 	m_flDefaultFadeScale = GetGlobalFadeScale();
@@ -149,7 +147,7 @@ void CRagdollProp::SetSourceClassName( const char *pClassname )
 }
 
 
-void CRagdollProp::OnRestore()
+void CRagdollProp::OnRestore_Impl()
 {
 	// rebuild element 0 since it isn't saved
 	// NOTE: This breaks the rules - the pointer needs to get fixed in Restore()
@@ -157,7 +155,7 @@ void CRagdollProp::OnRestore()
 	m_ragdoll.list[0].parentIndex = -1;
 	m_ragdoll.list[0].originParentSpace.Init();
 
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 	if ( !m_ragdoll.listCount )
 		return;
 
@@ -172,7 +170,7 @@ void CRagdollProp::CalcRagdollSize( void )
 	CollisionProp()->RemoveSolidFlags( FSOLID_FORCE_WORLD_ALIGNED );
 }
 
-void CRagdollProp::UpdateOnRemove( void )
+void CRagdollProp::UpdateOnRemove_Impl( void )
 {
 	for ( int i = 0; i < m_ragdoll.listCount; i++ )
 	{
@@ -188,7 +186,7 @@ void CRagdollProp::UpdateOnRemove( void )
 	RagdollDestroy( m_ragdoll );
 	// Chain to base after doing our own cleanup to mimic
 	//  destructor unwind order
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 CRagdollProp::CRagdollProp( void )
@@ -206,15 +204,15 @@ CRagdollProp::~CRagdollProp( void )
 {
 }
 
-void CRagdollProp::Precache( void )
+void CRagdollProp::Precache_Impl( void )
 {
 	PrecacheModel( STRING( GetModelName() ) );
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
-int CRagdollProp::ObjectCaps()
+int CRagdollProp::ObjectCaps_Impl()
 {
-	return BaseClass::ObjectCaps() | FCAP_WCEDIT_POSITION;
+	return BaseClass::ObjectCaps_Impl() | FCAP_WCEDIT_POSITION;
 }
 
 //-----------------------------------------------------------------------------
@@ -242,9 +240,9 @@ void CRagdollProp::InitRagdollAnimation()
 //-----------------------------------------------------------------------------
 // Response system stuff
 //-----------------------------------------------------------------------------
-IResponseSystem *CRagdollProp::GetResponseSystem()
+extern IResponseSystem *g_pResponseSystem;
+IResponseSystem *CRagdollProp::GetResponseSystem_Impl()
 {
-	extern IResponseSystem *g_pResponseSystem;
 
 	// Just use the general NPC response system; we often come from NPCs after all
 	return g_pResponseSystem;
@@ -254,9 +252,9 @@ IResponseSystem *CRagdollProp::GetResponseSystem()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CRagdollProp::ModifyOrAppendCriteria( AI_CriteriaSet& set )
+void CRagdollProp::ModifyOrAppendCriteria_Impl( AI_CriteriaSet& set )
 {
-	BaseClass::ModifyOrAppendCriteria( set );
+	BaseClass::ModifyOrAppendCriteria_Impl( set );
 
 	if ( m_strSourceClassName != NULL_STRING )
 	{
@@ -379,7 +377,7 @@ void CRagdollProp::OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t Reaso
 //-----------------------------------------------------------------------------
 // Physics attacker
 //-----------------------------------------------------------------------------
-CBasePlayer *CRagdollProp::HasPhysicsAttacker( float dt )
+CBasePlayer *CRagdollProp::HasPhysicsAttacker_Impl( float dt )
 {
 	if (gpGlobals->curtime - dt <= m_flLastPhysicsInfluenceTime)
 	{
@@ -392,9 +390,9 @@ CBasePlayer *CRagdollProp::HasPhysicsAttacker( float dt )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CRagdollProp::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
+void CRagdollProp::VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent )
 {
-	BaseClass::VPhysicsCollision( index, pEvent );
+	BaseClass::VPhysicsCollision_Impl( index, pEvent );
 
 	CBaseEntity *pHitEntity = pEvent->pEntities[!index];
 	if ( pHitEntity == this )
@@ -709,7 +707,7 @@ void CRagdollProp::SetDamageEntity( CBaseEntity *pEntity )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int	CRagdollProp::OnTakeDamage( const CTakeDamageInfo &info )
+int	CRagdollProp::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	// If we have a damage entity, we want to pass damage to it. Add the
 	// Never Ragdoll flag, on the assumption that if the entity dies, we'll
@@ -721,7 +719,7 @@ int	CRagdollProp::OnTakeDamage( const CTakeDamageInfo &info )
 		return m_hDamageEntity->OnTakeDamage( subInfo );
 	}
 
-	return BaseClass::OnTakeDamage( info );
+	return BaseClass::OnTakeDamage_Impl( info );
 }
 
 //-----------------------------------------------------------------------------
@@ -736,13 +734,13 @@ void CRagdollProp::RecheckCollisionFilter( void )
 }
 
 
-void CRagdollProp::TraceAttack( const CTakeDamageInfo &info, const Vector &dir, trace_t *ptr )
+void CRagdollProp::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &dir, trace_t *ptr )
 {
 	if ( ptr->physicsbone >= 0 && ptr->physicsbone < m_ragdoll.listCount )
 	{
 		VPhysicsSwapObject( m_ragdoll.list[ptr->physicsbone].pObject );
 	}
-	BaseClass::TraceAttack( info, dir, ptr );
+	BaseClass::TraceAttack_Impl( info, dir, ptr );
 }
 
 void CRagdollProp::SetupBones( matrix3x4a_t *pBoneToWorld, int boneMask )
@@ -792,7 +790,7 @@ void CRagdollProp::SetupBones( matrix3x4a_t *pBoneToWorld, int boneMask )
 	}
 }
 
-bool CRagdollProp::TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace )
+bool CRagdollProp::TestCollision_Impl( const Ray_t &ray, unsigned int mask, trace_t& trace )
 {
 
 	MDLCACHE_CRITICAL_SECTION();
@@ -835,7 +833,7 @@ bool CRagdollProp::TestCollision( const Ray_t &ray, unsigned int mask, trace_t& 
 }
 
 
-void CRagdollProp::Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts )
+void CRagdollProp::Teleport_Impl( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts )
 {
 	// newAngles is a relative transform for the entity
 	// But a ragdoll entity has identity orientation by design
@@ -866,7 +864,7 @@ void CRagdollProp::Teleport( const Vector *newPosition, const QAngle *newAngles,
 	Vector obj0Pos;
 	QAngle obj0Angles;
 	MatrixAngles( obj0Target, obj0Angles, obj0Pos );
-	BaseClass::Teleport( &obj0Pos, &obj0Angles, newVelocity, bUseSlowHighAccuracyContacts );
+	BaseClass::Teleport_Impl( &obj0Pos, &obj0Angles, newVelocity, bUseSlowHighAccuracyContacts );
 	
 	for ( int i = 1; i < m_ragdoll.listCount; i++ )
 	{
@@ -880,7 +878,7 @@ void CRagdollProp::Teleport( const Vector *newPosition, const QAngle *newAngles,
 	UpdateNetworkDataFromVPhysics( m_ragdoll.list[0].pObject, 0 );
 }
 
-void CRagdollProp::VPhysicsUpdate( IPhysicsObject *pPhysics )
+void CRagdollProp::VPhysicsUpdate_Impl( IPhysicsObject *pPhysics )
 {
 	if ( m_lastUpdateTickCount == (unsigned int)gpGlobals->tickcount )
 		return;
@@ -973,7 +971,7 @@ void CRagdollProp::VPhysicsUpdate( IPhysicsObject *pPhysics )
 	PhysicsTouchTriggers();
 }
 
-int CRagdollProp::VPhysicsGetObjectList( IPhysicsObject **pList, int listMax )
+int CRagdollProp::VPhysicsGetObjectList_Impl( IPhysicsObject **pList, int listMax )
 {
 	for ( int i = 0; i < m_ragdoll.listCount; i++ )
 	{
@@ -1060,9 +1058,9 @@ void CRagdollProp::FadeOutThink(void)
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CRagdollProp::DrawDebugTextOverlays(void) 
+int CRagdollProp::DrawDebugTextOverlays_Impl(void) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -1087,7 +1085,7 @@ int CRagdollProp::DrawDebugTextOverlays(void)
 	return text_offset;
 }
 
-void CRagdollProp::DrawDebugGeometryOverlays() 
+void CRagdollProp::DrawDebugGeometryOverlays_Impl() 
 {
 	if (m_debugOverlays & OVERLAY_BBOX_BIT) 
 	{
@@ -1107,7 +1105,7 @@ void CRagdollProp::DrawDebugGeometryOverlays()
 			}
 		}
 	} 
-	BaseClass::DrawDebugGeometryOverlays();
+	BaseClass::DrawDebugGeometryOverlays_Impl();
 }
 
 //-----------------------------------------------------------------------------
@@ -1141,7 +1139,7 @@ public:
 
 	void InitRagdollAttached( IPhysicsObject *pAttached, const Vector &forceVector, int forceBone, matrix3x4_t *pPrevBones, matrix3x4_t *pBoneToWorld, float dt, int collisionGroup, CBaseAnimating *pFollow, int boneIndexRoot, const Vector &boneLocalOrigin, int parentBoneAttach, const Vector &worldAttachOrigin );
 	void DetachOnNextUpdate();
-	void VPhysicsUpdate( IPhysicsObject *pPhysics );
+	void VPhysicsUpdate_Impl( IPhysicsObject *pPhysics );
 
 	DECLARE_SERVERCLASS();
 
@@ -1355,14 +1353,14 @@ void CRagdollPropAttached::DetachOnNextUpdate()
 	m_bShouldDetach = true;
 }
 
-void CRagdollPropAttached::VPhysicsUpdate( IPhysicsObject *pPhysics )
+void CRagdollPropAttached::VPhysicsUpdate_Impl( IPhysicsObject *pPhysics )
 {
 	if ( m_bShouldDetach )
 	{
 		Detach();
 		m_bShouldDetach = false;
 	}
-	BaseClass::VPhysicsUpdate( pPhysics );
+	BaseClass::VPhysicsUpdate_Impl( pPhysics );
 }
 
 void CRagdollPropAttached::Detach()

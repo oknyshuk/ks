@@ -33,10 +33,18 @@ inline CCSBotManager *TheCSBots( void )
 }
 
 //--------------------------------------------------------------------------------------------------------------
-class BotEventInterface : public IGameEventListener2
+class BotEventInterface
 {
 public:
-	virtual const char *GetEventName( void ) const = 0;
+	const char *GetEventName( void ) const		{ return m_eventName; }
+	GameEventCallback_t GetCallback( void ) const	{ return m_callback; }
+
+protected:
+	BotEventInterface( const char *eventName, GameEventCallback_t callback ) : m_eventName( eventName ), m_callback( callback ) { }
+
+private:
+	const char *m_eventName;
+	GameEventCallback_t m_callback;		// the event class's FireGameEvent
 };
 
 //--------------------------------------------------------------------------------------------------------------
@@ -46,41 +54,33 @@ public:
  */
 #define DECLARE_BOTMANAGER_EVENT_LISTENER( BotManagerSingleton, EventClass, EventName ) \
 	public: \
-	virtual void On##EventClass( IGameEvent *data ); \
+	void On##EventClass( IGameEvent *data ); \
 	private: \
 	class EventClass##Event : public BotEventInterface \
 	{ \
 		bool m_enabled; \
 	public: \
-		EventClass##Event( void ) \
+		EventClass##Event( void ) : BotEventInterface( #EventName, GameEventCallback_t( std::cw<&EventClass##Event::FireGameEvent>, this ) ) \
 		{ \
-			gameeventmanager->AddListener( this, #EventName, true ); \
+			gameeventmanager->AddListener( static_cast< BotEventInterface * >( this ), GetCallback(), #EventName, true ); \
 			m_enabled = true; \
 		} \
 		~EventClass##Event( void ) \
 		{ \
-			if ( m_enabled ) gameeventmanager->RemoveListener( this ); \
-		} \
-		virtual const char *GetEventName( void ) const \
-		{ \
-			return #EventName; \
+			if ( m_enabled ) gameeventmanager->RemoveListener( static_cast< BotEventInterface * >( this ) ); \
 		} \
 		void Enable( bool enable ) \
 		{ \
 			m_enabled = enable; \
 			if ( enable ) \
-				gameeventmanager->AddListener( this, #EventName, true ); \
+				gameeventmanager->AddListener( static_cast< BotEventInterface * >( this ), GetCallback(), #EventName, true ); \
 			else \
-				gameeventmanager->RemoveListener( this ); \
+				gameeventmanager->RemoveListener( static_cast< BotEventInterface * >( this ) ); \
 		} \
 		bool IsEnabled( void ) const { return m_enabled; } \
 		void FireGameEvent( IGameEvent *event ) \
 		{ \
 			BotManagerSingleton()->On##EventClass( event ); \
-		} \
-		int GetEventDebugID( void ) \
-		{ \
-			return EVENT_DEBUG_ID_INIT; \
 		} \
 	}; \
 	EventClass##Event m_##EventClass##Event;
@@ -94,7 +94,7 @@ public:
 /**
  * Macro to propogate an event from the bot manager to all bots
  */
-// @kutta: changed dynamic_cast -> static_cast; what other bot types can there be?
+// CCSBot is the only bot type
 #define CCSBOTMANAGER_ITERATE_BOTS( Callback, arg1 ) \
 	{ \
 		for ( int idx = 1; idx <= gpGlobals->maxClients; ++idx ) \
@@ -117,21 +117,22 @@ class CCSBotManager : public CBotManager
 public:
 	CCSBotManager();
 
-	virtual CBasePlayer *AllocateBotEntity( void );			///< factory method to allocate the appropriate entity for the bot
+	CBasePlayer *AllocateAndBindBotEntity( edict_t *ed );	///< allocate the appropriate entity for the bot and bind it to the given edict
+	CBasePlayer *AllocateBotEntity( void );					///< factory method to allocate the appropriate entity for the bot
 
-	virtual void ClientDisconnect( CBaseEntity *entity );
-	virtual bool ClientCommand( CBasePlayer *player, const CCommand &args );
+	void ClientDisconnect( CBaseEntity *entity );
+	bool ClientCommand( CBasePlayer *player, const CCommand &args );
 
-	virtual void ServerActivate( void );
-	virtual void ServerDeactivate( void );
-	virtual bool ServerCommand( const char *cmd );
+	void ServerActivate( void );
+	void ServerDeactivate( void );
+	bool ServerCommand( const char *cmd );
 	bool IsServerActive( void ) const { return m_serverActive; }
 
-	virtual void RestartRound( void );						///< (EXTEND) invoked when a new round begins
-	virtual void StartFrame( void );						///< (EXTEND) called each frame
+	void RestartRound( void );						///< invoked when a new round begins
+	void StartFrame( void );						///< called each frame
 
-	virtual unsigned int GetPlayerPriority( CBasePlayer *player ) const;	///< return priority of player (0 = max pri)
-	virtual bool IsImportantPlayer( CCSPlayer *player ) const;				///< return true if player is important to scenario (VIP, bomb carrier, etc)
+	unsigned int GetPlayerPriority( CBasePlayer *player ) const;	///< return priority of player (0 = max pri)
+	bool IsImportantPlayer( CCSPlayer *player ) const;				///< return true if player is important to scenario (VIP, bomb carrier, etc)
 
 	void ExtractScenarioData( void );							///< search the map entities to determine the game scenario and define important zones
 
@@ -417,6 +418,12 @@ private:
 	bool m_eventListenersEnabled;
 	void EnableEventListeners( bool enable );
 };
+
+inline CBasePlayer *CCSBotManager::AllocateAndBindBotEntity( edict_t *ed )
+{
+	SetPlayerEdictForNextBot( ed );
+	return AllocateBotEntity();
+}
 
 inline CBasePlayer *CCSBotManager::AllocateBotEntity( void )
 {

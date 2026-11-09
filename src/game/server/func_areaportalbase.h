@@ -5,7 +5,6 @@
 #include "reflect_annotations.h"
 
 #include "baseentity.h"
-import std;
 
 // Shared stuff between door portals and window portals.
 class CFuncAreaPortalBase : public CBaseEntity
@@ -18,7 +17,7 @@ public:
 	virtual			~CFuncAreaPortalBase();
 
 	// Areaportals must be placed in each map for preprocess, they can't use transitions
-	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	int	ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION; }
 	
 	// This is called each frame for each client to all portals to close 
 	// when the viewer is far enough away, or on the backside.

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -43,7 +41,6 @@ import ks.tier1;
 
 #include "datacache/imdlcache.h"
 
-#include "toolframework/itoolframework.h"
 
 #include "cs_player.h"
 
@@ -345,14 +342,14 @@ void CBaseAnimatingOverlay::VerifyOrder( void )
 // Purpose: Sets the entity's model, clearing animation data
 // Input  : *szModelName - 
 //-----------------------------------------------------------------------------
-void CBaseAnimatingOverlay::SetModel( const char *szModelName )
+void CBaseAnimatingOverlay::SetModel_Impl( const char *szModelName )
 {
 	for ( int j=0; j<std::ssize( m_AnimOverlay ); ++j )
 	{
 		m_AnimOverlay[j].Init( this );
 	}
 
-	BaseClass::SetModel( szModelName );
+	BaseClass::SetModel_Impl( szModelName );
 }
 
 
@@ -697,7 +694,7 @@ void CBaseAnimatingOverlay::GetSkeleton( CStudioHdr *pStudioHdr, BoneVector pos[
 // Purpose: zero's out all non-restore safe fields
 // Output :
 //-----------------------------------------------------------------------------
-void CBaseAnimatingOverlay::OnRestore( )
+void CBaseAnimatingOverlay::OnRestore_Impl( )
 {
 	int i;
 
@@ -723,7 +720,7 @@ void CBaseAnimatingOverlay::OnRestore( )
 		}
 	}
 
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 }
 
 

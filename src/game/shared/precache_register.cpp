@@ -5,11 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
-import ks.vstdlib;
 #include "const.h"
 #include "string_t.h"
 #include "predictableid.h"
@@ -22,7 +18,6 @@ import ks.vstdlib;
 #include "physics.h"
 #include "cdll_client_int.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -40,7 +35,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -77,7 +71,7 @@ static const char *s_pPrecacheResourceTypeName[] =
 //-----------------------------------------------------------------------------
 // Provides callback to do actual precaching of resources
 //-----------------------------------------------------------------------------
-class CPrecacheHandler : public IPrecacheHandler
+class CPrecacheHandler
 {
 public:
 	void CacheResource( PrecacheResourceType_t nType, const char *pName, bool bPrecache, ResourceList_t hResourceList, int *pIndex = nullptr );
@@ -95,7 +89,11 @@ static CPrecacheRegister	s_PrecacheRegister;
 CPrecacheRegister *g_pPrecacheRegister = &s_PrecacheRegister;
 
 static CPrecacheHandler		s_PrecacheHandler;
-IPrecacheHandler *g_pPrecacheHandler = &s_PrecacheHandler;
+static auto s_CacheResource = []( PrecacheResourceType_t nType, const char *pName, bool bPrecache, ResourceList_t hResourceList, int *pIndex )
+{
+	s_PrecacheHandler.CacheResource( nType, pName, bPrecache, hResourceList, pIndex );
+};
+PrecacheHandler_t g_PrecacheHandler( s_CacheResource );
 
 bool CPrecacheRegister::Init()
 { 
@@ -108,7 +106,7 @@ bool CPrecacheRegister::Init()
 void CPrecacheRegister::LevelInitPreEntity()
 {
 	COM_TimestampedLog( "LevelInitPreEntity - PreCache - Start" );
-	g_pPrecacheSystem->Cache( g_pPrecacheHandler, GLOBAL, nullptr, true, RESOURCE_LIST_INVALID, false );
+	g_pPrecacheSystem->Cache( g_PrecacheHandler, GLOBAL, nullptr, true, RESOURCE_LIST_INVALID, false );
 	COM_TimestampedLog( "LevelInitPreEntity - PreCache - Finish" );
 
 #ifdef CLIENT_DLL
@@ -123,7 +121,7 @@ void CPrecacheRegister::LevelInitPreEntity()
 void CPrecacheRegister::LevelShutdownPostEntity()
 {
 	// FIXME: How to uncache all resources cached during the course of the level?
-	g_pPrecacheSystem->UncacheAll( g_pPrecacheHandler );
+	g_pPrecacheSystem->UncacheAll( g_PrecacheHandler );
 
 	if ( g_pResourceAccessControl )
 	{
@@ -347,7 +345,7 @@ void CPrecacheHandler::CacheResource( PrecacheResourceType_t nType, const char *
 			break;
 
 		case SHARED:
-			g_pPrecacheSystem->Cache( this, SHARED_SYSTEM, pName, bPrecache, hResourceList, false );
+			g_pPrecacheSystem->Cache( g_PrecacheHandler, SHARED_SYSTEM, pName, bPrecache, hResourceList, false );
 			break;
 
 		case KV_DEP_FILE:

@@ -14,7 +14,7 @@ class IMaterialInternal;
 // functions called after last function added
 //-----------------------------------------------------------------------------
 
-class CMatCallQueue
+class CMatCallQueue : public ICallQueue
 {
 public:
 	CMatCallQueue()
@@ -26,170 +26,13 @@ public:
 #else
 		m_Allocator.Init( (const char *)stackName, 2*1024*1024, 64*1024, 256*1024, 16 );
 #endif
-		m_FunctorFactory.SetAllocator( &m_Allocator );
-		m_pHead = m_pTail = nullptr;
-	}
-
-	std::size_t GetMemoryUsed()
-	{
-		return m_Allocator.GetUsed();
-	}
-
-	int Count() const
-	{
-		int i = 0;
-		Elem_t *pCurrent = m_pHead;
-		while ( pCurrent )
-		{
-			i++;
-			pCurrent = pCurrent->pNext;
-		}
-		return i;
-	}
-
-	template <typename T>
-	T &Copy( T &item )
-	{
-		T *pCopy = (T *)m_Allocator.Alloc( sizeof(T) );
-		std::memcpy( pCopy, &item, sizeof(T) );
-		return *pCopy;
-	}
-
-	template <typename T>
-	T *CopyArray( T *p, int n )
-	{
-		T *pCopy = (T *)m_Allocator.Alloc( sizeof(T) * n );
-		std::memcpy( (void *)pCopy, p, sizeof(T) * n );
-		return pCopy;
-	}
-
-	template <const char *>
-	const char *Copy( const char *psz )
-	{
-		int len = V_strlen( psz );
-		char *pCopy = (char *)m_Allocator.Alloc( len + 1 );
-		memcpy( pCopy, psz, len + 1 );
-		return pCopy;
-
 	}
 
 	void CallQueued()
 	{
 		CPerfStatsScope _perfStatsScope3171( "RenderThread", PERF_STATS_SLOT_RENDERTHREAD );
-		if ( !m_pHead )
-		{
-			return;
-		}
-
-		CFunctor *pFunctor;
-
-		Elem_t *pCurrent = m_pHead;
-		while ( pCurrent )
-		{
-			pFunctor = pCurrent->GetFunctor();
-#ifdef _DEBUG
-			if ( pFunctor->m_nUserID == m_nBreakSerialNumber)
-			{
-				m_nBreakSerialNumber = (unsigned)-1;
-			}
-#endif
-			if ( pCurrent->pNext )
-			{
-			}
-			(*pFunctor)();
-			pFunctor->~CFunctor(); // no need to ref count, we're alone here...
-			pCurrent = pCurrent->pNext;
-		}
-		m_Allocator.FreeAll( false );
-		m_pHead = m_pTail = nullptr;
+		ICallQueue::CallQueued();
 	}
-
-	void QueueFunctor( CFunctor *pFunctor )
-	{
-		contract_assert( pFunctor );
-		m_Allocator.Alloc( sizeof(Elem_t) );
-		QueueFunctorInternal( m_FunctorFactory.CreateRefCountingFunctor( pFunctor, &CFunctor::operator() ) );
-	}
-
-	void Flush()
-	{
-		if ( !m_pHead )
-		{
-			return;
-		}
-
-		CFunctor *pFunctor;
-
-		Elem_t *pCurrent = m_pHead;
-		while ( pCurrent )
-		{
-			pFunctor = pCurrent->GetFunctor();
-			pFunctor->Release();
-			pCurrent = pCurrent->pNext;
-		}
-
-		m_Allocator.FreeAll( false );
-		m_pHead = m_pTail = nullptr;
-	}
-
-	template <typename RET_TYPE, typename... PARAMS, typename... ARGS>
-	void QueueCall( RET_TYPE (*pfnProxied)( PARAMS... ), ARGS &&... args )
-	{
-		m_Allocator.Alloc( sizeof(Elem_t) );
-		QueueFunctorInternal( m_FunctorFactory.CreateFunctor( pfnProxied, std::forward<ARGS>(args)... ) );
-	}
-
-		//-------------------------------------
-
-	template <typename OBJECT_TYPE_PTR, typename RET_TYPE, typename FUNCTION_CLASS, typename... PARAMS, typename... ARGS>
-	void QueueCall( OBJECT_TYPE_PTR pObject, RET_TYPE ( FUNCTION_CLASS::*pfnProxied )( PARAMS... ), ARGS &&... args )
-	{
-		m_Allocator.Alloc( sizeof(Elem_t) );
-		QueueFunctorInternal( m_FunctorFactory.CreateFunctor( pObject, pfnProxied, std::forward<ARGS>(args)... ) );
-	}
-
-		//-------------------------------------
-
-	template <typename OBJECT_TYPE_PTR, typename RET_TYPE, typename FUNCTION_CLASS, typename... PARAMS, typename... ARGS>
-	void QueueCall( OBJECT_TYPE_PTR pObject, RET_TYPE ( FUNCTION_CLASS::*pfnProxied )( PARAMS... ) const, ARGS &&... args )
-	{
-		m_Allocator.Alloc( sizeof(Elem_t) );
-		QueueFunctorInternal( m_FunctorFactory.CreateFunctor( pObject, pfnProxied, std::forward<ARGS>(args)... ) );
-	}
-
-private:
-	void QueueFunctorInternal( CFunctor *pFunctor )
-	{
-#ifdef _DEBUG
-		pFunctor->m_nUserID = m_nCurSerialNumber++;
-#endif
-		// Caller is expected to have preallocated Elem_t entry immediately prior to functor
-		Elem_t *pNew = ((Elem_t *)pFunctor) - 1;
-		if ( m_pTail )
-		{
-			m_pTail->pNext = pNew;
-			m_pTail = pNew;
-		}
-		else
-		{
-			m_pHead = m_pTail = pNew;
-		}
-		pNew->pNext = nullptr;
-	}
-
-	struct Elem_t
-	{
-		Elem_t *pNext;
-		CFunctor *GetFunctor() { return (CFunctor *)(this + 1 ); }
-	};
-
-	Elem_t *m_pHead;
-	Elem_t *m_pTail;
-
-	CMemoryStack m_Allocator;
-	CCustomizedFunctorFactory<CMemoryStack, CRefCounted1<CFunctor, CRefCountServiceDestruct< CRefST > > > m_FunctorFactory;
-	unsigned m_nCurSerialNumber;
-	unsigned m_nBreakSerialNumber;
 };
 
 inline constexpr auto MATCONFIG_FLAGS_SUPPORT_EDITOR = ( 1 << 0 );
@@ -201,34 +44,34 @@ class IMaterialSystemInternal : public IMaterialSystem
 {
 public:
 	// Returns the current material
-	virtual IMaterial* GetCurrentMaterial() = 0;
+	IMaterial* GetCurrentMaterial();
 
-	virtual int GetLightmapPage( void ) = 0;
+	int GetLightmapPage( void );
 
 	// Gets the maximum lightmap page size...
-	virtual int GetLightmapWidth( int lightmap ) const = 0;
-	virtual int GetLightmapHeight( int lightmap ) const = 0;
+	int GetLightmapWidth( int lightmap ) const;
+	int GetLightmapHeight( int lightmap ) const;
 
-	virtual ITexture *GetLocalCubemap( void ) = 0;
+	ITexture *GetLocalCubemap( void );
 
 //	virtual bool RenderZOnlyWithHeightClipEnabled( void ) = 0;
-	virtual void ForceDepthFuncEquals( bool bEnable ) = 0;
-	virtual enum MaterialHeightClipMode_t GetHeightClipMode( void ) = 0;
+	void ForceDepthFuncEquals( bool bEnable );
+	enum MaterialHeightClipMode_t GetHeightClipMode( void );
 
 	// FIXME: Remove? Here for debugging shaders in CShaderSystem
-	virtual void AddMaterialToMaterialList( IMaterialInternal *pMaterial ) = 0;
-	virtual void RemoveMaterial( IMaterialInternal *pMaterial ) = 0;
-	virtual void RemoveMaterialSubRect( IMaterialInternal *pMaterial ) = 0;
-	virtual bool InFlashlightMode() const = 0;
-	virtual bool IsCascadedShadowMapping() const = 0;
+	void AddMaterialToMaterialList( IMaterialInternal *pMaterial );
+	void RemoveMaterial( IMaterialInternal *pMaterial );
+	void RemoveMaterialSubRect( IMaterialInternal *pMaterial );
+	bool InFlashlightMode() const;
+	bool IsCascadedShadowMapping() const;
 
 	// Can we use editor materials?
-	virtual bool CanUseEditorMaterials() const = 0;
-	virtual int GetConfigurationFlags( void ) const = 0;
-	virtual const char *GetForcedTextureLoadPathID() = 0;
+	bool CanUseEditorMaterials() const;
+	int GetConfigurationFlags( void ) const;
+	const char *GetForcedTextureLoadPathID();
 
-	virtual CMatCallQueue *GetRenderCallQueue() = 0;
+	CMatCallQueue *GetRenderCallQueue();
 
-	virtual void UnbindMaterial( IMaterial *pMaterial ) = 0;
-	virtual uint GetRenderThreadId() const = 0 ;
+	void UnbindMaterial( IMaterial *pMaterial );
+	uint GetRenderThreadId() const;
 };

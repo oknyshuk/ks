@@ -4,8 +4,6 @@
 // Purpose: Particles which are simulated locally to some space (attachment, bone, etc)
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -143,7 +141,7 @@ void CLocalSpaceEmitter::SetupTransformMatrix( void )
 		m_ParticleEffect.SetLocalSpaceTransform( mat );
 		SetSortOrigin( origin );
 
-		C_BaseEntity *pEnt = pRenderable->GetIClientUnknown()->GetBaseEntity();
+		C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( pRenderable->GetIClientUnknown()->GetBaseEntity() );
 		if ( pEnt )
 		{
 			Vector vWorldMins, vWorldMaxs;

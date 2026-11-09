@@ -44,9 +44,7 @@ struct MovieInfo_t
 	enum
 	{
 		FMOVIE_TGA	= ( 1 << 0 ),
-		FMOVIE_AVI	= ( 1 << 1 ),
 		FMOVIE_WAV	= ( 1 << 2 ),
-		FMOVIE_AVISOUND	= ( 1 << 3 ),
 		FMOVIE_JPG = ( 1<< 4 )
 	};
 
@@ -86,16 +84,6 @@ struct MovieInfo_t
 		return ( type & FMOVIE_JPG ) ? true : false;
 	}
 
-
-	bool	DoAVI() const
-	{
-		return ( type & FMOVIE_AVI ) ? true : false;
-	}
-
-	bool	DoAVISound() const
-	{
-		return ( type & FMOVIE_AVISOUND ) ? true : false;
-	}
 
 	char	moviename[ 256 ];
 	int		movieframe;

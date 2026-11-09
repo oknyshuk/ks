@@ -84,7 +84,6 @@ import std;
 #include "pure_server.h"
 #include "datacache/idatacache.h"
 #include "cl_rcon.h"
-#include "toolframework/itoolframework.h"
 #include "snd_audio_source.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "serializedentity.h"
@@ -96,7 +95,7 @@ import std;
 extern CNetworkStringTableContainer *networkStringTableContainerServer;
 extern CNetworkStringTableContainer *networkStringTableContainerClient;
 extern void Host_EnsureHostNameSet();
-void OnHibernateWhenEmptyChanged( IConVar *var, const char *pOldValue, float flOldValue );
+void OnHibernateWhenEmptyChanged( ConVar *var, const char *pOldValue, float flOldValue );
 extern ConVar deathmatch;
 extern ConVar sv_sendtables;
 ConVar sv_hibernate_when_empty( "sv_hibernate_when_empty", "1", FCVAR_RELEASE, "Puts the server into extremely low CPU usage mode when no clients connected", OnHibernateWhenEmptyChanged );
@@ -148,7 +147,7 @@ void RevertAllModifiedLocalState()
 	}
 }
 
-static void SV_CheatsChanged_f( IConVar *pConVar, const char *pOldString, float flOldValue )
+static void SV_CheatsChanged_f( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 
     ConVarRef var( pConVar );
@@ -282,7 +281,7 @@ ConVar  sv_client_predict( "sv_client_predict", "-1", FCVAR_REPLICATED,
     );
 
 
-void OnTVEnablehanged( IConVar *pConVar, const char *pOldString, float flOldValue )
+void OnTVEnablehanged( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
     ConVarRef var( pConVar );
 
@@ -426,7 +425,7 @@ void CGameServer::Clear( void )
 
     m_TempEntities.clear(); m_TempEntities.shrink_to_fit();
 
-    BaseClass::Clear();
+    BaseClass::ClearBase();
 }
 
 
@@ -752,16 +751,7 @@ static void maxplayers( const CCommand &args )
             ConMsg ("\"mininum_maxplayers\" is \"%u\"\n", minmaxplayers );
             ConMsg ("\"absolute_maxplayers\" is \"%u\"\n", maxmaxplayers );
             ConMsg ("\"default_maxplayers\" is \"%u\"\n", defaultmaxplayers );
-#ifndef DEDICATED
-            if ( toolframework->InToolMode() ) 
-            {
-                ConMsg ("\"max_splitscreen_players\" is \"%u\" (limited by -tools mode)\n", host_state.max_splitscreen_players );
-            }
-            else
-#endif
-            {
-                ConMsg ("\"max_splitscreen_players\" is \"%u\"\n", host_state.max_splitscreen_players );
-            }
+            ConMsg ("\"max_splitscreen_players\" is \"%u\"\n", host_state.max_splitscreen_players );
         }
         return;
     }
@@ -1008,7 +998,7 @@ ServerClass* SV_FindServerClass( int index )
 //-----------------------------------------------------------------------------
 void CGameServer::Init (bool isDedicated)
 {
-    BaseClass::Init( isDedicated );
+    BaseClass::InitBase( isDedicated );
 
     m_FullSendTables.SetDebugName( "m_FullSendTables" );
     
@@ -1083,7 +1073,7 @@ void CGameServer::Shutdown( void )
         g_GameEventManager.FireEvent( event );
     }
 
-    BaseClass::Shutdown();
+    BaseClass::ShutdownBase();
 
     // Actually performs a shutdown.
     framesnapshotmanager->LevelChanged();
@@ -1315,6 +1305,7 @@ CLIENT SPAWNING
 */
 
 CGameServer::CGameServer()
+	: CBaseServer( server_kind_t::game )
 {
     m_nMinClientsLimit = 0;
     m_nMaxClientsLimit = 0;
@@ -1550,7 +1541,7 @@ CPureServerWhitelist * CGameServer::GetPureServerWhitelist() const
     return m_pPureServerWhitelist;
 }
 
-void OnHibernateWhenEmptyChanged( IConVar *var, const char *pOldValue, float flOldValue )
+void OnHibernateWhenEmptyChanged( ConVar *var, const char *pOldValue, float flOldValue )
 {
     // We only need to do something special if we were preventing hibernation
     // with sv_hibernate_when_empty but we would otherwise have been hibernating.
@@ -2935,15 +2926,14 @@ SV_Frame
 
 ==================
 */
-CFunctor *g_pDeferredServerWork;
+CFunctor g_deferredServerWork;
 
 void SV_FrameExecuteThreadDeferred()
 {
-    if ( g_pDeferredServerWork )
+    if ( g_deferredServerWork )
     {
-        (*g_pDeferredServerWork)();
-        delete g_pDeferredServerWork;
-        g_pDeferredServerWork = nullptr;
+        g_deferredServerWork();
+        g_deferredServerWork = nullptr;
     }
 }
 
@@ -2986,7 +2976,7 @@ void SV_Frame( bool finalTick )
     if ( !sv.IsActive() || !Host_ShouldRun() )
     {
         // Need to process LAN searches
-        NET_ProcessSocket( NS_SERVER, &sv );
+        NET_ProcessSocket( NS_SERVER, [&]( netpacket_t *packet ) { return sv.ProcessConnectionlessPacket( packet ); } );
         return;
     }
 
@@ -3025,7 +3015,7 @@ void SV_Frame( bool finalTick )
         if ( !IsEngineThreaded() || sv.IsMultiplayer() )
             SV_SendClientUpdates( bIsSimulating, bSendDuringPause );
         else
-            g_pDeferredServerWork = CreateFunctor( SV_SendClientUpdates, bIsSimulating, bSendDuringPause );
+            g_deferredServerWork = CreateFunctor( SV_SendClientUpdates, bIsSimulating, bSendDuringPause );
 
     }
 

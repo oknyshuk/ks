@@ -4,27 +4,31 @@
 import std;
 import ks.tier1;
 #include "tier2/tier2.h"
+#include "appframework/apptiers.h"
 #include "datacache/iprecachesystem.h"
 #include "datacache/iresourceaccesscontrol.h"
 
 //-----------------------------------------------------------------------------
 // Implementation class
 //-----------------------------------------------------------------------------
-class CPrecacheSystem : public CTier2AppSystem< IPrecacheSystem >
+class CPrecacheSystem : public IPrecacheSystem
 {
-	typedef CTier2AppSystem< IPrecacheSystem > BaseClass;
-
-	// Inherited from IAppSystem
+	// App system protocol (a tier 2 system)
 public:
+	bool Connect( CreateInterfaceFn factory ) { return AppSystemTier2Connect( factory ); }
+	void Disconnect() { AppSystemTier2Disconnect(); }
+	void *QueryInterface( const char *pInterfaceName ) { return nullptr; }
+	InitReturnVal_t Init() { return AppSystemTier1Init(); }
+	void Shutdown() { AppSystemTier1Shutdown(); }
 
 	// Inherited from IResourceAccessControl
 public:
-	void Register( IResourcePrecacher *pResourcePrecacherFirst, PrecacheSystem_t nSystem );
+	void Register( CBaseResourcePrecacher *pResourcePrecacherFirst, PrecacheSystem_t nSystem );
 
 	// Precaches/uncaches all resources used by a particular system
-	void Cache( IPrecacheHandler *pPrecacheHandler, PrecacheSystem_t nSystem, const char *pName, bool bPrecache, ResourceList_t hResourceList, bool bBuildResourceList );
+	void Cache( PrecacheHandler_t pPrecacheHandler, PrecacheSystem_t nSystem, const char *pName, bool bPrecache, ResourceList_t hResourceList, bool bBuildResourceList );
 
-	void UncacheAll( IPrecacheHandler *pPrecacheHandler );
+	void UncacheAll( PrecacheHandler_t pPrecacheHandler );
 
 	// Limits resource access to only resources used by this particular system
 	// Use GLOBAL system, and NULL name to disable limited resource access
@@ -32,7 +36,7 @@ public:
 	void EndLimitedResourceAccess();
 
 private:
-	IResourcePrecacher *m_pFirstPrecacher[PRECACHE_SYSTEM_COUNT];
+	CBaseResourcePrecacher *m_pFirstPrecacher[PRECACHE_SYSTEM_COUNT];
 	ks::idict< ResourceList_t > m_ResourceList[ PRECACHE_SYSTEM_COUNT ];
 };
 
@@ -58,11 +62,11 @@ static InterfaceReg s_Reg_CPrecacheSystem_IPrecacheSystem( []() -> void * { retu
 //-----------------------------------------------------------------------------
 // Precaches/uncaches all resources used by a particular system
 //-----------------------------------------------------------------------------
-void CPrecacheSystem::Cache( IPrecacheHandler *pPrecacheHandler, PrecacheSystem_t nSystem, const char *pName, bool bPrecache, ResourceList_t hResourceList, bool bBuildResourceList )
+void CPrecacheSystem::Cache( PrecacheHandler_t pPrecacheHandler, PrecacheSystem_t nSystem, const char *pName, bool bPrecache, ResourceList_t hResourceList, bool bBuildResourceList )
 {	
 	static_assert( std::size( s_pResourceSystemName ) == PRECACHE_SYSTEM_COUNT );
 
-	IResourcePrecacher *pPrecacher = m_pFirstPrecacher[nSystem];
+	CBaseResourcePrecacher *pPrecacher = m_pFirstPrecacher[nSystem];
 	for( ; pPrecacher; pPrecacher = pPrecacher->GetNext() )
 	{
 		if ( pName && V_stricmp( pName, pPrecacher->GetName() ) )
@@ -100,12 +104,12 @@ void CPrecacheSystem::Cache( IPrecacheHandler *pPrecacheHandler, PrecacheSystem_
 //-----------------------------------------------------------------------------
 // Uncaches everything
 //-----------------------------------------------------------------------------
-void CPrecacheSystem::UncacheAll( IPrecacheHandler *pPrecacheHandler )
+void CPrecacheSystem::UncacheAll( PrecacheHandler_t pPrecacheHandler )
 {
 	int nSystem;
 	for ( nSystem = 0; nSystem < PRECACHE_SYSTEM_COUNT; nSystem ++ )
 	{
-		IResourcePrecacher *pPrecacher = m_pFirstPrecacher[nSystem];
+		CBaseResourcePrecacher *pPrecacher = m_pFirstPrecacher[nSystem];
 		for( ; pPrecacher; pPrecacher = pPrecacher->GetNext() )
 		{
 			pPrecacher->Cache( pPrecacheHandler, false, RESOURCE_LIST_INVALID, false );
@@ -118,10 +122,10 @@ void CPrecacheSystem::UncacheAll( IPrecacheHandler *pPrecacheHandler )
 //-----------------------------------------------------------------------------
 // Called to register a list of resource precachers for a given system
 //-----------------------------------------------------------------------------
-void CPrecacheSystem::Register( IResourcePrecacher *pResourcePrecacherFirst, PrecacheSystem_t nSystem )
+void CPrecacheSystem::Register( CBaseResourcePrecacher *pResourcePrecacherFirst, PrecacheSystem_t nSystem )
 {
 	// do we already have any precachers registered for this system?
-	IResourcePrecacher *pCur = m_pFirstPrecacher[nSystem];
+	CBaseResourcePrecacher *pCur = m_pFirstPrecacher[nSystem];
 
 	if ( pCur )
 	{
@@ -166,3 +170,8 @@ void CPrecacheSystem::EndLimitedResourceAccess()
 		g_pResourceAccessControl->LimitAccess( RESOURCE_LIST_INVALID );
 	}
 }
+
+//-----------------------------------------------------------------------------
+// The IPrecacheSystem members forward to CPrecacheSystem
+//-----------------------------------------------------------------------------
+#include "facade/iprecachesystem.inl"

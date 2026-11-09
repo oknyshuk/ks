@@ -3,7 +3,6 @@
 // Copyright (c) Valve Corporation
 
 import ks.tier1;
-#include "toolframework/itoolframework.h"
 #include "snd_dma.h"
 #include "snd_channels.h"
 #include "sos_entry_match_system.h"
@@ -175,12 +174,11 @@ public:
 		}
 
 		//////////////////////////////////////////////////////////////////////////
-		// is this a player originated sound and not a tool sound?
+		// is this a player originated sound?
 		//////////////////////////////////////////////////////////////////////////
-		if ( IsSoundSourceViewEntity( m_nSoundSource ) && !toolframework->InToolMode() )
+		if ( IsSoundSourceViewEntity( m_nSoundSource ) )
 		{
 			// sounds coming from listener actually come from a short distance directly in front of listener
-			// in tool mode however, the view entity is meaningless, since we're viewing from arbitrary locations in space
 			m_bIsPlayerSound = true;
 		}
 	}

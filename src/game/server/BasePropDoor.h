@@ -45,10 +45,10 @@ public:
 
 	CBasePropDoor( void );
 
-	void Spawn();
-	void Precache();
-	void Activate();
-	int	ObjectCaps();
+	void Spawn_Impl();
+	void Precache_Impl();
+	void Activate_Impl();
+	int	ObjectCaps_Impl();
 
 	virtual bool IsAbleToCloseAreaPortals( void ) const;
 
@@ -70,7 +70,7 @@ public:
 	virtual bool IsDoorLocked() { return m_bLocked; }
 
 	bool NPCOpenDoor(CAI_BaseNPC *pNPC);
-	bool TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace );
+	bool TestCollision_Impl( const Ray_t &ray, unsigned int mask, trace_t& trace );
 	// }
 
 	// Implement these in your leaf class.
@@ -162,17 +162,21 @@ private:
 	void DoorCloseMoveDone();
 	void DoorAutoCloseThink();
 
-	void Use(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value);
+	public: void Use_Impl(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value);
+	private:
 	void OnUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	inline bool WillAutoReturn() { return m_flAutoReturnDelay != -1; }
 
-	void StartBlocked(CBaseEntity *pOther);
+	public: void StartBlocked_Impl(CBaseEntity *pOther);
+	private:
 	void OnStartBlocked( CBaseEntity *pOther );
 	void MasterStartBlocked( CBaseEntity *pOther );
 
-	void Blocked(CBaseEntity *pOther);
-	void EndBlocked(void);
+	public: void Blocked_Impl(CBaseEntity *pOther);
+	private:
+	public: void EndBlocked_Impl(void);
+	private:
 	void OnEndBlocked( void );
 
 	// Input handlers
@@ -321,13 +325,13 @@ class [[= ks::reflect::NetTable{ .name = "DT_PropDoorRotating" } ]]
 
 	~CPropDoorRotating();
 
-	int		DrawDebugTextOverlays( void );
+	int		DrawDebugTextOverlays_Impl( void );
 
-	void	Spawn( void );
-	void	MoveDone( void );
+	void	Spawn_Impl( void );
+	void	MoveDone_Impl( void );
 	void	BeginOpening( CBaseEntity *pOpenAwayFrom );
 	void	BeginClosing( void );
-	void	OnRestore( void );
+	void	OnRestore_Impl( void );
 
 	void	DoorTeleportToSpawnPosition();
 
@@ -351,7 +355,7 @@ class [[= ks::reflect::NetTable{ .name = "DT_PropDoorRotating" } ]]
 
 	virtual void ComputeDoorExtent( Extent *extent, unsigned int extentType );	// extent contains the volume encompassing open + closed states
 
-	virtual int UpdateTransmitState() { return SetTransmitState( FL_EDICT_ALWAYS ); }
+	int UpdateTransmitState_Impl() { return SetTransmitState( FL_EDICT_ALWAYS ); }
 
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
@@ -404,17 +408,17 @@ class CPropDoorRotatingBreakable : public CPropDoorRotating
 
 	DECLARE_DATADESC();
 
-	virtual void Spawn( void );
-	virtual void Precache( void );
-	virtual void UpdateOnRemove( void );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	void UpdateOnRemove_Impl( void );
 	void PrecacheBreakables( void );
-	virtual int OnTakeDamage( const CTakeDamageInfo &info );
-	virtual void Event_Killed( const CTakeDamageInfo &info );
+	int OnTakeDamage_Impl( const CTakeDamageInfo &info );
+	void Event_Killed_Impl( const CTakeDamageInfo &info );
 	void InputSetRotationDistance( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "SetUnbreakable", .type = FIELD_VOID } ]] void InputSetUnbreakable( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "SetBreakable", .type = FIELD_VOID } ]] void InputSetBreakable( inputdata_t &inputdata );
 	virtual bool IsAbleToCloseAreaPortals( void ) const;
-	virtual int DrawDebugTextOverlays( void );
+	int DrawDebugTextOverlays_Impl( void );
 	bool IsBreakable( void ) { return m_bBreakable; }
 
 	virtual void Lock();

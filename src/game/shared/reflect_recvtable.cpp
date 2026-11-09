@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-import std;
-import ks.core;
 #include "reflect_recvtable.h"
 
-namespace ks::reflect::recv
+namespace ksr::recv
 {
+using namespace ::ks::reflect;
 
 RecvProp make_prop( const PropDesc &d, std::span<const PropDesc> all )
 {
@@ -57,4 +56,4 @@ RecvProp make_prop( const PropDesc &d, std::span<const PropDesc> all )
 	}
 }
 
-} // namespace ks::reflect::recv
+} // namespace ksr::recv

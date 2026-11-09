@@ -33,7 +33,7 @@ public:
 #else
 
 	virtual void 	EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBasePlayer *pPlayer, const CCSWeaponInfo& weaponInfo );
-	virtual void 	Precache( void );
+	KS_VIRTUAL void 	Precache_Impl( void );
 #endif
 
 	virtual void	Drop( const Vector& vecVelocity );
@@ -71,7 +71,7 @@ public:
 	//DECLARE_DATADESC();
 
 	virtual void	EmitGrenade( Vector vecSrc, QAngle vecAngles, Vector vecVel, AngularImpulse angImpulse, CBasePlayer *pPlayer, const CCSWeaponInfo& weaponInfo );
-	virtual void 	Precache( void );
+	KS_VIRTUAL void 	Precache_Impl( void );
 #endif
 
 private:

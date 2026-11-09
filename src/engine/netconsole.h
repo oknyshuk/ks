@@ -28,8 +28,9 @@ public:
 };
 
 
-class CNetConsoleMgr : public ISocketCreatorListener
+class CNetConsoleMgr
 {
+public:
 	CSocketCreator m_Socket;
 	char m_pPassword[256];									// if set
 	netadr_t m_Address;

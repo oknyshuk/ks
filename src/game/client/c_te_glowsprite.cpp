@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -66,39 +64,6 @@ C_TEGlowSprite::~C_TEGlowSprite( void )
 }
 
 //-----------------------------------------------------------------------------
-// Recording 
-//-----------------------------------------------------------------------------
-static inline void RecordGlowSprite( const Vector &start, int nModelIndex, 
-	float flDuration, float flSize, int nBrightness )
-{
-	if ( !ToolsEnabled() )
-		return;
-
-	if ( clienttools->IsInRecordingMode() )
-	{
-		const model_t* pModel = (nModelIndex != 0) ? modelinfo->GetModel( nModelIndex ) : nullptr;
-		const char *pModelName = pModel ? modelinfo->GetModelName( pModel ) : "";
-
-		KeyValues *msg = new KeyValues( "TempEntity" );
-
- 		msg->SetInt( "te", TE_GLOW_SPRITE );
- 		msg->SetString( "name", "TE_GlowSprite" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetFloat( "originx", start.x );
-		msg->SetFloat( "originy", start.y );
-		msg->SetFloat( "originz", start.z );
-  		msg->SetString( "model", pModelName );
-		msg->SetFloat( "duration", flDuration );
-		msg->SetFloat( "size", flSize );
-		msg->SetInt( "brightness", nBrightness );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
-}
-
-
-//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void C_TEGlowSprite::PostDataUpdate( DataUpdateType_t updateType )
@@ -111,7 +76,6 @@ void C_TEGlowSprite::PostDataUpdate( DataUpdateType_t updateType )
 	{
 		ent->bounceFactor = 0.2;
 	}
-	RecordGlowSprite( m_vecOrigin, m_nModelIndex, m_fLife, m_fScale, m_nBrightness );
 }
 
 void TE_GlowSprite( IRecipientFilter& filter, float delay,
@@ -123,7 +87,6 @@ void TE_GlowSprite( IRecipientFilter& filter, float delay,
 	{
 		ent->bounceFactor = 0.2;
 	}
-	RecordGlowSprite( *pos, modelindex, life, size, brightness );
 }
 
 void TE_GlowSprite( IRecipientFilter& filter, float delay, KeyValues *pKeyValues )

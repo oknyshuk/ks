@@ -15,8 +15,6 @@
 #include "rkhud_model.h"
 
 #include <rocketui/rocketui.h>
-import ks.core;
-import std;
 
 
 // Function-local so registration works whatever order the translation units

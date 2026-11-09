@@ -7,7 +7,8 @@ import ks.tier1;
 
 class IServer;
 class IHLTVDirector;
-class IGameEvent;
+class CGameEvent;
+using IGameEvent = CGameEvent;
 class CGameInfo;
 struct netadr_s;
 
@@ -18,28 +19,27 @@ struct netadr_s;
 //-----------------------------------------------------------------------------
 inline constexpr const char *INTERFACEVERSION_HLTVSERVER = "HLTVServer001";
 
-class IHLTVServer : public IBaseInterface
+class IHLTVServer
 {
 public:
 
-	virtual	~IHLTVServer() {}
 
-	virtual	IServer	*GetBaseServer( void ) = 0; // get HLTV base server interface
-	virtual	IHLTVDirector *GetDirector( void ) = 0;	// get director interface
-	virtual	int		GetHLTVSlot( void ) = 0; // return entity index-1 of HLTV in game
-	virtual float	GetOnlineTime( void ) = 0; // seconds since broadcast started
-	virtual void	GetLocalStats( int &proxies, int &slots, int &specs ) = 0; 
-	virtual void	GetGlobalStats( int &proxies, int &slots, int &specs ) = 0; 
+	IServer	*GetBaseServer( void ); // get HLTV base server interface
+	IHLTVDirector *GetDirector( void );	// get director interface
+	int		GetHLTVSlot( void ); // return entity index-1 of HLTV in game
+	float	GetOnlineTime( void ); // seconds since broadcast started
+	void	GetLocalStats( int &proxies, int &slots, int &specs ); 
+	void	GetGlobalStats( int &proxies, int &slots, int &specs ); 
 
-	virtual const netadr_s *GetRelayAddress( void ) = 0; // returns relay address
+	const netadr_s *GetRelayAddress( void ); // returns relay address
 
-	virtual bool	IsMasterProxy( void ) = 0; // true, if this is the HLTV master proxy
-	virtual bool	IsDemoPlayback( void ) = 0; // true if this is a HLTV demo
+	bool	IsMasterProxy( void ); // true, if this is the HLTV master proxy
+	bool	IsDemoPlayback( void ); // true if this is a HLTV demo
 
-	virtual void	BroadcastEvent(IGameEvent *event) = 0; // send a director command to all specs
+	void	BroadcastEvent(IGameEvent *event); // send a director command to all specs
 
-	virtual bool		IsRecording() = 0;
-	virtual const char* GetRecordingDemoFilename() = 0;
-	virtual void		StartAutoRecording() = 0;
-	virtual void		StopRecording( const CGameInfo *pGameInfo = nullptr ) = 0;
+	bool		IsRecording();
+	const char* GetRecordingDemoFilename();
+	void		StartAutoRecording();
+	void		StopRecording( const CGameInfo *pGameInfo = nullptr );
 };

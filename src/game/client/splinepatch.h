@@ -4,8 +4,6 @@
 
 // Purpose: A little helper class that computes a spline patch
 
-import std;
-import ks.math;
 
 //-----------------------------------------------------------------------------
 // Spline patch: 

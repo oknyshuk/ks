@@ -3,8 +3,6 @@
 
 // Purpose: 'Button' which activates after a specified amount of weight is touching it.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -48,8 +45,8 @@ public:
 	DECLARE_DATADESC();
 	DECLARE_CLASS( CWeightButton, CBaseEntity ); 
 
-	void Spawn( void );
-	bool CreateVPhysics( void );
+	void Spawn_Impl( void );
+	bool CreateVPhysics_Impl( void );
 
 	[[= ks::reflect::Key{ .name = "OnPressed" } ]] COutputEvent m_OnPressed;				// After threshold weight has been reached
 	[[= ks::reflect::Key{ .name = "OnReleased" } ]] COutputEvent m_OnReleased;				// After weight has been removed to go below weight threshold
@@ -67,9 +64,9 @@ LINK_ENTITY_TO_CLASS( func_weight_button, CWeightButton );
 IMPLEMENT_REFLECT_DATAMAP( CWeightButton )
 
 
-void CWeightButton::Spawn()
+void CWeightButton::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	// Convert movedir from angles to a vector
 	SetMoveType( MOVETYPE_VPHYSICS );
@@ -84,7 +81,7 @@ void CWeightButton::Spawn()
 //-----------------------------------------------------------------------------
 // Purpose: Create VPhysics collision for this entity
 //-----------------------------------------------------------------------------
-bool CWeightButton::CreateVPhysics()
+bool CWeightButton::CreateVPhysics_Impl()
 {
 	VPhysicsInitShadow( false, false );
 	return true;

@@ -7615,7 +7615,7 @@ inline int PSET_GetNext ( pset_t *ppset, int x )
 ConVar dsp_room			("dsp_room", "0", FCVAR_DEMO );				// room dsp preset - sounds more distant from player (1ch)
 ConVar dsp_water		("dsp_water", "14", FCVAR_DEMO );			// "14" underwater dsp preset - sound when underwater (1-2ch)
 static int dsp_player_value = 0;
-static void dsp_player_changed( IConVar *pConVar, const char *pOldValue, float flOldValue )
+static void dsp_player_changed( ConVar *pConVar, const char *pOldValue, float flOldValue )
 {
 #ifndef DEDICATED
 	CClientState &cl = GetBaseLocalClient();

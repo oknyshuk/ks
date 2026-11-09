@@ -14,24 +14,9 @@ void *GetAppInstance();
 
 
 //-----------------------------------------------------------------------------
-// Sets the application instance, should only be used if you're not calling AppMain.
+// Sets the application instance
 //-----------------------------------------------------------------------------
 void SetAppInstance( void* hInstance );
-
-
-//-----------------------------------------------------------------------------
-// Main entry point for the application
-//-----------------------------------------------------------------------------
-int AppMain( void* hInstance, void* hPrevInstance, const char* lpCmdLine, int nCmdShow, CAppSystemGroup *pAppSystemGroup );
-int AppMain( int argc, char **argv, CAppSystemGroup *pAppSystemGroup );
-
-
-//-----------------------------------------------------------------------------
-// Used to startup/shutdown the application
-//-----------------------------------------------------------------------------
-int AppStartup( void* hInstance, void* hPrevInstance, const char* lpCmdLine, int nCmdShow, CAppSystemGroup *pAppSystemGroup );
-int AppStartup( int argc, char **argv, CAppSystemGroup *pAppSystemGroup );
-void AppShutdown( CAppSystemGroup *pAppSystemGroup );
 
 
 //-----------------------------------------------------------------------------
@@ -39,48 +24,37 @@ void AppShutdown( CAppSystemGroup *pAppSystemGroup );
 // It loads up the file system in preparation for using it to load other
 // required modules.
 //-----------------------------------------------------------------------------
-class CFSApplication : public CAppSystemGroup
+class CFSApplicationBase : public CAppSystemGroup
 {
-	typedef CAppSystemGroup BaseClass;
-
 public:
-	CFSApplication( CFSAppSystemGroup *pAppSystemGroup );
+	CFSApplicationBase();
 
-	// Implementation of IAppSystemGroup
-	virtual bool Create( );
-	virtual bool PreInit( );
-	virtual int Main( );
-	virtual void PostShutdown();
-	virtual void Destroy();
-
-	// Use this version in cases where you can't control the main loop and
-	// expect to be ticked
-	virtual int Startup();
-	virtual void Shutdown();
-
-public:
-	// Here's a hook to override the filesystem DLL that it tries to load.
-	// By default, it uses FileSystem_GetFileSystemDLLName to figure this out.
-	virtual bool GetFileSystemDLLName( char *pOut, int nMaxBytes );
+	// Hooks of the application group
+	bool Create( );
+	bool PreInit( );
+	void PostShutdown();
+	void Destroy();
 
 protected:
 	IFileSystem *m_pFileSystem;
-	CFSAppSystemGroup *m_pChildAppSystemGroup;
 };
 
-
-class CBinLaunchableFSApp : public CFSApplication
+// The application group that loads the file system, then runs the child group (the real
+// application) with the file system as its module loader.
+template< class CHILD >
+class CFSApplication : public CFSApplicationBase
 {
 public:
-	CBinLaunchableFSApp( CFSAppSystemGroup *pAppSystemGroup ) : CFSApplication( pAppSystemGroup )
+	CFSApplication( CHILD *pAppSystemGroup ) : m_pChildAppSystemGroup( pAppSystemGroup ) {}
+
+	// Run main loop
+	int Main( )
 	{
+		// Now that the file system is loaded, we can load up main libraries through it
+		m_pChildAppSystemGroup->Setup( m_pFileSystem, this );
+		return m_pChildAppSystemGroup->Run( );
 	}
 
-	virtual bool GetFileSystemDLLName( char *pOut, int nMaxChars )
-	{
-		// Our path should already include game\bin, so just use the filename directly
-		// and don't try to figure out an absolute path to it as CFSApplication does.
-		V_strncpy( pOut, "filesystem_stdio", nMaxChars );
-		return true;
-	}
+protected:
+	CHILD *m_pChildAppSystemGroup;
 };

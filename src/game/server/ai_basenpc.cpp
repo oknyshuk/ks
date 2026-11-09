@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.vstdlib;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -18,7 +16,6 @@ import ks.vstdlib;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -70,7 +67,6 @@ import ks.vstdlib;
 #include "ai_squad.h"
 #include "ai_localnavigator.h"
 #include "ai_tacticalservices.h"
-#include "ai_behavior.h"
 #include "ai_dynamiclink.h"
 #include "ai_criteria.h"
 #include "basegrenade_shared.h"
@@ -98,7 +94,6 @@ import ks.vstdlib;
 #include "physics_npc_solver.h"
 #include "death_pose.h"
 #include "datacache/imdlcache.h"
-#include "ai_addon.h"
 
 #include "env_debughistory.h"
 #include "collisionutils.h"
@@ -305,12 +300,12 @@ bool CPostFrameNavigationHook::Init( void )
 // Main query job
 CJob *g_pQueuedNavigationQueryJob = nullptr;
 
-static void ProcessNavigationQueries( CFunctor **pData, unsigned int nCount )
+static void ProcessNavigationQueries( CFunctor *pData, unsigned int nCount )
 {
 	// Run all queued navigation on a separate thread
 	for ( int i = 0; i < nCount; i++ )
 	{
-		(*pData[i])();
+		pData[i]();
 	}
 }
 
@@ -351,12 +346,12 @@ void CPostFrameNavigationHook::FrameUpdatePostEntityThink( void )
 //-----------------------------------------------------------------------------
 // Purpose: Queue up our navigation call
 //-----------------------------------------------------------------------------
-void CPostFrameNavigationHook::EnqueueEntityNavigationQuery( CAI_BaseNPC *pNPC, CFunctor *pFunctor )
+void CPostFrameNavigationHook::EnqueueEntityNavigationQuery( CAI_BaseNPC *pNPC, CFunctor functor )
 {
 	if ( ai_post_frame_navigation.GetBool() == false )
 		return;
 
-	m_Functors.push_back( pFunctor );
+	m_Functors.push_back( std::move( functor ) );
 	pNPC->SetNavigationDeferred( true );
 }
 
@@ -369,108 +364,6 @@ void CPostFrameNavigationHook::EnqueueEntityNavigationQuery( CAI_BaseNPC *pNPC, 
 //  Class Methods
 // ================================================================
 
-//-------------------------------------
-
-void CAI_BaseNPC::AddBehavior( CAI_BehaviorBase *pBehavior )
-{
-#ifdef DEBUG
-	contract_assert( ks::find_index( m_Behaviors, pBehavior ) == -1 );
-	for ( int i = 0; i < std::ssize( m_Behaviors ); i++)
-	{
-		contract_assert( typeid(*m_Behaviors[i]) != typeid(*pBehavior) );
-	}
-#endif
-	m_Behaviors.push_back( pBehavior );
-	pBehavior->SetOuter( this );
-	pBehavior->SetBackBridge( this );
-}
-
-//-------------------------------------
-
-void CAI_BaseNPC::RemoveAndDestroyBehavior( CAI_BehaviorBase *pBehavior )
-{
-#ifdef DEBUG
-	bool bFound = false;
-	for ( int i = 0; i < std::ssize( m_Behaviors ); i++)
-	{
-		if ( typeid(*m_Behaviors[i]) == typeid(*pBehavior) )
-		{
-			bFound = true;
-			break;
-		}
-	}
-	contract_assert( bFound && !pBehavior->IsRunning() );
-#endif
-
-	ks::erase_first( m_Behaviors, pBehavior );
-	delete pBehavior;
-}
-
-//-------------------------------------
-
-bool CAI_BaseNPC::BehaviorSelectSchedule()
-{
-	for ( int i = 0; i < std::ssize( m_Behaviors ); i++ )
-	{
-		if ( m_Behaviors[i]->CanSelectSchedule() && ShouldBehaviorSelectSchedule( m_Behaviors[i] ) )
-		{
-			DeferSchedulingToBehavior( m_Behaviors[i] );
-			return true;
-		}
-	}
-
-	DeferSchedulingToBehavior( nullptr );
-	return false;
-}
-//------------------------------------
-
-void CAI_BaseNPC::SetPrimaryBehavior( CAI_BehaviorBase *pNewBehavior )
-{
-	bool change = ( m_pPrimaryBehavior != pNewBehavior );
-	CAI_BehaviorBase *pOldBehavior = m_pPrimaryBehavior;
-	m_pPrimaryBehavior = pNewBehavior;
-
-	if ( change ) 
-	{
-		if ( m_pPrimaryBehavior )
-		{
-			m_pPrimaryBehavior->BeginScheduleSelection();
-
-			g_bBehaviorHost_PreventBaseClassGatherConditions = true;
-			m_pPrimaryBehavior->GatherConditions();
-			g_bBehaviorHost_PreventBaseClassGatherConditions = false;
-		}
-
-		if ( pOldBehavior )
-		{
-			pOldBehavior->EndScheduleSelection();
-			VacateStrategySlot();
-		}
-
-		OnChangeRunningBehavior( pOldBehavior, pNewBehavior );
-	}
-}
-
-//-------------------------------------
-
-bool CAI_BaseNPC::OnBehaviorChangeStatus(  CAI_BehaviorBase *pBehavior, bool fCanFinishSchedule )
-{
-	if ( pBehavior == GetPrimaryBehavior() && !pBehavior->CanSelectSchedule() && !fCanFinishSchedule )
-	{
-		DeferSchedulingToBehavior( nullptr );
-		return true;
-	}
-	return false;
-}
-
-//-------------------------------------
-
-CAI_BehaviorBase *CAI_BaseNPC::DeferSchedulingToBehavior( CAI_BehaviorBase *pNewBehavior )
-{
-	CAI_BehaviorBase *pOldBehavior = m_pPrimaryBehavior;
-	SetPrimaryBehavior( pNewBehavior );
-	return pOldBehavior;
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: Static debug function to clear schedules for all NPCS
@@ -668,7 +561,7 @@ void CAI_BaseNPC::SelectDeathPose( const CTakeDamageInfo &info )
 // Purpose:
 // Input  :
 //-----------------------------------------------------------------------------
-void CAI_BaseNPC::Event_Killed( const CTakeDamageInfo &info )
+void CAI_BaseNPC::Event_Killed_Impl( const CTakeDamageInfo &info )
 {
 	if (IsCurSchedule(SCHED_NPC_FREEZE))
 	{
@@ -693,7 +586,7 @@ void CAI_BaseNPC::Event_Killed( const CTakeDamageInfo &info )
 		SetTouch( nullptr );
 	}
 
-	BaseClass::Event_Killed( info );
+	BaseClass::Event_Killed_Impl( info );
 
 	if ( m_bFadeCorpse )
 	{
@@ -742,7 +635,7 @@ void CAI_BaseNPC::Ignite( float flFlameLifetime, bool bNPCOnly, float flSize, bo
 
 ConVar	ai_block_damage( "ai_block_damage","0" );
 
-bool CAI_BaseNPC::PassesDamageFilter( const CTakeDamageInfo &info )
+bool CAI_BaseNPC::PassesDamageFilter_Impl( const CTakeDamageInfo &info )
 {
 	if ( ai_block_damage.GetBool() )
 		return false;
@@ -775,7 +668,7 @@ bool CAI_BaseNPC::PassesDamageFilter( const CTakeDamageInfo &info )
 		}
 	}
 	
-	if ( !BaseClass::PassesDamageFilter( info ) )
+	if ( !BaseClass::PassesDamageFilter_Impl( info ) )
 	{
 		m_fNoDamageDecal = true;
 		return false;
@@ -1111,7 +1004,7 @@ void CAI_BaseNPC::DoRadiusDamage( const CTakeDamageInfo &info, const Vector &vec
 //-----------------------------------------------------------------------------
 // Set the contents types that are solid by default to all NPCs
 //-----------------------------------------------------------------------------
-unsigned int CAI_BaseNPC::PhysicsSolidMaskForEntity( void ) const 
+unsigned int CAI_BaseNPC::PhysicsSolidMaskForEntity_Impl( void ) const 
 { 
 	return MASK_NPCSOLID;
 }
@@ -1122,7 +1015,7 @@ unsigned int CAI_BaseNPC::PhysicsSolidMaskForEntity( void ) const
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CAI_BaseNPC::DecalTrace( trace_t *pTrace, char const *decalName )
+void CAI_BaseNPC::DecalTrace_Impl( trace_t *pTrace, char const *decalName )
 {
 	if ( m_fNoDamageDecal )
 	{
@@ -1130,13 +1023,13 @@ void CAI_BaseNPC::DecalTrace( trace_t *pTrace, char const *decalName )
 		// @Note (toml 04-23-03): e3, don't decal face on damage if still alive
 		return;
 	}
-	BaseClass::DecalTrace( pTrace, decalName );
+	BaseClass::DecalTrace_Impl( pTrace, decalName );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CAI_BaseNPC::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
+void CAI_BaseNPC::ImpactTrace_Impl( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
 {
 	if ( m_fNoDamageDecal )
 	{
@@ -1144,7 +1037,7 @@ void CAI_BaseNPC::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCu
 		// @Note (toml 04-23-03): e3, don't decal face on damage if still alive
 		return;
 	}
-	BaseClass::ImpactTrace( pTrace, iDamageType, pCustomImpactName );
+	BaseClass::ImpactTrace_Impl( pTrace, iDamageType, pCustomImpactName );
 }
 
 //---------------------------------------------------------
@@ -1185,7 +1078,7 @@ float CAI_BaseNPC::GetHitgroupDamageMultiplier( int iHitGroup, const CTakeDamage
 //=========================================================
 // TraceAttack
 //=========================================================
-void CAI_BaseNPC::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
+void CAI_BaseNPC::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
 	m_fNoDamageDecal = false;
 	if ( m_takedamage == DAMAGE_NO )
@@ -1469,14 +1362,14 @@ void CBaseEntity::TraceAttackToTriggers( const CTakeDamageInfo &info, const Vect
 // Purpose: 
 // Output : const char
 //-----------------------------------------------------------------------------
-const char *CAI_BaseNPC::GetTracerType( void )
+const char *CAI_BaseNPC::GetTracerType_Impl( void )
 {
 	if ( GetActiveWeapon() )
 	{
 		return GetActiveWeapon()->GetTracerType();
 	}
 
-	return BaseClass::GetTracerType();
+	return BaseClass::GetTracerType_Impl();
 }
 
 //-----------------------------------------------------------------------------
@@ -1485,7 +1378,7 @@ const char *CAI_BaseNPC::GetTracerType( void )
 //			&tr - 
 //			iTracerType - 
 //-----------------------------------------------------------------------------
-void CAI_BaseNPC::MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType )
+void CAI_BaseNPC::MakeTracer_Impl( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType )
 {
 	if ( GetActiveWeapon() )
 	{
@@ -1493,16 +1386,16 @@ void CAI_BaseNPC::MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int
 		return;
 	}
 
-	BaseClass::MakeTracer( vecTracerSrc, tr, iTracerType );
+	BaseClass::MakeTracer_Impl( vecTracerSrc, tr, iTracerType );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CAI_BaseNPC::FireBullets( const FireBulletsInfo_t &info )
+void CAI_BaseNPC::FireBullets_Impl( const FireBulletsInfo_t &info )
 {
 
-	BaseClass::FireBullets( info );
+	BaseClass::FireBullets_Impl( info );
 }
 
 
@@ -1653,7 +1546,7 @@ void CAI_BaseNPC::MakeDamageBloodDecal ( int cCount, float flNoise, trace_t *ptr
 // Input  : &tr - 
 //			nDamageType - 
 //-----------------------------------------------------------------------------
-void CAI_BaseNPC::DoImpactEffect( trace_t &tr, int nDamageType )
+void CAI_BaseNPC::DoImpactEffect_Impl( trace_t &tr, int nDamageType )
 {
 	if ( GetActiveWeapon() != nullptr )
 	{
@@ -1661,7 +1554,7 @@ void CAI_BaseNPC::DoImpactEffect( trace_t &tr, int nDamageType )
 		return;
 	}
 
-	BaseClass::DoImpactEffect( tr, nDamageType );
+	BaseClass::DoImpactEffect_Impl( tr, nDamageType );
 }
 
 //---------------------------------------------------------
@@ -6629,9 +6522,9 @@ void CAI_BaseNPC::CheckPhysicsContacts()
 	}
 }
 
-void CAI_BaseNPC::StartTouch( CBaseEntity *pOther )
+void CAI_BaseNPC::StartTouch_Impl( CBaseEntity *pOther )
 {
-	BaseClass::StartTouch(pOther);
+	BaseClass::StartTouch_Impl(pOther);
 
 	if ( pOther->GetMoveType() == MOVETYPE_VPHYSICS )
 	{
@@ -6880,15 +6773,11 @@ void CAI_BaseNPC::NPCInit ( void )
 
 	m_EnemiesSerialNumber = -1;
 
-	for( int i = 0; i < std::ssize( m_Behaviors ); i++ )
-	{
-		m_Behaviors[i]->Spawn();
-	}
 }
 
 //-----------------------------------------------------------------------------
 
-bool CAI_BaseNPC::CreateVPhysics()
+bool CAI_BaseNPC::CreateVPhysics_Impl()
 {
 	if ( IsAlive() && !VPhysicsGetObject() )
 	{
@@ -6911,12 +6800,6 @@ void CAI_BaseNPC::OnUpdateShotRegulator( )
 	m_ShotRegulator.SetBurstInterval( pWeapon->GetFireRate(), pWeapon->GetFireRate() );
 	m_ShotRegulator.SetBurstShotCountRange( pWeapon->GetMinBurst(), pWeapon->GetMaxBurst() );
 	m_ShotRegulator.SetRestInterval( pWeapon->GetMinRestTime(), pWeapon->GetMaxRestTime() );
-
-	// Let the behavior have a whack at it.
-	if ( GetPrimaryBehavior() )
-	{
-		GetPrimaryBehavior()->OnUpdateShotRegulator();
-	}
 }
 
 
@@ -8072,12 +7955,12 @@ Vector CAI_BaseNPC::EyeOffset( Activity nActivity )
 // Purpose: 
 // Output : Vector
 //-----------------------------------------------------------------------------
-Vector CAI_BaseNPC::EyePosition( void ) 
+Vector CAI_BaseNPC::EyePosition_Impl( void ) 
 {
 	if ( IsCrouching() )
 		return GetAbsOrigin() + GetCrouchEyeOffset();
 
-	return BaseClass::EyePosition();
+	return BaseClass::EyePosition_Impl();
 }
 
 //------------------------------------------------------------------------------
@@ -8606,7 +8489,7 @@ void CAI_BaseNPC::HandleAnimEvent( animevent_t *pEvent )
 // Input  :
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-void CAI_BaseNPC::DrawDebugGeometryOverlays(void)
+void CAI_BaseNPC::DrawDebugGeometryOverlays_Impl(void)
 {
 	// Handy for debug
 	//NDebugOverlay::Cross3D(EyePosition(),Vector(-2,-2,-2),Vector(2,2,2),0,255,0,true);
@@ -8872,7 +8755,7 @@ void CAI_BaseNPC::DrawDebugGeometryOverlays(void)
 
 	GetPathfinder()->DrawDebugGeometryOverlays(m_debugOverlays);
 
-	CBaseEntity::DrawDebugGeometryOverlays();
+	CBaseEntity::DrawDebugGeometryOverlays_Impl();
 }
 
 //-----------------------------------------------------------------------------
@@ -8880,14 +8763,14 @@ void CAI_BaseNPC::DrawDebugGeometryOverlays(void)
 // Input  :
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CAI_BaseNPC::DrawDebugTextOverlays(void)
+int CAI_BaseNPC::DrawDebugTextOverlays_Impl(void)
 {
 	int text_offset = 0;
 
 	// ---------------------
 	// Print Baseclass text
 	// ---------------------
-	text_offset = BaseClass::DrawDebugTextOverlays();
+	text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_NPC_SQUAD_BIT)
 	{
@@ -9010,14 +8893,6 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 		// --------------
 		if ( GetCurSchedule() )
 		{
-			CAI_BehaviorBase *pBehavior = GetPrimaryBehavior();
-			if ( pBehavior )
-			{
-				V_snprintf(tempstr,sizeof(tempstr),"Behv: %s, ", pBehavior->GetName() );
-				EntityText(text_offset,tempstr,0,r,g,b);
-				text_offset++;
-			}
-
 			const char *pName = nullptr;
 			pName = GetCurSchedule()->GetName();
 			if ( !pName )
@@ -9226,11 +9101,6 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 			V_snprintf(tempstr, sizeof(tempstr), "SquadSlot:%s", GetSquadSlotDebugName( GetMyStrategySlot() ) );
 			EntityText(text_offset, tempstr, 0,r,g,b);
 			text_offset++;
-		}
-
-		if ( m_pPrimaryBehavior )
-		{
-			text_offset = m_pPrimaryBehavior->DrawDebugTextOverlays( text_offset );
 		}
 	}
 	return text_offset;
@@ -9659,7 +9529,7 @@ Vector CAI_BaseNPC::GetActualShootTrajectory( const Vector &shootOrigin )
 
 //-----------------------------------------------------------------------------
 
-Vector CAI_BaseNPC::BodyTarget( const Vector &posSrc, bool bNoisy ) 
+Vector CAI_BaseNPC::BodyTarget_Impl( const Vector &posSrc, bool bNoisy ) 
 { 
 	Vector low = WorldSpaceCenter() - ( WorldSpaceCenter() - GetAbsOrigin() ) * .25;
 	Vector high = EyePosition();
@@ -10433,18 +10303,18 @@ IMPLEMENT_REFLECT_DATAMAP_SIMPLE( ScriptedNPCInteraction_t )
 
 //-------------------------------------
 
-void CAI_BaseNPC::PostConstructor( const char *szClassname )
+void CAI_BaseNPC::PostConstructor_Impl( const char *szClassname )
 {
-	BaseClass::PostConstructor( szClassname );
+	BaseClass::PostConstructor_Impl( szClassname );
 	CreateComponents();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CAI_BaseNPC::Activate( void )
+void CAI_BaseNPC::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( GetModelPtr() )
 	{
@@ -10467,7 +10337,7 @@ void CAI_BaseNPC::Activate( void )
 
 }
 
-void CAI_BaseNPC::Precache( void )
+void CAI_BaseNPC::Precache_Impl( void )
 {
 	gm_iszPlayerSquad = AllocPooledString( PLAYER_SQUADNAME ); // cache for fast IsPlayerSquad calls
 
@@ -10489,7 +10359,7 @@ void CAI_BaseNPC::Precache( void )
 	PrecacheScriptSound( "AI_BaseNPC.BodyDrop_Light" );
 	PrecacheScriptSound( "AI_BaseNPC.SentenceStop" );
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 
@@ -10571,7 +10441,7 @@ void CAI_BaseNPC::DiscardScheduleState()
 
 //-------------------------------------
 
-void CAI_BaseNPC::OnRestore()
+void CAI_BaseNPC::OnRestore_Impl()
 {
 	gm_iszPlayerSquad = AllocPooledString( PLAYER_SQUADNAME ); // cache for fast IsPlayerSquad calls
 
@@ -10585,31 +10455,15 @@ void CAI_BaseNPC::OnRestore()
 	{
 		GetNavigator()->ClearGoal();
 	}
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 	m_bCheckContacts = true;
 }
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-bool CAI_BaseNPC::KeyValue( const char *szKeyName, const char *szValue )
+bool CAI_BaseNPC::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
-	bool bResult = BaseClass::KeyValue( szKeyName, szValue );
-
-	if( !bResult )
-	{
-		// Defer unhandled Keys to behaviors
-		CAI_BehaviorBase **ppBehaviors = AccessBehaviors();
-		
-		for ( int i = 0; i < NumBehaviors(); i++ )
-		{
-			if( ppBehaviors[ i ]->KeyValue( szKeyName, szValue ) )
-			{
-				return true;
-			}
-		}
-	}
-
-	return bResult;
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 
@@ -10705,8 +10559,7 @@ bool CAI_BaseNPC::LoadedSchedules(void)
 //-----------------------------------------------------------------------------
 CAI_BaseNPC::CAI_BaseNPC(void)
  :	
-    m_bDeferredNavigation( false ),
-	m_pPrimaryBehavior(nullptr)
+    m_bDeferredNavigation( false )
 {
 	m_pMotor = nullptr;
 	m_pMoveProbe = nullptr;
@@ -10816,7 +10669,7 @@ CAI_BaseNPC::~CAI_BaseNPC(void)
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CAI_BaseNPC::UpdateOnRemove(void)
+void CAI_BaseNPC::UpdateOnRemove_Impl(void)
 {
 	if ( !m_bDidDeathCleanup )
 	{
@@ -10827,19 +10680,19 @@ void CAI_BaseNPC::UpdateOnRemove(void)
 	}
 
 	// Chain at end to mimic destructor unwind order
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-int CAI_BaseNPC::UpdateTransmitState()
+int CAI_BaseNPC::UpdateTransmitState_Impl()
 {
 	if( gpGlobals->curtime < m_flTimePingEffect )
 	{
 		return SetTransmitState( FL_EDICT_ALWAYS );
 	}
 
-	return BaseClass::UpdateTransmitState();
+	return BaseClass::UpdateTransmitState_Impl();
 }
 
 //-----------------------------------------------------------------------------
@@ -10882,7 +10735,7 @@ bool CAI_BaseNPC::CreateComponents()
 	m_pPathfinder->Init( g_pBigAINet );
 	m_pTacticalServices->Init( g_pBigAINet );
 	
-	return CreateBehaviors();
+	return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -11080,29 +10933,6 @@ void CAI_BaseNPC::InputUpdateEnemyMemory( inputdata_t &inputdata )
 	if( pEnemy )
 	{
 		UpdateEnemyMemory( pEnemy, pEnemy->GetAbsOrigin(), this );
-	}
-}
-
-//-----------------------------------------------------------------------------
-// create an addon and attach to npc
-//-----------------------------------------------------------------------------
-void CAI_BaseNPC::InputCreateAddon( inputdata_t &inputdata )
-{
-	Vector vecSpawnOrigin = GetLocalOrigin();
-
-	const char *pszAddonName = inputdata.value.String();
-
-	// Spawn the addon
-	CBaseEntity *pItem = (CBaseEntity *)CreateEntityByName( pszAddonName );
-
-	if ( pItem )
-	{
-		pItem->SetAbsOrigin( vecSpawnOrigin );
-
-		DispatchSpawn( pItem );
-
-		// install the addon
-		static_cast< CAI_AddOn *>( pItem )->Install( this );
 	}
 }
 
@@ -11387,11 +11217,11 @@ bool CAI_BaseNPC::CineCleanup()
 
 //-----------------------------------------------------------------------------
 
-void CAI_BaseNPC::Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts )
+void CAI_BaseNPC::Teleport_Impl( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts )
 {
 	CleanupScriptsOnTeleport( false );
 
-	BaseClass::Teleport( newPosition, newAngles, newVelocity, bUseSlowHighAccuracyContacts );
+	BaseClass::Teleport_Impl( newPosition, newAngles, newVelocity, bUseSlowHighAccuracyContacts );
 
 	CheckPVSCondition();
 }
@@ -11742,7 +11572,7 @@ void CAI_BaseNPC::OnDoorBlocked(CBasePropDoor *pDoor)
 //			do not spawn, but their keyvalues are saved for use by a template
 //			spawner.
 //-----------------------------------------------------------------------------
-bool CAI_BaseNPC::IsTemplate( void )
+bool CAI_BaseNPC::IsTemplate_Impl( void )
 {
 	return HasSpawnFlags( SF_NPC_TEMPLATE );
 }
@@ -11958,14 +11788,14 @@ bool CAI_BaseNPC::CanBeUsedAsAFriend( void )
 
 //-----------------------------------------------------------------------------
 
-Vector CAI_BaseNPC::GetSmoothedVelocity( void )
+Vector CAI_BaseNPC::GetSmoothedVelocity_Impl( void )
 {
 	if( GetNavType() == NAV_GROUND || GetNavType() == NAV_FLY )
 	{
 		return m_pMotor->GetCurVel();
 	}
 
-	return BaseClass::GetSmoothedVelocity();
+	return BaseClass::GetSmoothedVelocity_Impl();
 }
 
 
@@ -13347,15 +13177,9 @@ void CAI_BaseNPC::PlayerHasIlluminatedNPC( CBasePlayer *pPlayer, float flDot )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CAI_BaseNPC::ModifyOrAppendCriteria( AI_CriteriaSet& set )
+void CAI_BaseNPC::ModifyOrAppendCriteria_Impl( AI_CriteriaSet& set )
 {
-	BaseClass::ModifyOrAppendCriteria( set );
-
-	if ( m_pPrimaryBehavior )
-	{
-		// Append active behavior name
-		set.AppendCriteria( "active_behavior", GetPrimaryBehavior()->GetName() );
-	}
+	BaseClass::ModifyOrAppendCriteria_Impl( set );
 
 	// Append time since seen player
 	if ( m_flLastSawPlayerTime )

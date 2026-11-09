@@ -24,8 +24,6 @@
 #include "inputsystem/iinputsystem.h"
 
 #include <rocketui/rmlui.h>
-import ks.tier1;
-import std;
 
 // hud_console.rml reports edits to the input here (data-event-change) so the
 // completion list can follow what is being typed.
@@ -116,7 +114,7 @@ void RocketConsole::Initialize() {
     return;
 
   if (g_pCVar)
-    g_pCVar->InstallConsoleDisplayFunc(this);
+    g_pCVar->InstallConsoleDisplayFunc(this, ConsoleDisplayFn_t(std::cw<&RocketConsole::Display>, this));
 
   RocketUI()->SetInputHook(RocketUI_HandleInput);
 
@@ -618,6 +616,20 @@ void RocketConsole::ColorPrint(const Color &clr, const char *pMessage) {
   m_OutputBuffer.push_back( line );
 
   AddOutputLine(pMessage, clr);
+}
+
+void RocketConsole::Display(ConsoleDisplayOp_t op, const Color &clr, const char *pMessage) {
+  switch (op) {
+  case ConsoleDisplayOp_t::ColorPrint:
+    ColorPrint(clr, pMessage);
+    break;
+  case ConsoleDisplayOp_t::Print:
+    Print(pMessage);
+    break;
+  case ConsoleDisplayOp_t::DPrint:
+    DPrint(pMessage);
+    break;
+  }
 }
 
 void RocketConsole::Print(const char *pMessage) {

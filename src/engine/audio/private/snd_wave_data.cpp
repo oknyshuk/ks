@@ -23,7 +23,6 @@ import ks.tier1;
 #include "audio/private/posix_stubs.h"
 import std;
 #include "cdll_int.h"
-#include "ienginetoolinternal.h"
 #include "tier3/tier3.h"
 
 extern IVEngineClient *engineClient;
@@ -40,7 +39,6 @@ extern double realtime;
 // For non-looped sounds, only 2 buffers are needed for streaming.
 // For looped sounds, we may need up to 4 buffers. (assuming that the last sound frame is at the beginning of the buffer, and the first loop sound frame is at the end of a buffer).
 
-constexpr auto STREAM_BUFFER_COUNT = 4;
 constexpr auto STREAM_BUFFER_DATASIZE = ( 64 * 1024 );
 constexpr auto CONSOLE_STREAMING_AUDIO_PORTAL2 = ( 4 * 1024 * 1024 );
 constexpr auto ASIAN_FONT_MEMORY_USAGE = ( 0 );
@@ -969,137 +967,6 @@ void CAsyncWaveData::SetPostProcessed( bool proc )
 //-----------------------------------------------------------------------------
 // Purpose: Implements a cache of .wav / .mp3 data based on filename
 //-----------------------------------------------------------------------------
-class CAsyncWavDataCache : public IAsyncWavDataCache
-{
-public:
-	CAsyncWavDataCache();
-	~CAsyncWavDataCache() {}
-
-	virtual bool			Init( unsigned int memSize );
-	virtual void			Shutdown();
-
-	// implementation that treats file as monolithic
-	virtual WaveCacheHandle_t	AsyncLoadCache( char const *filename, int datasize, int startpos, bool bIsPrefetch = false );
-	virtual void			PrefetchCache( char const *filename, int datasize, int startpos );
-	virtual bool			CopyDataIntoMemory( char const *filename, int datasize, int startpos, void *buffer, int bufsize, int copystartpos, int bytestocopy, bool *pbPostProcessed );
-	virtual bool			CopyDataIntoMemory( WaveCacheHandle_t& handle, char const *filename, int datasize, int startpos, void *buffer, int bufsize, int copystartpos, int bytestocopy, bool *pbPostProcessed );
-	virtual void			SetPostProcessed( WaveCacheHandle_t handle, bool proc );
-	virtual void			Unload( WaveCacheHandle_t handle );
-	virtual bool			GetDataPointer( WaveCacheHandle_t& handle, char const *filename, int datasize, int startpos, void **pData, int copystartpos, bool *pbPostProcessed );
-	virtual bool			IsDataLoadCompleted( WaveCacheHandle_t handle, bool *pIsValid, bool *pIsMissing );
-	virtual void			RestartDataLoad( WaveCacheHandle_t* handle, char const *filename, int datasize, int startpos );
-	virtual bool			IsDataLoadInProgress( WaveCacheHandle_t handle );
-
-	// Xbox: alternate multi-buffer streaming implementation
-	virtual StreamHandle_t	OpenStreamedLoad( char const *pFileName, int dataSize, int dataStart, int startPos, int loopPos, int bufferSize, int numBuffers, streamFlags_t flags, SoundError &soundError );
-	virtual void			CloseStreamedLoad( StreamHandle_t hStream );
-	virtual int				CopyStreamedDataIntoMemory( StreamHandle_t hStream, void *pBuffer, int bufferSize, int copyStartPos, int bytesToCopy );
-	virtual bool			IsStreamedDataReady( StreamHandle_t hStream );
-	virtual void			*GetStreamedDataPointer( StreamHandle_t hStream, bool bSync );
-
-	virtual	void			Flush( bool bTearDownStaticPool = false );
-
-	virtual void			UpdateLoopPosition( StreamHandle_t hStream, int nLoopPosition );
-
-	enum MemoryUsageType
-	{
-		SPEW_BASIC = 0,
-		SPEW_MUSIC_NONSTREAMING,
-		SPEW_NONSTREAMING,
-		SPEW_ALL,
-	};
-	void					SpewMemoryUsage( MemoryUsageType level );
-
-	// Cache helpers
-	bool					GetItemName( DataCacheClientID_t clientId, const void *pItem, char *pDest, unsigned nMaxLen  );
-
-private:
-	void					Clear();
-
-	// tags the signature of a buffer inside a rb tree for faster than linear find
-	struct BufferEntry_t
-	{
-		FileNameHandle_t	m_hName;
-		WaveCacheHandle_t	m_hWaveData;
-		int					m_StartPos;
-		unsigned int		m_bIsTransient : 1;
-		unsigned int		m_bCanBeShared : 1;
-	};
-
-	struct BufferEntryLess
-	{
-		bool operator()( const BufferEntry_t& lhs, const BufferEntry_t& rhs ) const
-		{
-			if ( lhs.m_bIsTransient != rhs.m_bIsTransient )
-			{
-				return lhs.m_bIsTransient < rhs.m_bIsTransient;
-			}
-
-			if ( lhs.m_hName != rhs.m_hName )
-			{
-				return lhs.m_hName < rhs.m_hName;
-			}
-
-			if ( lhs.m_StartPos != rhs.m_StartPos )
-			{
-				return lhs.m_StartPos < rhs.m_StartPos;
-			}
-
-			return lhs.m_bCanBeShared < rhs.m_bCanBeShared;
-		}
-	};
-
-	// A signature is re-added whenever its buffer was evicted, so it can repeat.
-	std::multiset< BufferEntry_t, BufferEntryLess >	m_BufferList;
-
-	// encapsulates (n) buffers for a streamed wave object
-	struct StreamedEntry_t
-	{
-		FileNameHandle_t	m_hName;
-		WaveCacheHandle_t	m_hWaveData[STREAM_BUFFER_COUNT];
-		int					m_Front;			// buffer index, forever incrementing
-		int					m_NextStartPos;		// predicted offset if mixing linearly
-		int					m_DataSize;			// length of the data set in bytes
-		int					m_DataStart;		// file offset where data set starts
-		int					m_LoopStart;		// offset in data set where loop starts
-		int					m_BufferSize;		// size of the buffer in bytes
-		int					m_numBuffers;		// number of buffers (1 or 2) to march through
-		int					m_SectorSize;		// size of sector on stream device
-		bool				m_bSinglePlay;		// hint to keep same buffers
-		bool				m_bIsTransient;		// hint for buffer lifetime
-	};
-	ks::slot_pool< StreamedEntry_t, StreamHandle_t >	m_StreamedHandles;
-
-	std::map< FileNameHandle_t, WaveCacheHandle_t >	m_CacheHandles;
-
-	// these are buffers that were still in-flight at time of stream closure
-	// we track these until we can remove an outstanding lock
-	// some of these buffers are allowed to be reclaimed
-	struct DeadBufferEntry_t
-	{
-		WaveCacheHandle_t	hWaveData;
-		bool				bSinglePlay;
-	};
-	std::vector< DeadBufferEntry_t >	m_DeadBuffers;
-
-	WaveCacheHandle_t		FindOrCreateBuffer( asyncwaveparams_t &params, bool bFind );		
-	void					CleanupDeadBuffers( bool bSync );
-	bool					m_bInitialized;
-
-	struct  StreamData_t
-	{
-		int				actualCopied;
-		CAsyncWaveData	*pWaveData[STREAM_BUFFER_COUNT];
-		int				index;
-		bool			bWaiting;
-		int				copyStartPos;
-	};
-
-	bool InitializeStreamData( const StreamedEntry_t &streamedEntry, StreamData_t & streamData, int copyStartPos );
-	void CopyFromCurrentBuffers( StreamedEntry_t &streamedEntry, StreamData_t & streamData, StreamHandle_t hStream, void *pBuffer, int bufferSize, int bytesToCopy );
-	void PrefetchNextBuffers( StreamedEntry_t &streamedEntry, StreamData_t & streamData );
-};
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -2101,7 +1968,7 @@ void CAsyncWavDataCache::UpdateLoopPosition( StreamHandle_t hStream, int nLoopPo
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CAsyncWavDataCache::GetItemName( DataCacheClientID_t clientId, const void *pItem, char *pDest, unsigned nMaxLen  )
+bool CAsyncWavDataCache::GetItemName( uintp clientId, const void *pItem, char *pDest, unsigned nMaxLen  )
 {
 	CAsyncWaveData *pWaveData = (CAsyncWaveData *)pItem;
 	V_strncpy( pDest, pWaveData->GetFileName(), nMaxLen );
@@ -2197,7 +2064,7 @@ void CAsyncWavDataCache::Clear()
 
 
 static CAsyncWavDataCache g_AsyncWaveDataCache;
-IAsyncWavDataCache *wavedatacache = &g_AsyncWaveDataCache;
+CAsyncWavDataCache *wavedatacache = &g_AsyncWaveDataCache;
 
 static void snd_async_flush( const CCommand &args );
 static ConCommand snd_async_flush_command( "snd_async_flush", snd_async_flush, "Flush all unlocked async audio data" );
@@ -2248,7 +2115,7 @@ void PrefetchDataStream( const char *pFileName, int dataOffset, int dataSize )
 class CWaveDataStreamAsync : public IWaveData
 {
 public:
-	CWaveDataStreamAsync( CAudioSource &source, IWaveStreamSource *pStreamSource, const char *pFileName, int fileStart, int fileSize, CSfxTable *sfx, int startOffset, SoundError &soundError );
+	CWaveDataStreamAsync( CAudioSource &source, CAudioSource *pStreamSource, const char *pFileName, int fileStart, int fileSize, CSfxTable *sfx, int startOffset, SoundError &soundError );
 	~CWaveDataStreamAsync( void );
 
 	// return the source pointer (mixer needs this to determine some things like sampling rate)
@@ -2256,10 +2123,10 @@ public:
 
 	// Read data from the source - this is the primary function of a IWaveData subclass
 	// Get the data from the buffer (or reload from disk)
-	virtual int ReadSourceData( void **pData, int64 sampleIndex, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] );
+	int ReadSourceData( void **pData, int64 sampleIndex, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] );
 	bool IsValid() { return m_bValid; }
-	virtual bool IsReadyToMix();
-	virtual void UpdateLoopPosition( int nLoopPosition );
+	bool IsReadyToMix();
+	void UpdateLoopPosition( int nLoopPosition );
 
 private:
 	CWaveDataStreamAsync( const CWaveDataStreamAsync & );
@@ -2284,7 +2151,7 @@ private:
 
 	char const				*GetFileName();
 	CAudioSource			&m_source;					// wave source
-	IWaveStreamSource		*m_pStreamSource;			// streaming
+	CAudioSource			*m_pStreamSource;			// streaming
 	int						m_sampleSize;				// size of a sample in bytes
 	int						m_waveSize;					// total number of samples in the file
 
@@ -2313,7 +2180,7 @@ private:
 CWaveDataStreamAsync::CWaveDataStreamAsync
 	( 
 		CAudioSource &source, 
-		IWaveStreamSource *pStreamSource, 
+		CAudioSource *pStreamSource, 
 		const char *pFileName, 
 		int fileStart, 
 		int fileSize, 
@@ -2321,6 +2188,7 @@ CWaveDataStreamAsync::CWaveDataStreamAsync
 		int startOffset,
 		SoundError &soundError
 	) : 
+	IWaveData( WaveDataKind::StreamAsync ),
 	m_source( source ), 
 	m_dataStart( fileStart ), 
 	m_dataSize( fileSize ), 
@@ -2420,13 +2288,6 @@ bool CWaveDataStreamAsync::IsReadyToMix()
 	if ( !bCacheValid )
 	{
 		wavedatacache->RestartDataLoad( &m_hCache, GetFileName(), m_dataSize, m_dataStart );
-	}
-
-	// When laying off a movie, all sound access is forced to be synchronous to get better 
-	//  synchronization (avoids async loading random delay)
-	if ( g_pEngineToolInternal->IsRecordingMovie() )
-	{
-		return true;
 	}
 
 	return bLoaded;
@@ -2628,9 +2489,9 @@ public:
 	~CWaveDataMemoryAsync( void ) {}
 	CAudioSource &Source( void ) { return m_source; }
 	
-	virtual int ReadSourceData( void **pData, int64 sampleIndex, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] );
-	virtual bool IsReadyToMix();
-	virtual void UpdateLoopPosition( int nLoopPosition );
+	int ReadSourceData( void **pData, int64 sampleIndex, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] );
+	bool IsReadyToMix();
+	void UpdateLoopPosition( int nLoopPosition );
 
 private:
 	CAudioSource		&m_source;	// pointer to source
@@ -2641,6 +2502,7 @@ private:
 // Input  : &source - 
 //-----------------------------------------------------------------------------
 CWaveDataMemoryAsync::CWaveDataMemoryAsync( CAudioSource &source ) : 
+	IWaveData( WaveDataKind::MemoryAsync ),
 	m_source(source) 
 {
 }
@@ -2669,13 +2531,6 @@ bool CWaveDataMemoryAsync::IsReadyToMix()
 		// Wait until we're pending at least
 		if ( m_source.GetCacheStatus() == CAudioSource::AUDIO_NOT_LOADED || m_source.GetCacheStatus() == CAudioSource::AUDIO_ERROR_LOADING )
 		{
-			// When laying off a movie, all sound access is forced to be synchronous to get better 
-			//  synchronization (avoids async loading random delay)
-			if ( g_pEngineToolInternal->IsRecordingMovie() )
-			{
-				return true;
-			}
-
 			return false;
 		}
 		return true;
@@ -2709,12 +2564,12 @@ void CWaveDataMemoryAsync::UpdateLoopPosition( int nLoopPosition )
 //			dataSize - 
 // Output : IWaveData
 //-----------------------------------------------------------------------------
-IWaveData *CreateWaveDataStream( CAudioSource &source, IWaveStreamSource *pStreamSource, const char *pFileName, int dataStart, int dataSize, CSfxTable *pSfx, int startOffset, int skipInitialSamples, SoundError &soundError )
+IWaveData *CreateWaveDataStream( CAudioSource &source, CAudioSource *pStreamSource, const char *pFileName, int dataStart, int dataSize, CSfxTable *pSfx, int startOffset, int skipInitialSamples, SoundError &soundError )
 {
 	CWaveDataStreamAsync *pStream = new CWaveDataStreamAsync( source, pStreamSource, pFileName, dataStart, dataSize, pSfx, startOffset, soundError );
 	if ( !pStream || !pStream->IsValid() )
 	{
-		delete pStream;
+		IWaveData::Delete( pStream );
 		pStream = nullptr;
 	}
 	return pStream;
@@ -2729,4 +2584,66 @@ IWaveData *CreateWaveDataMemory( CAudioSource &source )
 {
 	CWaveDataMemoryAsync *mem = new CWaveDataMemoryAsync( source );
 	return mem;
+}
+
+
+//-----------------------------------------------------------------------------
+// IWaveData dispatch: the wave data are a closed set (WaveDataKind), so the interface switches on
+// the kind and calls the member of the same name of the object's class.
+//-----------------------------------------------------------------------------
+void IWaveData::Delete( IWaveData *pData )
+{
+	if ( !pData )
+		return;
+	switch ( pData->m_Kind )
+	{
+	case WaveDataKind::StreamAsync: delete static_cast< CWaveDataStreamAsync * >( pData ); return;
+	case WaveDataKind::MemoryAsync: delete static_cast< CWaveDataMemoryAsync * >( pData ); return;
+	case WaveDataKind::Voice: delete static_cast< CWaveDataVoice * >( pData ); return;
+	}
+	std::unreachable();
+}
+
+CAudioSource &IWaveData::Source( void )
+{
+	switch ( m_Kind )
+	{
+	case WaveDataKind::StreamAsync: return static_cast< CWaveDataStreamAsync * >( this )->Source();
+	case WaveDataKind::MemoryAsync: return static_cast< CWaveDataMemoryAsync * >( this )->Source();
+	case WaveDataKind::Voice: return static_cast< CWaveDataVoice * >( this )->Source();
+	}
+	std::unreachable();
+}
+
+int IWaveData::ReadSourceData( void **pData, int64 sampleIndex, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] )
+{
+	switch ( m_Kind )
+	{
+	case WaveDataKind::StreamAsync: return static_cast< CWaveDataStreamAsync * >( this )->ReadSourceData( pData, sampleIndex, sampleCount, copyBuf );
+	case WaveDataKind::MemoryAsync: return static_cast< CWaveDataMemoryAsync * >( this )->ReadSourceData( pData, sampleIndex, sampleCount, copyBuf );
+	case WaveDataKind::Voice: return static_cast< CWaveDataVoice * >( this )->ReadSourceData( pData, sampleIndex, sampleCount, copyBuf );
+	}
+	std::unreachable();
+}
+
+bool IWaveData::IsReadyToMix()
+{
+	switch ( m_Kind )
+	{
+	case WaveDataKind::StreamAsync: return static_cast< CWaveDataStreamAsync * >( this )->IsReadyToMix();
+	case WaveDataKind::MemoryAsync: return static_cast< CWaveDataMemoryAsync * >( this )->IsReadyToMix();
+	case WaveDataKind::Voice: return static_cast< CWaveDataVoice * >( this )->IsReadyToMix();
+	}
+	std::unreachable();
+}
+
+void IWaveData::UpdateLoopPosition( int nLoopPosition )
+{
+	switch ( m_Kind )
+	{
+	case WaveDataKind::StreamAsync: static_cast< CWaveDataStreamAsync * >( this )->UpdateLoopPosition( nLoopPosition ); return;
+	case WaveDataKind::MemoryAsync: static_cast< CWaveDataMemoryAsync * >( this )->UpdateLoopPosition( nLoopPosition ); return;
+	case WaveDataKind::Voice: static_cast< CWaveDataVoice * >( this )->UpdateLoopPosition( nLoopPosition ); return;
+	}
+	std::unreachable();
 }

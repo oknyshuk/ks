@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -372,7 +370,7 @@ void CPlayerMove::RunCommand ( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper 
 	// Do weapon selection
 	if ( ucmd->weaponselect != 0 )
 	{
-		CBaseCombatWeapon *weapon = dynamic_cast< CBaseCombatWeapon * >( CBaseEntity::Instance( ucmd->weaponselect ) );
+		CBaseCombatWeapon *weapon = entity_cast<CBaseCombatWeapon>( CBaseEntity::Instance( ucmd->weaponselect ) );
 		if ( weapon )
 		{
 			CVProfScope _( "player->SelectItem()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );

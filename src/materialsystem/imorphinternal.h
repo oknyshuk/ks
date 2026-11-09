@@ -28,9 +28,9 @@ public:
 class IMorphInternal : public IMorph
 {
 public:
-	virtual void Init( MorphFormat_t format, const char *pDebugName ) = 0;
-	virtual bool Bind( IMorphMgrRenderContext *pRenderContext ) = 0;
-	virtual MorphFormat_t GetMorphFormat() const = 0;
+	void Init( MorphFormat_t format, const char *pDebugName );
+	bool Bind( IMorphMgrRenderContext *pRenderContext );
+	MorphFormat_t GetMorphFormat() const;
 };
 
 
@@ -41,39 +41,39 @@ class IMorphMgr
 {
 public:
 	// Allocate,free scratch textures + materials
-	virtual bool ShouldAllocateScratchTextures() = 0;
-	virtual void AllocateScratchTextures() = 0;
-	virtual void FreeScratchTextures() = 0;
-	virtual void AllocateMaterials() = 0;
-	virtual void FreeMaterials() = 0;
+	bool ShouldAllocateScratchTextures();
+	void AllocateScratchTextures();
+	void FreeScratchTextures();
+	void AllocateMaterials();
+	void FreeMaterials();
 
 	// Returns the morph accumulator scratch texture
-	virtual ITextureInternal *MorphAccumulator() = 0;
-	virtual ITextureInternal *MorphWeights() = 0;
+	ITextureInternal *MorphAccumulator();
+	ITextureInternal *MorphWeights();
 
 	// Class factory
-	virtual IMorphInternal *CreateMorph() = 0;
-	virtual void DestroyMorph( IMorphInternal *pMorphData ) = 0;
+	IMorphInternal *CreateMorph();
+	void DestroyMorph( IMorphInternal *pMorphData );
 
 	// Max morphs between Begin/End
-	virtual int MaxHWMorphBatchCount() const = 0;
+	int MaxHWMorphBatchCount() const;
 
 	// Begin, end morph accumulation phase
-	virtual void BeginMorphAccumulation( IMorphMgrRenderContext *pRenderContext ) = 0;
-	virtual void EndMorphAccumulation( IMorphMgrRenderContext *pRenderContext ) = 0;
+	void BeginMorphAccumulation( IMorphMgrRenderContext *pRenderContext );
+	void EndMorphAccumulation( IMorphMgrRenderContext *pRenderContext );
 
 	// Accumulate a morph
-	virtual void AccumulateMorph( IMorphMgrRenderContext *pRenderContext, IMorph* pMorph, int nMorphCount, const MorphWeight_t* pWeights ) = 0;
+	void AccumulateMorph( IMorphMgrRenderContext *pRenderContext, IMorph* pMorph, int nMorphCount, const MorphWeight_t* pWeights );
 
 	// Advances frame count (for debugging)
-	virtual void AdvanceFrame() = 0;
+	void AdvanceFrame();
 
 	// Returns the location of a particular vertex in the morph accumulator
-	virtual bool GetMorphAccumulatorTexCoord( IMorphMgrRenderContext *pRenderContext, Vector2D *pTexCoord, IMorph *pMorph, int nVertex ) = 0;
+	bool GetMorphAccumulatorTexCoord( IMorphMgrRenderContext *pRenderContext, Vector2D *pTexCoord, IMorph *pMorph, int nVertex );
 
 	// Allocate, free morph mgr render context data.
-	virtual IMorphMgrRenderContext *AllocateRenderContext() = 0;
-	virtual void FreeRenderContext( IMorphMgrRenderContext *pRenderContext ) = 0;
+	IMorphMgrRenderContext *AllocateRenderContext();
+	void FreeRenderContext( IMorphMgrRenderContext *pRenderContext );
 };
 
 extern IMorphMgr *g_pMorphMgr;

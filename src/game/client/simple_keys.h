@@ -3,8 +3,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 
-import std;
-import ks.math;
 
 enum simplekeyinterp_t
 {

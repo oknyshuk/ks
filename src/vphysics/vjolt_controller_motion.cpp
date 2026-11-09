@@ -188,3 +188,6 @@ void JoltPhysicsMotionController::OnPreSimulate( float flDeltaTime )
 		}
 	}
 }
+
+//-------------------------------------------------------------------------------------------------
+#include "facade/iphysicsmotioncontroller.inl"

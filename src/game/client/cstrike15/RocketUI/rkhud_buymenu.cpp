@@ -21,8 +21,6 @@
 #include "c_cs_player.h"
 
 #include <rocketui/rmlui.h>
-import ks.tier1;
-import std;
 
 DECLARE_HUDELEMENT( RkHudBuyMenu );
 

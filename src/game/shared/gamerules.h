@@ -88,10 +88,10 @@ public:
 
 	// UNDONE: Is this correct, Mike?
 	// Don't carry these across a transition, they are recreated.
-	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	KS_VIRTUAL int	ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION; }
 
 	// ALWAYS transmit to all clients.
-	virtual int UpdateTransmitState( void );
+	KS_VIRTUAL int UpdateTransmitState_Impl( void );
 
 	// CGameRules chains its NetworkStateChanged calls to here, since this
 	// is the actual entity that will send the data.

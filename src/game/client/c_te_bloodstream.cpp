@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -69,43 +67,9 @@ C_TEBloodStream::~C_TEBloodStream( void )
 }
 
 
-//-----------------------------------------------------------------------------
-// Recording 
-//-----------------------------------------------------------------------------
-static inline void RecordBloodStream( const Vector &start, const Vector &direction, 
-	int r, int g, int b, int a, int amount )
-{
-	if ( !ToolsEnabled() )
-		return;
-
-	if ( clienttools->IsInRecordingMode() )
-	{
-		Color clr( r, g, b, a );
-
-		KeyValues *msg = new KeyValues( "TempEntity" );
-
- 		msg->SetInt( "te", TE_BLOOD_STREAM );
- 		msg->SetString( "name", "TE_BloodStream" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetFloat( "originx", start.x );
-		msg->SetFloat( "originy", start.y );
-		msg->SetFloat( "originz", start.z );
-		msg->SetFloat( "directionx", direction.x );
-		msg->SetFloat( "directiony", direction.y );
-		msg->SetFloat( "directionz", direction.z );
-		msg->SetColor( "color", clr );
-		msg->SetInt( "amount", amount );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
-}
-
-
 void TE_BloodStream( IRecipientFilter& filter, float delay,
 	const Vector* org, const Vector* direction, int r, int g, int b, int a, int amount )
 {
-	RecordBloodStream( *org, *direction, r, g, b, a, amount );
 
 	ks::intrusive_ptr<CTEParticleRenderer> pRen = CTEParticleRenderer::Create( "TEBloodStream", *org );
 	if( !pRen )

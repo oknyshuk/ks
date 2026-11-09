@@ -5,7 +5,6 @@
 #include "baseplayer_shared.h"
 
 class CUserCmd;
-class IMoveHelper;
 class CMoveData;
 class CBaseCombatCharacter;
 

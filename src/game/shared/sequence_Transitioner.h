@@ -2,15 +2,12 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #ifdef CLIENT_DLL
 #include "animationlayer.h"
 #else
 #include "BaseAnimatingOverlay.h"
 #endif
 
-class CStudioHdr;
 
 // ------------------------------------------------------------------------------------------------ //
 // CSequenceTransitioner declaration.

@@ -3,8 +3,6 @@
 
 // Purpose: Utility functions used by AI code.
 
-import std;
-import ks.vstdlib;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"

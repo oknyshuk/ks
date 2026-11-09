@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import std;
-import ks.math;
 #include "cdll_int.h"
 #include "GameEventListener.h"
 #include "ehandle.h"

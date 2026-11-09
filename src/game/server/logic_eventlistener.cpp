@@ -3,8 +3,6 @@
 
 // Purpose: Player for HL2.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -47,25 +45,25 @@ public:
 	{}
 
 	// IGameEventVisitor2
-	virtual bool VisitString( const char* name, const char* value ) override
+	bool VisitString( const char* name, const char* value )
 	{
 		mVM->SetValue( mTable, name, value );
 		return true;
 	}
 
-	virtual bool VisitFloat( const char* name, float value ) override
+	bool VisitFloat( const char* name, float value )
 	{
 		mVM->SetValue( mTable, name, value );
 		return true;
 	}
 
-	virtual bool VisitInt( const char* name, int value ) override
+	bool VisitInt( const char* name, int value )
 	{
 		mVM->SetValue( mTable, name, value );
 		return true;
 	}
 
-	virtual bool VisitBool( const char*name, bool value ) override
+	bool VisitBool( const char*name, bool value )
 	{
 		mVM->SetValue( mTable, name, value );
 		return true;
@@ -81,9 +79,9 @@ private:
 //-----------------------------------------------------------------------------
 // Purpose: Spawn
 //-----------------------------------------------------------------------------
-void CLogicEventListener::Spawn( void )
+void CLogicEventListener::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	ListenForGameEvent( STRING(m_iszEventName) );
 }
@@ -165,9 +163,9 @@ IMPLEMENT_REFLECT_DATAMAP( CLogicEventListenerItemEquip )
 	//-----------------------------------------------------------------------------
 	// Purpose: Spawn
 	//-----------------------------------------------------------------------------
-	void CLogicEventListenerItemEquip::Spawn( void )
+	void CLogicEventListenerItemEquip::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	ListenForGameEvent( "item_equip" );
 }

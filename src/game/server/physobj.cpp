@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -15,7 +13,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "baseentity_shared.h"
 #include "basetoggle.h"
@@ -67,8 +64,8 @@ public:
 	CPhysicsSpring();
 	~CPhysicsSpring();
 
-	void	Spawn( void );
-	void	Activate( void );
+	void	Spawn_Impl( void );
+	void	Activate_Impl( void );
 
 	// Inputs
 	[[= ks::reflect::Input{ .name = "SetSpringConstant", .type = FIELD_FLOAT } ]] void InputSetSpringConstant( inputdata_t &inputdata );
@@ -76,11 +73,11 @@ public:
 	[[= ks::reflect::Input{ .name = "SetSpringLength", .type = FIELD_FLOAT } ]] void InputSetSpringLength( inputdata_t &inputdata );
 
 	// Debug
-	int		DrawDebugTextOverlays(void);
-	void	DrawDebugGeometryOverlays(void);
+	int		DrawDebugTextOverlays_Impl(void);
+	void	DrawDebugGeometryOverlays_Impl(void);
 
 	void GetSpringObjectConnections( string_t nameStart, string_t nameEnd, IPhysicsObject **pStart, IPhysicsObject **pEnd );
-	void NotifySystemEvent( CBaseEntity *pNotify, notify_system_event_t eventType, const notify_system_event_params_t &params );
+	void NotifySystemEvent_Impl( CBaseEntity *pNotify, notify_system_event_t eventType, const notify_system_event_params_t &params );
 	IPhysicsObject *GetStartObject() { return m_pSpring ? m_pSpring->GetStartObject() : nullptr; }
 	IPhysicsObject *GetEndObject() { return m_pSpring ? m_pSpring->GetEndObject() : nullptr; }
 
@@ -184,9 +181,9 @@ void CPhysicsSpring::InputSetSpringLength( inputdata_t &inputdata )
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CPhysicsSpring::DrawDebugTextOverlays(void) 
+int CPhysicsSpring::DrawDebugTextOverlays_Impl(void) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -212,7 +209,7 @@ int CPhysicsSpring::DrawDebugTextOverlays(void)
 // Input  :
 // Output : 
 //-----------------------------------------------------------------------------
-void CPhysicsSpring::DrawDebugGeometryOverlays(void) 
+void CPhysicsSpring::DrawDebugGeometryOverlays_Impl(void) 
 {
 	if ( !m_pSpring )
 		return;
@@ -234,7 +231,7 @@ void CPhysicsSpring::DrawDebugGeometryOverlays(void)
 		NDebugOverlay::Line(vStartPos, vLength, 0,0,255, false, 0);
 		NDebugOverlay::Line(vLength, vEndPos, 255,0,0, false, 0);
 	}
-	BaseClass::DrawDebugGeometryOverlays();
+	BaseClass::DrawDebugGeometryOverlays_Impl();
 }
 
 bool PointIsNearer( IPhysicsObject *pObject1, const Vector &point1, const Vector &point2 )
@@ -288,9 +285,9 @@ void CPhysicsSpring::GetSpringObjectConnections( string_t nameStart, string_t na
 }
 
 
-void CPhysicsSpring::Activate( void )
+void CPhysicsSpring::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	// UNDONE: save/restore all data, and only create the spring here
 
@@ -331,7 +328,7 @@ void CPhysicsSpring::Activate( void )
 }
 
 
-void CPhysicsSpring::Spawn( void )
+void CPhysicsSpring::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	m_start = GetAbsOrigin();
@@ -341,7 +338,7 @@ void CPhysicsSpring::Spawn( void )
 	}
 }
 
-void CPhysicsSpring::NotifySystemEvent( CBaseEntity *pNotify, notify_system_event_t eventType, const notify_system_event_params_t &params )
+void CPhysicsSpring::NotifySystemEvent_Impl( CBaseEntity *pNotify, notify_system_event_t eventType, const notify_system_event_params_t &params )
 {
 	// don't recurse
 	if ( eventType != NOTIFY_EVENT_TELEPORT || (unsigned int)gpGlobals->tickcount == m_teleportTick )
@@ -375,7 +372,7 @@ IMPLEMENT_REFLECT_DATAMAP( CPhysBox )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPhysBox::Spawn( void )
+void CPhysBox::Spawn_Impl( void )
 {
 	// Initialize damage modifiers. Must be done before baseclass spawn.
 	m_flDmgModBullet = func_breakdmg_bullet.GetFloat();
@@ -469,7 +466,7 @@ static bool ShouldDampRotation( const CPhysCollide *pCollide )
 }
 
 
-bool CPhysBox::CreateVPhysics()
+bool CPhysBox::CreateVPhysics_Impl()
 {
 	solid_t tmpSolid;
 	PhysModelParseSolid( tmpSolid, this, GetModelIndex() );
@@ -510,9 +507,9 @@ bool CPhysBox::CreateVPhysics()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CPhysBox::ObjectCaps() 
+int CPhysBox::ObjectCaps_Impl() 
 { 
-	int caps = BaseClass::ObjectCaps() | FCAP_WCEDIT_POSITION;
+	int caps = BaseClass::ObjectCaps_Impl() | FCAP_WCEDIT_POSITION;
 	if ( HasSpawnFlags( SF_PHYSBOX_ENABLE_PICKUP_OUTPUT ) )
 	{
 		caps |= FCAP_IMPULSE_USE;
@@ -531,7 +528,7 @@ int CPhysBox::ObjectCaps()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPhysBox::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CPhysBox::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	CBasePlayer *pPlayer = ToBasePlayer( pActivator );
 	if ( pPlayer )
@@ -571,9 +568,9 @@ bool CPhysBox::CanBePickedUpByPhyscannon()
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CPhysBox::DrawDebugTextOverlays(void) 
+int CPhysBox::DrawDebugTextOverlays_Impl(void) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -696,9 +693,9 @@ void CPhysBox::Move( const Vector &direction )
 }
 
 // Update the visible representation of the physic system's representation of this object
-void CPhysBox::VPhysicsUpdate( IPhysicsObject *pPhysics )
+void CPhysBox::VPhysicsUpdate_Impl( IPhysicsObject *pPhysics )
 {
-	BaseClass::VPhysicsUpdate( pPhysics );
+	BaseClass::VPhysicsUpdate_Impl( pPhysics );
 
 	// if this is the first time we have moved, fire our target
 	if ( HasSpawnFlags( SF_PHYSBOX_ASLEEP ) )
@@ -758,9 +755,9 @@ void CPhysBox::OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t Reason )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPhysBox::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
+void CPhysBox::VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent )
 {
-	BaseClass::VPhysicsCollision( index, pEvent );
+	BaseClass::VPhysicsCollision_Impl( index, pEvent );
 
 	IPhysicsObject *pPhysObj = pEvent->pObjects[!index];
 
@@ -785,13 +782,13 @@ void CPhysBox::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CPhysBox::OnTakeDamage( const CTakeDamageInfo &info )
+int CPhysBox::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	if ( IsMarkedForDeletion() )
 		return 0;
 
 	// note: if motion is disabled, OnTakeDamage can't apply physics force
-	int ret = BaseClass::OnTakeDamage( info );
+	int ret = BaseClass::OnTakeDamage_Impl( info );
 
 	if ( info.GetInflictor() )
 	{
@@ -847,7 +844,7 @@ LINK_ENTITY_TO_CLASS( env_physexplosion, CPhysExplosion );
 IMPLEMENT_REFLECT_DATAMAP( CPhysExplosion )
 
 
-void CPhysExplosion::Spawn( void )
+void CPhysExplosion::Spawn_Impl( void )
 {
 	SetMoveType( MOVETYPE_NONE );
 	SetSolid( SOLID_NONE );
@@ -1039,9 +1036,9 @@ void CPhysExplosion::ExplodeAndRemove( CBaseEntity *pActivator, CBaseEntity *pCa
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CPhysExplosion::DrawDebugTextOverlays( void ) 
+int CPhysExplosion::DrawDebugTextOverlays_Impl( void ) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -1098,15 +1095,15 @@ IMPLEMENT_REFLECT_DATAMAP( CPhysImpact )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPhysImpact::Activate( void )
+void CPhysImpact::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPhysImpact::Spawn( void )
+void CPhysImpact::Spawn_Impl( void )
 {
 	SetMoveType( MOVETYPE_NONE );
 	SetSolid( SOLID_NONE );
@@ -1218,7 +1215,7 @@ class CSimplePhysicsBrush : public CBaseEntity
 {
 	DECLARE_CLASS( CSimplePhysicsBrush, CBaseEntity );
 public:
-	void Spawn()
+	void Spawn_Impl()
 	{
 		SetModel( STRING( GetModelName() ) );
 		SetMoveType( MOVETYPE_VPHYSICS );
@@ -1234,17 +1231,17 @@ class CSimplePhysicsProp : public CBaseProp
 	DECLARE_CLASS( CSimplePhysicsProp, CBaseProp );
 
 public:
-	void Spawn()
+	void Spawn_Impl()
 	{
-		BaseClass::Spawn();
+		BaseClass::Spawn_Impl();
 		SetMoveType( MOVETYPE_VPHYSICS );
 		SetSolid( SOLID_VPHYSICS );
 		m_takedamage = DAMAGE_EVENTS_ONLY;
 	}
 
-	int ObjectCaps()
+	int ObjectCaps_Impl()
 	{ 
-		int caps = BaseClass::ObjectCaps() | FCAP_WCEDIT_POSITION;
+		int caps = BaseClass::ObjectCaps_Impl() | FCAP_WCEDIT_POSITION;
 
 		if ( CBasePlayer::CanPickupObject( this, 35, 128 ) )
 		{
@@ -1254,7 +1251,7 @@ public:
 		return caps;
 	}
 
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 	{
 		CBasePlayer *pPlayer = ToBasePlayer( pActivator );
 		if ( pPlayer )
@@ -1484,7 +1481,7 @@ CPhysMagnet::~CPhysMagnet( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPhysMagnet::Spawn( void )
+void CPhysMagnet::Spawn_Impl( void )
 {
 	Precache();
 
@@ -1519,29 +1516,29 @@ void CPhysMagnet::Spawn( void )
 	m_flTotalMass = 0;
 	m_flNextSuckTime = 0;
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPhysMagnet::Precache( void )
+void CPhysMagnet::Precache_Impl( void )
 {
 	PrecacheModel( STRING( GetModelName() ) );
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPhysMagnet::Touch( CBaseEntity *pOther )
+void CPhysMagnet::Touch_Impl( CBaseEntity *pOther )
 {
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPhysMagnet::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
+void CPhysMagnet::VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent )
 {
 	int otherIndex = !index;
 	CBaseEntity *pOther = pEvent->pEntities[otherIndex];
@@ -1665,7 +1662,7 @@ void CPhysMagnet::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 
 	m_OnMagnetAttach.FireOutput( this, this );
 
-	BaseClass::VPhysicsCollision( index, pEvent );
+	BaseClass::VPhysicsCollision_Impl( index, pEvent );
 }
 
 //-----------------------------------------------------------------------------
@@ -1835,7 +1832,7 @@ class CInfoMassCenter : public CPointEntity
 {
 	DECLARE_CLASS( CInfoMassCenter, CPointEntity );
 public:
-	void Spawn( void )
+	void Spawn_Impl( void )
 	{
 		if ( m_target != NULL_STRING )
 		{

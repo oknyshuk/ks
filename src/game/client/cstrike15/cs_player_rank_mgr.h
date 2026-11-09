@@ -3,7 +3,6 @@
 // Copyright (c) Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
 
 // Purpose: Achievements (aka Medals) are divided into categories. Progress towards
 // completing a category of medals gives the player a higher 'rank'. Player
@@ -49,7 +48,7 @@ struct MedalStatEvent_t
 	CSStatType_t m_StatType;
 };
 
-class CPlayerRankManager : public CAutoGameSystem, public CGameEventListener, public IMatchEventsSink
+class CPlayerRankManager : public CAutoGameSystem, public CGameEventListener
 {
 public:
 	CPlayerRankManager();
@@ -94,9 +93,9 @@ public:
 	// Debug spew.
 	void PrintRankProgressThisRound() const;
 
-	// IMatchEventsSink functions
+	// Match events
 public:
-	virtual void OnEvent( KeyValues *pEvent ) override;
+	void OnEvent( KeyValues *pEvent );
 
 private:
 	struct MedalCategoryInfo_t
@@ -105,8 +104,10 @@ private:
 		int m_minCountForRank[MEDAL_RANK_COUNT];
 	};
 
+public:
 	void FireGameEvent( IGameEvent *event );
 
+private:
 	void SendRankDataToServer( void );
 	void BuildMedalCategories( void );
 	void RecalculateRanks( void );

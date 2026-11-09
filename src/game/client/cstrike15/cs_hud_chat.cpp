@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "sharedvar.h"
@@ -145,6 +143,7 @@ bool CHudChat::MsgFunc_RadioText( const ks::net::CCSUsrMsg_RadioText &msg )
 //-----------------------------------------------------------------------------
 // Purpose: Reads in a player's Chat text from the server
 //-----------------------------------------------------------------------------
+extern const char* Helper_GetLocalPlayerAssassinationQuestLocToken( const CEconQuestDefinition *pQuest );
 bool CHudChat::MsgFunc_SayText2( const ks::net::CCSUsrMsg_SayText2 &msg )
 {
 	// Got message during connection
@@ -176,7 +175,6 @@ bool CHudChat::MsgFunc_SayText2( const ks::net::CCSUsrMsg_SayText2 &msg )
 	CEconQuestDefinition *pQuestDef = CSGameRules()->GetActiveAssassinationQuest();
 	if ( pQuestDef && GetCSResources()->IsAssassinationTarget( client ) )
 	{
-		extern const char* Helper_GetLocalPlayerAssassinationQuestLocToken( const CEconQuestDefinition *pQuest );
 		if ( const char* szToken = Helper_GetLocalPlayerAssassinationQuestLocToken( pQuestDef ) )
 			V_wcscpy_safe( szBuf[ 1 ], g_pLocalize->Find( szToken ) );
 	}

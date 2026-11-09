@@ -25,7 +25,7 @@ public:
 
 	CBaseCSGrenade();
 
-	virtual void	Precache();
+	KS_VIRTUAL void	Precache_Impl();
 
 	bool			Deploy();
 	bool			Holster( CBaseCombatWeapon *pSwitchingTo );

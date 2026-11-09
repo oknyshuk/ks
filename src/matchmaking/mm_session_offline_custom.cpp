@@ -269,8 +269,6 @@ void CMatchSessionOfflineCustom::InitializeGameSettings()
 			pMachine->SetUint64( "id", ( pPriPlayer ? pPriPlayer->GetXUID() : INVALID_XUID ) );
 			pMachine->SetUint64( "flags", MatchSession_GetMachineFlags() );
 			pMachine->SetInt( "numPlayers", numPlayers );
-			if ( IDlcManager *pDlcManager = g_pMatchFramework->GetMatchSystem()->GetDlcManager() )
-				pMachine->SetUint64( "dlcmask", pDlcManager->GetDataInfo()->GetUint64( "@info/installed" ) );
 			pMachine->SetString( "tuver", MatchSession_GetTuInstalledString() );
 			pMachine->SetInt( "ping", 0 );
 
@@ -321,3 +319,7 @@ void CMatchSessionOfflineCustom::OnGamePrepareLobbyForGame()
 	// Let the title prepare for connect
 	MatchSession_PrepareClientForConnect( m_pSettings );
 }
+
+//-----------------------------------------------------------------------------
+#include "facade/imatchsession.inl"
+#include "facade/imatchsessioninternal.inl"

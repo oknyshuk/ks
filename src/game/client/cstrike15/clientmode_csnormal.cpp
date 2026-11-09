@@ -39,8 +39,6 @@
 #include "physpropclientside.h"
 #include "c_weapon__stubs.h"
 #include <engine/IEngineSound.h>
-import ks.tier1;
-import std;
 #include "c_cs_hostage.h"
 #include "buy_presets/buy_presets.h"
 #include "usermessages.h"
@@ -445,6 +443,8 @@ void CCSModeManager::LevelShutdown( void )
 //-----------------------------------------------------------------------------
 ClientModeCSNormal::ClientModeCSNormal()
 {
+	SetGameEventHandler( this );
+
 	m_CCKillCamReplay = INVALID_CLIENT_CCHANDLE;
 	m_CCKillCamReplayPercent = 0;
 	m_CCDeathHandle = INVALID_CLIENT_CCHANDLE;
@@ -478,7 +478,7 @@ void ClientModeCSNormal::Init()
 {
 	BaseClass::Init();
 
-	g_pMatchFramework->GetEventsSubscription()->Subscribe( this );
+	g_pMatchFramework->GetEventsSubscription()->Subscribe( this, [this]( KeyValues *pEvent ) { OnEvent( pEvent ); } );
 
 	ListenForGameEvent( "round_end" );
 	ListenForGameEvent( "round_mvp" );
@@ -839,6 +839,7 @@ bool ClientModeCSNormal::GetIdealCameraPosForPlayer( int playerindex )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+extern void OnPlayerDecalsLevelShutdown();
 void ClientModeCSNormal::LevelShutdown( void )
 {
 	BaseClass::LevelShutdown();
@@ -864,7 +865,6 @@ void ClientModeCSNormal::LevelShutdown( void )
 	s_flLastDigitalSignatureTime = 0;
 
 	// Shutdown decals system
-	extern void OnPlayerDecalsLevelShutdown();
 	OnPlayerDecalsLevelShutdown();
 
 	// Increment level transitions counter
@@ -878,6 +878,7 @@ void ClientModeCSNormal::LevelShutdown( void )
 
 uint32 ClientModeCSNormal::s_numLevelTransitions = 0;
 
+extern void OnPlayerDecalsUpdate();
 void ClientModeCSNormal::Update()
 {
 	BaseClass::Update();
@@ -885,7 +886,6 @@ void ClientModeCSNormal::Update()
 	UpdatePostProcessingEffects();
 
 	// Update decals system
-	extern void OnPlayerDecalsUpdate();
 	OnPlayerDecalsUpdate();
 
 	if ( ( m_fDelayedCTWinTime > 0.0f ) && ( gpGlobals->curtime >= m_fDelayedCTWinTime  ) )
@@ -1282,6 +1282,7 @@ void ClientModeCSNormal::LoadPostProcessParamsFromFile( const char* pFileName )
 
 
 //--------------------------------------------------------------------------------------------------------
+extern ConVar	spec_freeze_time;
 void ClientModeCSNormal::UpdatePostProcessingEffects()
 {
 	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
@@ -1332,7 +1333,6 @@ void ClientModeCSNormal::UpdatePostProcessingEffects()
 
 		if ( post_effect == POST_EFFECT_DEATH_CAM_BODYSHOT )
 		{
-			extern ConVar	spec_freeze_time;
 			PostProcessLerpTo( POST_EFFECT_DEATH_CAM_BODYSHOT, spec_freeze_time.GetInt() );
 		}
 		else if ( post_effect == POST_EFFECT_DEATH_CAM_HEADSHOT )
@@ -1651,6 +1651,11 @@ class ClientModeCSFullscreen : public ClientModeCSNormal
 	typedef ClientModeCSFullscreen ThisClass;
 
 public:
+	ClientModeCSFullscreen()
+	{
+		SetGameEventHandler( this );
+	}
+
 	virtual void InitViewport()
 	{
 		// dgoodenough - fix up GCC shortcoming.
@@ -1668,7 +1673,7 @@ public:
 
 	virtual void Init( void );
 	virtual void OnEvent( KeyValues *pEvent );
-	virtual void FireGameEvent( IGameEvent *event );
+	void FireGameEvent( IGameEvent *event );
 } g_ClientModeFullscreen;
 
 
@@ -2513,12 +2518,12 @@ bool ShouldRecreateClassImageEntity( C_BaseAnimating *pEnt, const char *pNewMode
 
 
 
+extern void UpdatePreviewDecal();
 void ClientModeCSNormal::PreRender(CViewSetup *pSetup)
 {
 	ClientModeShared::PreRender( pSetup );
 
 	// Make sure preview decals update before the current render pass every frame (if needed of course)
-	extern void UpdatePreviewDecal();
 	UpdatePreviewDecal();
 }
 

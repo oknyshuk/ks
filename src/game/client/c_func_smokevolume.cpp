@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "const.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"
@@ -208,9 +206,9 @@ static inline Vector EngineGetLightForPoint(const Vector &vPos)
 	return engine->GetLightForPoint(vPos, true);
 }
 
+extern Vector g_vecRenderOrigin[ MAX_SPLITSCREEN_PLAYERS ];
 static inline Vector& EngineGetVecRenderOrigin()
 {
-	extern Vector g_vecRenderOrigin[ MAX_SPLITSCREEN_PLAYERS ];
 	return g_vecRenderOrigin[ GET_ACTIVE_SPLITSCREEN_SLOT() ];
 }
 

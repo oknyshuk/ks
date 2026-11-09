@@ -30,7 +30,6 @@ import std;
 #include "gl_shader.h"
 #include "gl_rmain.h"
 #include "ispatialpartitioninternal.h"
-#include "toolframework/itoolframework.h"
 #include "r_decal.h"
 
 #include "rocketui/rocketui.h"
@@ -135,11 +134,7 @@ void V_RenderUIOnly( void )
 
 	g_EngineRenderer->FrameBegin();
 
-	toolframework->RenderFrameBegin();
-
 	V_RenderUIOnly_NoSwap();
-
-	toolframework->RenderFrameEnd();
 
 	g_EngineRenderer->FrameEnd( );
 
@@ -162,8 +157,6 @@ void V_RenderView( void )
 	bool bCanRenderWorld = ( host_state.worldmodel != nullptr ) && GetBaseLocalClient().IsActive();
 
 	bCanRenderWorld = bCanRenderWorld && !EngineUI()->IsPlayingFullScreenVideo();
-
-	bCanRenderWorld = bCanRenderWorld && toolframework->ShouldGameRenderView();
 
 	if ( bCanRenderWorld && g_bTextMode )
 	{	
@@ -240,14 +233,14 @@ public:
 		R_DrawBrushModel( baseentity, model, origin, angles, DEPTH_MODE_NORMAL, true, true );
 	}
 
-	virtual void DrawBrushModelEx( IClientEntity *baseentity, model_t *model, const Vector& origin, const QAngle& angles, DrawBrushModelMode_t mode )
+	void DrawBrushModelEx( IClientEntity *baseentity, model_t *model, const Vector& origin, const QAngle& angles, DrawBrushModelMode_t mode )
 	{
 		bool bDrawOpaque = ( mode != DBM_DRAW_TRANSLUCENT_ONLY );
 		bool bDrawTranslucent = ( mode != DBM_DRAW_OPAQUE_ONLY );
 		R_DrawBrushModel( baseentity, model, origin, angles, DEPTH_MODE_NORMAL, bDrawOpaque, bDrawTranslucent );
 	}
 
-	virtual void DrawBrushModelArray( IMatRenderContext* pRenderContext, int nCount, 
+	void DrawBrushModelArray( IMatRenderContext* pRenderContext, int nCount, 
 		const BrushArrayInstanceData_t *pInstanceData, int nModelTypeFlags )
 	{
 #ifdef _DEBUG
@@ -494,7 +487,7 @@ public:
 		return GetBaseLocalClient().GetAreaBits_BackwardCompatibility();
 	}
 
-	virtual void SetAreaState( 
+	void SetAreaState( 
 			unsigned char chAreaBits[MAX_AREA_STATE_BYTES],
 			unsigned char chAreaPortalBits[MAX_AREA_PORTAL_STATE_BYTES] )
 	{
@@ -510,7 +503,7 @@ public:
 		R_SetFogVolumeState(fogVolume, useHeightFog );
 	}
 
-	virtual void InstallBrushSurfaceRenderer( IBrushRenderer* pBrushRenderer )
+	void InstallBrushSurfaceRenderer( IBrushRenderer* pBrushRenderer )
 	{
 		R_InstallBrushRenderOverride( pBrushRenderer );
 	}
@@ -544,22 +537,22 @@ public:
 	}
 
 	// Push, pop views
-	virtual void Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes )
+	void Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes )
 	{
 		g_EngineRenderer->Push3DView( pRenderContext, view, nFlags, pRenderTarget, frustumPlanes, nullptr );
 	}
 
-	virtual void Push2DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes )
+	void Push2DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes )
 	{
 		g_EngineRenderer->Push2DView( pRenderContext, view, nFlags, pRenderTarget, frustumPlanes );
 	}
 
-	virtual void PopView( IMatRenderContext *pRenderContext, Frustum frustumPlanes )
+	void PopView( IMatRenderContext *pRenderContext, Frustum frustumPlanes )
  	{
 		g_EngineRenderer->PopView( pRenderContext, frustumPlanes );
 	}
 
-	virtual void SetMainView( const Vector &vecOrigin, const QAngle &angles )
+	void SetMainView( const Vector &vecOrigin, const QAngle &angles )
 	{
 		g_EngineRenderer->SetMainView( vecOrigin, angles );
 	}
@@ -594,7 +587,7 @@ public:
 		g_EngineRenderer->EndUpdateLightmaps();
 	}
 
-	virtual void Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes, ITexture* pDepthTexture )
+	void Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes, ITexture* pDepthTexture )
 	{
 		g_EngineRenderer->Push3DView( pRenderContext, view, nFlags, pRenderTarget, frustumPlanes, pDepthTexture );
 	}
@@ -605,11 +598,14 @@ public:
 		ComputeWorldToScreenMatrix( pWorldToPixels, *pWorldToProjection, view );
 	}
 
-	virtual bool DoesBrushModelNeedPowerOf2Framebuffer( const model_t *model )
+	bool DoesBrushModelNeedPowerOf2Framebuffer( const model_t *model )
 	{
 		return !!( model->flags & MODELFLAG_FRAMEBUFFER_TEXTURE );
 	}
 };
+
+#include "facade/ivrenderview.inl"
+
 
 static CVRenderView s_RenderView;
 static InterfaceReg s_Reg_CVRenderView_IVRenderView( []() -> void * { return static_cast<IVRenderView *>( &s_RenderView ); }, VENGINE_RENDERVIEW_INTERFACE_VERSION );;

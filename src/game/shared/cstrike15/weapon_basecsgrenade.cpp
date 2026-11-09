@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -22,7 +19,6 @@ import ks.tier1;
 #include "cdll_client_int.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -122,9 +118,9 @@ CBaseCSGrenade::CBaseCSGrenade()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseCSGrenade::Precache()
+void CBaseCSGrenade::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 //-----------------------------------------------------------------------------

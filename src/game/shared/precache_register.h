@@ -39,5 +39,5 @@ private:
 //-----------------------------------------------------------------------------
 // Singletons
 //-----------------------------------------------------------------------------
-extern IPrecacheHandler *g_pPrecacheHandler;
+extern PrecacheHandler_t g_PrecacheHandler;
 extern CPrecacheRegister *g_pPrecacheRegister;

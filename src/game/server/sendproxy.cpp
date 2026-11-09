@@ -3,8 +3,6 @@
 
 // Purpose: implements various common send proxies
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "baseentity_shared.h"
 #include "basetoggle.h"
@@ -49,7 +46,7 @@ void SendProxy_EHandleToInt( const SendProp *pProp, const void *pStruct, const v
 {
 	CBaseHandle *pHandle = (CBaseHandle*)pVarData;
 
-	if ( pHandle && pHandle->Get() )
+	if ( pHandle && EntityFromHandle( *pHandle ) )
 	{
 		int iSerialNum = pHandle->GetSerialNumber() & (1 << NUM_NETWORKED_EHANDLE_SERIAL_NUMBER_BITS) - 1;
 		pOut->m_Int = pHandle->GetEntryIndex() | (iSerialNum << MAX_EDICT_BITS);
@@ -178,20 +175,10 @@ SendProp SendPropStringT( const char *pVarName, int offset, int sizeofVar )
 }
 
 
-void CSendProxyRecipients::SetRecipient( int iClient )
+void SendProxyRecipients_SetOnly( CSendProxyRecipients *pRecipients, int iClient )
 {
-	m_Bits.set( iClient );
-}
-
-void CSendProxyRecipients::ClearRecipient( int iClient )
-{
-	m_Bits.reset( iClient );
-}
-
-void CSendProxyRecipients::SetOnly( int iClient )
-{
-	m_Bits.reset();
-	SetRecipient( iClient );
+	pRecipients->m_Bits.reset();
+	pRecipients->SetRecipient( iClient );
 
 	CBaseEntity *pEntity = CBaseEntity::Instance( iClient + 1 );
 	if ( pEntity && pEntity->IsPlayer() )
@@ -201,7 +188,7 @@ void CSendProxyRecipients::SetOnly( int iClient )
 		{
 			if ( pPlayer->GetSplitScreenPlayerOwner() )
 			{
-				SetRecipient( pPlayer->GetSplitScreenPlayerOwner()->entindex() - 1 );
+				pRecipients->SetRecipient( pPlayer->GetSplitScreenPlayerOwner()->entindex() - 1 );
 			}
 			else
 			{
@@ -220,16 +207,16 @@ void CSendProxyRecipients::SetOnly( int iClient )
 				}
 
 				int iEntIndex = pSplitPlayer->entindex();
-				SetRecipient( iEntIndex - 1 );
+				pRecipients->SetRecipient( iEntIndex - 1 );
 			}
 		}
 	}
 }
 
-void CSendProxyRecipients::ExcludeOnly( int iClient )
+void SendProxyRecipients_ExcludeOnly( CSendProxyRecipients *pRecipients, int iClient )
 {
-	m_Bits.set();
-	ClearRecipient( iClient );
+	pRecipients->m_Bits.set();
+	pRecipients->ClearRecipient( iClient );
 	CBaseEntity *pEntity = CBaseEntity::Instance( iClient + 1 );
 	if ( pEntity && pEntity->IsPlayer() )
 	{
@@ -238,7 +225,7 @@ void CSendProxyRecipients::ExcludeOnly( int iClient )
 		{
 			if ( pPlayer->GetSplitScreenPlayerOwner() )
 			{
-				ClearRecipient( pPlayer->GetSplitScreenPlayerOwner()->entindex() - 1 );
+				pRecipients->ClearRecipient( pPlayer->GetSplitScreenPlayerOwner()->entindex() - 1 );
 			}
 		}
 		else
@@ -253,7 +240,7 @@ void CSendProxyRecipients::ExcludeOnly( int iClient )
 				}
 
 				int iEntIndex = pSplitPlayer->entindex();
-				ClearRecipient( iEntIndex - 1 );
+				pRecipients->ClearRecipient( iEntIndex - 1 );
 			}
 		}
 	}

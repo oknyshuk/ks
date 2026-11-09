@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-#include "ai_behavior.h"
 #include "ai_blended_movement.h"
 
 //-----------------------------------------------------------------------------
 // CLASS: CAI_BaseHumanoid
 //-----------------------------------------------------------------------------
 
-typedef CAI_BlendingHost< CAI_BehaviorHost<CAI_BaseNPC> > CAI_BaseHumanoidBase;
+typedef CAI_BlendingHost<CAI_BaseNPC> CAI_BaseHumanoidBase;
 
 class CAI_BaseHumanoid : public CAI_BaseHumanoidBase
 {
@@ -27,7 +26,7 @@ public:
 	bool OnMoveBlocked( AIMoveResult_t *pResult );
 
 	// Damage
-	void TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
+	void TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
 
 	// Various start tasks
 	virtual	void StartTaskRangeAttack1( const Task_t *pTask );

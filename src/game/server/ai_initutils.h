@@ -54,11 +54,12 @@ class CNodeEnt : public CServerOnlyPointEntity
 	DECLARE_CLASS( CNodeEnt, CServerOnlyPointEntity );
 
 public:
-	virtual void SetOwnerEntity( CBaseEntity* pOwner ) { BaseClass::SetOwnerEntity( nullptr ); }
+	void SetOwnerEntity_Impl( CBaseEntity* pOwner ) { BaseClass::SetOwnerEntity_Impl( nullptr ); }
 
 	static int			m_nNodeCount;
 
-	void	Spawn( void );
+	void	Spawn_Impl( void );
+	using CBaseEntity::Spawn;
 	int		Spawn( const char *pMapData );
 
 
@@ -85,9 +86,9 @@ public:
 	static void				ReturnTestHull(void);					// Return the test hull
 
 	bool					bInUse;
-	virtual void			Precache();
-	void					Spawn(void);
-	virtual int				ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~(FCAP_ACROSS_TRANSITION|FCAP_DONT_SAVE); }
+	void			Precache_Impl();
+	void					Spawn_Impl(void);
+	int				ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() & ~(FCAP_ACROSS_TRANSITION|FCAP_DONT_SAVE); }
 
 	virtual bool			IsJumpLegal(const Vector &startPos, const Vector &apex, const Vector &endPos) const;
 

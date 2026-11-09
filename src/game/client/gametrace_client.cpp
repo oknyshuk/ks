@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -11,22 +9,22 @@ import std;
 #include "gamerules.h"
 #include "gametrace.h"
 
-bool CGameTrace::DidHitWorld() const
+bool TraceDidHitWorld( const CGameTrace &tr )
 {
-	return Ent<CBaseEntity>() == ClientEntityList().GetBaseEntity( 0 );
+	return tr.Ent<CBaseEntity>() == ClientEntityList().GetBaseEntity( 0 );
 }
 
 
-bool CGameTrace::DidHitNonWorldEntity() const
+bool TraceDidHitNonWorldEntity( const CGameTrace &tr )
 {
-	return m_pEnt != nullptr && !DidHitWorld();
+	return tr.m_pEnt != nullptr && !TraceDidHitWorld( tr );
 }
 
 
-int CGameTrace::GetEntityIndex() const
+int TraceGetEntityIndex( const CGameTrace &tr )
 {
-	if ( m_pEnt )
-		return Ent<CBaseEntity>()->entindex();
+	if ( tr.m_pEnt )
+		return tr.Ent<CBaseEntity>()->entindex();
 	else
 		return -1;
 }

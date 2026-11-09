@@ -3,8 +3,6 @@
 
 // Purpose: A point entity that periodically emits sparks and "bzzt" sounds.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -70,8 +67,8 @@ class CEnvSpark : public CPointEntity
 public:
 	CEnvSpark( void );
 
-	void	Spawn(void);
-	void	Precache(void);
+	void	Spawn_Impl(void);
+	void	Precache_Impl(void);
 	void	SparkThink(void);
 
 	// Input handlers
@@ -110,7 +107,7 @@ CEnvSpark::CEnvSpark( void )
 //-----------------------------------------------------------------------------
 // Purpose: Called when spawning, after keyvalues have been handled.
 //-----------------------------------------------------------------------------
-void CEnvSpark::Spawn(void)
+void CEnvSpark::Spawn_Impl(void)
 {
 	SetThink( nullptr );
 	SetUse( nullptr );
@@ -135,7 +132,7 @@ void CEnvSpark::Spawn(void)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvSpark::Precache(void)
+void CEnvSpark::Precache_Impl(void)
 {
 	// Unlock string tables to avoid an engine warning
 	bool oldLock = engine->LockNetworkStringTables( false );

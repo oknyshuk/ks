@@ -29,9 +29,9 @@ public:
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 
-	virtual void	Spawn( void );
-	virtual void	Activate( void );
-	virtual int		UpdateTransmitState( void );
+	void	Spawn_Impl( void );
+	void	Activate_Impl( void );
+	int		UpdateTransmitState_Impl( void );
 	void			SetControllerState( DOFControlSettings_t setting );
 
 	void	UpdateParamBlend( void );

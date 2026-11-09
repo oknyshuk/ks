@@ -59,7 +59,6 @@ extern IFileSystem *g_pFileSystem;
 #endif
 
 
-#include "toolframework/itoolframework.h"
 
 // Start the frame count at one so stuff gets updated the first frame
 int	r_framecount = 1;               // used for dlight + lightstyle push checking
@@ -148,7 +147,7 @@ ConVar mat_depthbias_normal( "mat_depthbias_normal", "0.0f", FCVAR_CHEAT );
 
 static ITexture *CreateFullFrameDepthTexture( void );
 
-static void mat_resolveFullFrameDepth_changed( IConVar *var, const char *pOldValue, float flOldValue )
+static void mat_resolveFullFrameDepth_changed( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	ConVar *cVar = (ConVar*)(var);
 	int newVal = cVar->GetInt();
@@ -177,7 +176,7 @@ static void NukeModeSwitchSaveGames( void )
 }
 
 
-void mat_hdr_level_Callback( IConVar *var, const char *pOldString, float flOldValue )
+void mat_hdr_level_Callback( ConVar *var, const char *pOldString, float flOldValue )
 {
 
 	// CSGO doesn't support any values other than 2.
@@ -876,13 +875,6 @@ void InitWellKnownRenderTargets( void )
 
 	g_FullFrameFBTexture0.Init( CreateFullFrameFBTexture( 0 ) );
 
-	// Since the tools may not draw the world, we don't want depth buffer effects
-	if ( toolframework->InToolMode() )
-	{
-		mat_resolveFullFrameDepth.SetValue( 0 );
-	}
-
-
 	g_FullFrameFBTexture1.Init( CreateFullFrameFBTexture( 1, CREATERENDERTARGETFLAGS_TEMP ) );
 
 
@@ -1557,8 +1549,7 @@ void WorldStaticMeshCreate( void )
 	std::vector< int > depthMeshIndexList;
 	depthMeshIndexList.assign( std::ssize( g_WorldStaticMeshes ), {} );
 	g_DepthMeshForSortID.assign( std::ssize( g_WorldStaticMeshes ), {} );
-	extern bool g_bReplayLoadedTools;
-	bool bTools = CommandLine()->CheckParm( "-tools" ) != nullptr || g_bReplayLoadedTools;
+	bool bTools = CommandLine()->CheckParm( "-tools" ) != nullptr;
 
 	int i;
 	// sort the surfaces into the sort arrays

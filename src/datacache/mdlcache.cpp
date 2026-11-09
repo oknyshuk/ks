@@ -7,6 +7,7 @@
 import ks.tier1;
 import std;
 #include "datacache/imdlcache.h"
+#include "appframework/apptiers.h"
 #include "istudiorender.h"
 #include "filesystem.h"
 #include "optimize.h"
@@ -72,7 +73,7 @@ enum
 
 static IPhysicsSurfaceProps *physprops = nullptr;
 
-class CStudioVCollide : public CRefCounted<>
+class CStudioVCollide : public CRefCounted<CStudioVCollide>
 {
 public:
 	~CStudioVCollide()
@@ -557,53 +558,49 @@ private:
 
 
 //-----------------------------------------------------------------------------
-class CMDLCache : public CTier3AppSystem< IMDLCache >, public IStudioDataCache, public CDefaultDataCacheClient
+class CMDLCache : public IMDLCache, public IStudioDataCache
 {
-	typedef CTier3AppSystem< IMDLCache > BaseClass;
 
 public:
 	CMDLCache();
 
-	// Inherited from IAppSystem
-	virtual bool Connect( CreateInterfaceFn factory );
-	virtual void Disconnect();
-	virtual void *QueryInterface( const char *pInterfaceName );
-	virtual InitReturnVal_t Init();
-	virtual void Shutdown();
-	virtual const AppSystemInfo_t* GetDependencies() { return nullptr; }
-	virtual AppSystemTier_t GetTier() { return APP_SYSTEM_TIER3; }
-	virtual void Reconnect( CreateInterfaceFn factory, const char *pInterfaceName ) { BaseClass::Reconnect( factory, pInterfaceName ); }
+	// App system protocol (IMDLCache and IStudioDataCache are both added to the app system group, so these run twice)
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t Init();
+	void Shutdown();
 
 	// Inherited from IStudioDataCache
 	bool VerifyHeaders( studiohdr_t *pStudioHdr );
 	vertexFileHeader_t *CacheVertexData( studiohdr_t *pStudioHdr );
 
 	// Inherited from IMDLCache
-	virtual MDLHandle_t FindMDL( const char *pMDLRelativePath );
-	virtual int AddRef( MDLHandle_t handle );
-	virtual int Release( MDLHandle_t handle );
-	virtual int GetRef( MDLHandle_t handle );
-	virtual void MarkAsLoaded(MDLHandle_t handle);
+	MDLHandle_t FindMDL( const char *pMDLRelativePath );
+	int AddRef( MDLHandle_t handle );
+	int Release( MDLHandle_t handle );
+	int GetRef( MDLHandle_t handle );
+	void MarkAsLoaded(MDLHandle_t handle);
 
-	virtual studiohdr_t *GetStudioHdr( MDLHandle_t handle );
-	virtual studiohwdata_t *GetHardwareData( MDLHandle_t handle );
-	virtual vcollide_t *GetVCollide( MDLHandle_t handle ) { return GetVCollideEx( handle, true); }
-	virtual vcollide_t *GetVCollideEx( MDLHandle_t handle, bool synchronousLoad = true );
-	virtual unsigned char *GetAnimBlock( MDLHandle_t handle, int nBlock, bool preloadIfMissing );
-	virtual bool HasAnimBlockBeenPreloaded( MDLHandle_t handle, int nBlock );
-	virtual virtualmodel_t *GetVirtualModel( MDLHandle_t handle );
-	virtual virtualmodel_t *GetVirtualModelFast( const studiohdr_t *pStudioHdr, MDLHandle_t handle );
-	virtual int GetAutoplayList( MDLHandle_t handle, unsigned short **pOut );
-	virtual void TouchAllData( MDLHandle_t handle );
-	virtual void SetUserData( MDLHandle_t handle, void* pData );
-	virtual void *GetUserData( MDLHandle_t handle );
-	virtual bool IsErrorModel( MDLHandle_t handle );
-	virtual bool IsOverBudget( MDLHandle_t handle );
-	virtual void SetCacheNotify( IMDLCacheNotify *pNotify );
-	virtual vertexFileHeader_t *GetVertexData( MDLHandle_t handle );
-	virtual void Flush( MDLCacheFlush_t nFlushFlags = MDLCACHE_FLUSH_ALL );
-	virtual void Flush( MDLHandle_t handle, int nFlushFlags = MDLCACHE_FLUSH_ALL );
-	virtual const char *GetModelName( MDLHandle_t handle );
+	studiohdr_t *GetStudioHdr( MDLHandle_t handle );
+	studiohwdata_t *GetHardwareData( MDLHandle_t handle );
+	vcollide_t *GetVCollide( MDLHandle_t handle ) { return GetVCollideEx( handle, true); }
+	vcollide_t *GetVCollideEx( MDLHandle_t handle, bool synchronousLoad = true );
+	unsigned char *GetAnimBlock( MDLHandle_t handle, int nBlock, bool preloadIfMissing );
+	bool HasAnimBlockBeenPreloaded( MDLHandle_t handle, int nBlock );
+	virtualmodel_t *GetVirtualModel( MDLHandle_t handle );
+	virtualmodel_t *GetVirtualModelFast( const studiohdr_t *pStudioHdr, MDLHandle_t handle );
+	int GetAutoplayList( MDLHandle_t handle, unsigned short **pOut );
+	void TouchAllData( MDLHandle_t handle );
+	void SetUserData( MDLHandle_t handle, void* pData );
+	void *GetUserData( MDLHandle_t handle );
+	bool IsErrorModel( MDLHandle_t handle );
+	bool IsOverBudget( MDLHandle_t handle );
+	void SetCacheNotify( IMDLCacheNotify *pNotify );
+	vertexFileHeader_t *GetVertexData( MDLHandle_t handle );
+	void Flush( MDLCacheFlush_t nFlushFlags = MDLCACHE_FLUSH_ALL );
+	void Flush( MDLHandle_t handle, int nFlushFlags = MDLCACHE_FLUSH_ALL );
+	const char *GetModelName( MDLHandle_t handle );
 
 	IDataCacheSection *GetCacheSection( MDLCacheDataType_t type )
 	{
@@ -633,67 +630,67 @@ public:
 
 	void DisableAsync() { mod_load_mesh_async.SetValue( 0 ); mod_load_anims_async.SetValue( 0 ); }
 
-	virtual void BeginLock();
-	virtual void EndLock();
-	virtual void BeginCoarseLock();
-	virtual void EndCoarseLock();
-	virtual int *GetFrameUnlockCounterPtrOLD();
-	virtual int *GetFrameUnlockCounterPtr( MDLCacheDataType_t type );
+	void BeginLock();
+	void EndLock();
+	void BeginCoarseLock();
+	void EndCoarseLock();
+	int *GetFrameUnlockCounterPtrOLD();
+	int *GetFrameUnlockCounterPtr( MDLCacheDataType_t type );
 
-	virtual void FinishPendingLoads();
+	void FinishPendingLoads();
 
 	// Task switch
 	void ReleaseMaterialSystemObjects( int nChangeFlags );
 	void RestoreMaterialSystemObjects( int nChangeFlags );
-	virtual bool GetVCollideSize( MDLHandle_t handle, int *pVCollideSize );
+	bool GetVCollideSize( MDLHandle_t handle, int *pVCollideSize );
 
-	virtual void BeginMapLoad();
-	virtual void EndMapLoad();
+	void BeginMapLoad();
+	void EndMapLoad();
 
-	virtual void InitPreloadData( bool rebuild );
-	virtual void ShutdownPreloadData();
+	void InitPreloadData( bool rebuild );
+	void ShutdownPreloadData();
 
-	virtual bool IsDataLoaded( MDLHandle_t handle, MDLCacheDataType_t type );
+	bool IsDataLoaded( MDLHandle_t handle, MDLCacheDataType_t type );
 
-	virtual studiohdr_t *LockStudioHdr( MDLHandle_t handle );
-	virtual void UnlockStudioHdr( MDLHandle_t handle );
+	studiohdr_t *LockStudioHdr( MDLHandle_t handle );
+	void UnlockStudioHdr( MDLHandle_t handle );
 
-	virtual void UnloadQueuedHardwareData( );
+	void UnloadQueuedHardwareData( );
 
-	virtual bool PreloadModel( MDLHandle_t handle );
-	virtual void ResetErrorModelStatus( MDLHandle_t handle );
+	bool PreloadModel( MDLHandle_t handle );
+	void ResetErrorModelStatus( MDLHandle_t handle );
 
-	virtual void MarkFrame();
+	void MarkFrame();
 
 	// Queued loading
 	void ProcessQueuedData( ModelParts_t *pModelParts );
 
 	// combined models
-	virtual MDLHandle_t	CreateCombinedModel( const char *pszModelName );
-	virtual bool		CreateCombinedModel( MDLHandle_t handle );
-	virtual bool		SetCombineModels( MDLHandle_t handle, const std::vector< SCombinerModelInput_t > &vecModelsToCombine );
-	virtual bool		FinishCombinedModel( MDLHandle_t handle, CombinedModelLoadedCallback pFunc, void *pUserData );
-	virtual bool		IsCombinedPlaceholder( MDLHandle_t handle );
-	virtual bool		IsCombinedModel( MDLHandle_t handle );
-	virtual int			GetNumCombinedSubModels( MDLHandle_t handle );
-	virtual void		GetCombinedSubModelFilename( MDLHandle_t handle, int nSubModelIndex, char *pszResult, int nResultSize );
-	virtual KeyValues	*GetCombinedMaterialKV( MDLHandle_t handle, int nAtlasGroup = 0 );	
-	virtual void		UpdateCombiner( );
-	virtual void		*GetCombinedInternalAsset( ECombinedAsset AssetType, const char *pszAssetID, int *nSize );
-	virtual void		SetCombinerFlags( unsigned nFlags );
-	virtual void		ClearCombinerFlags( unsigned nFlags );
-	virtual void		DebugCombinerInfo( );
+	MDLHandle_t	CreateCombinedModel( const char *pszModelName );
+	bool		CreateCombinedModel( MDLHandle_t handle );
+	bool		SetCombineModels( MDLHandle_t handle, const std::vector< SCombinerModelInput_t > &vecModelsToCombine );
+	bool		FinishCombinedModel( MDLHandle_t handle, CombinedModelLoadedCallback pFunc, void *pUserData );
+	bool		IsCombinedPlaceholder( MDLHandle_t handle );
+	bool		IsCombinedModel( MDLHandle_t handle );
+	int			GetNumCombinedSubModels( MDLHandle_t handle );
+	void		GetCombinedSubModelFilename( MDLHandle_t handle, int nSubModelIndex, char *pszResult, int nResultSize );
+	KeyValues	*GetCombinedMaterialKV( MDLHandle_t handle, int nAtlasGroup = 0 );	
+	void		UpdateCombiner( );
+	void		*GetCombinedInternalAsset( ECombinedAsset AssetType, const char *pszAssetID, int *nSize );
+	void		SetCombinerFlags( unsigned nFlags );
+	void		ClearCombinerFlags( unsigned nFlags );
+	void		DebugCombinerInfo( );
 
-	virtual bool ReleaseAnimBlockAllocator();
+	bool ReleaseAnimBlockAllocator();
 
-	virtual bool RestoreHardwareData( MDLHandle_t handle, FSAsyncControl_t *pAsyncVTXControl, FSAsyncControl_t *pAsyncVVDControl );
-	virtual bool ProcessPendingHardwareRestore();
+	bool RestoreHardwareData( MDLHandle_t handle, FSAsyncControl_t *pAsyncVTXControl, FSAsyncControl_t *pAsyncVVDControl );
+	bool ProcessPendingHardwareRestore();
 
 	void OnAsyncHardwareDataComplete( ModelParts_t::BufferType_t bufferType, ModelParts_t *pContext, void *pData, int nNumReadBytes, FSAsyncStatus_t asyncStatus );
 
-	virtual void DumpDictionaryState();
+	void DumpDictionaryState();
 
-private:
+public:	// the IMDLCache members forward here (see facade/imdlcache.inl)
 	// Inits, shuts downs studiodata_t
 	void InitStudioData( MDLHandle_t handle );
 	void ShutdownStudioData( MDLHandle_t handle, bool bImmediate );
@@ -725,7 +722,7 @@ private:
 	void AllocateAnimBlocks( studiodata_t *pStudioData, int nCount );
 	void FreeAnimBlocks( studiodata_t *pStudioData );
 
-	// Allocates/frees the virtual model
+	// Allocates/frees the model
 	void AllocateVirtualModel( MDLHandle_t handle );
 	void FreeVirtualModel( studiodata_t *pStudioData );
 
@@ -753,11 +750,14 @@ private:
 
 	const char *GetVTXExtension();
 
-	virtual bool HandleCacheNotification( const DataCacheNotification_t &notification  );
-	virtual bool GetItemName( DataCacheClientID_t clientId, const void *pItem, char *pDest, unsigned nMaxLen  );
+	bool HandleCacheNotification( const DataCacheNotification_t &notification  );
+	bool GetItemName( DataCacheClientID_t clientId, const void *pItem, char *pDest, unsigned nMaxLen  );
 
-	virtual bool GetAsyncLoad( MDLCacheDataType_t type );
-	virtual bool SetAsyncLoad( MDLCacheDataType_t type, bool bAsync );
+	// Owner side of the cache sections: the data cache calls back into HandleCacheNotification and GetItemName
+	IDataCacheClient m_CacheClient;
+
+	bool GetAsyncLoad( MDLCacheDataType_t type );
+	bool SetAsyncLoad( MDLCacheDataType_t type, bool bAsync );
 
 	// Attempts to read the platform native file
 	std::optional< std::vector< std::byte > > ReadFileNative( char *pFileName, const char *pPath, int nMaxBytes = 0 );
@@ -776,11 +776,11 @@ private:
 
 	void ReloadVCollide( MDLHandle_t handle );
 
-	virtual void DisableVCollideLoad( void ) {m_bDisableVCollideLoad = true;}
-	virtual void EnableVCollideLoad( void )  {m_bDisableVCollideLoad = false;}
+	void DisableVCollideLoad( void ) {m_bDisableVCollideLoad = true;}
+	void EnableVCollideLoad( void )  {m_bDisableVCollideLoad = false;}
 
-	virtual void DisableFileNotFoundWarnings( void ) {m_bFileNotFoundAllowed = true;}
-	virtual void EnableFileNotFoundWarnings( void ) {m_bFileNotFoundAllowed = false;}
+	void DisableFileNotFoundWarnings( void ) {m_bFileNotFoundAllowed = true;}
+	void EnableFileNotFoundWarnings( void ) {m_bFileNotFoundAllowed = false;}
 
 	// combined models
 	TCombinedStudioData	*GetCombinedData( MDLHandle_t handle );
@@ -1087,6 +1087,8 @@ private:
 // Constructor
 //-----------------------------------------------------------------------------
 CMDLCache::CMDLCache()
+	: m_CacheClient( [this]( const DataCacheNotification_t &notification ) { return HandleCacheNotification( notification ); },
+					 [this]( DataCacheClientID_t clientId, const void *pItem, char *pDest, unsigned nMaxLen ) { return GetItemName( clientId, pItem, pDest, nMaxLen ); } )
 {
 	m_bLostVideoMemory = false;
 	m_bConnected = false;
@@ -1116,7 +1118,7 @@ CMDLCache::CMDLCache()
 //-----------------------------------------------------------------------------
 bool CMDLCache::Connect( CreateInterfaceFn factory )
 {
-	if ( !BaseClass::Connect( factory ) )
+	if ( !AppSystemTier3Connect( factory ) )
 		return false;
 
 	// Connect can be called twice, because this inherits from 2 appsystems.
@@ -1152,7 +1154,7 @@ void CMDLCache::Disconnect()
 		m_bConnected = false;
 	}
 
-	BaseClass::Disconnect();
+	AppSystemTier3Disconnect();
 }
 
 
@@ -1187,20 +1189,20 @@ InitReturnVal_t CMDLCache::Init()
 	if ( m_bInitialized )
 		return INIT_OK;
 
-	InitReturnVal_t nRetVal = BaseClass::Init();
+	InitReturnVal_t nRetVal = AppSystemTier1Init();
 	if ( nRetVal != INIT_OK )
 		return nRetVal;
 
 	if ( !m_pModelCacheSection )
 	{
-		m_pModelCacheSection = g_pDataCache->AddSection( this, MODEL_CACHE_MODEL_SECTION_NAME );
+		m_pModelCacheSection = g_pDataCache->AddSection( &m_CacheClient, MODEL_CACHE_MODEL_SECTION_NAME );
 	}
 
 	if ( !m_pMeshCacheSection )
 	{
 		unsigned int meshLimit = (unsigned)-1;
 		DataCacheLimits_t limits( meshLimit, (unsigned)-1, 0, 0 );
-		m_pMeshCacheSection = g_pDataCache->AddSection( this, MODEL_CACHE_MESH_SECTION_NAME, limits );
+		m_pMeshCacheSection = g_pDataCache->AddSection( &m_CacheClient, MODEL_CACHE_MESH_SECTION_NAME, limits );
 		
 		// model meshes do not participate in LRU pruge due to -1 max bytes limit
 		// not allowing console mem_force_flush to unexpectedly flush, which would otherwise destabilize model meshes
@@ -1211,7 +1213,7 @@ InitReturnVal_t CMDLCache::Init()
 	{
 		unsigned int animBlockLimit = (unsigned)-1;
 		DataCacheLimits_t limits( animBlockLimit, (unsigned)-1, 0, 0 );
-		m_pAnimBlocksCacheSection = g_pDataCache->AddSection( this, MODEL_CACHE_ANIMBLOCK_SECTION_NAME, limits );
+		m_pAnimBlocksCacheSection = g_pDataCache->AddSection( &m_CacheClient, MODEL_CACHE_ANIMBLOCK_SECTION_NAME, limits );
 	}
 
 	m_bLostVideoMemory = false;
@@ -1257,7 +1259,7 @@ void CMDLCache::Shutdown()
 		m_pAnimBlocksCacheSection = nullptr;
 	}
 
-	BaseClass::Shutdown();
+	AppSystemTier1Shutdown();
 }
 
 void CMDLCache::FlushImmediate( studiodata_t *pStudioData, MDLCacheFlush_t nFlushFlags )
@@ -2927,7 +2929,7 @@ bool CMDLCache::HandleCacheNotification( const DataCacheNotification_t &notifica
 		}
 	}
 
-	return CDefaultDataCacheClient::HandleCacheNotification( notification );
+	return IDataCacheClient::DefaultHandleCacheNotification( notification );
 }
 
 bool CMDLCache::GetItemName( DataCacheClientID_t clientId, const void *pItem, char *pDest, unsigned nMaxLen  )
@@ -5280,3 +5282,9 @@ static void clear_anim_cache( const CCommand &args )
 }
 
 #pragma GCC diagnostic pop
+
+
+//-----------------------------------------------------------------------------
+// The IMDLCache and IStudioDataCache members forward to CMDLCache
+//-----------------------------------------------------------------------------
+#include "facade/imdlcache.inl"

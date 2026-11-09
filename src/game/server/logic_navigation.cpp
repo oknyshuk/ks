@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -53,11 +50,15 @@ class CLogicNavigation : public CLogicalEntity,
 {
 	DECLARE_CLASS( CLogicNavigation, CLogicalEntity );
 
-	bool KeyValue( const char *szKeyName, const char *szValue );
-	void Activate( void );
+	public: using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	private:
+	public: void Activate_Impl( void );
+	private:
 
 private:
-	void UpdateOnRemove();
+	public: void UpdateOnRemove_Impl();
+	private:
 
 	void OnEntitySpawned( CBaseEntity *pEntity );
 
@@ -95,7 +96,7 @@ IMPLEMENT_REFLECT_DATAMAP( CLogicNavigation )
 //			*szValue - 
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-bool CLogicNavigation::KeyValue( const char *szKeyName, const char *szValue )
+bool CLogicNavigation::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if ( FStrEq(szKeyName, "navprop") )
 	{
@@ -110,15 +111,15 @@ bool CLogicNavigation::KeyValue( const char *szKeyName, const char *szValue )
 		return true;
 	}
 
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CLogicNavigation::Activate()
+void CLogicNavigation::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( HasSpawnFlags( SF_NAV_START_ON ) )
 	{
@@ -134,14 +135,14 @@ void CLogicNavigation::Activate()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CLogicNavigation::UpdateOnRemove()
+void CLogicNavigation::UpdateOnRemove_Impl()
 {
 	if ( m_isOn )
 	{
 		gEntList.RemoveListenerEntity( this );
 	}
 
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 //-----------------------------------------------------------------------------

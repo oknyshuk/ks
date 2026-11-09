@@ -145,7 +145,7 @@ class CFrameSnapshotManager
 
 public:
 	CFrameSnapshotManager( void );
-	virtual ~CFrameSnapshotManager( void );
+	~CFrameSnapshotManager( void );
 
 	// IFrameSnapshot implementation.
 public:
@@ -154,7 +154,7 @@ public:
 	static const uint32 knDefaultSnapshotSet = 0;
 
 	// Called when a level change happens
-	virtual void			LevelChanged();
+	void			LevelChanged();
 
 	// Called once per frame after simulation to store off all entities.
 	// Note: the returned snapshot has a recount of 1 so you MUST call ReleaseReference on it. Snapshots are created into different sets,
@@ -194,7 +194,7 @@ public:
 
 	void			BuildSnapshotList( CFrameSnapshot *pCurrentSnapshot, CFrameSnapshot *pLastSnapshot, uint32 nSnapshotSet, CReferencedSnapshotList &list );
 
-private:
+public:
 	void					DeleteFrameSnapshot( CFrameSnapshot* pSnapshot );
 	// Non-threadsafe call, used with BuildSnapshotList which acquires the mutex
 	CFrameSnapshot			*NextSnapshot( CFrameSnapshot *pSnapshot );

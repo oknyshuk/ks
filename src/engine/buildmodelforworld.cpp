@@ -388,7 +388,8 @@ static void CompileQC( const char *pFileName )
 	char cmdline[ 2 * MAX_PATH + 256 ];
 	V_snprintf( cmdline, sizeof( cmdline ), "studiomdl.exe -nop4 %s", pFileName );
 
-	int nExitCode = g_pProcessUtils->SimpleRunProcess( cmdline );
+	// Launching external processes is not supported; always fails
+	int nExitCode = -1;
 	if ( nExitCode == -1 )
 	{
 		Msg( "Failed compiling %s\n", pFileName );
@@ -445,7 +446,8 @@ static void CompileTGA( const char *pFileName )
 	char cmdline[ 2 * MAX_PATH + 256 ];
 	V_snprintf( cmdline, sizeof( cmdline ), "vtex.exe -nop4 %s", pFileName );
 
-	int nExitCode = g_pProcessUtils->SimpleRunProcess( cmdline );
+	// Launching external processes is not supported; always fails
+	int nExitCode = -1;
 	if ( nExitCode == -1 )
 	{
 		Msg( "Failed compiling %s\n", pFileName );

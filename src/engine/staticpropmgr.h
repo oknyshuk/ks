@@ -27,47 +27,47 @@ extern LoggingChannelID_t LOG_StaticPropManager;;
 class IStaticPropMgrEngine
 {
 public:
-	virtual bool Init() = 0;
-	virtual void Shutdown() = 0;
+	bool Init();
+	void Shutdown();
 
 	// Call at the beginning of the level, will unserialize all static
 	// props and add them to the main collision tree
-	virtual void LevelInit() = 0;
+	void LevelInit();
 
 	// Call this when there's a client, *after* LevelInit, and after the world entity is loaded
-	virtual void LevelInitClient() = 0;
+	void LevelInitClient();
 
 	// Call this when there's a client, *before* LevelShutdown
-	virtual void LevelShutdownClient() = 0;
+	void LevelShutdownClient();
 
 	// Call at the end of the level, cleans up the static props
-	virtual void LevelShutdown() = 0;
+	void LevelShutdown();
 
 	// Call this to recompute static prop lighting when necessary
-	virtual void RecomputeStaticLighting() = 0;
+	void RecomputeStaticLighting();
 
 	// Check if a static prop is in a particular PVS.
-	virtual bool IsPropInPVS( IHandleEntity *pHandleEntity, const byte *pVis ) const = 0;
+	bool IsPropInPVS( IHandleEntity *pHandleEntity, const byte *pVis ) const;
 
 	// temp - loadtime setting of flag to disable CSM rendering for static prop.
-	virtual void DisableCSMRenderingForStaticProp( int staticPropIndex ) = 0;
+	void DisableCSMRenderingForStaticProp( int staticPropIndex );
 
 	// returns a collideable interface to static props
-	virtual ICollideable *GetStaticProp( IHandleEntity *pHandleEntity ) = 0;
+	ICollideable *GetStaticProp( IHandleEntity *pHandleEntity );
 
 	// returns the lightcache handle associated with a static prop
-	virtual LightCacheHandle_t GetLightCacheHandleForStaticProp( IHandleEntity *pHandleEntity ) = 0;
+	LightCacheHandle_t GetLightCacheHandleForStaticProp( IHandleEntity *pHandleEntity );
 
 	// Is a base handle a static prop?
-	virtual bool IsStaticProp( IHandleEntity *pHandleEntity ) const = 0;
-	virtual bool IsStaticProp( CBaseHandle handle ) const = 0;
+	bool IsStaticProp( IHandleEntity *pHandleEntity ) const;
+	bool IsStaticProp( CBaseHandle handle ) const;
 
 	// Returns the static prop index (useful for networking)
-	virtual int GetStaticPropIndex( IHandleEntity *pHandleEntity ) const = 0;
+	int GetStaticPropIndex( IHandleEntity *pHandleEntity ) const;
 
-	virtual void ConfigureSystemLevel( int nCPULevel, int nGPULevel ) = 0;
+	void ConfigureSystemLevel( int nCPULevel, int nGPULevel );
 
-	virtual void RestoreStaticProps() = 0;
+	void RestoreStaticProps();
 };
 
 

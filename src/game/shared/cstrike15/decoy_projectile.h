@@ -39,8 +39,8 @@ public:
 
 // Overrides.
 public:
-	virtual void Spawn( void );
-	virtual void Precache( void );
+	KS_VIRTUAL void Spawn_Impl( void );
+	KS_VIRTUAL void Precache_Impl( void );
 	virtual void Detonate( void );
 	virtual void BounceSound( void );
 

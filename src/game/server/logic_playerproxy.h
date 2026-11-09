@@ -35,9 +35,9 @@ public:
 	void InputDisableCappedPhysicsDamage( inputdata_t &inputdata );
 
 
-	void Activate( void );
+	void Activate_Impl( void );
 
-	bool PassesDamageFilter( const CTakeDamageInfo &info );
+	bool PassesDamageFilter_Impl( const CTakeDamageInfo &info );
 
 	EHANDLE m_hPlayer;
 };

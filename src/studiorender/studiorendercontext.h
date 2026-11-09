@@ -93,71 +93,68 @@ struct StudioRenderContext_t
 //-----------------------------------------------------------------------------
 // Implementation of IStudioRender
 //-----------------------------------------------------------------------------
-class CStudioRenderContext : public CTier3AppSystem< IStudioRender >
+class CStudioRenderContext : public IStudioRender
 {
-	typedef CTier3AppSystem< IStudioRender > BaseClass;
-
-	// Methods of IAppSystem 
+	// App system protocol (a tier 3 system)
 public:
-	virtual bool Connect( CreateInterfaceFn factory );
-	virtual void Disconnect();
-	virtual void *QueryInterface( const char *pInterfaceName );
-	virtual InitReturnVal_t Init();
-	virtual void Shutdown();
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t Init();
+	void Shutdown();
 
 	// Methods of IStudioRender
 public:
-	virtual void BeginFrame( void );
-	virtual void EndFrame( void );
-	virtual void Mat_Stub( IMaterialSystem *pMatSys );
-	virtual void UpdateConfig( const StudioRenderConfig_t& config );
-	virtual void GetCurrentConfig( StudioRenderConfig_t& config );
-	virtual bool LoadModel(studiohdr_t *pStudioHdr, void *pVtxData, studiohwdata_t *pHardwareData);
-	virtual void UnloadModel( studiohwdata_t *pHardwareData );
-	virtual void RefreshStudioHdr( studiohdr_t* pStudioHdr, studiohwdata_t* pHardwareData );
-	virtual void SetEyeViewTarget( const studiohdr_t *pStudioHdr, int nBodyIndex, const Vector& worldPosition );
-	virtual void SetAmbientLightColors( const Vector *pAmbientOnlyColors );
-	virtual void SetAmbientLightColors( const Vector4D *pAmbientOnlyColors );
-	virtual void SetLocalLights( int numLights, const LightDesc_t *pLights );
-	virtual int GetNumAmbientLightSamples();
-	virtual const Vector *GetAmbientLightDirections();
-	virtual void SetViewState( const Vector& viewOrigin, const Vector& viewRight, const Vector& viewUp, const Vector& viewPlaneNormal );
-	virtual int GetNumLODs( const studiohwdata_t &hardwareData ) const;
-	virtual float GetLODSwitchValue( const studiohwdata_t &hardwareData, int lod ) const;
-	virtual void SetLODSwitchValue( studiohwdata_t &hardwareData, int lod, float switchValue );
-	virtual void SetColorModulation( const float* pColor );
-	virtual void SetAlphaModulation( float alpha );
-	virtual void DrawModel( DrawModelResults_t *pResults, const DrawModelInfo_t& info, matrix3x4_t *pCustomBoneToWorld, float *pFlexWeights, float *pFlexDelayedWeights, const Vector& origin, int flags = STUDIORENDER_DRAW_ENTIRE_MODEL );
-	virtual void DrawModelArray( const StudioModelArrayInfo_t &drawInfo, int arrayCount, StudioArrayInstanceData_t *pInstanceData, int instanceStride, int flags );
-	virtual void DrawModelArray( const StudioModelArrayInfo2_t &drawInfo, int nArrayCount, StudioArrayData_t *pArrayData, int nInstanceStride, int flags = STUDIORENDER_DRAW_ENTIRE_MODEL );
-	virtual void DrawModelShadowArray( int nCount, StudioArrayData_t *pShadowData, int nInstanceStride, int flags );
-	virtual void DrawModelStaticProp( const DrawModelInfo_t& info, const matrix3x4_t &modelToWorld, int flags = STUDIORENDER_DRAW_ENTIRE_MODEL );
-	virtual void DrawModelArrayStaticProp( const DrawModelInfo_t& info, int nInstanceCount, const MeshInstanceData_t *pInstanceData, ColorMeshInfo_t **pColorMeshes );
-	virtual void DrawStaticPropDecals( const DrawModelInfo_t &drawInfo, const matrix3x4_t &modelToWorld );
-	virtual void DrawStaticPropShadows( const DrawModelInfo_t &drawInfo, const matrix3x4_t &modelToWorld, int flags );
-	virtual void ForcedMaterialOverride( IMaterial *newMaterial, OverrideType_t nOverrideType = OVERRIDE_NORMAL, int nMaterialIndex = -1 );
-	virtual bool IsForcedMaterialOverride();
+	void BeginFrame( void );
+	void EndFrame( void );
+	void UpdateConfig( const StudioRenderConfig_t& config );
+	void GetCurrentConfig( StudioRenderConfig_t& config );
+	bool LoadModel(studiohdr_t *pStudioHdr, void *pVtxData, studiohwdata_t *pHardwareData);
+	void UnloadModel( studiohwdata_t *pHardwareData );
+	void RefreshStudioHdr( studiohdr_t* pStudioHdr, studiohwdata_t* pHardwareData );
+	void SetEyeViewTarget( const studiohdr_t *pStudioHdr, int nBodyIndex, const Vector& worldPosition );
+	void SetAmbientLightColors( const Vector *pAmbientOnlyColors );
+	void SetAmbientLightColors( const Vector4D *pAmbientOnlyColors );
+	void SetLocalLights( int numLights, const LightDesc_t *pLights );
+	int GetNumAmbientLightSamples();
+	const Vector *GetAmbientLightDirections();
+	void SetViewState( const Vector& viewOrigin, const Vector& viewRight, const Vector& viewUp, const Vector& viewPlaneNormal );
+	int GetNumLODs( const studiohwdata_t &hardwareData ) const;
+	float GetLODSwitchValue( const studiohwdata_t &hardwareData, int lod ) const;
+	void SetLODSwitchValue( studiohwdata_t &hardwareData, int lod, float switchValue );
+	void SetColorModulation( const float* pColor );
+	void SetAlphaModulation( float alpha );
+	void DrawModel( DrawModelResults_t *pResults, const DrawModelInfo_t& info, matrix3x4_t *pCustomBoneToWorld, float *pFlexWeights, float *pFlexDelayedWeights, const Vector& origin, int flags = STUDIORENDER_DRAW_ENTIRE_MODEL );
+	void DrawModelArray( const StudioModelArrayInfo_t &drawInfo, int arrayCount, StudioArrayInstanceData_t *pInstanceData, int instanceStride, int flags );
+	void DrawModelArray( const StudioModelArrayInfo2_t &drawInfo, int nArrayCount, StudioArrayData_t *pArrayData, int nInstanceStride, int flags = STUDIORENDER_DRAW_ENTIRE_MODEL );
+	void DrawModelShadowArray( int nCount, StudioArrayData_t *pShadowData, int nInstanceStride, int flags );
+	void DrawModelStaticProp( const DrawModelInfo_t& info, const matrix3x4_t &modelToWorld, int flags = STUDIORENDER_DRAW_ENTIRE_MODEL );
+	void DrawModelArrayStaticProp( const DrawModelInfo_t& info, int nInstanceCount, const MeshInstanceData_t *pInstanceData, ColorMeshInfo_t **pColorMeshes );
+	void DrawStaticPropDecals( const DrawModelInfo_t &drawInfo, const matrix3x4_t &modelToWorld );
+	void DrawStaticPropShadows( const DrawModelInfo_t &drawInfo, const matrix3x4_t &modelToWorld, int flags );
+	void ForcedMaterialOverride( IMaterial *newMaterial, OverrideType_t nOverrideType = OVERRIDE_NORMAL, int nMaterialIndex = -1 );
+	bool IsForcedMaterialOverride();
 	StudioDecalHandle_t CreateDecalList( studiohwdata_t * a1 )	{ return (g_pStudioRenderImp)->CreateDecalList( a1 ); };
-	virtual void DestroyDecalList( StudioDecalHandle_t handle );
-	virtual void AddDecal( StudioDecalHandle_t handle, studiohdr_t *pStudioHdr, matrix3x4_t *pBoneToWorld, const Ray_t & ray, const Vector& decalUp, IMaterial* pDecalMaterial, float radius, int body, bool noPokethru, int maxLODToDecal = ADDDECAL_TO_ALL_LODS, void *pvProxyUserData = nullptr, int nAdditionalDecalFlags = 0 );
-	virtual void ComputeLighting( const Vector* pAmbient, int lightCount, LightDesc_t* pLights, const Vector& pt, const Vector& normal, Vector& lighting );
-	virtual void ComputeLightingConstDirectional( const Vector* pAmbient, int lightCount, LightDesc_t* pLights, const Vector& pt, const Vector& normal, Vector& lighting, float flDirectionalAmount );
-	virtual void AddShadow( IMaterial* pMaterial, void* pProxyData, FlashlightState_t *pFlashlightState, VMatrix *pWorldToTexture, ITexture *pFlashlightDepthTexture );
-	virtual void ClearAllShadows();
-	virtual int ComputeModelLod( studiohwdata_t* pHardwareData, float flUnitSphereSize, float *pMetric = nullptr );
-	virtual void GetPerfStats( DrawModelResults_t *pResults, const DrawModelInfo_t &info, ks::text_writer *pSpewBuf = nullptr ) const;
-	virtual void GetTriangles( const DrawModelInfo_t& info, matrix3x4_t *pBoneToWorld, GetTriangles_Output_t &out );
-	virtual int GetMaterialList( studiohdr_t *pStudioHdr, int count, IMaterial** ppMaterials );
-	virtual int GetMaterialListFromBodyAndSkin( MDLHandle_t studio, int nSkin, int nBody, int nCountOutputMaterials, IMaterial** ppOutputMaterials );
+	void DestroyDecalList( StudioDecalHandle_t handle );
+	void AddDecal( StudioDecalHandle_t handle, studiohdr_t *pStudioHdr, matrix3x4_t *pBoneToWorld, const Ray_t & ray, const Vector& decalUp, IMaterial* pDecalMaterial, float radius, int body, bool noPokethru, int maxLODToDecal = ADDDECAL_TO_ALL_LODS, void *pvProxyUserData = nullptr, int nAdditionalDecalFlags = 0 );
+	void ComputeLighting( const Vector* pAmbient, int lightCount, LightDesc_t* pLights, const Vector& pt, const Vector& normal, Vector& lighting );
+	void ComputeLightingConstDirectional( const Vector* pAmbient, int lightCount, LightDesc_t* pLights, const Vector& pt, const Vector& normal, Vector& lighting, float flDirectionalAmount );
+	void AddShadow( IMaterial* pMaterial, void* pProxyData, FlashlightState_t *pFlashlightState, VMatrix *pWorldToTexture, ITexture *pFlashlightDepthTexture );
+	void ClearAllShadows();
+	int ComputeModelLod( studiohwdata_t* pHardwareData, float flUnitSphereSize, float *pMetric = nullptr );
+	void GetPerfStats( DrawModelResults_t *pResults, const DrawModelInfo_t &info, ks::text_writer *pSpewBuf = nullptr ) const;
+	void GetTriangles( const DrawModelInfo_t& info, matrix3x4_t *pBoneToWorld, GetTriangles_Output_t &out );
+	int GetMaterialList( studiohdr_t *pStudioHdr, int count, IMaterial** ppMaterials );
+	int GetMaterialListFromBodyAndSkin( MDLHandle_t studio, int nSkin, int nBody, int nCountOutputMaterials, IMaterial** ppOutputMaterials );
 
 	// Gathers information about faces rendered this past frame and feeds them into the given callback function (presuambly to spew)
 	// Callback may be invoked on mat queue thread!
-	virtual void GatherRenderedFaceInfo( IStudioRender::FaceInfoCallbackFunc_t pFunc );
+	void GatherRenderedFaceInfo( IStudioRender::FaceInfoCallbackFunc_t pFunc );
 
 	// Other public methods
 public:
 	CStudioRenderContext();
-	virtual ~CStudioRenderContext();
+	~CStudioRenderContext();
 
 private:
 	// Load, unload materials

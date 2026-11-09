@@ -17,12 +17,12 @@
 //-----------------------------------------------------------------------------
 // The DX8 implementation of the shader setup interface
 //-----------------------------------------------------------------------------
-class CShaderShadowDX8 : public IShaderShadowDX8
+class CShaderShadowDX8
 {
 public:
 	// constructor, destructor
 	CShaderShadowDX8( );
-	virtual ~CShaderShadowDX8();
+	~CShaderShadowDX8();
 
 	// Initialize render state
 	void Init( );
@@ -69,12 +69,12 @@ public:
 	//void SetShadowDepthFiltering( Sampler_t stage );
 
 	// Computes the vertex format
-	virtual void VertexShaderVertexFormat( unsigned int nFlags, 
+	void VertexShaderVertexFormat( unsigned int nFlags, 
 		int nTexCoordCount, int* pTexCoordDimensions, int nUserDataSize );
 
 	// Pixel and vertex shader methods
-	virtual void SetVertexShader( const char* pFileName, int nStaticVshIndex );
-	virtual	void SetPixelShader( const char* pFileName, int nStaticPshIndex );
+	void SetVertexShader( const char* pFileName, int nStaticVshIndex );
+	void SetPixelShader( const char* pFileName, int nStaticPshIndex );
 
 	// Per texture unit stuff
 	void EnableTexture( Sampler_t stage, bool bEnable );
@@ -93,7 +93,7 @@ public:
 	// Alpha to coverage
 	void EnableAlphaToCoverage( bool bEnable );
 
-	virtual float GetLightMapScaleFactor( void ) const;
+	float GetLightMapScaleFactor( void ) const;
 
 private:
 	struct SamplerState_t
@@ -114,7 +114,7 @@ private:
 	bool IsUsingTextureCoordinates( Sampler_t stage ) const;
 
 	// State needed to create the snapshots
-	IMaterialSystemHardwareConfig* m_pHardwareConfig;
+	CHardwareConfig* m_pHardwareConfig;
 	
 	// Alpha blending...
 	D3DBLEND	m_SrcBlend;
@@ -144,16 +144,41 @@ private:
 // Class factory
 //-----------------------------------------------------------------------------
 static CShaderShadowDX8 g_ShaderShadow;
-IShaderShadowDX8 *g_pShaderShadowDx8 = &g_ShaderShadow;
 
-static InterfaceReg s_Reg_CShaderShadowDX8_IShaderShadow( []() -> void * { return static_cast<IShaderShadow *>( &g_ShaderShadow ); }, SHADERSHADOW_INTERFACE_VERSION );;
+// The shader shadow interfaces are stateless facades that forward to the one implementation.
+static IShaderShadowDX8 s_ShaderShadowFacade;
+IShaderShadowDX8 *g_pShaderShadowDx8 = &s_ShaderShadowFacade;
+static CShaderShadowDX8 &ShaderShadowImpl() { return g_ShaderShadow; }
+#include "../shaderapi_facade/ishadershadow.inl"
+
+void IShaderShadowDX8::Init()
+{
+	ShaderShadowImpl().Init();
+}
+
+const ShadowState_t &IShaderShadowDX8::GetShadowState()
+{
+	return ShaderShadowImpl().GetShadowState();
+}
+
+const ShadowShaderState_t &IShaderShadowDX8::GetShadowShaderState()
+{
+	return ShaderShadowImpl().GetShadowShaderState();
+}
+
+void IShaderShadowDX8::ComputeAggregateShadowState()
+{
+	ShaderShadowImpl().ComputeAggregateShadowState();
+}
+
+static InterfaceReg s_Reg_CShaderShadowDX8_IShaderShadow( []() -> void * { return static_cast<IShaderShadow *>( &s_ShaderShadowFacade ); }, SHADERSHADOW_INTERFACE_VERSION );;
 
 //-----------------------------------------------------------------------------
 // Global instance
 //-----------------------------------------------------------------------------
 IShaderShadowDX8* ShaderShadow()
 {
-	return &g_ShaderShadow;
+	return &s_ShaderShadowFacade;
 }
 
 

@@ -4,22 +4,16 @@
 
 // Purpose: This file contains code to allow us to associate client data with bsp leaves.
 
-import ks.tier1;
 #include "igamesystem.h"
 #include "engine/IClientLeafSystem.h"
 #include "cdll_int.h"
 #include "ivrenderview.h"
-import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-struct WorldListInfo_t;
-class IClientRenderable;
-class CGameTrace;
-typedef CGameTrace trace_t;
-struct Ray_t;
 class CStaticProp;
+class C_BaseEntity;
 
 
 //-----------------------------------------------------------------------------
@@ -55,7 +49,7 @@ struct DistanceFadeInfo_t
 };
 
 
-class CClientRenderablesList : public CRefCounted<>, public ks::pooled< CClientRenderablesList >
+class CClientRenderablesList : public CRefCounted<CClientRenderablesList>, public ks::pooled< CClientRenderablesList >
 {
 	private:
 		static ks::fixed_pool s_Allocator;

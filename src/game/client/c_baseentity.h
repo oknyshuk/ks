@@ -7,8 +7,6 @@
 //			and networked to the client AND entities that are created on the
 //			client.
 
-import std;
-import ks.tier1;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 
@@ -34,16 +32,11 @@ import ks.tier1;
 void RecvProxy_AnimTime( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
 class C_Team;
-class IPhysicsObject;
 class IClientVehicle;
 class CPredictionCopy;
 class C_BasePlayer;
-struct studiohdr_t;
-class CStudioHdr;
 class CDamageModifier;
-class IRecipientFilter;
 class CUserCmd;
-struct solid_t;
 class C_BaseAnimating;
 class C_BaseAnimatingOverlay;
 class C_AI_BaseNPC;
@@ -52,10 +45,7 @@ class C_RecipientFilter;
 class CTakeDamageInfo;
 class C_BaseCombatCharacter;
 class CEntityMapData;
-class ConVar;
 class CClientAlphaProperty;
-struct CSoundParameters;
-class CCallQueue;
 
 typedef unsigned int			AimEntsListHandle_t;
 
@@ -394,7 +384,7 @@ class [[= ks::reflect::NetTable{ .name = "DT_AnimTimeMustBeFirst", .base = false
 	DECLARE_CLASS_NOBASE( C_BaseEntity );
 
 	friend class CPrediction;
-	friend void cc_cl_interp_all_changed( IConVar *pConVar, const char *pOldString, float flOldValue );
+	friend void cc_cl_interp_all_changed( ConVar *pConVar, const char *pOldString, float flOldValue );
 
 public:
 	DECLARE_DATADESC();
@@ -1857,9 +1847,6 @@ private:
 	// Check which entities want to be drawn and add them to the leaf system.
 	static void	AddVisibleEntities();
 
-	// For entities marked for recording, post bone messages to IToolSystems
-	static void ToolRecordEntities();
-
 	// Computes the base velocity
 	void UpdateBaseVelocity( void );
 
@@ -2206,7 +2193,7 @@ inline const Vector &C_BaseEntity::GetAbsVelocity( ) const
 
 inline C_BaseEntity	*C_BaseEntity::Instance( IClientEntity *ent )
 {
-	return ent ? ent->GetBaseEntity() : nullptr;
+	return ent ? EntityCast<C_BaseEntity>( ent->GetBaseEntity() ) : nullptr;
 }
 
 // For debugging shared code

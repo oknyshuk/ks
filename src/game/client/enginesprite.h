@@ -2,17 +2,11 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
-#include "avi/iavi.h"
-#include "avi/ibik.h"
 #include "const.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class IMaterial;
-class IMaterialVar;
 typedef struct wrect_s wrect_t;
 
 
@@ -42,13 +36,9 @@ public:
 	float GetRight() { return right; }
 	void DrawFrame( RenderMode_t nRenderMode, int frame, int x, int y, const wrect_t *prcSubRect );
 	void DrawFrameOfSize( RenderMode_t nRenderMode, int frame, int x, int y, int iWidth, int iHeight, const wrect_t *prcSubRect);
-	bool IsAVI();
-	bool IsBIK();
 	void GetTexCoordRange( float *pMinU, float *pMinV, float *pMaxU, float *pMaxV );
 
 private:
-	AVIMaterial_t m_hAVIMaterial;
-	BIKMaterial_t m_hBIKMaterial;
 	int m_width;
 	int m_height;
 	int m_numFrames;

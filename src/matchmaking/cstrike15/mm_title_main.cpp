@@ -11,7 +11,6 @@ static CMatchTitle g_MatchTitle;
 CMatchTitle *g_pMatchTitle = &g_MatchTitle;
 
 IMatchTitle *g_pIMatchTitle = g_pMatchTitle;
-IMatchEventsSink *g_pIMatchTitleEventsSink = g_pMatchTitle;
 
 
 
@@ -22,6 +21,11 @@ IMatchEventsSink *g_pIMatchTitleEventsSink = g_pMatchTitle;
 InitReturnVal_t MM_Title_Init()
 {
 	return g_pMatchTitle->Init();
+}
+
+void MM_Title_OnEvent( KeyValues *pEvent )
+{
+	g_pMatchTitle->OnEvent( pEvent );
 }
 
 void MM_Title_Shutdown()

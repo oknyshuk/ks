@@ -103,9 +103,13 @@ inline JobPriority_t ConvertPriority( int iFilesystemPriority )
 //
 //-----------------------------------------------------------------------------
 
-struct AsyncOpenedFile_t : CRefCounted<CRefCountServiceNoDelete> // no mutex needed, under control of CAsyncOpenedFiles
+struct AsyncOpenedFile_t // no mutex needed, under control of CAsyncOpenedFiles
 {
 	AsyncOpenedFile_t() : hFile(FILESYSTEM_INVALID_HANDLE) {}
+	// Reference count, starting at one; the owner (CAsyncOpenedFiles) deletes at zero
+	int AddRef() { return m_iRefs.fetch_add( 1 ) + 1; }
+	int Release() { return m_iRefs.fetch_sub( 1 ) - 1; }
+	std::atomic<int> m_iRefs{ 1 };
 	FileHandle_t hFile;
 	const std::string *m_pName = nullptr;	// this entry's key in CAsyncOpenedFiles
 };
@@ -220,31 +224,20 @@ static_assert( (int)FSASYNC_STATUS_ABORTED == (int)JOB_STATUS_ABORTED );
 static_assert( (int)FSASYNC_STATUS_UNSERVICED == (int)JOB_STATUS_UNSERVICED );
 
 //---------------------------------------------------------
-// A standard filesystem job
+// The filesystem jobs are plain CJobs. Each job owns its work object (captured by the
+// job's callable), which is destroyed with the job.
 //---------------------------------------------------------
-class CFileAsyncJob : public CJob
-{
-public:
-	CFileAsyncJob( JobPriority_t priority = JP_NORMAL )
-	  : CJob( priority )
-	{
-		SetFlags( GetFlags() | JF_IO );
-	}
-
-	virtual JobStatus_t GetResult( void **ppData, int *pSize ) { *ppData = nullptr; *pSize = 0; return GetStatus(); }
-	virtual bool IsWrite() const { return false; }
-};
 
 //---------------------------------------------------------
-// A standard filesystem read job
+// A standard filesystem read job (and the file size job, which is a read that only
+// asks for the size)
 //---------------------------------------------------------
-class CFileAsyncReadJob : public CFileAsyncJob, 
-						  protected FileAsyncRequest_t
+class CFileAsyncReadWork : public FileAsyncRequest_t
 {
 public:
-	CFileAsyncReadJob( const FileAsyncRequest_t &fromRequest )
-	  : CFileAsyncJob( ConvertPriority( fromRequest.priority ) ),
-		FileAsyncRequest_t( fromRequest ),
+	CFileAsyncReadWork( const FileAsyncRequest_t &fromRequest, bool bFileSizeOnly )
+	  : FileAsyncRequest_t( fromRequest ),
+		m_bFileSizeOnly( bFileSizeOnly ),
 		m_pResultData( nullptr ),
 		m_nResultSize( 0 ),
 		m_pRealContext( fromRequest.pContext ),
@@ -266,7 +259,7 @@ public:
 #endif
 	}
 
-	~CFileAsyncReadJob()
+	~CFileAsyncReadWork()
 	{
 		if ( hSpecificAsyncFile != FS_INVALID_ASYNC_FILE )
 		{
@@ -277,19 +270,14 @@ public:
 			g_pMemAlloc->Free( (void *)pszFilename );
 	}
 
-	virtual char const	*Describe()
-	{
-		return pszFilename; 
-	}
-
-	const FileAsyncRequest_t *GetRequest() const
-	{
-		return this;
-	}
-
-	virtual JobStatus_t DoExecute()
+	JobStatus_t Run()
 	{
 		SimulateDelay();
+
+		if ( m_bFileSizeOnly )
+		{
+			return BaseFileSystem()->SyncGetFileSize( *this );
+		}
 
 #if defined(_DEBUG)
 		if ( m_pszAllocCreditFile )
@@ -306,33 +294,32 @@ public:
 		return retval;
 	}
 
-	virtual JobStatus_t GetResult( void **ppData, int *pSize ) 
-	{ 
+	void GetResult( void **ppData, int *pSize ) const
+	{
 		if ( m_pResultData )
 		{
 			*ppData = m_pResultData;
 			*pSize = m_nResultSize;
 		}
-		return GetStatus(); 
 	}
 
 	static void InterceptCallback( const FileAsyncRequest_t &request, int nBytesRead, FSAsyncStatus_t result )
 	{
-		CFileAsyncReadJob *pJob = (CFileAsyncReadJob *)request.pContext;
+		CFileAsyncReadWork *pWork = (CFileAsyncReadWork *)request.pContext;
 		if ( result == FSASYNC_OK && !( request.flags & FSASYNC_FLAGS_FREEDATAPTR ) )
 		{
-			pJob->m_pResultData = request.pData;
-			pJob->m_nResultSize = nBytesRead;
+			pWork->m_pResultData = request.pData;
+			pWork->m_nResultSize = nBytesRead;
 		}
 
-		if ( pJob->m_pfnRealCallback )
+		if ( pWork->m_pfnRealCallback )
 		{
 			// Going to slam the values. Not used after this point. Make temps if that changes
 			FileAsyncRequest_t &temp = const_cast<FileAsyncRequest_t &>(request);
-			temp.pfnCallback = pJob->m_pfnRealCallback;
-			temp.pContext = pJob->m_pRealContext;
+			temp.pfnCallback = pWork->m_pfnRealCallback;
+			temp.pContext = pWork->m_pRealContext;
 
-			(*pJob->m_pfnRealCallback)( temp, nBytesRead, result );
+			(*pWork->m_pfnRealCallback)( temp, nBytesRead, result );
 		}
 	}
 
@@ -345,6 +332,7 @@ public:
 	}
 
 private:
+	bool					m_bFileSizeOnly;
 	void *					m_pResultData;
 	int						m_nResultSize;
 	void *					m_pRealContext;
@@ -355,38 +343,45 @@ private:
 #endif
 };
 
+// The job carries its read work as user data, for AsyncGetResult
+static CJob *CreateFileAsyncReadJob( const FileAsyncRequest_t &fromRequest, bool bFileSizeOnly, const char *pszFile, int line )
+{
+	std::unique_ptr<CFileAsyncReadWork> pWork = std::make_unique<CFileAsyncReadWork>( fromRequest, bFileSizeOnly );
+	CFileAsyncReadWork *pRawWork = pWork.get();
+#if defined(_DEBUG)
+	pRawWork->SetAllocCredit( pszFile, line );
+#endif
+	CJob *pJob = new CJob( [pWork = std::move( pWork )]() { return pWork->Run(); }, ConvertPriority( fromRequest.priority ), pRawWork->pszFilename );
+	pJob->SetFlags( pJob->GetFlags() | JF_IO );
+	pJob->SetUserData( pRawWork );
+	return pJob;
+}
+
 //---------------------------------------------------------
-// Append to a file
+// Write to a file (or append to it)
 //---------------------------------------------------------
 static int g_nAsyncWriteJobs;
 
-class CFileAsyncWriteJob : public CFileAsyncJob
+class CFileAsyncWriteWork
 {
 public:
-	CFileAsyncWriteJob( const char *pszFilename, const void *pData, unsigned nBytes, bool bFreeMemory, bool bAppend )
-	  : CFileAsyncJob( JP_LOW ),
+	CFileAsyncWriteWork( const char *pszFilename, const void *pData, unsigned nBytes, bool bFreeMemory, bool bAppend )
+	  : m_bFreeMemory( bFreeMemory ),
 		m_pData( pData ),
 		m_nBytes( nBytes ),
-		m_bFreeMemory( bFreeMemory ),
 		m_bAppend( bAppend )
 	{
 		m_pszFilename = MemAlloc_StrDup( pszFilename );
 		g_nAsyncWriteJobs++;
-
-		SetFlags( GetFlags() | JF_SERIAL );
 	}
 
-	~CFileAsyncWriteJob()
+	~CFileAsyncWriteWork()
 	{
 		g_nAsyncWriteJobs--;
 		g_pMemAlloc->Free( (void *)m_pszFilename );
 	}
 
-	virtual char const *Describe() { return m_pszFilename; }
-
-	virtual bool IsWrite() const { return true; }
-
-	virtual JobStatus_t DoExecute()
+	JobStatus_t Run()
 	{
 		SimulateDelay();
 		JobStatus_t retval = BaseFileSystem()->SyncWrite( m_pszFilename, m_pData, m_nBytes, false, m_bAppend );
@@ -394,49 +389,54 @@ public:
 		return retval;
 	}
 
-	virtual void DoCleanup()
+	// Called once the job has been executed or discarded
+	void Cleanup()
 	{
 		if ( m_pData && m_bFreeMemory )
 			delete[] (char*)m_pData;
 	}
 
-protected:
-	bool		m_bFreeMemory;
+	const char *Filename() const { return m_pszFilename; }
+
 private:
+	bool		m_bFreeMemory;
 	const char *m_pszFilename;
 	const void *m_pData;
 	int			m_nBytes;
 	bool		m_bAppend;
 };
 
+static CJob *CreateFileAsyncWriteJob( const char *pszFilename, const void *pData, unsigned nBytes, bool bFreeMemory, bool bAppend )
+{
+	std::unique_ptr<CFileAsyncWriteWork> pWork = std::make_unique<CFileAsyncWriteWork>( pszFilename, pData, nBytes, bFreeMemory, bAppend );
+	CFileAsyncWriteWork *pRawWork = pWork.get();
+	CJob *pJob = new CJob( [pWork = std::move( pWork )]() { return pWork->Run(); }, JP_LOW, pRawWork->Filename() );
+	pJob->SetFlags( pJob->GetFlags() | JF_IO | JF_SERIAL | JF_WRITE );
+	pJob->SetCleanup( [pRawWork]() { pRawWork->Cleanup(); } );
+	return pJob;
+}
+
 //---------------------------------------------------------
 // Append two files
 //---------------------------------------------------------
-class CFileAsyncAppendFileJob : public CFileAsyncJob
+class CFileAsyncAppendFileWork
 {
 public:
-	CFileAsyncAppendFileJob( const char *pszAppendTo, const char *pszAppendFrom )
-		: CFileAsyncJob( JP_LOW )
+	CFileAsyncAppendFileWork( const char *pszAppendTo, const char *pszAppendFrom )
 	{
 		m_pszAppendTo = MemAlloc_StrDup( pszAppendTo );
 		m_pszAppendFrom = MemAlloc_StrDup( pszAppendFrom );
 		V_FixSlashes( const_cast<char*>( m_pszAppendTo ) );
 		V_FixSlashes( const_cast<char*>( m_pszAppendFrom ) );
 		g_nAsyncWriteJobs++;
-
-		SetFlags( GetFlags() | JF_SERIAL );
 	}
 
-	~CFileAsyncAppendFileJob()
+	~CFileAsyncAppendFileWork()
 	{
 		g_nAsyncWriteJobs--;
 	}
 
-	virtual char const	*Describe() { return m_pszAppendTo; }
-
-	virtual bool IsWrite() const { return true; }
-
-	virtual JobStatus_t DoExecute()
+	JobStatus_t Run()
 	{
 		SimulateDelay();
 		JobStatus_t retval = BaseFileSystem()->SyncAppendFile( m_pszAppendTo, m_pszAppendFrom );
@@ -444,72 +444,53 @@ public:
 		return retval;
 	}
 
+	const char *AppendTo() const { return m_pszAppendTo; }
+
 private:
 	const char *m_pszAppendTo;
 	const char *m_pszAppendFrom;
 };
 
-//---------------------------------------------------------
-// Job to find out file size
-//---------------------------------------------------------
+static CJob *CreateFileAsyncAppendFileJob( const char *pszAppendTo, const char *pszAppendFrom )
+{
+	std::unique_ptr<CFileAsyncAppendFileWork> pWork = std::make_unique<CFileAsyncAppendFileWork>( pszAppendTo, pszAppendFrom );
+	CFileAsyncAppendFileWork *pRawWork = pWork.get();
+	CJob *pJob = new CJob( [pWork = std::move( pWork )]() { return pWork->Run(); }, JP_LOW, pRawWork->AppendTo() );
+	pJob->SetFlags( pJob->GetFlags() | JF_IO | JF_SERIAL | JF_WRITE );
+	return pJob;
+}
 
-class CFileAsyncFileSizeJob : public CFileAsyncReadJob 
+//---------------------------------------------------------
+// Scan a directory
+//---------------------------------------------------------
+class CFileAsyncDirectoryScanWork
 {
 public:
-	CFileAsyncFileSizeJob( const FileAsyncRequest_t &fromRequest )
-		: CFileAsyncReadJob( fromRequest )
+	CFileAsyncDirectoryScanWork( const char* pSearchSpec, bool bRecurseDirs, void* pContext, FSAsyncScanAddFunc_t pAddCallback, FSAsyncScanCompleteFunc_t pDoneCallback )
 	{
+		contract_assert( pSearchSpec != nullptr && V_strlen( pSearchSpec )  < MAX_PATH && pAddCallback != nullptr && pDoneCallback != nullptr );
+		m_pAddResultCallback = pAddCallback;
+		m_pCompletionCallback = pDoneCallback;
+		m_bRecurse = bRecurseDirs;
+		m_pContext = pContext;
+		V_strcpy( m_SearchSpec, pSearchSpec );
+		V_memset( m_CurPath, 0, sizeof (m_CurPath) );
 	}
 
-	virtual JobStatus_t DoExecute()
-	{
-		SimulateDelay();
-		JobStatus_t retval = BaseFileSystem()->SyncGetFileSize( *this );
-		return retval;
-	}
+	JobStatus_t Run();
+
+	const char *SearchSpec() const { return m_SearchSpec; }
+
+private:
+	FSAsyncScanAddFunc_t		m_pAddResultCallback;
+	FSAsyncScanCompleteFunc_t	m_pCompletionCallback;
+	void*						m_pContext;
+	bool						m_bRecurse;
+	char						m_SearchSpec[MAX_PATH];
+	char						m_CurPath[MAX_PATH];
 };
 
-
-
-
-class CFileAsyncDirectoryScanJob : public CFileAsyncJob
-{
-	private:
-		FSAsyncScanAddFunc_t		m_pAddResultCallback;
-		FSAsyncScanCompleteFunc_t	m_pCompletionCallback;
-		void*						m_pContext;
-		bool						m_bRecurse;
-		char						m_SearchSpec[MAX_PATH];
-		char						m_CurPath[MAX_PATH];
-		
-		CFileAsyncDirectoryScanJob() : CFileAsyncJob() {};
-
-	public:
-		CFileAsyncDirectoryScanJob( const char* pSearchSpec, bool bRecurseDirs, void* pContext, FSAsyncScanAddFunc_t pAddCallback, FSAsyncScanCompleteFunc_t pDoneCallback ) : CFileAsyncJob( JP_NORMAL )
-		{
-			contract_assert( pSearchSpec != nullptr && V_strlen( pSearchSpec )  < MAX_PATH && pAddCallback != nullptr && pDoneCallback != nullptr );
-			m_pAddResultCallback = pAddCallback;
-			m_pCompletionCallback = pDoneCallback;
-			m_bRecurse = bRecurseDirs;
-			m_pContext = pContext;
-			V_strcpy( m_SearchSpec, pSearchSpec );
-			V_memset( m_CurPath, 0, sizeof (m_CurPath) );
-		
-		}
-		~CFileAsyncDirectoryScanJob()  {};
-
-	virtual char const*		Describe() { return m_SearchSpec; }
-
-	virtual bool			IsWrite() const { return false; }
-
-	virtual JobStatus_t		DoExecute();
-
-	virtual void			DoCleanup()   {};
-
-};
-
-
-JobStatus_t CFileAsyncDirectoryScanJob::DoExecute()
+JobStatus_t CFileAsyncDirectoryScanWork::Run()
 {
 
 	FileFindHandle_t findSession = -1;
@@ -533,6 +514,15 @@ JobStatus_t CFileAsyncDirectoryScanJob::DoExecute()
 
 	return FSASYNC_OK;
 
+}
+
+static CJob *CreateFileAsyncDirectoryScanJob( const char* pSearchSpec, bool bRecurseDirs, void* pContext, FSAsyncScanAddFunc_t pAddCallback, FSAsyncScanCompleteFunc_t pDoneCallback )
+{
+	std::unique_ptr<CFileAsyncDirectoryScanWork> pWork = std::make_unique<CFileAsyncDirectoryScanWork>( pSearchSpec, bRecurseDirs, pContext, pAddCallback, pDoneCallback );
+	CFileAsyncDirectoryScanWork *pRawWork = pWork.get();
+	CJob *pJob = new CJob( [pWork = std::move( pWork )]() { return pWork->Run(); }, JP_NORMAL, pRawWork->SearchSpec() );
+	pJob->SetFlags( pJob->GetFlags() | JF_IO );
+	return pJob;
 }
 
 
@@ -614,22 +604,12 @@ FSAsyncStatus_t CBaseFileSystem::AsyncReadMultipleCreditAlloc( const FileAsyncRe
 		AsyncFinishAll();
 	}
 
-	CFileAsyncReadJob *pJob;
+	CJob *pJob;
 
 	for ( int i = 0; i < nRequests; i++ )
 	{
-		if ( pRequests[i].nBytes >= 0 )
-		{
-			pJob = new CFileAsyncReadJob( pRequests[i] );
-		}
-		else
-		{
-			pJob =  new CFileAsyncFileSizeJob( pRequests[i] );
-		}
+		pJob = CreateFileAsyncReadJob( pRequests[i], pRequests[i].nBytes < 0, pszFile, line );
 
-#if defined(_DEBUG)
-		pJob->SetAllocCredit( pszFile, line );
-#endif
 		if ( !bSynchronous )
 		{
 			// async mode, queue request
@@ -667,7 +647,7 @@ FSAsyncStatus_t CBaseFileSystem::AsyncWrite(const char *pFileName, const void *p
 		AsyncFinishAll();
 	}
 
-	CJob *pJob = new CFileAsyncWriteJob( pFileName, pSrc, nSrcBytes, bFreeMemory, bAppend );
+	CJob *pJob = CreateFileAsyncWriteJob( pFileName, pSrc, nSrcBytes, bFreeMemory, bAppend );
 
 	if ( !bSynchronous )
 	{
@@ -704,7 +684,7 @@ FSAsyncStatus_t CBaseFileSystem::AsyncAppendFile(const char *pAppendToFileName, 
 		AsyncFinishAll();
 	}
 
-	CJob *pJob = new CFileAsyncAppendFileJob( pAppendToFileName, pAppendFromFileName );
+	CJob *pJob = CreateFileAsyncAppendFileJob( pAppendToFileName, pAppendFromFileName );
 
 	if ( !bSynchronous )
 	{
@@ -747,8 +727,7 @@ void CBaseFileSystem::AsyncFinishAll( int iToPriority )
 
 static bool AsyncWriteJobFilter( CJob *pJob )
 {
-	CFileAsyncJob *pFileJob = dynamic_cast<CFileAsyncJob *>(pJob);
-	return ( pFileJob && pFileJob->IsWrite() );
+	return ( pJob->GetFlags() & JF_WRITE ) != 0;
 }
 
 void CBaseFileSystem::AsyncFinishAllWrites()
@@ -855,14 +834,20 @@ FSAsyncStatus_t CBaseFileSystem::AsyncGetResult( FSAsyncControl_t hControl, void
 		*pSize = 0;
 	}
 
-	CFileAsyncJob *pJob = (CFileAsyncJob *)hControl;
+	CJob *pJob = (CJob *)hControl;
 	if ( !pJob )
 	{
 		return FSASYNC_ERR_FAILURE;
 	}
 	if ( pJob->IsFinished() )
 	{
-		return (FSAsyncStatus_t)pJob->GetResult( ppData, pSize );
+		// Only read jobs have a result to hand out
+		const CFileAsyncReadWork *pReadWork = static_cast<const CFileAsyncReadWork *>( pJob->GetUserData() );
+		if ( pReadWork )
+		{
+			pReadWork->GetResult( ppData, pSize );
+		}
+		return (FSAsyncStatus_t)pJob->GetStatus();
 	}
 	return FSASYNC_STATUS_PENDING;
 }
@@ -973,7 +958,7 @@ FSAsyncStatus_t CBaseFileSystem::AsyncDirectoryScan( const char* pSearchSpec, bo
 		AsyncFinishAll();
 	}
 
-	CJob *pJob = new CFileAsyncDirectoryScanJob( pSearchSpec, recurseFolders, pContext, pfnAdd, pfnDone );
+	CJob *pJob = CreateFileAsyncDirectoryScanJob( pSearchSpec, recurseFolders, pContext, pfnAdd, pfnDone );
 
 	if ( !bSynchronous )
 	{

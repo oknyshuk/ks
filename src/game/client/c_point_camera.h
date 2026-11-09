@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.core;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 
 #include "c_baseentity.h"
-import std;
 
 class [[= ks::reflect::NetTable{ .name = "DT_PointCamera" } ]]
       C_PointCamera : public C_BaseEntity

@@ -7,7 +7,6 @@
 #define CSceneEntity C_SceneEntity
 #endif
 
-import ks.tier1;
 #include "ehandle.h"
 #include "studio.h"
 
@@ -20,13 +19,9 @@ typedef CHandle<CBaseEntity> EHANDLE;
 #endif
 
 #include "iscenetokenprocessor.h"
-import std;
 
 class CBaseFlex;
 
-class CChoreoEvent;
-class CChoreoScene;
-class CChoreoActor;
 class CSceneEntity;
 
 //-----------------------------------------------------------------------------

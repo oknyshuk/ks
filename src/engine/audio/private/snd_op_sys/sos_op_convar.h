@@ -13,7 +13,7 @@ struct CSosOperatorConvar_t : CSosOperator_t
 {
 	CSosOperatorConvar_t()
 		:
-	m_ConVarRef( ( IConVar * )nullptr )
+	m_ConVarRef( ( ConVar * )nullptr )
 	{
 		// Do nothing...
 	}
@@ -37,7 +37,7 @@ struct CSosOperatorSetConvar_t : CSosOperator_t
 {
 	CSosOperatorSetConvar_t()
 		:
-	m_ConVarRef( ( IConVar * )nullptr )
+	m_ConVarRef( ( ConVar * )nullptr )
 	{
 		// Do nothing...
 	}

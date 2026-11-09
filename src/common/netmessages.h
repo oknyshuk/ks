@@ -36,17 +36,35 @@ import std;
 // The message body is the schema struct itself; this adds the framing the net channel
 // needs around it.
 template< int msgType, typename PB_OBJECT_TYPE, int groupType = INetChannelInfo::GENERIC, bool bReliable = true >
+class CNetMessagePB;
+
+// The closed set of message classes and the kind of each one
+#include "netmessage_list.h"
+
+enum class net_message_kind : unsigned char
+{
+#define X( Final, ... ) Final,
+	KS_NET_MESSAGE_CLASSES( X )
+#undef X
+	count
+};
+
+template< class T > struct net_msg_index;
+#define X( Final, ... ) template<> struct net_msg_index< __VA_ARGS__ > { static constexpr unsigned char value = static_cast< unsigned char >( net_message_kind::Final ); };
+KS_NET_MESSAGE_CLASSES( X )
+#undef X
+
+template< int msgType, typename PB_OBJECT_TYPE, int groupType, bool bReliable >
 class CNetMessagePB : public INetMessage, public PB_OBJECT_TYPE
 {
 public:
 	typedef CNetMessagePB< msgType, PB_OBJECT_TYPE, groupType, bReliable > MyType_t;
 	typedef PB_OBJECT_TYPE PBType_t;
-	static const int sk_Type = msgType;
+	static constexpr int sk_Type = msgType;
 
-	CNetMessagePB() : m_bReliable( bReliable ) {}
-	virtual ~CNetMessagePB() {}
+	CNetMessagePB() : INetMessage( net_msg_index< MyType_t >::value, msgType, groupType, bReliable ) {}
 
-	virtual bool ReadFromBuffer( bf_read &buffer )
+	bool ReadFromBuffer( bf_read &buffer )
 	{
 		const int size = buffer.ReadVarInt32();
 		if ( size < 0 || size > NET_MAX_PAYLOAD || size > buffer.GetNumBytesLeft() )
@@ -67,7 +85,7 @@ public:
 		       ks::proto::read_bytes( body(), shifted, size );
 	}
 
-	virtual bool WriteToBuffer( bf_write &buffer ) const
+	bool WriteToBuffer( bf_write &buffer ) const
 	{
 		const int size = int( ks::proto::byte_size( body() ) );
 
@@ -93,27 +111,14 @@ public:
 		return buffer.WriteBytes( shifted, size );
 	}
 
-	virtual const char *ToString() const
+	const char *ToString() const
 	{
 		m_toString = ks::proto::to_text( body() );
 		return m_toString.c_str();
 	}
 
-	virtual int GetType() const { return msgType; }
-	virtual std::size_t GetSize() const { return sizeof( *this ); }
-	virtual const char *GetName() const { return ks::proto::type_name<PBType_t>(); }
-	virtual int GetGroup() const { return groupType; }
-
-	virtual void SetReliable( bool state ) { m_bReliable = state; }
-	virtual bool IsReliable() const { return m_bReliable; }
-
-	virtual INetMessage *Clone() const
-	{
-		MyType_t *pClone = new MyType_t;
-		pClone->body() = body();
-		pClone->m_bReliable = m_bReliable;
-		return pClone;
-	}
+	std::size_t GetSize() const { return sizeof( *this ); }
+	const char *GetName() const { return ks::proto::type_name<PBType_t>(); }
 
 	PBType_t &body() { return *this; }
 	const PBType_t &body() const { return *this; }
@@ -122,7 +127,6 @@ public:
 	void CopyFrom( const PBType_t &o ) { body() = o; }
 
 protected:
-	bool m_bReliable;
 	mutable std::string m_toString;
 };
 
@@ -130,27 +134,41 @@ protected:
 class CNetMessageBinder
 {
 public:
-	CNetMessageBinder()
-		: m_pBind( nullptr )
-	{
-	}
-
-	~CNetMessageBinder()
-	{
-		delete m_pBind;
-	}
+	CNetMessageBinder() = default;
 
 	template< class _N >
 	void Bind( INetChannel *pNetChannel, std::move_only_function< bool ( const typename _N::PBType_t & obj ) > handler )
 	{
-		delete m_pBind;
-		m_pBind = new BindParams<_N>( pNetChannel, std::move( handler ) );
+		auto create = []( bf_read &buffer ) -> INetMessage *
+		{
+			INetMessage *pMsg = new typename _N::MyType_t;
+			if ( !pMsg->ReadFromBuffer( buffer ) )
+			{
+				pMsg->DeleteThis();
+				return nullptr;
+			}
+			return pMsg;
+		};
+
+		auto process = [handler = std::move( handler )]( const INetMessage &src ) mutable -> bool
+		{
+			const typename _N::MyType_t &typedSrc = static_cast< const typename _N::MyType_t & >( src );
+
+			contract_assert( handler );
+			if( handler )
+			{
+				return handler( static_cast< typename _N::PBType_t const & >( typedSrc ) );
+			}
+			return false;
+		};
+
+		m_pBind.reset();
+		m_pBind = std::make_unique< INetMessageBinder >( pNetChannel, _N::sk_Type, std::move( create ), std::move( process ) );
 	}
 
 	void Unbind()
 	{
-		delete m_pBind;
-		m_pBind = nullptr;
+		m_pBind.reset();
 	}
 
 	bool IsBound() const
@@ -159,74 +177,7 @@ public:
 	}
 
 private:
-	template < class _N >
-	struct BindParams : public INetMessageBinder
-	{
-		BindParams( INetChannel *pNetChannel, std::move_only_function< bool ( const typename _N::PBType_t & obj ) > handler )
-			: m_NetChannel( pNetChannel )
-			, m_handler( std::move( handler ) )
-		{
-			if ( m_NetChannel )
-			{
-				m_NetChannel->RegisterMessage( this );
-			}
-		}
-
-		virtual ~BindParams()
-		{
-			if ( m_NetChannel )
-			{
-				m_NetChannel->UnregisterMessage( this );
-			}
-		}
-
-		virtual int	GetType( void ) const
-		{
-			return _N::sk_Type;
-		}
-
-		virtual void SetNetChannel(INetChannel * netchan)
-		{
-			if( m_NetChannel != netchan )
-			{
-				if( m_NetChannel )
-					m_NetChannel->UnregisterMessage( this );
-
-				m_NetChannel = netchan;
-
-				if( m_NetChannel )
-					m_NetChannel->RegisterMessage( this );
-			}
-		}
-
-		virtual INetMessage *CreateFromBuffer( bf_read &buffer )
-		{
-			INetMessage *pMsg = new typename _N::MyType_t;
-			if ( !pMsg->ReadFromBuffer( buffer ) )
-			{
-				delete pMsg;
-				return nullptr;
-			}
-			return pMsg;
-		}
-
-		virtual bool Process( const INetMessage &src )
-		{
-			const typename _N::MyType_t &typedSrc = static_cast< const typename _N::MyType_t & >( src );
-
-			contract_assert( m_handler );
-			if( m_handler )
-			{
-				return m_handler( static_cast< typename _N::PBType_t const & >( typedSrc ) );
-			}
-			return false;
-		}
-
-		INetChannel	*m_NetChannel;	// netchannel this message is from/for
-		std::move_only_function< bool ( const typename _N::PBType_t & obj ) > m_handler;
-	};
-
-	INetMessageBinder *m_pBind;
+	std::unique_ptr< INetMessageBinder > m_pBind;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////

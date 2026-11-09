@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -40,22 +37,22 @@ import ks.tier1;
 #include "gametrace.h"
 #include "world.h"
 
-bool CGameTrace::DidHitWorld() const
+bool TraceDidHitWorld( const CGameTrace &tr )
 {
-	return Ent<CBaseEntity>() == GetWorldEntity();
+	return tr.Ent<CBaseEntity>() == GetWorldEntity();
 }
 
 
-bool CGameTrace::DidHitNonWorldEntity() const
+bool TraceDidHitNonWorldEntity( const CGameTrace &tr )
 {
-	return m_pEnt != nullptr && !DidHitWorld();
+	return tr.m_pEnt != nullptr && !TraceDidHitWorld( tr );
 }
 
 
-int CGameTrace::GetEntityIndex() const
+int TraceGetEntityIndex( const CGameTrace &tr )
 {
-	if ( m_pEnt )
-		return Ent<CBaseEntity>()->entindex();
+	if ( tr.m_pEnt )
+		return tr.Ent<CBaseEntity>()->entindex();
 	else
 		return -1;
 }

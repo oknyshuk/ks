@@ -4,8 +4,6 @@
 // Purpose: Implements a particle system steam jet.
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"

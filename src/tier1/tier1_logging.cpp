@@ -7,6 +7,7 @@ import std;
 import ks.tier1;
 
 CBufferedLoggingListener::CBufferedLoggingListener() :
+ILoggingListener( [this]( const LoggingContext_t *pContext, const tchar *pMessage ) { Log( pContext, pMessage ); } ),
 m_StoredSpew( 512 )
 {
 }

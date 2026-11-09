@@ -4,8 +4,6 @@
 // Purpose: Client handler implementations for instruction players how to play
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -59,7 +57,7 @@ ConVar gameinstructor_verbose( "gameinstructor_verbose", "0", FCVAR_CHEAT, "Set 
 ConVar gameinstructor_verbose_lesson( "gameinstructor_verbose_lesson", "", FCVAR_CHEAT, "Display more verbose information for lessons have this name." );
 ConVar gameinstructor_find_errors( "gameinstructor_find_errors", "0", FCVAR_CHEAT, "Set to 1 and the game instructor will run EVERY scripted command to uncover errors." );
 
-void GameInstructorEnable_ChangeCallback( IConVar *var, const char *pOldValue, float flOldValue );
+void GameInstructorEnable_ChangeCallback( ConVar *var, const char *pOldValue, float flOldValue );
 ConVar gameinstructor_enable( "gameinstructor_enable", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Display in game lessons that teach new players.", GameInstructorEnable_ChangeCallback );
 extern ConVar sv_gameinstructor_disable;
 
@@ -105,7 +103,7 @@ void EnableDisableInstructor( void )
 	}
 }
 
-void GameInstructorEnable_ChangeCallback( IConVar *var, const char *pOldValue, float flOldValue )
+void GameInstructorEnable_ChangeCallback( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	for ( int i = 0 ; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
@@ -117,9 +115,9 @@ void GameInstructorEnable_ChangeCallback( IConVar *var, const char *pOldValue, f
 	}
 }
 
-void SVGameInstructorDisable_ChangeCallback( IConVar *var, const char *pOldValue, float flOldValue );
+void SVGameInstructorDisable_ChangeCallback( ConVar *var, const char *pOldValue, float flOldValue );
 ConVar sv_gameinstructor_disable( "sv_gameinstructor_disable", "0", FCVAR_REPLICATED | FCVAR_RELEASE, "Force all clients to disable their game instructors.", SVGameInstructorDisable_ChangeCallback );
-void SVGameInstructorDisable_ChangeCallback( IConVar *var, const char *pOldValue, float flOldValue )
+void SVGameInstructorDisable_ChangeCallback( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	if ( !engine )
 		return;
@@ -139,7 +137,7 @@ void GameInstructor_KeyValueBuilder( KeyValues *pKeyValues )
 
 
 // Merged from L4D but waiting on other code to be merged before this can compile 
-class CGameInstructorUserNotificationsListener : public IMatchEventsSink
+class CGameInstructorUserNotificationsListener
 {
 public:
 	CGameInstructorUserNotificationsListener() : m_nRefCount( 0 ) {}
@@ -148,7 +146,7 @@ public:
 	void RefCount( int nDelta );
 
 public:
-	virtual void OnEvent( KeyValues *pEvent );
+	void OnEvent( KeyValues *pEvent );
 
 protected:
 	void OnGameUsersChanged();
@@ -165,7 +163,7 @@ void CGameInstructorUserNotificationsListener::RefCount( int nDelta )
 
 	if ( m_nRefCount <= 0 && nDelta > 0 )
 	{
-		g_pMatchFramework->GetEventsSubscription()->Subscribe( this );
+		g_pMatchFramework->GetEventsSubscription()->Subscribe( this, [this]( KeyValues *pEvent ) { OnEvent( pEvent ); } );
 	}
 
 	if ( m_nRefCount > 0 && m_nRefCount - nDelta <= 0 )

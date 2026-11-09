@@ -3,8 +3,6 @@
 
 // Purpose: Implements a grab bag of visual effects entities.
 
-import std;
-import ks.vstdlib;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -21,7 +19,6 @@ import ks.vstdlib;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -75,8 +72,8 @@ class [[= ks::reflect::KeyFrom<"m_flSpeed", ks::reflect::Key{ .name = "current" 
 public:
 	DECLARE_CLASS( CBubbling, CBaseEntity );
 
-	virtual  void	Spawn( void );
-	virtual void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 
 	void	FizzThink( void );
 
@@ -111,7 +108,7 @@ IMPLEMENT_REFLECT_DATAMAP( CBubbling )
 
 constexpr auto SF_BUBBLES_STARTOFF = 0x0001;
 
-void CBubbling::Spawn( void )
+void CBubbling::Spawn_Impl( void )
 {
 	Precache( );
 	SetModel( STRING( GetModelName() ) );		// Set size
@@ -133,7 +130,7 @@ void CBubbling::Spawn( void )
 	}
 }
 
-void CBubbling::Precache( void )
+void CBubbling::Precache_Impl( void )
 {
 	m_bubbleModel = PrecacheModel("sprites/bubble.vmt");			// Precache bubble sprite
 }
@@ -254,9 +251,9 @@ class CEnvTracer : public CPointEntity
 public:
 	DECLARE_CLASS( CEnvTracer, CPointEntity );
 
-	void Spawn( void );
+	void Spawn_Impl( void );
 	void TracerThink( void );
-	void Activate( void );
+	void Activate_Impl( void );
 
 	DECLARE_DATADESC();
 
@@ -273,7 +270,7 @@ IMPLEMENT_REFLECT_DATAMAP( CEnvTracer )
 //-----------------------------------------------------------------------------
 // Purpose: Called after keyvalues are parsed.
 //-----------------------------------------------------------------------------
-void CEnvTracer::Spawn( void )
+void CEnvTracer::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	SetMoveType( MOVETYPE_NONE );
@@ -286,9 +283,9 @@ void CEnvTracer::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: Called after all the entities have been loaded.
 //-----------------------------------------------------------------------------
-void CEnvTracer::Activate( void )
+void CEnvTracer::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	CBaseEntity *pEnd = gEntList.FindEntityByName( nullptr, m_target );
 	if (pEnd != nullptr)
@@ -327,9 +324,9 @@ class CGibShooter : public CBaseEntity
 public:
 	DECLARE_CLASS( CGibShooter, CBaseEntity );
 
-	void Spawn( void );
-	void Precache( void );
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	virtual CGib *CreateGib( void );
 
@@ -372,7 +369,7 @@ IMPLEMENT_REFLECT_DATAMAP( CGibShooter )
 LINK_ENTITY_TO_CLASS( gibshooter, CGibShooter );
 
 
-void CGibShooter::Precache ( void )
+void CGibShooter::Precache_Impl ( void )
 {
 	if ( g_Language.GetInt() == LANGUAGE_GERMAN )
 	{
@@ -385,7 +382,7 @@ void CGibShooter::Precache ( void )
 }
 
 
-void CGibShooter::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CGibShooter::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	SetThink( &CGibShooter::ShootThink );
 	SetNextThink( gpGlobals->curtime );
@@ -402,7 +399,7 @@ void CGibShooter::InputShoot( inputdata_t &inputdata )
 }
 
 
-void CGibShooter::Spawn( void )
+void CGibShooter::Spawn_Impl( void )
 {
 	Precache();
 
@@ -615,8 +612,9 @@ public:
 	DECLARE_CLASS( CEnvShooter, CGibShooter );
 
 	CEnvShooter() { m_flGibGravityScale = 1.0f; }
-	void		Precache( void );
-	bool		KeyValue( const char *szKeyName, const char *szValue );
+	void		Precache_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool		KeyValue_Impl( const char *szKeyName, const char *szValue );
 
 	CGib		*CreateGib( void );
 
@@ -635,7 +633,7 @@ IMPLEMENT_REFLECT_DATAMAP( CEnvShooter )
 
 LINK_ENTITY_TO_CLASS( env_shooter, CEnvShooter );
 
-bool CEnvShooter::KeyValue( const char *szKeyName, const char *szValue )
+bool CEnvShooter::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "shootmodel"))
 	{
@@ -676,14 +674,14 @@ bool CEnvShooter::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
 }
 
 
-void CEnvShooter::Precache ( void )
+void CEnvShooter::Precache_Impl ( void )
 {
 	m_iGibModelIndex = PrecacheModel( STRING( GetModelName() ) );
 }
@@ -758,7 +756,7 @@ public:
 	DECLARE_CLASS( CRotorWashShooter, CEnvShooter );
 	DECLARE_DATADESC();
 
-	virtual void Spawn();
+	void Spawn_Impl();
 
 public:
 	// Inherited from IRotorWashShooter
@@ -798,9 +796,9 @@ IRotorWashShooter *GetRotorWashShooter( CBaseEntity *pEntity )
 //-----------------------------------------------------------------------------
 // Inherited from IRotorWashShooter
 //-----------------------------------------------------------------------------
-void CRotorWashShooter::Spawn()
+void CRotorWashShooter::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	m_flLastWashStartTime = -1;
 }
 
@@ -862,11 +860,11 @@ class CTestEffect : public CBaseEntity
 public:
 	DECLARE_CLASS( CTestEffect, CBaseEntity );
 
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 	// bool	KeyValue( const char *szKeyName, const char *szValue );
-	void Think( void );
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Think_Impl( void );
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	int		m_iLoop;
 	int		m_iBeam;
@@ -878,17 +876,17 @@ public:
 
 LINK_ENTITY_TO_CLASS( test_effect, CTestEffect );
 
-void CTestEffect::Spawn( void )
+void CTestEffect::Spawn_Impl( void )
 {
 	Precache( );
 }
 
-void CTestEffect::Precache( void )
+void CTestEffect::Precache_Impl( void )
 {
 	PrecacheModel( "sprites/lgtning.vmt" );
 }
 
-void CTestEffect::Think( void )
+void CTestEffect::Think_Impl( void )
 {
 	int i;
 	float t = (gpGlobals->curtime - m_flStartTime);
@@ -939,7 +937,7 @@ void CTestEffect::Think( void )
 }
 
 
-void CTestEffect::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CTestEffect::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	SetNextThink( gpGlobals->curtime + 0.1f );
 	m_flStartTime = gpGlobals->curtime;
@@ -953,9 +951,10 @@ class CBlood : public CPointEntity
 public:
 	DECLARE_CLASS( CBlood, CPointEntity );
 
-	void	Precache();
-	void	Spawn( void );
-	bool	KeyValue( const char *szKeyName, const char *szValue );
+	void	Precache_Impl();
+	void	Spawn_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
 
 	inline	int		Color( void ) { return m_Color; }
 	inline	float 	BloodAmount( void ) { return m_flAmount; }
@@ -994,9 +993,9 @@ constexpr auto SF_BLOOD_GORE = 0x0040;
 //-----------------------------------------------------------------------------
 // Precache
 //-----------------------------------------------------------------------------
-void CBlood::Precache()
+void CBlood::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 	UTIL_BloodSprayPrecache();
 }
 
@@ -1004,7 +1003,7 @@ void CBlood::Precache()
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CBlood::Spawn( void )
+void CBlood::Spawn_Impl( void )
 {
 	Precache();
 
@@ -1024,7 +1023,7 @@ void CBlood::Spawn( void )
 //			szValue -
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-bool CBlood::KeyValue( const char *szKeyName, const char *szValue )
+bool CBlood::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "color"))
 	{
@@ -1040,7 +1039,7 @@ bool CBlood::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
@@ -1166,9 +1165,9 @@ class CEnvFunnel : public CBaseEntity
 public:
 	DECLARE_CLASS( CEnvFunnel, CBaseEntity );
 
-	void	Spawn( void );
-	void	Precache( void );
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
+	void	Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	int		m_iSprite;	// Don't save, precache
 };
@@ -1181,12 +1180,12 @@ LINK_ENTITY_TO_CLASS( env_funnel, CEnvFunnel );
 
 
 
-void CEnvFunnel::Precache ( void )
+void CEnvFunnel::Precache_Impl ( void )
 {
 	m_iSprite = PrecacheModel ( "sprites/flare6.vmt" );
 }
 
-void CEnvFunnel::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CEnvFunnel::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	CBroadcastRecipientFilter filter;
 	te->LargeFunnel( filter, 0.0,
@@ -1196,7 +1195,7 @@ void CEnvFunnel::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE us
 	SetNextThink( gpGlobals->curtime );
 }
 
-void CEnvFunnel::Spawn( void )
+void CEnvFunnel::Spawn_Impl( void )
 {
 	Precache();
 	SetSolid( SOLID_NONE );
@@ -1212,10 +1211,11 @@ class CEnvBeverage : public CBaseEntity
 public:
 	DECLARE_CLASS( CEnvBeverage, CBaseEntity );
 
-	void	Spawn( void );
-	void	Precache( void );
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	bool	KeyValue( const char *szKeyName, const char *szValue );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
+	void	Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
 
 	// Input handlers.
 	[[= ks::reflect::Input{ .name = "Activate", .type = FIELD_VOID } ]] void	InputActivate( inputdata_t &inputdata );
@@ -1227,7 +1227,7 @@ public:
 	int		m_nBeverageType;
 };
 
-void CEnvBeverage::Precache ( void )
+void CEnvBeverage::Precache_Impl ( void )
 {
 	PrecacheModel( "models/can.mdl" );
 }
@@ -1237,7 +1237,7 @@ IMPLEMENT_REFLECT_DATAMAP( CEnvBeverage )
 LINK_ENTITY_TO_CLASS( env_beverage, CEnvBeverage );
 
 
-bool CEnvBeverage::KeyValue( const char *szKeyName, const char *szValue )
+bool CEnvBeverage::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "beveragetype"))
 	{
@@ -1245,13 +1245,13 @@ bool CEnvBeverage::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
 }
 
-void CEnvBeverage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CEnvBeverage::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	if ( m_CanInDispenser || m_iHealth <= 0 )
 	{
@@ -1283,7 +1283,7 @@ void CEnvBeverage::InputActivate( inputdata_t &inputdata )
 	Use( inputdata.pActivator, inputdata.pCaller, USE_ON, 0 );
 }
 
-void CEnvBeverage::Spawn( void )
+void CEnvBeverage::Spawn_Impl( void )
 {
 	Precache();
 	SetSolid( SOLID_NONE );
@@ -1304,8 +1304,8 @@ class CItemSoda : public CBaseAnimating
 public:
 	DECLARE_CLASS( CItemSoda, CBaseAnimating );
 
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 	void	CanThink ( void );
 	void	CanTouch ( CBaseEntity *pOther );
 
@@ -1315,14 +1315,14 @@ public:
 
 LINK_ENTITY_TO_CLASS( item_sodacan, CItemSoda );
 
-void CItemSoda::Precache ( void )
+void CItemSoda::Precache_Impl ( void )
 {
 	PrecacheModel( "models/can.mdl" );
 
 	PrecacheScriptSound( "ItemSoda.Bounce" );
 }
 
-void CItemSoda::Spawn( void )
+void CItemSoda::Spawn_Impl( void )
 {
 	Precache();
 	SetSolid( SOLID_NONE );
@@ -1387,8 +1387,8 @@ public:
 	DECLARE_SERVERCLASS();
 
 	CPrecipitation();
-	int UpdateTransmitState();
-	void	Spawn( void );
+	int UpdateTransmitState_Impl();
+	void	Spawn_Impl( void );
 
 	// bits: Q_log2( NUM_PRECIPITATION_TYPES ) + 1, spelled out because Q_log2 is a runtime call.
 	CNetworkVar( PrecipitationType_t, m_nPrecipType, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED } ]] [[= ks::reflect::Key{ .name = "preciptype" } ]] );
@@ -1407,12 +1407,12 @@ CPrecipitation::CPrecipitation()
 	m_nPrecipType = PRECIPITATION_TYPE_RAIN; // default to rain.
 }
 
-int CPrecipitation::UpdateTransmitState()
+int CPrecipitation::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
 
-void CPrecipitation::Spawn( void )
+void CPrecipitation::Spawn_Impl( void )
 {
 	//SetTransmitState( FL_EDICT_ALWAYS );
 	SetTransmitState( FL_EDICT_PVSCHECK );
@@ -1458,8 +1458,8 @@ public:
 	DECLARE_SERVERCLASS();
 
 	CPrecipitationBlocker();
-	void	Spawn( void );
-	int		UpdateTransmitState( void );
+	void	Spawn_Impl( void );
+	int		UpdateTransmitState_Impl( void );
 };
 
 LINK_ENTITY_TO_CLASS( func_precipitation_blocker, CPrecipitationBlocker );
@@ -1473,13 +1473,13 @@ CPrecipitationBlocker::CPrecipitationBlocker()
 {
 }
 
-int CPrecipitationBlocker::UpdateTransmitState()
+int CPrecipitationBlocker::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
 
 
-void CPrecipitationBlocker::Spawn( void )							   
+void CPrecipitationBlocker::Spawn_Impl( void )							   
 {
 	SetTransmitState( FL_EDICT_ALWAYS );
 	Precache();
@@ -1521,10 +1521,10 @@ class [[= ks::reflect::NetTable{ .name = "DT_EnvWind", .base = false } ]]
 public:
 	DECLARE_CLASS( CEnvWind, CBaseEntity );
 
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 	void	WindThink( void );
-	int		UpdateTransmitState( void );
+	int		UpdateTransmitState_Impl( void );
 
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
@@ -1543,7 +1543,7 @@ IMPLEMENT_REFLECT_TABLE( CEnvWindShared, DT_EnvWindShared );
 // This table encodes the CBaseEntity data.
 IMPLEMENT_REFLECT_SERVERCLASS( CEnvWind, DT_EnvWind )
 
-void CEnvWind::Precache ( void )
+void CEnvWind::Precache_Impl ( void )
 {
 //	if (m_iszGustSound)
 //	{
@@ -1551,7 +1551,7 @@ void CEnvWind::Precache ( void )
 //	}
 }
 
-void CEnvWind::Spawn( void )
+void CEnvWind::Spawn_Impl( void )
 {
 	Precache();
 	SetSolid( SOLID_NONE );
@@ -1564,7 +1564,7 @@ void CEnvWind::Spawn( void )
 	SetNextThink( gpGlobals->curtime );
 }
 
-int CEnvWind::UpdateTransmitState()
+int CEnvWind::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
@@ -1590,8 +1590,8 @@ class [[= ks::reflect::NetTable{ .name = "DT_Embers" } ]]
 public:
 	DECLARE_CLASS( CEmbers, CBaseEntity );
 
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 
 	void	EmberUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
@@ -1617,7 +1617,7 @@ IMPLEMENT_REFLECT_SERVERCLASS( CEmbers, DT_Embers )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CEmbers::Spawn( void )
+void CEmbers::Spawn_Impl( void )
 {
 	Precache();
 	SetModel( STRING( GetModelName() ) );
@@ -1635,7 +1635,7 @@ void CEmbers::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CEmbers::Precache( void )
+void CEmbers::Precache_Impl( void )
 {
 }
 
@@ -1685,8 +1685,8 @@ class CPhysicsWire : public CBaseEntity
 public:
 	DECLARE_CLASS( CPhysicsWire, CBaseEntity );
 
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 
 	DECLARE_DATADESC();
 
@@ -1705,9 +1705,9 @@ IMPLEMENT_REFLECT_DATAMAP( CPhysicsWire )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CPhysicsWire::Spawn( void )
+void CPhysicsWire::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	Precache();
 
@@ -1718,9 +1718,9 @@ void CPhysicsWire::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CPhysicsWire::Precache( void )
+void CPhysicsWire::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 class CPhysBallSocket;
@@ -1782,7 +1782,7 @@ class CEnvMuzzleFlash : public CPointEntity
 	DECLARE_CLASS( CEnvMuzzleFlash, CPointEntity );
 
 public:
-	virtual void Spawn();
+	void Spawn_Impl();
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "Fire", .type = FIELD_VOID } ]] void	InputFire( inputdata_t &inputdata );
@@ -1802,7 +1802,7 @@ LINK_ENTITY_TO_CLASS( env_muzzleflash, CEnvMuzzleFlash );
 //-----------------------------------------------------------------------------
 // Spawn!
 //-----------------------------------------------------------------------------
-void CEnvMuzzleFlash::Spawn()
+void CEnvMuzzleFlash::Spawn_Impl()
 {
 	if ( (m_iszParentAttachment != NULL_STRING) && GetParent() && GetParent()->GetBaseAnimating() )
 	{
@@ -1838,8 +1838,8 @@ class CEnvSplash : public CPointEntity
 	DECLARE_CLASS( CEnvSplash, CPointEntity );
 
 public:
-	virtual void Precache();
-	virtual void Spawn();
+	void Precache_Impl();
+	void Spawn_Impl();
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "Splash", .type = FIELD_VOID } ]] void	InputSplash( inputdata_t &inputdata );
@@ -1860,16 +1860,16 @@ LINK_ENTITY_TO_CLASS( env_splash, CEnvSplash );
 // Input  : &inputdata -
 //-----------------------------------------------------------------------------
 
-void CEnvSplash::Precache()
+void CEnvSplash::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 	PrecacheEffect( "watersplash" );
 }
 
-void CEnvSplash::Spawn()
+void CEnvSplash::Spawn_Impl()
 {
 	Precache();
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 constexpr auto SPLASH_MAX_DEPTH = 120.0f;
@@ -1949,9 +1949,9 @@ public:
 		m_bCollide = false;
 	}
 
-	void Precache();
-	void Spawn();
-	void Activate();
+	void Precache_Impl();
+	void Spawn_Impl();
+	void Activate_Impl();
 	void StartShooting();
 	void StopShooting();
 	void ShootThink();
@@ -2009,7 +2009,7 @@ LINK_ENTITY_TO_CLASS( env_gunfire, CEnvGunfire );
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CEnvGunfire::Precache()
+void CEnvGunfire::Precache_Impl()
 {
 	PrecacheScriptSound( STRING( m_iszShootSound ) );
 	PrecacheEffect( "impact_wallbang_heavy" );
@@ -2018,7 +2018,7 @@ void CEnvGunfire::Precache()
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CEnvGunfire::Spawn()
+void CEnvGunfire::Spawn_Impl()
 {
 	Precache();
 
@@ -2053,7 +2053,7 @@ void CEnvGunfire::Spawn()
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CEnvGunfire::Activate( void )
+void CEnvGunfire::Activate_Impl( void )
 {
 	// Find my target
 	if (m_target != NULL_STRING)
@@ -2061,7 +2061,7 @@ void CEnvGunfire::Activate( void )
 		m_hTarget = gEntList.FindEntityByName( nullptr, m_target );
 	}
 
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 }
 
 //-----------------------------------------------------------------------------
@@ -2553,9 +2553,9 @@ LINK_ENTITY_TO_CLASS( env_quadraticbeam, CEnvQuadraticBeam );
 
 IMPLEMENT_REFLECT_SERVERCLASS( CEnvQuadraticBeam, DT_QuadraticBeam )
 
-void CEnvQuadraticBeam::Spawn()
+void CEnvQuadraticBeam::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	m_nRenderMode = kRenderTransAdd;
 	SetRenderColor( 255, 255, 255 );
 }
@@ -2586,7 +2586,7 @@ public:
 
 	DECLARE_CLASS( CEnvViewPunch, CPointEntity );
 
-	virtual void Spawn();
+	void Spawn_Impl();
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "ViewPunch", .type = FIELD_VOID } ]] void InputViewPunch( inputdata_t &inputdata );
@@ -2611,7 +2611,7 @@ constexpr auto SF_PUNCH_IN_AIR = 0x0002; // Punch players in air
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CEnvViewPunch::Spawn( void )
+void CEnvViewPunch::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	SetMoveType( MOVETYPE_NONE );

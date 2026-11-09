@@ -21,6 +21,8 @@ import ks.vstdlib;
 #include "materialsystem/imaterialsystem.h"
 
 bool InitInstance( );
+void Cvar_InstallEngineHooks( ICvar *pCVar );
+void Cvar_RemoveEngineHooks();
 void ProcessConsoleInput( void );
 const char *UTIL_GetExecutableDir( );
 const char *UTIL_GetBaseDir( void );
@@ -39,7 +41,9 @@ extern char g_szEXEName[ 256 ];
 class CDedicatedServerLoggingListener : public ILoggingListener
 {
 public:
-	virtual void Log( const LoggingContext_t *pContext, const tchar *pMessage )
+	CDedicatedServerLoggingListener() : ILoggingListener( [this]( const LoggingContext_t *pContext, const tchar *pMessage ) { Log( pContext, pMessage ); } ) {}
+
+	void Log( const LoggingContext_t *pContext, const tchar *pMessage )
 	{
 		if ( sys )
 		{
@@ -182,13 +186,15 @@ bool CDedicatedAppSystemGroup::Create( )
 
 	// Added the dedicated exports module for the engine to grab
 	AppModule_t dedicatedModule = LoadModule( Sys_GetFactoryThis() );
-	IAppSystem *pSystem = AddSystem( dedicatedModule, VENGINE_DEDICATEDEXPORTS_API_VERSION );
+	void *pSystem = AddSystem( dedicatedModule, VENGINE_DEDICATEDEXPORTS_API_VERSION );
 	if ( !pSystem )
 		return false;
 
+	// Install the engine's ConVar linkage rules before any other system is added
+	Cvar_InstallEngineHooks( static_cast<ICvar *>( FindSystem( CVAR_INTERFACE_VERSION ) ) );
+
 	static const char * const pBuiltinSystems[] =
 	{
-		CVAR_QUERY_INTERFACE_VERSION,
 		MATERIAL_SYSTEM_INTERFACE_VERSION,
 		STUDIO_RENDER_INTERFACE_VERSION,
 		VPHYSICS_INTERFACE_VERSION,
@@ -262,6 +268,7 @@ int CDedicatedAppSystemGroup::Main( )
 
 void CDedicatedAppSystemGroup::PostShutdown()
 {
+	Cvar_RemoveEngineHooks();
 	sys->DestroyConsoleWindow();
 	console.ShutDown();
 	BaseClass::PostShutdown();
@@ -339,7 +346,7 @@ static bool s_GameInfoSuggestFN( CFSSetupInfo const *pFsSetupInfo, char *pchPath
 //
 //-----------------------------------------------------------------------------
 
-int main(int argc, char **argv)
+int DedicatedServerMain(int argc, char **argv)
 {
 	SetupFPUControlWord();
 

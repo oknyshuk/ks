@@ -3,8 +3,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -288,7 +285,7 @@ void CCSBot::BreakablesCheck( void )
 				// trace the potential bullet's path
 				trace_t result;
 				UTIL_TraceLine( EyePosition(), EyePosition() + FarBreakableCheckDist * aimDir, MASK_PLAYERSOLID, this, COLLISION_GROUP_NONE, &result );
-				if ( result.DidHitNonWorldEntity() )
+				if ( TraceDidHitNonWorldEntity( result ) )
 				{
 					LOSbreakable.EnumElement( result.Ent<CBaseEntity>() );
 					if ( LOSbreakable.m_nAlreadyHit == 1 && LOSbreakable.m_AlreadyHit[ 0 ] == breakable )
@@ -341,11 +338,16 @@ void CCSBot::DoorCheck( void )
 		{
 			if ( !IsOpeningDoor() )
 			{
-				CBasePropDoor *pPropDoor = dynamic_cast<CBasePropDoor*>( door );
-				if ( pPropDoor && pPropDoor->IsDoorLocked() )
-					return;
-				else if ( CBaseDoor *pFuncDoor = dynamic_cast< CBaseDoor * >( door ) )
+				// CBotDoorEnumerator only collects "func_door*" (CBaseDoor) and "prop_door*" (CBasePropDoor) entities
+				if ( FClassnameIs( door, "prop_door*" ) )
 				{
+					CBasePropDoor *pPropDoor = static_cast<CBasePropDoor*>( door );
+					if ( pPropDoor->IsDoorLocked() )
+						return;
+				}
+				else if ( FClassnameIs( door, "func_door*" ) )
+				{
+					CBaseDoor *pFuncDoor = static_cast< CBaseDoor * >( door );
 					if ( pFuncDoor->m_bLocked )
 						return;
 				}
@@ -799,7 +801,7 @@ void CCSBot::ComputeApproachPoints( void )
 	float halfWidth;
 	for( int i=0; i<m_lastKnownArea->GetApproachInfoCount() && m_approachPointCount < MAX_APPROACH_POINTS; ++i )
 	{
-		const CCSNavArea::ApproachInfo *info = m_lastKnownArea->GetApproachInfo( i );
+		const CNavArea::ApproachInfo *info = m_lastKnownArea->GetApproachInfo( i );
 
 		if (info->here.area == nullptr || info->prev.area == nullptr)
 		{

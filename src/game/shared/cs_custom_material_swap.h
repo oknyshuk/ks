@@ -15,7 +15,6 @@ class CBaseEntity;
 typedef CHandle<CBaseEntity> EHANDLE;
 #endif
 
-class ICustomMaterial;
 
 struct CCSPendingCustomMaterialSwap_t
 {

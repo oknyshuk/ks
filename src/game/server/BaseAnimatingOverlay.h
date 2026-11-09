@@ -7,14 +7,12 @@
 #include "reflect_annotations.h"
 #include "shareddefs.h"
 #include "baseanimating.h"
-import std;
 
 inline constexpr auto ORDER_BITS = 4;
 
 inline constexpr auto WEIGHT_BITS = 8;
 
 class CBaseAnimatingOverlay;
-class IBoneSetup;
 
 class [[= ks::reflect::NetTable{ .name = "DT_Animationlayer", .base = false } ]]
       CAnimationLayer : public CMemZeroOnNew
@@ -229,10 +227,10 @@ private:
 
 public:
 	
-	virtual CBaseAnimatingOverlay *	GetBaseAnimatingOverlay() { return this; }
+	CBaseAnimatingOverlay *	GetBaseAnimatingOverlay_Impl() { return this; }
 	
-	virtual void	OnRestore();
-	virtual void	SetModel( const char *szModelName );
+	void	OnRestore_Impl();
+	void	SetModel_Impl( const char *szModelName );
 
 	virtual void	StudioFrameAdvance();
 	virtual	void	DispatchAnimEvents ( CBaseAnimating *eventHandler );

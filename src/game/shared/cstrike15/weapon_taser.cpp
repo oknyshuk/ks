@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -22,7 +19,6 @@ import ks.tier1;
 #include "cdll_client_int.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -82,7 +78,7 @@ public:
 	
 	CWeaponTaser();
 
-	virtual void Precache();
+	KS_VIRTUAL void Precache_Impl();
 	virtual void PrimaryAttack( void );
 	virtual const char* GetMuzzleFlashEffectName_1stPerson( void );
 	virtual const char* GetMuzzleFlashEffectName_3rdPerson( void );
@@ -115,9 +111,9 @@ CWeaponTaser::CWeaponTaser() :
 {
 }
 
-void CWeaponTaser::Precache()
+void CWeaponTaser::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	PrecacheParticleSystem( TASER_BIRTHDAY_PARTICLES );
 	PrecacheScriptSound( TASER_BIRTHDAY_SOUND );

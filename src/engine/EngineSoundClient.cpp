@@ -19,77 +19,7 @@ void DSP_FastReset(int dsp);
 
 extern float g_flReplaySoundFade;
 
-//-----------------------------------------------------------------------------
-//
-// Client-side implementation of the engine sound interface
-//
-//-----------------------------------------------------------------------------
-class CEngineSoundClient : public IEngineSound
-{
-public:
-	// constructor, destructor
-	CEngineSoundClient();
-	virtual ~CEngineSoundClient();
-
-	virtual bool PrecacheSound( const char *pSample, bool bPreload, bool bIsUISound );
-	virtual bool IsSoundPrecached( const char *pSample );
-	virtual void PrefetchSound( const char *pSample );
-	virtual bool IsLoopingSound( const char *pSample );
-
-	virtual float GetSoundDuration( const char *pSample );  
-
-	virtual int EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH nSoundEntryHash, const char *pSample, 
-		float flVolume, float flAttenuation, int nSeed, int iFlags, int iPitch, 
-		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
-
-	virtual int EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH nSoundEntryHash, const char *pSample, 
-		float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
-		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
-
-	virtual void EmitSentenceByIndex( IRecipientFilter& filter, int iEntIndex, int iChannel, int iSentenceIndex, 
-		float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch,
-		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
-
-	virtual void StopSound( int iEntIndex, int iChannel, const char *pSample, HSOUNDSCRIPTHASH nSoundEntryHash = SOUNDEMITTER_INVALID_HASH );
-
-	virtual void StopAllSounds(bool bClearBuffers);
-
-	virtual void SetRoomType( IRecipientFilter& filter, int roomType );
-	virtual void SetPlayerDSP( IRecipientFilter& filter, int dspType, bool fastReset );
-
-	virtual int EmitAmbientSound( const char *pSample, float flVolume, 
-		int iPitch, int flags, float soundtime = 0.0f );
-
-	virtual float GetDistGainFromSoundLevel( soundlevel_t soundlevel, float dist );
-
-	// Client .dll only functions
-	virtual int		GetGuidForLastSoundEmitted();
-	virtual bool	IsSoundStillPlaying( int guid );
-	virtual bool	GetSoundChannelVolume( const char* sound, float &flVolumeLeft, float &flVolumeRight );
-	virtual void	StopSoundByGuid( int guid, bool bForceSync );
-	// Set's master volume (0.0->1.0)
-	virtual void	SetVolumeByGuid( int guid, float fvol );
-	virtual float   GetElapsedTimeByGuid( int guid );
-
-	// Retrieves list of all active sounds
-	virtual void	GetActiveSounds( std::vector< SndInfo_t >& sndlist );
-
-	virtual void	PrecacheSentenceGroup( const char *pGroupName );
-	virtual void	NotifyBeginMoviePlayback();
-	virtual void	NotifyEndMoviePlayback();
-	virtual bool	IsMoviePlaying();
-	virtual bool    GetPreventSound( void );
-
-	virtual void SetReplaySoundFade( float flReplayVolume ) { g_flReplaySoundFade = flReplayVolume; }
-	virtual float GetReplaySoundFade()const { return g_flReplaySoundFade; }
-
-private:
-	int EmitSoundInternal( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH nSoundEntryHash, const char *pSample, 
-		float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
-		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
-
-	bool m_bMoviePlaying;
-};
+#include "enginesoundimpl.h"
 
 
 //-----------------------------------------------------------------------------
@@ -108,6 +38,7 @@ IEngineSound *EngineSoundClient()
 // constructor, destructor
 //-----------------------------------------------------------------------------
 CEngineSoundClient::CEngineSoundClient() :
+	IEngineSound( kind_t::client ),
 	m_bMoviePlaying( false )
 {
 }

@@ -3,10 +3,106 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.core;
 #include "cs_bot.h"
 #include "cs_nav_path.h"
+
+//--------------------------------------------------------------------------------------------------------------
+// BotState methods: forward to the concrete state according to the Kind
+//
+void BotState::OnEnter( CCSBot *bot )
+{
+	switch ( m_kind )
+	{
+	case Kind::Idle:	static_cast< IdleState * >( this )->OnEnter( bot );	break;
+	case Kind::Hunt:	static_cast< HuntState * >( this )->OnEnter( bot );	break;
+	case Kind::Attack:	static_cast< AttackState * >( this )->OnEnter( bot );	break;
+	case Kind::InvestigateNoise:	static_cast< InvestigateNoiseState * >( this )->OnEnter( bot );	break;
+	case Kind::Buy:	static_cast< BuyState * >( this )->OnEnter( bot );	break;
+	case Kind::MoveTo:	static_cast< MoveToState * >( this )->OnEnter( bot );	break;
+	case Kind::FetchBomb:	static_cast< FetchBombState * >( this )->OnEnter( bot );	break;
+	case Kind::PlantBomb:	static_cast< PlantBombState * >( this )->OnEnter( bot );	break;
+	case Kind::DefuseBomb:	static_cast< DefuseBombState * >( this )->OnEnter( bot );	break;
+	case Kind::PickupHostage:	static_cast< PickupHostageState * >( this )->OnEnter( bot );	break;
+	case Kind::Hide:	static_cast< HideState * >( this )->OnEnter( bot );	break;
+	case Kind::EscapeFromBomb:	static_cast< EscapeFromBombState * >( this )->OnEnter( bot );	break;
+	case Kind::Follow:	static_cast< FollowState * >( this )->OnEnter( bot );	break;
+	case Kind::UseEntity:	static_cast< UseEntityState * >( this )->OnEnter( bot );	break;
+	case Kind::OpenDoor:	static_cast< OpenDoorState * >( this )->OnEnter( bot );	break;
+	case Kind::EscapeFromFlames:	static_cast< EscapeFromFlamesState * >( this )->OnEnter( bot );	break;
+	}
+}
+
+void BotState::OnUpdate( CCSBot *bot )
+{
+	switch ( m_kind )
+	{
+	case Kind::Idle:	static_cast< IdleState * >( this )->OnUpdate( bot );	break;
+	case Kind::Hunt:	static_cast< HuntState * >( this )->OnUpdate( bot );	break;
+	case Kind::Attack:	static_cast< AttackState * >( this )->OnUpdate( bot );	break;
+	case Kind::InvestigateNoise:	static_cast< InvestigateNoiseState * >( this )->OnUpdate( bot );	break;
+	case Kind::Buy:	static_cast< BuyState * >( this )->OnUpdate( bot );	break;
+	case Kind::MoveTo:	static_cast< MoveToState * >( this )->OnUpdate( bot );	break;
+	case Kind::FetchBomb:	static_cast< FetchBombState * >( this )->OnUpdate( bot );	break;
+	case Kind::PlantBomb:	static_cast< PlantBombState * >( this )->OnUpdate( bot );	break;
+	case Kind::DefuseBomb:	static_cast< DefuseBombState * >( this )->OnUpdate( bot );	break;
+	case Kind::PickupHostage:	static_cast< PickupHostageState * >( this )->OnUpdate( bot );	break;
+	case Kind::Hide:	static_cast< HideState * >( this )->OnUpdate( bot );	break;
+	case Kind::EscapeFromBomb:	static_cast< EscapeFromBombState * >( this )->OnUpdate( bot );	break;
+	case Kind::Follow:	static_cast< FollowState * >( this )->OnUpdate( bot );	break;
+	case Kind::UseEntity:	static_cast< UseEntityState * >( this )->OnUpdate( bot );	break;
+	case Kind::OpenDoor:	static_cast< OpenDoorState * >( this )->OnUpdate( bot );	break;
+	case Kind::EscapeFromFlames:	static_cast< EscapeFromFlamesState * >( this )->OnUpdate( bot );	break;
+	}
+}
+
+void BotState::OnExit( CCSBot *bot )
+{
+	switch ( m_kind )
+	{
+	case Kind::Idle:	break;	// no exit action
+	case Kind::Hunt:	static_cast< HuntState * >( this )->OnExit( bot );	break;
+	case Kind::Attack:	static_cast< AttackState * >( this )->OnExit( bot );	break;
+	case Kind::InvestigateNoise:	static_cast< InvestigateNoiseState * >( this )->OnExit( bot );	break;
+	case Kind::Buy:	static_cast< BuyState * >( this )->OnExit( bot );	break;
+	case Kind::MoveTo:	static_cast< MoveToState * >( this )->OnExit( bot );	break;
+	case Kind::FetchBomb:	break;	// no exit action
+	case Kind::PlantBomb:	static_cast< PlantBombState * >( this )->OnExit( bot );	break;
+	case Kind::DefuseBomb:	static_cast< DefuseBombState * >( this )->OnExit( bot );	break;
+	case Kind::PickupHostage:	static_cast< PickupHostageState * >( this )->OnExit( bot );	break;
+	case Kind::Hide:	static_cast< HideState * >( this )->OnExit( bot );	break;
+	case Kind::EscapeFromBomb:	static_cast< EscapeFromBombState * >( this )->OnExit( bot );	break;
+	case Kind::Follow:	static_cast< FollowState * >( this )->OnExit( bot );	break;
+	case Kind::UseEntity:	static_cast< UseEntityState * >( this )->OnExit( bot );	break;
+	case Kind::OpenDoor:	static_cast< OpenDoorState * >( this )->OnExit( bot );	break;
+	case Kind::EscapeFromFlames:	static_cast< EscapeFromFlamesState * >( this )->OnExit( bot );	break;
+	}
+}
+
+const char *BotState::GetName( void ) const
+{
+	switch ( m_kind )
+	{
+	case Kind::Idle:	return static_cast< const IdleState * >( this )->GetName();
+	case Kind::Hunt:	return static_cast< const HuntState * >( this )->GetName();
+	case Kind::Attack:	return static_cast< const AttackState * >( this )->GetName();
+	case Kind::InvestigateNoise:	return static_cast< const InvestigateNoiseState * >( this )->GetName();
+	case Kind::Buy:	return static_cast< const BuyState * >( this )->GetName();
+	case Kind::MoveTo:	return static_cast< const MoveToState * >( this )->GetName();
+	case Kind::FetchBomb:	return static_cast< const FetchBombState * >( this )->GetName();
+	case Kind::PlantBomb:	return static_cast< const PlantBombState * >( this )->GetName();
+	case Kind::DefuseBomb:	return static_cast< const DefuseBombState * >( this )->GetName();
+	case Kind::PickupHostage:	return static_cast< const PickupHostageState * >( this )->GetName();
+	case Kind::Hide:	return static_cast< const HideState * >( this )->GetName();
+	case Kind::EscapeFromBomb:	return static_cast< const EscapeFromBombState * >( this )->GetName();
+	case Kind::Follow:	return static_cast< const FollowState * >( this )->GetName();
+	case Kind::UseEntity:	return static_cast< const UseEntityState * >( this )->GetName();
+	case Kind::OpenDoor:	return static_cast< const OpenDoorState * >( this )->GetName();
+	case Kind::EscapeFromFlames:	return static_cast< const EscapeFromFlamesState * >( this )->GetName();
+	}
+
+	return "";
+}
+
 
 //--------------------------------------------------------------------------------------------------------------
 /**

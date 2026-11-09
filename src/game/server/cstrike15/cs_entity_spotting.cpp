@@ -3,8 +3,6 @@
 
 // Purpose: A game system for tracking and updating entity spot state
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"

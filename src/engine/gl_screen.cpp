@@ -29,7 +29,6 @@ import std;
 #include "cl_main.h"
 #include "engineui.h"
 #include "lightcache.h"
-#include "toolframework/itoolframework.h"
 #include "host.h"
 #include "matchmaking/imatchframework.h"
 
@@ -149,16 +148,6 @@ void SCR_EndLoadingPlaque( void )
 				kv->SetString( "reason", gszDisconnectReason );
 			}
 
-			if ( toolframework->InToolMode() )
-			{				
-				// Make a copy of the message to send to the tools framework
-				KeyValues *pToolMsg = kv->MakeCopy();
-
-				// Notify the active tool that the level has finished loading
-				toolframework->PostMessage( pToolMsg );
-				pToolMsg->deleteThis();
-			}
-
 			g_pMatchFramework->GetEventsSubscription()->BroadcastEvent( kv );
 			return;
 		}
@@ -189,7 +178,6 @@ void SCR_UpdateScreen( void )
 	V_CheckGamma();
 
 	// This is a HACK to let things settle for a bit on level start
-	// NOTE: If you remove scr_nextdrawtick, remove it from enginetool.cpp too
 	if ( scr_nextdrawtick != 0 )
 	{
 		if ( host_tickcount < scr_nextdrawtick )
@@ -264,7 +252,6 @@ void SCR_UpdateScreen( void )
 	// This needs to happen before the client DLL is called because the client DLL depends on 
 	// some of the setup in FRAME_RENDER_START.
 	g_EngineRenderer->FrameBegin();
-	toolframework->RenderFrameBegin();
 
 	GetBaseLocalClient().UpdateAreaBits_BackwardsCompatible();
 
@@ -275,8 +262,6 @@ void SCR_UpdateScreen( void )
 	CL_TakeSnapshotAndSwap();	   
 
 	ClientDLL_FrameStageNotify( FRAME_RENDER_END );
-
-	toolframework->RenderFrameEnd();
 
 	g_EngineRenderer->FrameEnd();
 

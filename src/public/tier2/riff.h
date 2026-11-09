@@ -13,12 +13,14 @@ import std;
 class IFileReadBinary
 {
 public:
-	virtual FileHandle_t open( const char *pFileName ) = 0;
-	virtual int read( void *pOutput, int size, FileHandle_t file ) = 0;
-	virtual void close( FileHandle_t file ) = 0;
-	virtual void seek( FileHandle_t file, int pos ) = 0;
-	virtual unsigned int tell( FileHandle_t file ) = 0;
-	virtual unsigned int size( FileHandle_t file ) = 0;
+	// The one implementation lives in engine/snd_io.cpp: sound files are read from the sound/ directory
+	// of the engine's file system.
+	FileHandle_t open( const char *pFileName );
+	int read( void *pOutput, int size, FileHandle_t file );
+	void close( FileHandle_t file );
+	void seek( FileHandle_t file, int pos );
+	unsigned int tell( FileHandle_t file );
+	unsigned int size( FileHandle_t file );
 };
 
 
@@ -84,87 +86,6 @@ private:
 	unsigned int		m_chunkName;
 	int					m_chunkSize;
 	int					m_chunkPosition;
-};
-
-class IFileWriteBinary
-{
-public:
-	virtual FileHandle_t create( const char *pFileName ) = 0;
-	virtual int write( void *pData, int size, FileHandle_t file ) = 0;
-	virtual void close( FileHandle_t file ) = 0;
-	virtual void seek( FileHandle_t file, int pos ) = 0;
-	virtual unsigned int tell( FileHandle_t file ) = 0;
-};
-//-----------------------------------------------------------------------------
-// Purpose: Used to write a RIFF format file
-//-----------------------------------------------------------------------------
-class OutFileRIFF
-{
-public:
-	OutFileRIFF( const char *pFileName, IFileWriteBinary &io );
-	~OutFileRIFF( void );
-
-	bool	WriteInt( int number );
-	bool 	WriteData( void *pOutput, int dataSize );
-	int		PositionGet( void );
-	void	PositionSet( int position );
-	bool	IsValid( void ) { return m_file != 0; }
-	
-	void    HasLISETData( int position );
-
-private:
-	const OutFileRIFF & operator=( const OutFileRIFF & );
-
-	IFileWriteBinary	&m_io;
-	FileHandle_t		m_file;
-	unsigned int		m_riffName;
-	unsigned int		m_riffSize;
-	unsigned int		m_nNamePos;
-
-	// hack to make liset work correctly
-	bool				m_bUseIncorrectLISETLength;
-	int					m_nLISETSize;
-
-
-};
-
-//-----------------------------------------------------------------------------
-// Purpose: Used to iterate over an InFileRIFF
-//-----------------------------------------------------------------------------
-class IterateOutputRIFF
-{
-public:
-	IterateOutputRIFF( OutFileRIFF &riff );
-	IterateOutputRIFF( IterateOutputRIFF &parent );
-
-	void			ChunkStart( unsigned int chunkname );
-	void			ChunkFinish( void );
-
-	void			ChunkWrite( unsigned int chunkname, void *pOutput, int size );
-	void			ChunkWriteInt( int number );
-	void			ChunkWriteData( void *pOutput, int size );
-
-	int				ChunkFilePosition( void ) { return m_chunkPosition; }
-
-	unsigned int	ChunkGetPosition( void );
-	void			ChunkSetPosition( int position );
-
-	void			CopyChunkData( IterateRIFF& input );
-
-	void			SetLISETData( int position );
-
-private:
-
-	const IterateOutputRIFF & operator=( const IterateOutputRIFF & );
-
-	OutFileRIFF			&m_riff;
-	int					m_start;
-	int					m_size;
-
-	unsigned int		m_chunkName;
-	int					m_chunkSize;
-	int					m_chunkPosition;
-	int					m_chunkStart;
 };
 
 #define RIFF_ID					MAKEID('R','I','F','F')

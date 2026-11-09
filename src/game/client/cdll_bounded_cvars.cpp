@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -17,37 +15,29 @@ bool g_bSpectatingForceCLPredictOff = false;
 // cl_predict.
 // ------------------------------------------------------------------------------------------ //
 
-class CBoundedCvar_Predict : public ConVar_ServerBounded
+static float CBoundedCvar_Predict_GetFloat( const ConVar_ServerBounded &bounded )
 {
-public:
-	CBoundedCvar_Predict() :
-	  ConVar_ServerBounded( "cl_predict", 
-		  "1.0", 
-		  FCVAR_USERINFO | FCVAR_NOT_CONNECTED, 
-		  "Perform client side prediction." )
-	  {
-	  }
+	// Used temporarily for CS kill cam.
+	if ( g_bForceCLPredictOff || g_bSpectatingForceCLPredictOff )
+		return 0;
 
-	  virtual float GetFloat() const
-	  {
-		  // Used temporarily for CS kill cam.
-		  if ( g_bForceCLPredictOff || g_bSpectatingForceCLPredictOff )
-			  return 0;
+	static const ConVar *pClientPredict = g_pCVar->FindVar( "sv_client_predict" );
+	if ( pClientPredict && pClientPredict->GetInt() != -1 )
+	{
+		// Ok, the server wants to control this value.
+		return pClientPredict->GetFloat();
+	}
+	else
+	{
+		return bounded.GetBaseFloatValue();
+	}
+}
 
-		  static const ConVar *pClientPredict = g_pCVar->FindVar( "sv_client_predict" );
-		  if ( pClientPredict && pClientPredict->GetInt() != -1 )
-		  {
-			  // Ok, the server wants to control this value.
-			  return pClientPredict->GetFloat();
-		  }
-		  else
-		  {
-			  return GetBaseFloatValue();
-		  }
-	  }
-};
-
-static CBoundedCvar_Predict cl_predict_var;
+static ConVar_ServerBounded cl_predict_var( CBoundedCvar_Predict_GetFloat,
+	"cl_predict", 
+	"1.0", 
+	FCVAR_USERINFO | FCVAR_NOT_CONNECTED, 
+	"Perform client side prediction." );
 ConVar_ServerBounded *cl_predict = &cl_predict_var;
 
 
@@ -56,38 +46,30 @@ ConVar_ServerBounded *cl_predict = &cl_predict_var;
 // cl_interp_ratio.
 // ------------------------------------------------------------------------------------------ //
 
-class CBoundedCvar_InterpRatio : public ConVar_ServerBounded
+static float CBoundedCvar_InterpRatio_GetFloat( const ConVar_ServerBounded &bounded )
 {
-public:
-	CBoundedCvar_InterpRatio() :
-	  ConVar_ServerBounded( "cl_interp_ratio", 
-		  "2.0", 
-		  FCVAR_USERINFO | FCVAR_NOT_CONNECTED, 
-		  "Sets the interpolation amount (final amount is cl_interp_ratio / cl_updaterate)." )
-	  {
-	  }
+	static const ConVar *pMin = g_pCVar->FindVar( "sv_client_min_interp_ratio" );
+	static const ConVar *pMax = g_pCVar->FindVar( "sv_client_max_interp_ratio" );
 
-	  virtual float GetFloat() const
-	  {
-		  static const ConVar *pMin = g_pCVar->FindVar( "sv_client_min_interp_ratio" );
-		  static const ConVar *pMax = g_pCVar->FindVar( "sv_client_max_interp_ratio" );
+	float flBaseFloatValue = bounded.GetBaseFloatValue();
+	if ( engine->IsPlayingDemo() && engine->GetDemoPlaybackParameters() )
+		flBaseFloatValue = 2.0f; // use the default value when playing demos
 
-		  float flBaseFloatValue = GetBaseFloatValue();
-		  if ( engine->IsPlayingDemo() && engine->GetDemoPlaybackParameters() )
-			  flBaseFloatValue = 2.0f; // use the default value when playing demos
+	if ( pMin && pMax && pMin->GetFloat() != -1 )
+	{
+		return clamp( flBaseFloatValue, pMin->GetFloat(), pMax->GetFloat() );
+	}
+	else
+	{
+		return flBaseFloatValue;
+	}
+}
 
-		  if ( pMin && pMax && pMin->GetFloat() != -1 )
-		  {
-			  return clamp( flBaseFloatValue, pMin->GetFloat(), pMax->GetFloat() );
-		  }
-		  else
-		  {
-			  return flBaseFloatValue;
-		  }
-	  }
-};
-
-static CBoundedCvar_InterpRatio cl_interp_ratio_var;
+static ConVar_ServerBounded cl_interp_ratio_var( CBoundedCvar_InterpRatio_GetFloat,
+	"cl_interp_ratio", 
+	"2.0", 
+	FCVAR_USERINFO | FCVAR_NOT_CONNECTED, 
+	"Sets the interpolation amount (final amount is cl_interp_ratio / cl_updaterate)." );
 ConVar_ServerBounded *cl_interp_ratio = &cl_interp_ratio_var;
 
 
@@ -95,38 +77,30 @@ ConVar_ServerBounded *cl_interp_ratio = &cl_interp_ratio_var;
 // cl_interp
 // ------------------------------------------------------------------------------------------ //
 
-class CBoundedCvar_Interp : public ConVar_ServerBounded
+static float CBoundedCvar_Interp_GetFloat( const ConVar_ServerBounded &bounded )
 {
-public:
-	CBoundedCvar_Interp() :
-	  ConVar_ServerBounded( "cl_interp", 
-		  "0.03125",		// 2 / 102.4
-		  FCVAR_USERINFO | FCVAR_NOT_CONNECTED, 
-		  "Sets the interpolation amount (bounded on low side by server interp ratio settings).", true, 0.0f, true, 0.5f )
-	  {
-	  }
+	static const ConVar *pUpdateRate = g_pCVar->FindVar( "cl_updaterate" );
+	static const ConVar *pMin = g_pCVar->FindVar( "sv_client_min_interp_ratio" );
+	
+	float flBaseFloatValue = bounded.GetBaseFloatValue();
+	if ( engine->IsPlayingDemo() && engine->GetDemoPlaybackParameters() && pUpdateRate )
+		flBaseFloatValue = 2.0f / pUpdateRate->GetFloat(); // use a default value 2/updaterate when playing demos
 
-	  virtual float GetFloat() const
-	  {
-		  static const ConVar *pUpdateRate = g_pCVar->FindVar( "cl_updaterate" );
-		  static const ConVar *pMin = g_pCVar->FindVar( "sv_client_min_interp_ratio" );
-		  
-		  float flBaseFloatValue = GetBaseFloatValue();
-		  if ( engine->IsPlayingDemo() && engine->GetDemoPlaybackParameters() && pUpdateRate )
-			  flBaseFloatValue = 2.0f / pUpdateRate->GetFloat(); // use a default value 2/updaterate when playing demos
+	if ( pUpdateRate && pMin && pMin->GetFloat() != -1 )
+	{
+		return std::max( flBaseFloatValue, pMin->GetFloat() / pUpdateRate->GetFloat() );
+	}
+	else
+	{
+		return flBaseFloatValue;
+	}
+}
 
-		  if ( pUpdateRate && pMin && pMin->GetFloat() != -1 )
-		  {
-			  return std::max( flBaseFloatValue, pMin->GetFloat() / pUpdateRate->GetFloat() );
-		  }
-		  else
-		  {
-			  return flBaseFloatValue;
-		  }
-	  }
-};
-
-static CBoundedCvar_Interp cl_interp_var;
+static ConVar_ServerBounded cl_interp_var( CBoundedCvar_Interp_GetFloat,
+	"cl_interp", 
+	"0.03125",		// 2 / 102.4
+	FCVAR_USERINFO | FCVAR_NOT_CONNECTED, 
+	"Sets the interpolation amount (bounded on low side by server interp ratio settings).", true, 0.0f, true, 0.5f );
 ConVar_ServerBounded *cl_interp = &cl_interp_var;
 
 float GetClientInterpAmount()

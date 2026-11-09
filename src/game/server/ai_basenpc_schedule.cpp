@@ -4,8 +4,6 @@
 // Purpose: Functions and data pertaining to the NPCs' AI scheduling system.
 //			Implements default NPC tasks and schedules.
 
-import std;
-import ks.vstdlib;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -20,7 +18,6 @@ import ks.vstdlib;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -59,7 +56,6 @@ import ks.vstdlib;
 #include "IEffects.h"
 #include "ndebugoverlay.h"
 #include "env_debughistory.h"
-#include "ai_behavior.h"
 #include "global_event_log.h"
 
 extern ConVar ai_task_pre_script;
@@ -594,9 +590,9 @@ static bool ShouldStopProcessingTasks( CAI_BaseNPC *pNPC, int taskTime, int time
 
 //-------------------------------------
 
+extern CFastTimer g_AIMaintainScheduleTimer;
 void CAI_BaseNPC::MaintainSchedule ( void )
 {
-	extern CFastTimer g_AIMaintainScheduleTimer;
 	CTimeScope timeScope(&g_AIMaintainScheduleTimer);
 
 	//---------------------------------
@@ -847,11 +843,6 @@ void CAI_BaseNPC::MaintainSchedule ( void )
 		// Decide if we should continue on this frame
 		if ( !bStopProcessing && ShouldStopProcessingTasks( this, Plat_MSTime() - taskTime, timeLimit ) )
 			bStopProcessing = true;
-	}
-
-	for ( i = 0; i < std::ssize( m_Behaviors ); i++ )
-	{
-		m_Behaviors[i]->MaintainChannelSchedules();
 	}
 
 	// UNDONE: We have to do this so that we have an animation set to blend to if RunTask changes the animation

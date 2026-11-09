@@ -19,57 +19,64 @@ import std;
 #include "imatchsystem.h"
 #include "iplayermanager.h"
 #include "iplayer.h"
-#include "iservermanager.h"
 #include "imatchvoice.h"
-#include "isearchmanager.h"
-#include "idatacenter.h"
-#include "idlcmanager.h"
 
 typedef void (*RankedMatchStartCallback)( KeyValues *pSettings, uint32 volatile *pResult );
 
-class IMatchFramework : public IAppSystem
+class IMatchFramework
 {
 public:
+	//--------------------------------------------------------
+	// App system protocol. Not an IAppSystem: CAppSystemGroup drives it by kind (see AppSystemRef).
+	//--------------------------------------------------------
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t Init();
+	void Shutdown();
+	const AppSystemInfo_t *GetDependencies() { return nullptr; }
+	void Reconnect( CreateInterfaceFn factory, const char *pInterfaceName ) { ReconnectInterface( factory, pInterfaceName ); }
+
 	// Run frame of the matchmaking framework
-	virtual void RunFrame() = 0;
+	void RunFrame();
 	
 
 	// Get matchmaking extensions
-	virtual IMatchExtensions * GetMatchExtensions() = 0;
+	IMatchExtensions * GetMatchExtensions();
 
 	// Get events container
-	virtual IMatchEventsSubscription * GetEventsSubscription() = 0;
+	IMatchEventsSubscription * GetEventsSubscription();
 
 	// Get the matchmaking title interface
-	virtual IMatchTitle * GetMatchTitle() = 0;
+	IMatchTitle * GetMatchTitle();
 
 	// Get the match session interface of the current match framework type
-	virtual IMatchSession * GetMatchSession() = 0;
+	IMatchSession * GetMatchSession();
 
 	// Get the network msg encode/decode factory
-	virtual IMatchNetworkMsgController * GetMatchNetworkMsgController() = 0;
+	IMatchNetworkMsgController * GetMatchNetworkMsgController();
 
 	// Get the match system
-	virtual IMatchSystem * GetMatchSystem() = 0;
+	IMatchSystem * GetMatchSystem();
 
 	// Send the key values back to the server
-	virtual void ApplySettings( KeyValues* keyValues ) = 0;
+	void ApplySettings( KeyValues* keyValues );
 
 	// Entry point to create session
-	virtual void CreateSession( KeyValues *pSettings ) = 0;
+	void CreateSession( KeyValues *pSettings );
 
 	// Entry point to match into a session
-	virtual void MatchSession( KeyValues *pSettings ) = 0;
+	void MatchSession( KeyValues *pSettings );
 
 	// Close the session
-	virtual void CloseSession() = 0;
+	void CloseSession();
 	
 	// Checks to see if the current game is being played online ( as opposed to locally against bots )
-	virtual bool IsOnlineGame( void ) = 0;
+	bool IsOnlineGame( void );
 
 	// Called by the client to notify matchmaking that it should update matchmaking properties based
 	// on player distribution among the teams.
-	virtual void UpdateTeamProperties( KeyValues *pTeamProperties ) = 0;
+	void UpdateTeamProperties( KeyValues *pTeamProperties );
 };
 
 inline constexpr const char *IMATCHFRAMEWORK_VERSION_STRING = "MATCHFRAMEWORK_001";
@@ -80,21 +87,21 @@ class IMatchSession
 {
 public:
 	// Get an internal pointer to session system-specific data
-	virtual KeyValues * GetSessionSystemData() = 0;
+	KeyValues * GetSessionSystemData();
 
 	// Get an internal pointer to session settings
-	virtual KeyValues * GetSessionSettings() = 0;
+	KeyValues * GetSessionSettings();
 
 	// Update session settings, only changing keys and values need
 	// to be passed and they will be updated
-	virtual void UpdateSessionSettings( KeyValues *pSettings ) = 0;
+	void UpdateSessionSettings( KeyValues *pSettings );
 
 	// Issue a session command
-	virtual void Command( KeyValues *pCommand ) = 0;
+	void Command( KeyValues *pCommand );
 
 	// Get the lobby or XSession ID 
-	virtual uint64 GetSessionID() = 0;
+	uint64 GetSessionID();
 
 	// Callback when team changes
-	virtual void UpdateTeamProperties( KeyValues *pTeamProperties ) = 0;
+	void UpdateTeamProperties( KeyValues *pTeamProperties );
 };

@@ -36,7 +36,6 @@ import std;
 #include "sv_main.h"
 #include "server.h"
 #include "MapReslistGenerator.h"
-#include "toolframework/itoolframework.h"
 #include "netconsole.h"
 #include "host_cmd.h"
 #include "cmd.h"
@@ -93,7 +92,7 @@ static bool ConsoleLogWantedByDefault()
 	return CommandLine()->FindParm( "-nocondebug" ) == 0;
 }
 
-void ConsoleLogFileCallback(IConVar *var, const char *pOldValue, float flOldValue )
+void ConsoleLogFileCallback(ConVar *var, const char *pOldValue, float flOldValue )
 {
 	ConVarRef ref( var->GetName() );
 	const char *logFile = ref.GetString();

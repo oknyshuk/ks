@@ -89,7 +89,6 @@ import ks.tier1;
 #include "lightcache.h"
 #include "ivideomode.h"
 #include "icolorcorrectiontools.h"
-#include "toolframework/itoolframework.h"
 #include "game/client/iclientrendertargets.h"
 #include "iachievementmgr.h"
 #include "profile.h"
@@ -97,7 +96,6 @@ import ks.tier1;
 #include "cl_demo.h"
 #include "MapReslistGenerator.h"
 #include "iclientalphaproperty.h"
-#include "enginebugreporter.h"
 #include "world.h"
 #include "staticpropmgr.h"
 #include "host_cmd.h"
@@ -106,6 +104,7 @@ import ks.tier1;
 #include "paint.h"
 #include "igame.h"
 #include "sys_mainwind.h"
+#include "game_entry.h"
 
 
 //-----------------------------------------------------------------------------
@@ -125,7 +124,6 @@ extern ConVar host_timescale;
 //-----------------------------------------------------------------------------
 // globals
 //-----------------------------------------------------------------------------
-CSysModule		*g_ClientDLLModule = nullptr; // also used by materialproxyfactory.cpp
 bool g_bClientGameDLLGreaterThanV13;
 
 void AddIntersectingLeafSurfaces( mleaf_t *pLeaf, GetIntersectingSurfaces_Struct *pStruct )
@@ -359,7 +357,7 @@ public:
 	Vector	GetLightForPoint(const Vector &pos, bool bClamp);
 	Vector	GetLightForPointFast(const Vector &pos, bool bClamp);
 	const char *ParseFile( const char *data, char *token, int maxlen );
-	virtual bool CopyLocalFile( const char *source, const char *destination );
+	bool CopyLocalFile( const char *source, const char *destination );
 	void GetScreenSize( int& w, int &h );
 	void ServerCmd( const char *szCmdString, bool bReliable );
 	void ClientCmd( const char *szCmdString );
@@ -372,8 +370,8 @@ public:
 	bool Con_IsVisible( void );
 	int GetLocalPlayer( void );
 	float GetLastTimeStamp( void );
-	virtual int GetLastAcknowledgedCommand( void );
-	virtual int GetServerTick( void );
+	int GetLastAcknowledgedCommand( void );
+	int GetServerTick( void );
 	const model_t *LoadModel( const char *pName, bool bProp );
 	void UnloadModel( const model_t *model, bool bProp );
 	CSentence *GetSentence( CAudioSource *pAudioSource );
@@ -394,8 +392,8 @@ public:
 	bool IsConnected( void );
 	bool IsDrawingLoadingImage( void );
 	void HideLoadingPlaque( void );
-	void Con_NPrintf( int pos, const char *fmt, ... );
-	void Con_NXPrintf( const struct con_nprint_s *info, const char *fmt, ... );
+	void Con_NPrintfV( int pos, const char *fmt, std::va_list argptr );
+	void Con_NXPrintfV( const struct con_nprint_s *info, const char *fmt, std::va_list argptr );
 	IMaterial *TraceLineMaterialAndLighting( const Vector &start, const Vector &end, 
 		                                     Vector &diffuseLightColor, Vector &baseColor );
 	int		IsBoxVisible( const Vector& mins, const Vector& maxs );
@@ -415,63 +413,62 @@ public:
 
 	// Returns the number of leaves in the level
 	int		LevelLeafCount() const;
-	virtual ISpatialQuery* GetBSPTreeQuery();
+	ISpatialQuery* GetBSPTreeQuery();
 
 	// Convert texlight to gamma...
-	virtual void LinearToGamma( float* linear, float* gamma );
+	void LinearToGamma( float* linear, float* gamma );
 
 	// Get the lightstyle value
-	virtual float LightStyleValue( int style );
-	virtual void DrawPortals();
+	float LightStyleValue( int style );
+	void DrawPortals();
 
 	// Computes light due to dynamic lighting at a point
 	// If the normal isn't specified, then it'll return the maximum lighting
-	virtual void ComputeDynamicLighting( Vector const& pt, Vector const* pNormal, Vector& color );
+	void ComputeDynamicLighting( Vector const& pt, Vector const* pNormal, Vector& color );
 
 	// Computes light due to dynamic lighting at a point
 	// If the normal isn't specified, then it'll return the maximum lighting
 	// If pBoxColors is specified (it's an array of 6), then it'll copy the light contribution at each box side.
-	virtual void ComputeLighting( const Vector& pt, const Vector* pNormal, bool bClamp, Vector& color, Vector *pBoxColors );
+	void ComputeLighting( const Vector& pt, const Vector* pNormal, bool bClamp, Vector& color, Vector *pBoxColors );
 
 	// Returns the color of the ambient light
-	virtual void GetAmbientLightColor( Vector& color );
+	void GetAmbientLightColor( Vector& color );
 
 	// Returns the dx support level
-	virtual int	GetDXSupportLevel();
+	int	GetDXSupportLevel();
 	
-	virtual bool SupportsHDR();
-	virtual void Mat_Stub( IMaterialSystem *pMatSys );
+	bool SupportsHDR();
 
 	// menu display
-	virtual void GetChapterName( char *pchBuff, int iMaxLength );
-	virtual char const *GetLevelName( void );
-	virtual char const *GetLevelNameShort( void );
-	virtual char const *GetMapGroupName( void );	
-	virtual bool IsLevelMainMenuBackground( void );
-	virtual void GetMainMenuBackgroundName( char *dest, int destlen );
+	void GetChapterName( char *pchBuff, int iMaxLength );
+	char const *GetLevelName( void );
+	char const *GetLevelNameShort( void );
+	char const *GetMapGroupName( void );	
+	bool IsLevelMainMenuBackground( void );
+	void GetMainMenuBackgroundName( char *dest, int destlen );
 
 	// Occlusion system control
-	virtual void SetOcclusionParameters( const OcclusionParams_t &params );
+	void SetOcclusionParameters( const OcclusionParams_t &params );
 
 	//-----------------------------------------------------------------------------
 	// Purpose: Takes a trackerID and returns which player slot that user is in
 	//			returns 0 if no player found with that ID
 	//-----------------------------------------------------------------------------
-	virtual int	GetPlayerForUserID(int userID);
-	virtual struct IVoiceTweak_s *GetVoiceTweakAPI( void );
-	virtual void SetVoiceCasterID( uint32 casterID );
-	virtual void EngineStats_BeginFrame( void );
-	virtual void EngineStats_EndFrame( void );
-	virtual void FireEvents();
-	virtual void ClearEvents();
-	virtual void CheckPoint( const char *pName );
-	virtual int GetLeavesArea( unsigned short *pLeaves, int nLeaves );
-	virtual bool DoesBoxTouchAreaFrustum( const Vector &mins, const Vector &maxs, int iArea );
-	virtual int GetFrustumList( Frustum_t **pList, int listMax );
-	virtual bool ShouldUseAreaFrustum( int area );
+	int	GetPlayerForUserID(int userID);
+	struct IVoiceTweak_s *GetVoiceTweakAPI( void );
+	void SetVoiceCasterID( uint32 casterID );
+	void EngineStats_BeginFrame( void );
+	void EngineStats_EndFrame( void );
+	void FireEvents();
+	void ClearEvents();
+	void CheckPoint( const char *pName );
+	int GetLeavesArea( unsigned short *pLeaves, int nLeaves );
+	bool DoesBoxTouchAreaFrustum( const Vector &mins, const Vector &maxs, int iArea );
+	int GetFrustumList( Frustum_t **pList, int listMax );
+	bool ShouldUseAreaFrustum( int area );
 
 	// Sets the hearing origin
-	virtual void SetAudioState( const AudioState_t &audioState );
+	void SetAudioState( const AudioState_t &audioState );
 
 	//-----------------------------------------------------------------------------
 	//
@@ -479,220 +476,223 @@ public:
 	//
 	//-----------------------------------------------------------------------------
 
-	virtual int SentenceGroupPick( int groupIndex, char *name, int nameLen );
-	virtual int SentenceGroupPickSequential( int groupIndex, char *name, int nameLen, int sentenceIndex, int reset );
-	virtual int SentenceIndexFromName( const char *pSentenceName );
-	virtual const char *SentenceNameFromIndex( int sentenceIndex );
-	virtual int SentenceGroupIndexFromName( const char *pGroupName );
-	virtual const char *SentenceGroupNameFromIndex( int groupIndex );
-	virtual float SentenceLength( int sentenceIndex );
-	virtual void DebugDrawPhysCollide( const CPhysCollide *pCollide, IMaterial *pMaterial, const matrix3x4_t& transform, const color32 &color );
+	int SentenceGroupPick( int groupIndex, char *name, int nameLen );
+	int SentenceGroupPickSequential( int groupIndex, char *name, int nameLen, int sentenceIndex, int reset );
+	int SentenceIndexFromName( const char *pSentenceName );
+	const char *SentenceNameFromIndex( int sentenceIndex );
+	int SentenceGroupIndexFromName( const char *pGroupName );
+	const char *SentenceGroupNameFromIndex( int groupIndex );
+	float SentenceLength( int sentenceIndex );
+	void DebugDrawPhysCollide( const CPhysCollide *pCollide, IMaterial *pMaterial, const matrix3x4_t& transform, const color32 &color );
 
 	// Activates/deactivates an occluder...
-	virtual void ActivateOccluder( int nOccluderIndex, bool bActive );
-	virtual bool IsOccluded( int occlusionViewId, const Vector &vecAbsMins, const Vector &vecAbsMaxs );
-	virtual int	GetOcclusionViewId() const;
-	virtual INetChannelInfo *GetNetChannelInfo( void );
-	virtual bool IsPlayingDemo( void );
-	virtual bool IsRecordingDemo( void );
-	virtual bool IsPlayingTimeDemo( void );
-	virtual int  GetDemoRecordingTick( void );
-	virtual int  GetDemoPlaybackTick( void );
-	virtual int  GetDemoPlaybackStartTick( void );
-	virtual float GetDemoPlaybackTimeScale( void );
-	virtual int  GetDemoPlaybackTotalTicks( void );
-	virtual CDemoPlaybackParameters_t const * GetDemoPlaybackParameters() override;
-	virtual bool IsDemoSkipping( void ) override;
-	virtual int GetConnectionDataProtocol() const override;
-	virtual bool EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt ) override;
-	virtual void SetDemoImportantEventData( const KeyValues *pData ) override;
-	virtual bool IsPaused( void );
-	virtual float GetTimescale( void ) const;
-	virtual bool IsTakingScreenshot( void );
-	virtual void WriteScreenshot( const char *pFilename );
-	virtual bool IsHLTV( void );
-	virtual bool IsReplay( void );
-	virtual void GetUILanguage( char *dest, int destlen );
+	void ActivateOccluder( int nOccluderIndex, bool bActive );
+	bool IsOccluded( int occlusionViewId, const Vector &vecAbsMins, const Vector &vecAbsMaxs );
+	int	GetOcclusionViewId() const;
+	INetChannelInfo *GetNetChannelInfo( void );
+	bool IsPlayingDemo( void );
+	bool IsRecordingDemo( void );
+	bool IsPlayingTimeDemo( void );
+	int  GetDemoRecordingTick( void );
+	int  GetDemoPlaybackTick( void );
+	int  GetDemoPlaybackStartTick( void );
+	float GetDemoPlaybackTimeScale( void );
+	int  GetDemoPlaybackTotalTicks( void );
+	CDemoPlaybackParameters_t const * GetDemoPlaybackParameters();
+	bool IsDemoSkipping( void );
+	int GetConnectionDataProtocol() const;
+	bool EngineGotvSyncPacket( const ks::net::CEngineGotvSyncPacket *pPkt );
+	void SetDemoImportantEventData( const KeyValues *pData );
+	bool IsPaused( void );
+	float GetTimescale( void ) const;
+	bool IsTakingScreenshot( void );
+	void WriteScreenshot( const char *pFilename );
+	bool IsHLTV( void );
+	bool IsReplay( void );
+	void GetUILanguage( char *dest, int destlen );
 
 	// Can skybox be seen from a particular point?
-	virtual SkyboxVisibility_t IsSkyboxVisibleFromPoint( const Vector &vecPoint );
+	SkyboxVisibility_t IsSkyboxVisibleFromPoint( const Vector &vecPoint );
 
-	virtual const char* GetMapEntitiesString();
-	virtual bool		IsInEditMode( void );
-	virtual float		GetScreenAspectRatio( int viewportWidth, int viewportHeight );
+	const char* GetMapEntitiesString();
+	bool		IsInEditMode( void );
+	float		GetScreenAspectRatio( int viewportWidth, int viewportHeight );
 
-	virtual unsigned int		GetEngineBuildNumber() { return GetHostVersion(); }
-	virtual const char *		GetProductVersionString() { return Sys_GetVersionString(); }
-	virtual void				GrabPreColorCorrectedFrame( int x, int y, int width, int height );
-	virtual bool				IsHammerRunning( ) const;
+	unsigned int		GetEngineBuildNumber() { return GetHostVersion(); }
+	const char *		GetProductVersionString() { return Sys_GetVersionString(); }
+	void				GrabPreColorCorrectedFrame( int x, int y, int width, int height );
+	bool				IsHammerRunning( ) const;
 
 	// Stuffs the cmd into the buffer & executes it immediately (vs ClientCmd() which executes it next frame)
-	virtual void				ExecuteClientCmd( const char *szCmdString );
+	void				ExecuteClientCmd( const char *szCmdString );
 
-	virtual bool MapHasHDRLighting( void) ;
-	virtual bool MapHasLightMapAlphaData(void);
-	virtual int GetAppID();
+	bool MapHasHDRLighting( void) ;
+	bool MapHasLightMapAlphaData(void);
+	int GetAppID();
 
-	virtual void				SetOverlayBindProxy( int iOverlayID, void *pBindProxy );
+	void				SetOverlayBindProxy( int iOverlayID, void *pBindProxy );
 
-	virtual bool				CopyFrameBufferToMaterial( const char *pMaterialName );
+	bool				CopyFrameBufferToMaterial( const char *pMaterialName );
 
 	// Matchmaking
-	virtual void				ReadConfiguration( const int iController, const bool readDefault );
+	void				ReadConfiguration( const int iController, const bool readDefault );
 
-	virtual void SetAchievementMgr( IAchievementMgr *pAchievementMgr );
-	virtual IAchievementMgr *GetAchievementMgr();
+	void SetAchievementMgr( IAchievementMgr *pAchievementMgr );
+	IAchievementMgr *GetAchievementMgr();
 
-	virtual bool				MapLoadFailed( void );
-	virtual void				SetMapLoadFailed( bool bState );
+	bool				MapLoadFailed( void );
+	void				SetMapLoadFailed( bool bState );
 
-	virtual bool				IsLowViolence();
+	bool				IsLowViolence();
 
-	virtual void				StartXboxExitingProcess();
+	void				StartXboxExitingProcess();
 
 
 
 	
-	virtual uint				OnStorageDeviceAttached( int iController );
-	virtual void				OnStorageDeviceDetached( int iController );
+	uint				OnStorageDeviceAttached( int iController );
+	void				OnStorageDeviceDetached( int iController );
 
-	virtual void				ResetDemoInterpolation( void );
+	void				ResetDemoInterpolation( void );
 
 
 // For non-split screen games this will always be zero
-	virtual int				GetActiveSplitScreenPlayerSlot();
-	virtual int				SetActiveSplitScreenPlayerSlot( int slot );
-	virtual bool			SetLocalPlayerIsResolvable( char const *pchContext, int nLine, bool bResolvable );
-	virtual bool			IsLocalPlayerResolvable();
+	int				GetActiveSplitScreenPlayerSlot();
+	int				SetActiveSplitScreenPlayerSlot( int slot );
+	bool			SetLocalPlayerIsResolvable( char const *pchContext, int nLine, bool bResolvable );
+	bool			IsLocalPlayerResolvable();
 
-	virtual int				GetSplitScreenPlayer( int nSlot );
-	virtual bool			IsSplitScreenActive();
-	virtual bool			IsValidSplitScreenSlot( int nSlot );
-	virtual int				FirstValidSplitScreenSlot(); // -1 == invalid
-	virtual int				NextValidSplitScreenSlot( int nPreviousSlot ); // -1 == invalid
+	int				GetSplitScreenPlayer( int nSlot );
+	bool			IsSplitScreenActive();
+	bool			IsValidSplitScreenSlot( int nSlot );
+	int				FirstValidSplitScreenSlot(); // -1 == invalid
+	int				NextValidSplitScreenSlot( int nPreviousSlot ); // -1 == invalid
 
-	virtual ISPSharedMemory *	GetSinglePlayerSharedMemorySpace( const char *handle, int ent_num = MAX_EDICTS );
+	ISPSharedMemory *	GetSinglePlayerSharedMemorySpace( const char *handle, int ent_num = MAX_EDICTS );
 
 	// Computes an ambient cube that includes ALL dynamic lights
-	virtual void ComputeLightingCube( const Vector& pt, bool bClamp, Vector *pBoxColors );
+	void ComputeLightingCube( const Vector& pt, bool bClamp, Vector *pBoxColors );
 
 	//All callbacks have to be registered before demo recording begins. TODO: Macro'ize a way to do it at startup
-	virtual void RegisterDemoCustomDataCallback( string_t szCallbackSaveID, pfnDemoCustomDataCallback pCallback );
-	virtual void RecordDemoCustomData( pfnDemoCustomDataCallback pCallback, const void *pData, std::size_t iDataLength );
+	void RegisterDemoCustomDataCallback( string_t szCallbackSaveID, pfnDemoCustomDataCallback pCallback );
+	void RecordDemoCustomData( pfnDemoCustomDataCallback pCallback, const void *pData, std::size_t iDataLength );
 
-	virtual void SetLeafFlag( int nLeafIndex, int nFlagBits );
+	void SetLeafFlag( int nLeafIndex, int nFlagBits );
 
 	// you must call this once done modifying flags. Not super fast.
-	virtual void RecalculateBSPLeafFlags( void );
+	void RecalculateBSPLeafFlags( void );
 
-	virtual bool DSPGetCurrentDASRoomNew(void);
-	virtual bool DSPGetCurrentDASRoomChanged(void);
-	virtual bool DSPGetCurrentDASRoomSkyAbove(void);
-	virtual float DSPGetCurrentDASRoomSkyPercent(void);
-	virtual void SetMixGroupOfCurrentMixer( const char *szgroupname, const char *szparam, float val, int setMixerType );
-	virtual int GetMixLayerIndex( const char *szmixlayername );
-	virtual void SetMixLayerLevel(int index, float level );
-	virtual int GetMixGroupIndex( const char *pMixGroupName );
-	virtual void SetMixLayerTriggerFactor( int nMixLayerIndex, int nMixGroupIndex, float flFactor );
-	virtual void SetMixLayerTriggerFactor( const char *pMixLayerIndex, const char *pMixGroupIndex, float flFactor );
+	bool DSPGetCurrentDASRoomNew(void);
+	bool DSPGetCurrentDASRoomChanged(void);
+	bool DSPGetCurrentDASRoomSkyAbove(void);
+	float DSPGetCurrentDASRoomSkyPercent(void);
+	void SetMixGroupOfCurrentMixer( const char *szgroupname, const char *szparam, float val, int setMixerType );
+	int GetMixLayerIndex( const char *szmixlayername );
+	void SetMixLayerLevel(int index, float level );
+	int GetMixGroupIndex( const char *pMixGroupName );
+	void SetMixLayerTriggerFactor( int nMixLayerIndex, int nMixGroupIndex, float flFactor );
+	void SetMixLayerTriggerFactor( const char *pMixLayerIndex, const char *pMixGroupIndex, float flFactor );
 
 
-	virtual bool IsCreatingReslist();
+	bool IsCreatingReslist();
 
-	virtual void SetTimescale( float flTimescale );
+	void SetTimescale( float flTimescale );
 
-	virtual void SetGamestatsData( CGamestatsData *pGamestatsData );
-	virtual CGamestatsData *GetGamestatsData();
+	void SetGamestatsData( void *pGamestatsData );
+	void *GetGamestatsData();
 
-	virtual	const char *Key_LookupBindingEx( const char *pBinding, int iUserId = -1, int iStartCount = 0, BindingLookupOption_t nFlags = BINDINGLOOKUP_ALL );
-	virtual int	Key_CodeForBinding( const char *pBinding, int iUserId = -1, int iStartCount = 0, BindingLookupOption_t nFlags = BINDINGLOOKUP_ALL );
+	const char *Key_LookupBindingEx( const char *pBinding, int iUserId = -1, int iStartCount = 0, BindingLookupOption_t nFlags = BINDINGLOOKUP_ALL );
+	int	Key_CodeForBinding( const char *pBinding, int iUserId = -1, int iStartCount = 0, BindingLookupOption_t nFlags = BINDINGLOOKUP_ALL );
 
-	virtual void UpdateDAndELights( void );
+	void UpdateDAndELights( void );
 
 	// Methods to get bug count for internal dev work stat tracking.
 	// Will get the bug count and clear it every map transition
-	virtual int			GetBugSubmissionCount() const;
-	virtual void		ClearBugSubmissionCount();
+	int			GetBugSubmissionCount() const;
+	void		ClearBugSubmissionCount();
 
-	virtual bool	DoesLevelContainWater() const;
-	virtual float	GetServerSimulationFrameTime() const;
-	virtual void SolidMoved( IClientEntity *pSolidEnt, ICollideable *pSolidCollide, const Vector* pPrevAbsOrigin, bool accurateBboxTriggerChecks );
-	virtual void TriggerMoved( IClientEntity *pTriggerEnt, bool accurateBboxTriggerChecks );
-	virtual void ComputeLeavesConnected( const Vector &vecOrigin, int nCount, const int *pLeaves, bool *pIsConnected );
+	bool	DoesLevelContainWater() const;
+	float	GetServerSimulationFrameTime() const;
+	void SolidMoved( IClientEntity *pSolidEnt, ICollideable *pSolidCollide, const Vector* pPrevAbsOrigin, bool accurateBboxTriggerChecks );
+	void TriggerMoved( IClientEntity *pTriggerEnt, bool accurateBboxTriggerChecks );
+	void ComputeLeavesConnected( const Vector &vecOrigin, int nCount, const int *pLeaves, bool *pIsConnected );
 
-	virtual void	SetBlurFade( float scale );
-	virtual bool	IsTransitioningToLoad();
-	virtual void	SearchPathsChangedAfterInstall();
-	virtual void ConfigureSystemLevel( int nCPULevel, int nGPULevel );
-	virtual void SetConnectionPassword( char const *pchCurrentPW );
+	void	SetBlurFade( float scale );
+	bool	IsTransitioningToLoad();
+	void	SearchPathsChangedAfterInstall();
+	void ConfigureSystemLevel( int nCPULevel, int nGPULevel );
+	void SetConnectionPassword( char const *pchCurrentPW );
 
-	virtual void ServerCmdKeyValues( KeyValues *pKeyValues );
-	virtual void SendMessageToServer( INetMessage *pMessage, bool bForceReliable, bool bVoice ) override;
+	void ServerCmdKeyValues( KeyValues *pKeyValues );
+	void SendMessageToServer( INetMessage *pMessage, bool bForceReliable, bool bVoice );
 
 	// global sound pitch scaling
-	virtual void SetPitchScale( float flPitchScale );
-	virtual float GetPitchScale( void );
+	void SetPitchScale( float flPitchScale );
+	float GetPitchScale( void );
 
 	// Load/unload the SFM - used by Replay
-	virtual bool LoadFilmmaker();
-	virtual void UnloadFilmmaker();
+	bool LoadFilmmaker();
+	void UnloadFilmmaker();
 
 	//paint stuff
-	virtual bool SpherePaintSurface( const model_t *pModel, const Vector& vPosition, BYTE color, float flSphereRadius, float flPaintCoatPercent );
-	virtual bool HasPaintmap();
-	virtual void EnablePaintmapRender();
-	virtual void SphereTracePaintSurface( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, std::vector< BYTE >& surfColors );
-	virtual void RemoveAllPaint();
-	virtual void PaintAllSurfaces( BYTE color );
-	virtual void RemovePaint( const model_t *pModel );
+	bool SpherePaintSurface( const model_t *pModel, const Vector& vPosition, BYTE color, float flSphereRadius, float flPaintCoatPercent );
+	bool HasPaintmap();
+	void EnablePaintmapRender();
+	void SphereTracePaintSurface( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, std::vector< BYTE >& surfColors );
+	void RemoveAllPaint();
+	void PaintAllSurfaces( BYTE color );
+	void RemovePaint( const model_t *pModel );
 
-	virtual bool IsActiveApp();
+	bool IsActiveApp();
 
 	// is this client running inside the same process as an active server?
-	virtual bool IsClientLocalToActiveServer();
+	bool IsClientLocalToActiveServer();
 	
-	virtual void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta );
+	void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta );
 
 	// Callback for LevelInit to tick the progress bar during time consuming operations
-	virtual void TickProgressBar();
+	void TickProgressBar();
 	// Returns the requested input context
-	virtual InputContextHandle_t GetInputContext( EngineInputContextId_t id );
+	InputContextHandle_t GetInputContext( EngineInputContextId_t id );
 
-	virtual void GetStartupImage( char *pOutBuffer, int nOutBufferSize );
+	void GetStartupImage( char *pOutBuffer, int nOutBufferSize );
 
-	virtual bool IsUsingLocalNetworkBackdoor();
+	bool IsUsingLocalNetworkBackdoor();
 
 
 	// Request 'generic' memory stats (returns a list of N named values; caller should assume this list will change over time)
-	virtual int GetGenericMemoryStats( GenericMemoryStat_t **ppMemoryStats );
+	int GetGenericMemoryStats( GenericMemoryStat_t **ppMemoryStats );
 
 	// On exit from a map, this becomes true once all map-related assets are flushed from memory:
-	virtual bool GameHasShutdownAndFlushedMemory();
+	bool GameHasShutdownAndFlushedMemory();
 
-	virtual void FinishContainerWrites( int iController );
+	void FinishContainerWrites( int iController );
 
 
 	const char *GetModDirectory( void );
 
-	virtual void AudioLanguageChanged();
+	void AudioLanguageChanged();
 
-	virtual void StartLoadingScreenForCommand( const char* command );
+	void StartLoadingScreenForCommand( const char* command );
 	
-	virtual void StartLoadingScreenForKeyValues( KeyValues* keyValues );
+	void StartLoadingScreenForKeyValues( KeyValues* keyValues );
 
-	virtual bool SOSSetOpvarFloat( const char *pOpVarName, float flValue );
-	virtual bool SOSGetOpvarFloat( const char *pOpVarName, float &flValue );
+	bool SOSSetOpvarFloat( const char *pOpVarName, float flValue );
+	bool SOSGetOpvarFloat( const char *pOpVarName, float &flValue );
 
 
 
-	virtual int GetClientVersion() const;
+	int GetClientVersion() const;
 
-	virtual float GetSafeZoneXMin( void ) const;
+	float GetSafeZoneXMin( void ) const;
 
-	virtual bool IsVoiceRecording() const override;
-	virtual void ForceVoiceRecordOn() const override;
-	virtual const char* AliasToCommandString( const char* szAliasName ) override;
+	bool IsVoiceRecording() const;
+	void ForceVoiceRecordOn() const;
+	const char* AliasToCommandString( const char* szAliasName );
 };
+
+#include "facade/ivengineclient.inl"
+
 
 
 //-----------------------------------------------------------------------------
@@ -1108,24 +1108,18 @@ void CEngineClient::HideLoadingPlaque( void )
 	SCR_EndLoadingPlaque();
 }
 
-void CEngineClient::Con_NPrintf( int pos, const char *fmt, ... )
+void CEngineClient::Con_NPrintfV( int pos, const char *fmt, std::va_list argptr )
 {
-	std::va_list		argptr;
 	char		text[4096];
-	__builtin_va_start (argptr, fmt);
 	V_vsnprintf(text, sizeof( text ), fmt, argptr);
-	__builtin_va_end (argptr);
 
 	::Con_NPrintf( pos, "%s", text );
 }
 
-void CEngineClient::Con_NXPrintf( const struct con_nprint_s *info, const char *fmt, ... )
+void CEngineClient::Con_NXPrintfV( const struct con_nprint_s *info, const char *fmt, std::va_list argptr )
 {
-	std::va_list		argptr;
 	char		text[4096];
-	__builtin_va_start (argptr, fmt);
 	V_vsnprintf(text, sizeof( text ), fmt, argptr);
-	__builtin_va_end (argptr);
 
 	::Con_NXPrintf( info, "%s", text );
 }
@@ -1304,15 +1298,6 @@ bool CEngineClient::SupportsHDR()
 	// deprecated.
 //	Assert( 0 );
 	return false;
-}
-
-void CEngineClient::Mat_Stub( IMaterialSystem *pMatSys )
-{
-	materials = pMatSys;
-	
-	// Pass the call to the model renderer.
-	if ( g_pStudioRender )
-		g_pStudioRender->Mat_Stub( pMatSys );
 }
 
 void CEngineClient::GetChapterName( char *pchBuff, int iMaxLength )
@@ -1947,13 +1932,13 @@ void CEngineClient::SetTimescale( float flTimescale )
 	sv.SetTimescale( flTimescale );
 }
 
-extern CGamestatsData *g_pGamestatsData;
-void CEngineClient::SetGamestatsData( CGamestatsData *pGamestatsData )
+extern void *g_pGamestatsData;
+void CEngineClient::SetGamestatsData( void *pGamestatsData )
 {
 	g_pGamestatsData = pGamestatsData;
 }
 
-CGamestatsData *CEngineClient::GetGamestatsData()
+void *CEngineClient::GetGamestatsData()
 {
 	return g_pGamestatsData;
 }
@@ -2044,24 +2029,13 @@ void CEngineClient::UpdateDAndELights( void )
 	CL_UpdateDAndELights( false );
 }
 
-extern IEngineBugReporter *bugreporter;
-
 int CEngineClient::GetBugSubmissionCount( void ) const
 {
-	if ( bugreporter )
-	{
-		return bugreporter->GetBugSubmissionCount();
-	}
-	
 	return 0;
 }
 
 void CEngineClient::ClearBugSubmissionCount( void )
 {
-	if ( bugreporter )
-	{
-		bugreporter->ClearBugSubmissionCount();
-	}
 }
 
 bool CEngineClient::DoesLevelContainWater()	const
@@ -2142,12 +2116,11 @@ float CEngineClient::GetPitchScale( void )
 }
 bool CEngineClient::LoadFilmmaker()
 {
-	return toolframework->LoadFilmmaker();
+	return false;
 }
 
 void CEngineClient::UnloadFilmmaker()
 {
-	toolframework->UnloadFilmmaker();
 }
 
 bool CEngineClient::SpherePaintSurface( const model_t *pModel, const Vector& vPosition, BYTE colorIndex, float flSphereRadius, float flPaintCoatPercent )
@@ -2373,39 +2346,22 @@ CreateInterfaceFn ClientDLL_GetFactory( void )
 //-----------------------------------------------------------------------------
 bool ClientDLL_Load()
 {
-	contract_assert( !g_ClientDLLModule );
-
-	g_ClientDLLModule = g_pFileSystem->LoadModule( "client.so", "GAMEBIN", false );
-	if ( g_ClientDLLModule )
+	g_ClientFactory = ClientGameFactory();
+	if ( g_ClientFactory )
 	{
-		g_ClientFactory = Sys_GetFactory( g_ClientDLLModule );
-		if ( g_ClientFactory )
+		g_ClientDLL = (IBaseClientDLL *)g_ClientFactory( CLIENT_DLL_INTERFACE_VERSION, nullptr );
+		// this is to ensure the old format of the string table is used for clients version 13 and older.
+		// when the client version gets revved, there will need to be an else that sets this bool to true
+		// TERROR: g_bClientGameDLLGreaterThanV13 is true, so we get better stringtables
+		g_bClientGameDLLGreaterThanV13 = true;
+		if ( !g_ClientDLL )
 		{
-			g_ClientDLL = (IBaseClientDLL *)g_ClientFactory( CLIENT_DLL_INTERFACE_VERSION, nullptr );
-			// this is to ensure the old format of the string table is used for clients version 13 and older.
-			// when the client version gets revved, there will need to be an else that sets this bool to true
-			// TERROR: g_bClientGameDLLGreaterThanV13 is true, so we get better stringtables
-			g_bClientGameDLLGreaterThanV13 = true;
-			if ( !g_ClientDLL )
-			{
-				{
-					Sys_Error( "Could not get client.dll interface from library client" );
-				}
-			}
-		}
-		else
-		{
-			{
-				Sys_Error( "Could not find factory interface in library client" );
-			}
+			Sys_Error( "Could not get client interface from the game client" );
 		}
 	}
 	else
-	{	
-		// library failed to load
-		{
-			Sys_Error( "Could not load library client" );
-		}
+	{
+		Sys_Error( "No game client in this executable" );
 	}
 
 	// Load the client render targets interface from the client .dll
@@ -2498,8 +2454,6 @@ void ClientDLL_Init( void )
 			{
 				Sys_Error( "Could not get client alpha property mgr interface from library client" );
 			}
-
-			toolframework->ClientInit( g_ClientFactory );
 		}
 		 		
 		if ( g_pMaterialSystemHardwareConfig )
@@ -2561,8 +2515,6 @@ void ClientDLL_Init( void )
 //-----------------------------------------------------------------------------
 void ClientDLL_Shutdown( void )
 {
-	toolframework->ClientShutdown();
-
 	ClientDLL_ShutdownRecvTableMgr();
 
 	{
@@ -2595,10 +2547,8 @@ void ClientDLL_Unload()
 	// doesn't know about it.
 	ClientDLL_Disconnect();
 
-	FileSystem_UnloadModule( g_ClientDLLModule );
-
 	g_ClientDLL = nullptr;
-	g_ClientDLLModule = nullptr;
+	g_ClientFactory = nullptr;
 	g_pClientRenderTargets = nullptr;
 
 }

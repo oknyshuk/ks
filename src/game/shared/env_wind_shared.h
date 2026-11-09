@@ -4,11 +4,9 @@
 
 // Purpose: Implements visual effects entities: sprites, beams, bubbles, etc.
 
-import ks.vstdlib;
 #include "reflect_annotations.h"
 #include "networkvar.h"
 
-import std;
 
 //-----------------------------------------------------------------------------
 // Forward declarations

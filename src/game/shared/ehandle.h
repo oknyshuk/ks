@@ -3,25 +3,34 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #if defined( _DEBUG ) && defined( GAME_DLL )
-import std;
-import ks.core;
 #endif
 
 #include "const.h"
+#include "entity_cast.h"
 #include "basehandle.h"
 #include "entitylist_base.h"
 
-class IHandleEntity;
 
 
 // -------------------------------------------------------------------------------------------------- //
 // Game-code CBaseHandle implementation.
 // -------------------------------------------------------------------------------------------------- //
 
-inline IHandleEntity* CBaseHandle::Get() const
+extern CBaseEntityList *g_pEntityList;
+
+inline IHandleEntity* EntityFromHandle( const CBaseHandle &handle )
 {
-	extern CBaseEntityList *g_pEntityList;
-	return g_pEntityList->LookupEntity( *this );
+	return g_pEntityList->LookupEntity( handle );
+}
+
+inline bool operator ==( const CBaseHandle &handle, const IHandleEntity *pEnt )
+{
+	return EntityFromHandle( handle ) == pEnt;
+}
+
+inline bool operator !=( const CBaseHandle &handle, const IHandleEntity *pEnt )
+{
+	return EntityFromHandle( handle ) != pEnt;
 }
 
 
@@ -115,7 +124,7 @@ inline CHandle<T> CHandle<T>::UnsafeFromIndex( int index )
 template<class T>
 inline T* CHandle<T>::Get() const
 {
-	return (T*)CBaseHandle::Get();
+	return (T*)EntityFromHandle( *this );
 }
 
 

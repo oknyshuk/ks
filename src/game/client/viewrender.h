@@ -2,13 +2,11 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.vstdlib;
 #include "shareddefs.h"
 #include "tier2/tier2.h"
 #include "iviewrender.h"
 #include "view_shared.h"
 
-import std;
 #include "cdll_client_int.h"
 #include "networkvar.h"
 #include "clientleafsystem.h"
@@ -16,7 +14,6 @@ import std;
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class ConVar;
 class CClientRenderablesList;
 class IClientVehicle;
 class C_PointCamera;
@@ -26,7 +23,6 @@ class CClientViewSetup;
 class CViewRender;
 struct ClientWorldListInfo_t;
 class C_BaseEntity;
-class CJob;
 
 
 //-----------------------------------------------------------------------------
@@ -159,12 +155,13 @@ struct WaterRenderInfo_t
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-class CBase3dView : public CRefCounted<>,
+class CBase3dView : public CRefCounted<CBase3dView>,
 					protected CViewSetup
 {
 	DECLARE_CLASS_NOBASE( CBase3dView );
 public:
 	explicit CBase3dView( CViewRender *pMainView );
+	virtual ~CBase3dView() {}
 
 	VPlane *		GetFrustum();
 	virtual int		GetDrawFlags() { return 0; }
@@ -201,7 +198,7 @@ class CRendering3dView : public CBase3dView
 	DECLARE_CLASS( CRendering3dView, CBase3dView );
 public:
 	explicit CRendering3dView( CViewRender *pMainView );
-	virtual ~CRendering3dView() { ReleaseLists(); }
+	~CRendering3dView() { ReleaseLists(); }
 
 	void Setup( const CViewSetup &setup );
 
@@ -426,17 +423,19 @@ private:
 	void WaitForCurrentSequentialJobAndRunPending();
 	void InternalWaitForBuildWorldListJob( int buildViewID );
 
-	// Jobs that will run sequentially
-	class SequentialJobs : public CJob
+	// Jobs that will run sequentially. This is the work of a CJob that owns it (see Create).
+	class SequentialJobs
 	{
 	public:
 
-		explicit SequentialJobs( CJob* pJob = nullptr );
+		// Makes a job (the caller owns a reference) that runs the jobs added to it, in order
+		static CJob* Create( CJob* pJob = nullptr );
+		// pSeqJob has to come from Create
+		static void AddJob( CJob* pSeqJob, CJob* pJob );
+
 		~SequentialJobs();
 
-		void AddJob( CJob* pJob );
-
-		virtual JobStatus_t DoExecute();
+		JobStatus_t Run();
 
 	private:
 
@@ -462,9 +461,9 @@ private:
 	CConcurrentViewData		m_viewData[ MAX_CONCURRENT_BUILDVIEWS ];
 
 	// Sequential jobs currently being executed
-	SequentialJobs*			m_pCurrentSeqJobs;
+	CJob*					m_pCurrentSeqJobs;
 	// Pending sequential job - need to wait for the current one to be done before executing
-	SequentialJobs*			m_pPendingSeqJobs;
+	CJob*					m_pPendingSeqJobs;
 
 	// Keeps track of all jobs added to the global threadpool
 	// We can then wait for them in Purge in case a job has been added in the build pass

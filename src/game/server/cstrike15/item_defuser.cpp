@@ -3,8 +3,6 @@
 
 // Purpose: Defuser kit that drops from counter-strike CTS
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "edict.h"
 #include "eiface.h"
@@ -44,15 +42,15 @@ public:
 	CItemDefuser();
 	~CItemDefuser();
 
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 	void	DefuserTouch( CBaseEntity *pOther );
 	void	ActivateThink( void );
 	
 };
 
 LINK_ENTITY_TO_CLASS( item_defuser, CItemDefuser );
-LINK_ENTITY_TO_CLASS( item_cutters, CItemDefuser );
+LINK_ENTITY_TO_CLASS_ALIAS( item_cutters, CItemDefuser );
 PRECACHE_REGISTER(item_defuser);
 
 
@@ -76,11 +74,11 @@ CItemDefuser::~CItemDefuser()
 	}
 }
 
-void CItemDefuser::Spawn( void )
+void CItemDefuser::Spawn_Impl( void )
 { 
 	Precache( );
 	SetModel( "models/weapons/w_defuser.mdl" );
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	
 #if !defined( CLIENT_DLL )
 
@@ -106,7 +104,7 @@ void CItemDefuser::Spawn( void )
 	SetTouch( nullptr );
 }
 	
-void CItemDefuser::Precache( void )
+void CItemDefuser::Precache_Impl( void )
 {
 	PrecacheModel( "models/weapons/w_defuser.mdl" );
 

@@ -11,42 +11,33 @@
 #define PIX_VALVE_ORANGE	0xFFF5940F
 
 //-----------------------------------------------------------------------------
-// The Base implementation of the shader rendering interface
+// The shader API as seen inside shaderapidx9: a stateless facade over CShaderAPIDx8
 //-----------------------------------------------------------------------------
 class CShaderAPIBase : public IShaderAPI
 {
 public:
-	// constructor, destructor
-	CShaderAPIBase();
-	virtual ~CShaderAPIBase();
-
 	// Called when the device is initializing or shutting down
-	virtual bool OnDeviceInit() = 0;
-	virtual void OnDeviceShutdown() = 0;
+	bool OnDeviceInit();
+	void OnDeviceShutdown();
 
 	// Pix events
-	virtual void BeginPIXEvent( unsigned long color, const char *szName ) = 0;
-	virtual void EndPIXEvent() = 0;
-	virtual void AdvancePIXFrame() = 0;
+	void BeginPIXEvent( unsigned long color, const char *szName );
+	void EndPIXEvent();
+	void AdvancePIXFrame();
 
 	// Release, reacquire objects
-	virtual void ReleaseShaderObjects( bool bReleaseManagedResources = true ) = 0;
-	virtual void RestoreShaderObjects() = 0;
+	void ReleaseShaderObjects( bool bReleaseManagedResources = true );
+	void RestoreShaderObjects();
 
 	// Resets the render state to its well defined initial value
-	virtual void ResetRenderState( bool bFullReset = true ) = 0;
+	void ResetRenderState( bool bFullReset = true );
 
 	// Returns a d3d texture associated with a texture handle
-	virtual IDirect3DBaseTexture* GetD3DTexture( ShaderAPITextureHandle_t hTexture ) = 0;
+	IDirect3DBaseTexture* GetD3DTexture( ShaderAPITextureHandle_t hTexture );
 
 	// Queues a non-full reset of render state next BeginFrame.
-	virtual void QueueResetRenderState() = 0;
+	void QueueResetRenderState();
 
-	// Methods of IShaderDynamicAPI
-public:
-	virtual void GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* pInfo );
-
-protected:
 };
 
 

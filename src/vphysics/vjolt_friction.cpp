@@ -131,3 +131,6 @@ float JoltPhysicsFrictionSnapshot::GetFrictionCoefficient()
 {
 	return 0.0f;
 }
+
+//-------------------------------------------------------------------------------------------------
+#include "facade/iphysicsfrictionsnapshot.inl"

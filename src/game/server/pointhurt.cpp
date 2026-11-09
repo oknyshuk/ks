@@ -3,8 +3,6 @@
 
 // Purpose: Implements hurting point entity
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -53,8 +50,8 @@ class CPointHurt : public CPointEntity
 	DECLARE_CLASS( CPointHurt, CPointEntity );
 
 public:
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 	void	HurtThink( void );
 
 	// Input handlers
@@ -80,7 +77,7 @@ LINK_ENTITY_TO_CLASS( point_hurt, CPointHurt );
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPointHurt::Spawn(void)
+void CPointHurt::Spawn_Impl(void)
 {
 	SetThink( nullptr );
 	SetUse( nullptr );
@@ -115,9 +112,9 @@ void CPointHurt::Spawn(void)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPointHurt::Precache( void )
+void CPointHurt::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 //-----------------------------------------------------------------------------

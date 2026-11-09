@@ -30,107 +30,26 @@ import ks.tier1;
 // who is speaking) into the sound engine.
 // ------------------------------------------------------------------------- //
 
-class CAudioSourceVoice : public CAudioSourceWave
+// ----------------------------------------------------------------------------- //
+// CWaveDataVoice: the wave data of a voice channel.
+// ----------------------------------------------------------------------------- //
+
+CAudioSource &CWaveDataVoice::Source( void )
 {
-public:
-								CAudioSourceVoice(CSfxTable *pSfx, int iEntity);
-								virtual ~CAudioSourceVoice();
-	
-	virtual int					GetType( void )
-	{
-		return AUDIO_SOURCE_VOICE;
-	}
-	virtual void				GetCacheData( CAudioSourceCachedInfo *info )
-	{
-		contract_assert( 0 );
-	}
+	return m_source;
+}
 
+// this file is in memory, simply pass along the data request to the source
+int CWaveDataVoice::ReadSourceData( void **pData, int64 sampleIndex, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] )
+{
+	return m_source.GetOutputData( pData, sampleIndex, sampleCount, copyBuf );
+}
 
-	virtual CAudioMixer			*CreateMixer( int initialStreamPosition, int skipInitialSamples, bool bUpdateDelayForChoreo, SoundError &soundError );
-	virtual int					GetOutputData( void **pData, int64 samplePosition, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] );
-	virtual int					SampleRate( void );
-	
-	// Sample size is in bytes.  It will not be accurate for compressed audio.  This is a best estimate.
-	// The compressed audio mixers understand this, but in general do not assume that SampleSize() * SampleCount() = filesize
-	// or even that SampleSize() is 100% accurate due to compression.
-	virtual int					SampleSize( void );
-
-	// Total number of samples in this source.  NOTE: Some sources are infinite (mic input), they should return
-	// a count equal to one second of audio at their current rate.
-	virtual int					SampleCount( void );
-
-	virtual bool				IsVoiceSource()				{return true;}
-	virtual bool				IsPlayerVoice()				{return true;}
-
-	virtual bool				IsLooped()					{return false;}
-	virtual bool				IsStreaming()				{return true;}
-	virtual bool				IsStereoWav()				{return false;}
-	virtual int					GetCacheStatus()			{return AUDIO_IS_LOADED;}
-	virtual void				CacheLoad()					{}
-	virtual void				CacheUnload()				{}
-	virtual CSentence			*GetSentence()				{return nullptr;}
-	virtual int					GetQuality()				{ return 0; }
-
-	virtual int					ZeroCrossingBefore( int sample )	{return sample;}
-	virtual int					ZeroCrossingAfter( int sample )		{return sample;}
-	
-	// mixer's references
-	virtual void				ReferenceAdd( CAudioMixer *pMixer );
-	virtual void				ReferenceRemove( CAudioMixer *pMixer );
-
-	// check reference count, return true if nothing is referencing this
-	virtual bool				CanDelete();
-
-	virtual void				Prefetch() {}
-
-	// Nothing, not a cache object...
-	virtual void				CheckAudioSourceCache() {} 
-
-private:
-
-	class CWaveDataVoice : public IWaveData
-	{
-	public:
-							CWaveDataVoice( CAudioSourceWave &source ) : m_source(source) {}
-							~CWaveDataVoice( void ) {}
-
-		virtual CAudioSource &Source( void )
-		{
-			return m_source;
-		}
-		
-		// this file is in memory, simply pass along the data request to the source
-		virtual int ReadSourceData( void **pData, int64 sampleIndex, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] )
-		{
-			return m_source.GetOutputData( pData, sampleIndex, sampleCount, copyBuf );
-		}
-
-		virtual bool IsReadyToMix() 
-		{ 
-			return true; 
-		}
-
-		void UpdateLoopPosition( int nLoopPosition )
-		{
-			// Should not be necessary in this implementation...
-			contract_assert( false );
-		}
-
-	private:
-		CAudioSourceWave		&m_source;	// pointer to source
-	};
-
-
-private:
-	CAudioSourceVoice( const CAudioSourceVoice & );
-
-	// Which entity's voice this is for.
-	int							m_iChannel;
-	
-	// How many mixers are referencing us.
-	int							m_refCount;
-};
-
+void CWaveDataVoice::UpdateLoopPosition( int nLoopPosition )
+{
+	// Should not be necessary in this implementation...
+	contract_assert( false );
+}
 
 
 // ----------------------------------------------------------------------------- //
@@ -143,12 +62,7 @@ extern WAVEFORMATEX g_VoiceSampleFormat;
 class CVoiceSfx : public CSfxTable
 {
 public:
-	virtual const char	*getname( char *pBuf, std::size_t bufLen )
-	{
-		const char *pName = "?VoiceSfx";
-		V_strncpy( pBuf, pName, bufLen );
-		return pBuf;
-	}
+	CVoiceSfx() { m_Kind = SfxKind::Voice; }
 };
 
 static CVoiceSfx g_CVoiceSfx[VOICE_NUM_CHANNELS];
@@ -173,7 +87,7 @@ extern int Voice_AvgBytesPerSec();
 // ----------------------------------------------------------------------------- //
 
 CAudioSourceVoice::CAudioSourceVoice( CSfxTable *pSfx, int iChannel )
-	: CAudioSourceWave( pSfx )
+	: CAudioSourceWave( AudioSourceKind::Voice, pSfx )
 {
 	m_iChannel = iChannel;
 	m_refCount = 0;
@@ -260,7 +174,7 @@ void CAudioSourceVoice::ReferenceRemove(CAudioMixer *pMixer)
 {
 	m_refCount--;
 	if ( m_refCount <= 0 )
-		delete this;
+		CAudioSource::Delete( this );
 }
 
 bool CAudioSourceVoice::CanDelete()

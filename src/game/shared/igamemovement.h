@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "imovehelper.h"
 #include "const.h"
 #include "shared_classnames.h"
@@ -21,7 +19,6 @@ inline constexpr const char *INTERFACENAME_GAMEMOVEMENT = "GameMovement001";
 // Forward declarations.
 //-----------------------------------------------------------------------------
 
-class IMoveHelper;
 
 //-----------------------------------------------------------------------------
 // Purpose: Encapsulated input parameters to player movement.

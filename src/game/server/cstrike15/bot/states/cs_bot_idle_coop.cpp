@@ -3,8 +3,6 @@
 
 // Purpose: Idle update function for coop mode. Split into different file for clarity
 
-import std;
-import ks.core;
 #include "cs_bot.h"
 #include "cs_team.h"
 

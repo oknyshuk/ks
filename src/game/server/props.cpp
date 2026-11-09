@@ -4,8 +4,6 @@
 // Purpose: static_prop - don't move, don't animate, don't do anything.
 //			physics_prop - move, take damage, but don't animate
 
-import std;
-import ks.vstdlib;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -212,7 +210,7 @@ float GetBreakableDamage( const CTakeDamageInfo &inputInfo, IBreakableWithPropDa
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseProp::Spawn( void )
+void CBaseProp::Spawn_Impl( void )
 {
 	char *szModel = (char *)STRING( GetModelName() );
 	if (!szModel || !*szModel)
@@ -270,7 +268,7 @@ void CBaseProp::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseProp::Precache( void )
+void CBaseProp::Precache_Impl( void )
 {
 	if ( GetModelName() == NULL_STRING )
 	{
@@ -284,15 +282,15 @@ void CBaseProp::Precache( void )
 	PrecacheScriptSound( "PropaneTank.Burst" );
 
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseProp::Activate( void )
+void CBaseProp::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	
 	// Make sure mapmakers haven't used the wrong prop type.
 	if ( m_takedamage == DAMAGE_NO && m_iHealth != 0 )
@@ -304,19 +302,19 @@ void CBaseProp::Activate( void )
 //-----------------------------------------------------------------------------
 // Purpose: Handles keyvalues from the BSP. Called before spawning.
 //-----------------------------------------------------------------------------
-bool CBaseProp::KeyValue( const char *szKeyName, const char *szValue )
+bool CBaseProp::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if ( FStrEq(szKeyName, "health") )
 	{
 		// Only override props are allowed to override health.
 		if ( FClassnameIs( this, "prop_physics_override" ) || FClassnameIs( this, "prop_dynamic_override" ) )
-			return BaseClass::KeyValue( szKeyName, szValue );
+			return BaseClass::KeyValue_Impl( szKeyName, szValue );
 
 		return true;
 	}
 	else
 	{ 
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
@@ -379,9 +377,9 @@ int CBaseProp::ParsePropData( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseProp::DrawDebugGeometryOverlays( void )
+void CBaseProp::DrawDebugGeometryOverlays_Impl( void )
 {
-	BaseClass::DrawDebugGeometryOverlays();
+	BaseClass::DrawDebugGeometryOverlays_Impl();
 
 	if ( m_debugOverlays & OVERLAY_PROP_DEBUG )  
 	{
@@ -786,7 +784,7 @@ CBreakableProp::CBreakableProp()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBreakableProp::Spawn()
+void CBreakableProp::Spawn_Impl()
 {
 	// Starts out as the default fade scale value
 	m_flDefaultFadeScale = GetGlobalFadeScale();
@@ -797,7 +795,7 @@ void CBreakableProp::Spawn()
 	m_flDmgModExplosive = 1.0;
 	m_flDmgModFire = 1.0f;
 	
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	
 	if ( IsMarkedForDeletion() )
 		return;
@@ -883,9 +881,9 @@ void CBreakableProp::Spawn()
 	SetTouch( &CBreakableProp::BreakablePropTouch );
 }
 
-void CBreakableProp::UpdateOnRemove()
+void CBreakableProp::UpdateOnRemove_Impl()
 {
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 //-----------------------------------------------------------------------------
@@ -980,7 +978,7 @@ void CBreakableProp::BreakablePropTouch( CBaseEntity *pOther )
 // and then break the children who spawn afterward ?
 // Explosions should use entities in box before they start to do damage.  Make sure nothing traverses the list
 // in a way that would hose this.
-int CBreakableProp::OnTakeDamage( const CTakeDamageInfo &inputInfo )
+int CBreakableProp::OnTakeDamage_Impl( const CTakeDamageInfo &inputInfo )
 {
 	CTakeDamageInfo info = inputInfo;
 
@@ -1022,7 +1020,7 @@ int CBreakableProp::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	{
 		int saveFlags = m_takedamage;
 		m_takedamage = DAMAGE_EVENTS_ONLY;
-		int ret = BaseClass::OnTakeDamage( info );
+		int ret = BaseClass::OnTakeDamage_Impl( info );
 		m_takedamage = saveFlags;
 
 		return ret;
@@ -1042,7 +1040,7 @@ int CBreakableProp::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 	{
 		int saveFlags = m_takedamage;
 		m_takedamage = DAMAGE_EVENTS_ONLY;
-		int ret = BaseClass::OnTakeDamage( info );
+		int ret = BaseClass::OnTakeDamage_Impl( info );
 		m_takedamage = saveFlags;
 		return ret;
 	}
@@ -1115,7 +1113,7 @@ int CBreakableProp::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		}
 	}
 
-	int ret = BaseClass::OnTakeDamage( info );
+	int ret = BaseClass::OnTakeDamage_Impl( info );
 
 	// Output the new health as a percentage of MAX health [0..1]
 	float flRatio = clamp( (float)m_iHealth / (float)m_iMaxHealth, 0, 1 );
@@ -1128,7 +1126,7 @@ int CBreakableProp::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBreakableProp::Event_Killed( const CTakeDamageInfo &info )
+void CBreakableProp::Event_Killed_Impl( const CTakeDamageInfo &info )
 {
 	IPhysicsObject *pPhysics = VPhysicsGetObject();
 	if ( pPhysics && !pPhysics->IsMoveable() )
@@ -1137,7 +1135,7 @@ void CBreakableProp::Event_Killed( const CTakeDamageInfo &info )
 		VPhysicsTakeDamage( info );
 	}
 	Break( info.GetInflictor(), info );
-	BaseClass::Event_Killed( info );
+	BaseClass::Event_Killed_Impl( info );
 }
 
 //-----------------------------------------------------------------------------
@@ -1457,7 +1455,7 @@ AngularImpulse CBreakableProp::PhysGunLaunchAngularImpulse()
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-CBasePlayer *CBreakableProp::HasPhysicsAttacker( float dt )
+CBasePlayer *CBreakableProp::HasPhysicsAttacker_Impl( float dt )
 {
 	if (gpGlobals->curtime - dt <= m_flLastPhysicsInfluenceTime)
 	{
@@ -1493,7 +1491,7 @@ void CBreakableProp::PlayPuntSound()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBreakableProp::Precache()
+void CBreakableProp::Precache_Impl()
 {
 	m_iNumBreakableChunks = PropBreakablePrecacheAll( GetModelName() );
 
@@ -1502,7 +1500,7 @@ void CBreakableProp::Precache()
 		PrecacheScriptSound( STRING(m_iszPuntSound) );
 	}
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 // Get the root physics object from which all broken pieces will
@@ -1741,9 +1739,9 @@ void CBreakableProp::Break( CBaseEntity *pBreaker, const CTakeDamageInfo &info )
 // DYNAMIC PROPS
 //=============================================================================================================
 LINK_ENTITY_TO_CLASS( dynamic_prop, CDynamicProp );
-LINK_ENTITY_TO_CLASS( prop_dynamic, CDynamicProp );	
-LINK_ENTITY_TO_CLASS( prop_dynamic_override, CDynamicProp );	
-LINK_ENTITY_TO_CLASS( prop_dynamic_glow, CDynamicProp );	
+LINK_ENTITY_TO_CLASS_ALIAS( prop_dynamic, CDynamicProp );	
+LINK_ENTITY_TO_CLASS_ALIAS( prop_dynamic_override, CDynamicProp );	
+LINK_ENTITY_TO_CLASS_ALIAS( prop_dynamic_glow, CDynamicProp );	
 
 IMPLEMENT_REFLECT_DATAMAP( CDynamicProp )
 
@@ -1769,7 +1767,7 @@ CDynamicProp::CDynamicProp()
 //------------------------------------------------------------------------------
 // Purpose:
 //------------------------------------------------------------------------------
-void CDynamicProp::Spawn( )
+void CDynamicProp::Spawn_Impl( )
 {
 	// Condense classname's to one, except for "prop_dynamic_override"
 	if ( FClassnameIs( this, "dynamic_prop" ) )
@@ -1786,7 +1784,7 @@ void CDynamicProp::Spawn( )
 		AddSolidFlags( FSOLID_NOT_SOLID );
 	}
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 
 	if ( IsMarkedForDeletion() )
@@ -1848,16 +1846,16 @@ void CDynamicProp::Spawn( )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CDynamicProp::OnRestore( void )
+void CDynamicProp::OnRestore_Impl( void )
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	BoneFollowerHierarchyChanged();
 }
 
-void CDynamicProp::SetParent( CBaseEntity *pNewParent, int iAttachment )
+void CDynamicProp::SetParent_Impl( CBaseEntity *pNewParent, int iAttachment )
 {
-	BaseClass::SetParent(pNewParent, iAttachment);
+	BaseClass::SetParent_Impl(pNewParent, iAttachment);
 	BoneFollowerHierarchyChanged();
 }
 
@@ -1882,7 +1880,7 @@ bool CDynamicProp::OverridePropdata( void )
 //------------------------------------------------------------------------------
 // Purpose:
 //------------------------------------------------------------------------------
-bool CDynamicProp::CreateVPhysics( void )
+bool CDynamicProp::CreateVPhysics_Impl( void )
 {
 	if ( GetSolid() == SOLID_NONE || ((GetSolidFlags() & FSOLID_NOT_SOLID) && HasSpawnFlags(SF_DYNAMICPROP_NO_VPHYSICS)))
 		return true;
@@ -1961,7 +1959,7 @@ void CDynamicProp::CreateBoneFollowers()
 }
 
 
-bool CDynamicProp::TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace )
+bool CDynamicProp::TestCollision_Impl( const Ray_t &ray, unsigned int mask, trace_t& trace )
 {
 	if ( IsSolidFlagSet(FSOLID_NOT_SOLID) )
 	{
@@ -1978,7 +1976,7 @@ bool CDynamicProp::TestCollision( const Ray_t &ray, unsigned int mask, trace_t& 
 	}
 
 	// PORTAL2: This is a change from shipped code, but should be benign
-	return BaseClass::TestCollision( ray, mask, trace );
+	return BaseClass::TestCollision_Impl( ray, mask, trace );
 }
 
 
@@ -2000,10 +1998,10 @@ IPhysicsObject *CDynamicProp::GetRootPhysicsObjectForBreak()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CDynamicProp::UpdateOnRemove( void )
+void CDynamicProp::UpdateOnRemove_Impl( void )
 {
 	m_BoneFollowerManager.DestroyBoneFollowers();
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 
@@ -2035,13 +2033,13 @@ void CDynamicProp::HandleAnimEvent( animevent_t *pEvent )
 	BaseClass::HandleAnimEvent( pEvent ); 
 }
 
-int CDynamicProp::ShouldTransmit( const CCheckTransmitInfo *pInfo )
+int CDynamicProp::ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo )
 {
 	// If we're glowing through walls, we need to always transmit
 	if ( m_bShouldGlow )
 		return FL_EDICT_ALWAYS;
 
-	return BaseClass::ShouldTransmit( pInfo );
+	return BaseClass::ShouldTransmit_Impl( pInfo );
 }
 
 //-----------------------------------------------------------------------------
@@ -2372,8 +2370,8 @@ class COrnamentProp : public CDynamicProp
 public:
 	DECLARE_DATADESC();
 
-	void Spawn();
-	void Activate();
+	void Spawn_Impl();
+	void Activate_Impl();
 	void AttachTo( const char *pAttachEntity, CBaseEntity *pActivator = nullptr, CBaseEntity *pCaller = nullptr );
 	void DetachFromOwner();
 
@@ -2389,9 +2387,9 @@ LINK_ENTITY_TO_CLASS( prop_dynamic_ornament, COrnamentProp );
 
 IMPLEMENT_REFLECT_DATAMAP( COrnamentProp )
 
-void COrnamentProp::Spawn()
+void COrnamentProp::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	DetachFromOwner();
 }
 
@@ -2403,9 +2401,9 @@ void COrnamentProp::DetachFromOwner()
 	AddEffects( EF_NODRAW );
 }
 
-void COrnamentProp::Activate()
+void COrnamentProp::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	
 	if ( m_initialOwner != NULL_STRING )
 	{
@@ -2439,8 +2437,8 @@ void COrnamentProp::InputDetach( inputdata_t &inputdata )
 // PHYSICS PROPS
 //=============================================================================
 LINK_ENTITY_TO_CLASS( physics_prop, CPhysicsProp );
-LINK_ENTITY_TO_CLASS( prop_physics, CPhysicsProp );	
-LINK_ENTITY_TO_CLASS( prop_physics_override, CPhysicsProp );	
+LINK_ENTITY_TO_CLASS_ALIAS( prop_physics, CPhysicsProp );	
+LINK_ENTITY_TO_CLASS_ALIAS( prop_physics_override, CPhysicsProp );	
 
 IMPLEMENT_REFLECT_DATAMAP( CPhysicsProp )
 
@@ -2458,6 +2456,7 @@ bool PropIsGib( CBaseEntity *pEntity )
 }
 
 CPhysicsProp::CPhysicsProp( void ) : 
+	INavAvoidanceObstacle( INavAvoidanceObstacle::Kind::PhysicsProp ),
 	m_bHasBeenAwakened( false ), 
 	m_fNextCheckDisableMotionContactsTime( 0 )
 {
@@ -2481,7 +2480,7 @@ bool CPhysicsProp::IsGib()
 //-----------------------------------------------------------------------------
 // Purpose: Create a physics object for this prop
 //-----------------------------------------------------------------------------
-void CPhysicsProp::Spawn( )
+void CPhysicsProp::Spawn_Impl( )
 {
 	SetNetworkQuantizeOriginAngAngles( true );
 
@@ -2495,7 +2494,7 @@ void CPhysicsProp::Spawn( )
 		SetClassname( "prop_physics" );
 	}
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	if ( IsMarkedForDeletion() )
 		return;
@@ -2611,7 +2610,7 @@ void CPhysicsProp::Spawn( )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPhysicsProp::Precache( void )
+void CPhysicsProp::Precache_Impl( void )
 {
 	if ( GetModelName() == NULL_STRING )
 	{
@@ -2620,7 +2619,7 @@ void CPhysicsProp::Precache( void )
 	else
 	{
 		PrecacheModel( STRING( GetModelName() ) );
-		BaseClass::Precache();
+		BaseClass::Precache_Impl();
 	}
 }
 
@@ -2628,7 +2627,7 @@ void CPhysicsProp::Precache( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CPhysicsProp::CreateVPhysics()
+bool CPhysicsProp::CreateVPhysics_Impl()
 {
 	// Create the object in the physics system
 	bool asleep = HasSpawnFlags( SF_PHYSPROP_START_ASLEEP ) ? true : false;
@@ -2907,9 +2906,9 @@ void CPhysicsProp::OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t Reaso
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CPhysicsProp::ObjectCaps()
+int CPhysicsProp::ObjectCaps_Impl()
 { 
-	int caps = BaseClass::ObjectCaps() | FCAP_WCEDIT_POSITION;
+	int caps = BaseClass::ObjectCaps_Impl() | FCAP_WCEDIT_POSITION;
 
 	if ( HasSpawnFlags( SF_PHYSPROP_ENABLE_PICKUP_OUTPUT ) )
 	{
@@ -2940,7 +2939,7 @@ int CPhysicsProp::ObjectCaps()
 //			useType - 
 //			value - 
 //-----------------------------------------------------------------------------
-void CPhysicsProp::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CPhysicsProp::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	CBasePlayer *pPlayer = ToBasePlayer( pActivator );
 	if ( pPlayer )
@@ -2991,9 +2990,9 @@ bool CPhysicsProp::ShouldDisableMotionOnFreeze( void )
 // Purpose: 
 // Input  : *pPhysics - 
 //-----------------------------------------------------------------------------
-void CPhysicsProp::VPhysicsUpdate( IPhysicsObject *pPhysics )
+void CPhysicsProp::VPhysicsUpdate_Impl( IPhysicsObject *pPhysics )
 {
-	BaseClass::VPhysicsUpdate( pPhysics );
+	BaseClass::VPhysicsUpdate_Impl( pPhysics );
 	m_bAwake = !pPhysics->IsAsleep();
 	IPhysicsObject *pPhysicsObject = VPhysicsGetObject();
 	NetworkStateChanged();
@@ -3179,9 +3178,9 @@ void CPhysicsProp::ComputeEnablingImpulse( int index, gamevcollisionevent_t *pEv
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPhysicsProp::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
+void CPhysicsProp::VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent )
 {
-	BaseClass::VPhysicsCollision( index, pEvent );
+	BaseClass::VPhysicsCollision_Impl( index, pEvent );
 
 	IPhysicsObject *pPhysObj = pEvent->pObjects[!index];
 
@@ -3274,10 +3273,10 @@ void CPhysicsProp::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CPhysicsProp::OnTakeDamage( const CTakeDamageInfo &info )
+int CPhysicsProp::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	// note: if motion is disabled, OnTakeDamage can't apply physics force
-	int ret = BaseClass::OnTakeDamage( info );
+	int ret = BaseClass::OnTakeDamage_Impl( info );
 
 	if( IsOnFire() )
 	{
@@ -3372,9 +3371,9 @@ float CPhysicsProp::GetMass() const
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CPhysicsProp::DrawDebugTextOverlays(void) 
+int CPhysicsProp::DrawDebugTextOverlays_Impl(void) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -3502,7 +3501,7 @@ static CBreakableProp *BreakModelCreate_Prop( CBaseEntity *pOwner, breakmodel_t 
 
 static CBaseAnimating *BreakModelCreate_Ragdoll( CBaseEntity *pOwner, breakmodel_t *pModel, const Vector &position, const QAngle &angles )
 {
-	CBaseAnimating *pAnimating = CreateServerRagdollSubmodel( dynamic_cast<CBaseAnimating *>(pOwner), pModel->modelName, position, angles, pModel->collisionGroup );
+	CBaseAnimating *pAnimating = CreateServerRagdollSubmodel( entity_cast<CBaseAnimating>(pOwner), pModel->modelName, position, angles, pModel->collisionGroup );
 	return pAnimating;
 }
 
@@ -3718,9 +3717,9 @@ CBasePropDoor::CBasePropDoor( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePropDoor::Spawn()
+void CBasePropDoor::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	DisableAutoFade();
 	Precache();
@@ -3771,18 +3770,18 @@ bool CBasePropDoor::IsAbleToCloseAreaPortals( void ) const
 }
 // Purpose: Returns our capabilities mask.
 //-----------------------------------------------------------------------------
-int	CBasePropDoor::ObjectCaps()
+int	CBasePropDoor::ObjectCaps_Impl()
 {
-	return BaseClass::ObjectCaps() | ( HasSpawnFlags( SF_DOOR_IGNORE_USE ) ? 0 : (FCAP_IMPULSE_USE|FCAP_USE_IN_RADIUS) );
+	return BaseClass::ObjectCaps_Impl() | ( HasSpawnFlags( SF_DOOR_IGNORE_USE ) ? 0 : (FCAP_IMPULSE_USE|FCAP_USE_IN_RADIUS) );
 };
 
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePropDoor::Precache(void)
+void CBasePropDoor::Precache_Impl(void)
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	RegisterPrivateActivities();
 }
@@ -3806,9 +3805,9 @@ void CBasePropDoor::RegisterPrivateActivities(void)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePropDoor::Activate( void )
+void CBasePropDoor::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	
 	UpdateAreaPortals( !IsDoorClosed() );
 
@@ -4039,7 +4038,7 @@ void CBasePropDoor::SetDoorBlocker( CBaseEntity *pBlocker )
 //			useType - 
 //			value - 
 //-----------------------------------------------------------------------------
-void CBasePropDoor::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value)
+void CBasePropDoor::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value)
 {
 	if ( GetMaster() != nullptr )
 	{
@@ -4496,7 +4495,7 @@ void CBasePropDoor::MasterStartBlocked( CBaseEntity *pOther )
 // Purpose: Called the first frame that the door is blocked while opening or closing.
 // Input  : pOther - The blocking entity.
 //-----------------------------------------------------------------------------
-void CBasePropDoor::StartBlocked( CBaseEntity *pOther )
+void CBasePropDoor::StartBlocked_Impl( CBaseEntity *pOther )
 {
 	m_bFirstBlocked = true;
 
@@ -4564,7 +4563,7 @@ void CBasePropDoor::OnStartBlocked( CBaseEntity *pOther )
 // Purpose: Called every frame when the door is blocked while opening or closing.
 // Input  : pOther - The blocking entity.
 //-----------------------------------------------------------------------------
-void CBasePropDoor::Blocked(CBaseEntity *pOther)
+void CBasePropDoor::Blocked_Impl(CBaseEntity *pOther)
 {
 	// dvs: TODO: will prop_door apply any blocking damage?
 	// Hurt the blocker a little.
@@ -4656,7 +4655,7 @@ void CBasePropDoor::Blocked(CBaseEntity *pOther)
 //-----------------------------------------------------------------------------
 // Purpose: Called the first frame that the door is unblocked while opening or closing.
 //-----------------------------------------------------------------------------
-void CBasePropDoor::EndBlocked( void )
+void CBasePropDoor::EndBlocked_Impl( void )
 {
 	if ( GetMaster() != nullptr )
 	{
@@ -4735,7 +4734,7 @@ bool CBasePropDoor::NPCOpenDoor( CAI_BaseNPC *pNPC )
 	return true;
 }
 
-bool CBasePropDoor::TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace )
+bool CBasePropDoor::TestCollision_Impl( const Ray_t &ray, unsigned int mask, trace_t& trace )
 {
 	if ( !VPhysicsGetObject() )
 		return false;
@@ -4909,7 +4908,7 @@ bool DoorUnlockedFilter( CBaseEntity *pVisibleEntity, CBasePlayer *pViewingPlaye
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPropDoorRotating::Spawn()
+void CPropDoorRotating::Spawn_Impl()
 {
 	// Doors are built closed, so save the current angles as the closed angles.
 	m_angRotationClosed = GetLocalAngles();
@@ -4921,7 +4920,7 @@ void CPropDoorRotating::Spawn()
 	CalcOpenAngles();
 
 	// Call this last! It relies on stuff we calculated above.
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	// We have to call this after we call the base Spawn because it requires
 	// that the model already be set.
@@ -5126,9 +5125,9 @@ void CPropDoorRotating::CalculateDoorVolume( QAngle closedAngles, QAngle openAng
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPropDoorRotating::OnRestore( void )
+void CPropDoorRotating::OnRestore_Impl( void )
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	// Figure out our volumes of movement as this door opens
 	CalculateDoorVolume( GetLocalAngles(), m_angRotationOpenForward, &m_vecForwardBoundsMin, &m_vecForwardBoundsMax );
@@ -5273,12 +5272,12 @@ void CPropDoorRotating::DoorTeleportToSpawnPosition()
 //-----------------------------------------------------------------------------
 // Purpose: After rotating, set angle to exact final angle, call "move done" function.
 //-----------------------------------------------------------------------------
-void CPropDoorRotating::MoveDone()
+void CPropDoorRotating::MoveDone_Impl()
 {
 	SetLocalAngles(m_angGoal);
 	SetLocalAngularVelocity(vec3_angle);
 	SetMoveDoneTime(-1);
-	BaseClass::MoveDone();
+	BaseClass::MoveDone_Impl();
 
 	m_OnRotationDone.FireOutput(this, this);
 }
@@ -5558,9 +5557,9 @@ float CPropDoorRotating::GetOpenInterval()
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CPropDoorRotating::DrawDebugTextOverlays(void) 
+int CPropDoorRotating::DrawDebugTextOverlays_Impl(void) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -5631,7 +5630,7 @@ class CPhysSphere : public CPhysicsProp
 	DECLARE_CLASS( CPhysSphere, CPhysicsProp );
 public:
 	virtual bool OverridePropdata() { return true; }
-	bool CreateVPhysics()
+	bool CreateVPhysics_Impl()
 	{
 		SetSolid( SOLID_BBOX );
 		SetCollisionBounds( -Vector(12,12,12), Vector(12,12,12) );
@@ -5669,9 +5668,9 @@ inline constexpr const char *EXPLODING_BARREL_EXPLODE_SND1 = "BaseGrenade.Explod
 inline constexpr const char *EXPLODING_BARREL_EXPLODE_SND2 = "Inferno.Start_IncGrenade";
 
 //--------------------------------------------------------------------------------------------------------
-void CCSPropExplodingBarrel::Precache( void )
+void CCSPropExplodingBarrel::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	PrecacheModel( EXPLODING_BARREL_MODEL_WHOLE );
 	PrecacheModel( EXPLODING_BARREL_MODEL_TOP );
@@ -5683,10 +5682,10 @@ void CCSPropExplodingBarrel::Precache( void )
 }
 
 //--------------------------------------------------------------------------------------------------------
-void CCSPropExplodingBarrel::Spawn( void )
+void CCSPropExplodingBarrel::Spawn_Impl( void )
 {
 	SetModelName( MAKE_STRING(EXPLODING_BARREL_MODEL_WHOLE) );
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	SetModel( EXPLODING_BARREL_MODEL_WHOLE );
 	
 	m_bExploded = false;
@@ -5704,14 +5703,14 @@ void CCSPropExplodingBarrel::Spawn( void )
 }
 
 //--------------------------------------------------------------------------------------------------------
-void CCSPropExplodingBarrel::Event_Killed( const CTakeDamageInfo &info )
+void CCSPropExplodingBarrel::Event_Killed_Impl( const CTakeDamageInfo &info )
 {
-	BaseClass::Event_Killed( info );
+	BaseClass::Event_Killed_Impl( info );
 	m_OnBreak.FireOutput( this, this );
 }
 
 //--------------------------------------------------------------------------------------------------------
-int CCSPropExplodingBarrel::OnTakeDamage( const CTakeDamageInfo &info )
+int CCSPropExplodingBarrel::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	if ( m_bExploded )
 		return 0;
@@ -5787,7 +5786,7 @@ int CCSPropExplodingBarrel::OnTakeDamage( const CTakeDamageInfo &info )
 		SetNextThink( gpGlobals->curtime + 2 );
 	}
 
-	return BaseClass::OnTakeDamage( info );
+	return BaseClass::OnTakeDamage_Impl( info );
 }
 
 void CCSPropExplodingBarrel::StopParticle( void )
@@ -5829,7 +5828,7 @@ void CCSPropExplodingBarrel::FadeOut( void )
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CCSPropExplodingBarrel::DrawDebugTextOverlays( void ) 
+int CCSPropExplodingBarrel::DrawDebugTextOverlays_Impl( void ) 
 {
 	return 0;
 }
@@ -5878,9 +5877,9 @@ bool CPropDoorRotatingBreakable::IsAbleToCloseAreaPortals( void ) const
 
 
 //--------------------------------------------------------------------------------------------------------
-void CPropDoorRotatingBreakable::Precache( void )
+void CPropDoorRotatingBreakable::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 
@@ -5930,11 +5929,11 @@ void CPropDoorRotatingBreakable::PrecacheBreakables( void )
 
 
 //--------------------------------------------------------------------------------------------------------
-void CPropDoorRotatingBreakable::Spawn( void )
+void CPropDoorRotatingBreakable::Spawn_Impl( void )
 {
 	m_isAbleToCloseAreaPortals = true;
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	PrecacheBreakables();
 
 	m_damageStates.clear();
@@ -6039,13 +6038,13 @@ void CPropDoorRotatingBreakable::UpdateBlocked( bool bBlocked )
 
 //--------------------------------------------------------------------------------------------------------
 // Forces nav areas to unblock when the nav blocker is deleted (round restart) so flow can compute properly
-void CPropDoorRotatingBreakable::UpdateOnRemove( void )
+void CPropDoorRotatingBreakable::UpdateOnRemove_Impl( void )
 {
 	UnblockNav();
 
 	//gm_NavBlockers.FindAndRemove( this );
 
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -6136,7 +6135,7 @@ bool CPropDoorRotatingBreakable::operator()( CNavArea *area )
 // }
 
 //--------------------------------------------------------------------------------------------------------
-void CPropDoorRotatingBreakable::Event_Killed( const CTakeDamageInfo &info )
+void CPropDoorRotatingBreakable::Event_Killed_Impl( const CTakeDamageInfo &info )
 {
 	if ( !m_damageStates.empty() )
 	{
@@ -6190,11 +6189,11 @@ void CPropDoorRotatingBreakable::Event_Killed( const CTakeDamageInfo &info )
 
 	m_OnBreak.FireOutput( this, this );
 
-	BaseClass::Event_Killed( info );
+	BaseClass::Event_Killed_Impl( info );
 }
 
 //--------------------------------------------------------------------------------------------------------
-int CPropDoorRotatingBreakable::OnTakeDamage( const CTakeDamageInfo &info )
+int CPropDoorRotatingBreakable::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	int oldHealth = m_iHealth;
 	CTakeDamageInfo subInfo = info;
@@ -6207,7 +6206,7 @@ int CPropDoorRotatingBreakable::OnTakeDamage( const CTakeDamageInfo &info )
 	if ( !m_bBreakable )
 		return 0;
 
-	int ret = BaseClass::OnTakeDamage( subInfo );
+	int ret = BaseClass::OnTakeDamage_Impl( subInfo );
 	int newHealth = m_iHealth;
 
 	if ( oldHealth != newHealth && newHealth > 0 && std::ssize( m_damageStates ) > 0 )
@@ -6308,9 +6307,9 @@ int CPropDoorRotatingBreakable::OnTakeDamage( const CTakeDamageInfo &info )
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CPropDoorRotatingBreakable::DrawDebugTextOverlays( void ) 
+int CPropDoorRotatingBreakable::DrawDebugTextOverlays_Impl( void ) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -6389,9 +6388,9 @@ public:
 
 	DECLARE_SERVERCLASS();
 
-	virtual void Activate()
+	void Activate_Impl()
 	{
-		BaseClass::Activate();
+		BaseClass::Activate_Impl();
 		SetCollisionGroup( COLLISION_GROUP_PUSHAWAY );
 		m_fMass = VPhysicsGetObject()->GetMass();
 	}
@@ -6436,9 +6435,9 @@ class [[= ks::reflect::NetTable{ .name = "DT_PhysicsPropMultiplayer" } ]]
 
 	bool	IsDebris( void )			{ return ( ( m_spawnflags & SF_PHYSPROP_DEBRIS ) != 0 ); }
 
-	virtual void VPhysicsUpdate( IPhysicsObject *pPhysics )
+	void VPhysicsUpdate_Impl( IPhysicsObject *pPhysics )
 	{
-		BaseClass::VPhysicsUpdate( pPhysics );
+		BaseClass::VPhysicsUpdate_Impl( pPhysics );
 
 		if ( sv_turbophysics.GetBool() )
 		{
@@ -6461,9 +6460,9 @@ class [[= ks::reflect::NetTable{ .name = "DT_PhysicsPropMultiplayer" } ]]
 		}
 	}
 
-	virtual void Spawn( void )
+	void Spawn_Impl( void )
 	{
-		BaseClass::Spawn();
+		BaseClass::Spawn_Impl();
 
 		// if no physicsmode was defined by .QC or propdata.txt, 
 		// use auto detect based on size & mass
@@ -6532,7 +6531,7 @@ class [[= ks::reflect::NetTable{ .name = "DT_PhysicsPropMultiplayer" } ]]
 		}
 	}
 
-	virtual void ComputeWorldSpaceSurroundingBox( Vector *mins, Vector *maxs )
+	void ComputeWorldSpaceSurroundingBox_Impl( Vector *mins, Vector *maxs )
 	{
 		contract_assert( m_usingCustomCollisionBounds );
 		contract_assert( mins != nullptr && maxs != nullptr );
@@ -6566,8 +6565,8 @@ public:
 
 	CPhysicsPropRespawnable();
 
-	virtual void Spawn( void );
-	virtual void Event_Killed( const CTakeDamageInfo &info );
+	void Spawn_Impl( void );
+	void Event_Killed_Impl( const CTakeDamageInfo &info );
 
 	void	Materialize( void );
 
@@ -6591,9 +6590,9 @@ CPhysicsPropRespawnable::CPhysicsPropRespawnable( void )
 	m_flRespawnTime = 0.0f;
 }
 
-void CPhysicsPropRespawnable::Spawn( void )
+void CPhysicsPropRespawnable::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	m_vOriginalSpawnOrigin = GetAbsOrigin();
 	m_vOriginalSpawnAngles = GetAbsAngles();
@@ -6609,7 +6608,7 @@ void CPhysicsPropRespawnable::Spawn( void )
 	SetOwnerEntity( nullptr );
 }
 
-void CPhysicsPropRespawnable::Event_Killed( const CTakeDamageInfo &info )
+void CPhysicsPropRespawnable::Event_Killed_Impl( const CTakeDamageInfo &info )
 {
 	IPhysicsObject *pPhysics = VPhysicsGetObject();
 	if ( pPhysics && !pPhysics->IsMoveable() )

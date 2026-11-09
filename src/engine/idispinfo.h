@@ -45,47 +45,46 @@ class IDispInfo
 {
 public:
 
-	virtual				~IDispInfo() {}
 
 	// Builds a list of displacement triangles intersecting the sphere.
-	virtual void		GetIntersectingSurfaces( GetIntersectingSurfaces_Struct *pStruct ) = 0;
+	void		GetIntersectingSurfaces( GetIntersectingSurfaces_Struct *pStruct );
 
-	virtual void		RenderWireframeInLightmapPage( int pageId ) = 0;
+	void		RenderWireframeInLightmapPage( int pageId );
 	
-	virtual void		GetBoundingBox( Vector &bbMin, Vector &bbMax ) = 0;
+	void		GetBoundingBox( Vector &bbMin, Vector &bbMax );
 
 	// Get and set the parent surfaces.
-	virtual void		SetParent( SurfaceHandle_t surfID ) = 0;
-	virtual SurfaceHandle_t	GetParent() = 0;
+	void		SetParent( SurfaceHandle_t surfID );
+	SurfaceHandle_t	GetParent();
 
 	// Add dynamic lights to the lightmap for this surface.
-	virtual void AddDynamicLights( struct dlight_t *pLights, unsigned int lightMask ) = 0;
+	void AddDynamicLights( struct dlight_t *pLights, unsigned int lightMask );
 	// Compute the mask for the lights hitting this surface.
-	virtual unsigned int ComputeDynamicLightMask( struct dlight_t *pLights ) = 0;
+	unsigned int ComputeDynamicLightMask( struct dlight_t *pLights );
 
 	// Add and remove decals.
 	// flSize is like the radius of the decal so the decal isn't put on any disp faces it's too far away from.
-	virtual DispDecalHandle_t	NotifyAddDecal( decal_t *pDecal, float flSize ) = 0;
-	virtual void				NotifyRemoveDecal( DispDecalHandle_t h ) = 0;
+	DispDecalHandle_t	NotifyAddDecal( decal_t *pDecal, float flSize );
+	void				NotifyRemoveDecal( DispDecalHandle_t h );
 	
-	virtual DispShadowHandle_t	AddShadowDecal( ShadowHandle_t shadowHandle ) = 0;
-	virtual void				RemoveShadowDecal( DispShadowHandle_t handle ) = 0;
+	DispShadowHandle_t	AddShadowDecal( ShadowHandle_t shadowHandle );
+	void				RemoveShadowDecal( DispShadowHandle_t handle );
 
 	// Compute shadow fragments for a particular shadow, return the vertex + index count of all fragments
-	virtual bool		ComputeShadowFragments( DispShadowHandle_t h, int& vertexCount, int& indexCount ) = 0;
+	bool		ComputeShadowFragments( DispShadowHandle_t h, int& vertexCount, int& indexCount );
 
 	// Tag the surface and check if it's tagged. You can untag all the surfaces
 	// with DispInfo_ClearAllTags. Note: it just uses a frame counter to track the
 	// tag state so it's really really fast to call ClearAllTags (just increments
 	// a variable 99.999% of the time).
-	virtual bool		GetTag() = 0;
-	virtual void		SetTag() = 0;
+	bool		GetTag();
+	void		SetTag();
 
 	// Cast a ray against this surface
-	virtual	bool	TestRay( Ray_t const& ray, float start, float end, float& dist, Vector2D* lightmapUV, Vector2D* textureUV ) = 0;
+	bool	TestRay( Ray_t const& ray, float start, float end, float& dist, Vector2D* lightmapUV, Vector2D* textureUV );
 
 	// Computes the texture + lightmap coordinate given a displacement uv
-	virtual void	ComputeLightmapAndTextureCoordinate( RayDispOutput_t const& uv, Vector2D* luv, Vector2D* tuv ) = 0;
+	void	ComputeLightmapAndTextureCoordinate( RayDispOutput_t const& uv, Vector2D* luv, Vector2D* tuv );
 };
 
 

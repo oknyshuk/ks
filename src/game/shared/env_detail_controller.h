@@ -26,15 +26,16 @@ public:
 	CEnvDetailController();
 	virtual ~CEnvDetailController();
 
-#ifndef CLIENT_DLL
-	virtual bool KeyValue( const char *szKeyName, const char *szValue );
+using BaseClass::KeyValue_Impl;
+	#ifndef CLIENT_DLL
+	KS_VIRTUAL bool KeyValue_Impl( const char *szKeyName, const char *szValue );
 #endif // !CLIENT_DLL
 
 	CNetworkVar( float, m_flFadeStartDist, [[= ks::reflect::Net{ .bits = 32 } ]] );
 	CNetworkVar( float, m_flFadeEndDist, [[= ks::reflect::Net{ .bits = 32 } ]] );
 
 	// ALWAYS transmit to all clients.
-	virtual int UpdateTransmitState( void );
+	KS_VIRTUAL int UpdateTransmitState_Impl( void );
 };
 
 CEnvDetailController * GetDetailController();

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -73,9 +71,9 @@ void CAI_BaseActor::StudioFrameAdvance ()
 }
 
 
-void CAI_BaseActor::Precache()
+void CAI_BaseActor::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	if ( NULL_STRING != m_iszExpressionOverride )
 	{
@@ -136,9 +134,9 @@ bool CAI_BaseActor::IsServerSideFlexController( char const *szName )
 	return false;
 }
 
-void CAI_BaseActor::SetModel( const char *szModelName )
+void CAI_BaseActor::SetModel_Impl( const char *szModelName )
 {
-	BaseClass::SetModel( szModelName );
+	BaseClass::SetModel_Impl( szModelName );
 
 	//Init( m_ParameterBodyTransY, "body_trans_Y" );
 	//Init( m_ParameterBodyTransX, "body_trans_X" );
@@ -668,11 +666,11 @@ void CAI_BaseActor::ClearHeadAdjustment()
 }
 
 
-void CAI_BaseActor::Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts )
+void CAI_BaseActor::Teleport_Impl( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts )
 {
 	ClearHeadAdjustment();
 
-	BaseClass::Teleport( newPosition, newAngles, newVelocity, bUseSlowHighAccuracyContacts );
+	BaseClass::Teleport_Impl( newPosition, newAngles, newVelocity, bUseSlowHighAccuracyContacts );
 }
 
 
@@ -700,7 +698,7 @@ void CAI_BaseActor::UpdateLatchedValues( )
 
 		if ( CanSkipAnimation() || !GetAttachment( "eyes", m_latchedEyeOrigin, &m_latchedHeadDirection ))
 		{
-			m_latchedEyeOrigin = BaseClass::EyePosition( );
+			m_latchedEyeOrigin = BaseClass::EyePosition_Impl( );
 			AngleVectors( GetLocalAngles(), &m_latchedHeadDirection );
 		}
 		// clear out eye latch
@@ -728,7 +726,7 @@ void CAI_BaseActor::UpdateLatchedValues( )
 //-----------------------------------------------------------------------------
 // Purpose: Returns true position of the eyeballs
 //-----------------------------------------------------------------------------
-Vector CAI_BaseActor::EyePosition( )
+Vector CAI_BaseActor::EyePosition_Impl( )
 { 
 	UpdateLatchedValues();
 

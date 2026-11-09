@@ -3,8 +3,6 @@
 
 // Purpose: Team spawnpoint handling
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -38,9 +36,9 @@ IMPLEMENT_REFLECT_DATAMAP( CTeamSpawnPoint )
 //-----------------------------------------------------------------------------
 // Purpose: Attach this spawnpoint to it's team
 //-----------------------------------------------------------------------------
-void CTeamSpawnPoint::Activate( void )
+void CTeamSpawnPoint::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	if ( GetTeamNumber() > 0 && GetTeamNumber() <= MAX_TEAMS )
 	{
 		GetGlobalTeam( GetTeamNumber() )->AddSpawnpoint( this );
@@ -114,9 +112,9 @@ bool CTeamVehicleSpawnPoint::IsValid( void )
 //-----------------------------------------------------------------------------
 // Purpose: Attach this spawnpoint to it's team
 //-----------------------------------------------------------------------------
-void CTeamVehicleSpawnPoint::Activate( void )
+void CTeamVehicleSpawnPoint::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	if ( GetTeamNumber() > 0 && GetTeamNumber() <= MAX_TEAMS )
 	{
 		// Don't add vehicle spawnpoints to the team for now

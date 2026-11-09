@@ -3,8 +3,6 @@
 
 // Purpose: The Escort's Shield weapon effect
 
-import std;
-import ks.core;
 #include "sheetsimulator.h"
 #include "edict.h"
 #include "collisionutils.h"

@@ -7,11 +7,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
-import ks.vstdlib;
 #include "const.h"
 #include "string_t.h"
 #include "predictableid.h"
@@ -32,7 +28,6 @@ import ks.vstdlib;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -272,6 +267,7 @@ bool CBasePlayer::UsingStandardWeaponsInVehicle( void )
 //-----------------------------------------------------------------------------
 // Purpose: Called every usercmd by the player PostThink
 //-----------------------------------------------------------------------------
+extern ConVar sv_infinite_ammo;
 void CBasePlayer::ItemPostFrame()
 {
 	CVProfScope _( "CBasePlayer::ItemPostFrame", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
@@ -342,7 +338,6 @@ void CBasePlayer::ItemPostFrame()
 	m_nImpulse = 0;
 #endif
 
-	extern ConVar sv_infinite_ammo;
 	if( ( sv_infinite_ammo.GetInt() == 1 ) && (GetActiveWeapon() != nullptr) )
 	{
 		CBaseCombatWeapon *pWeapon = GetActiveWeapon();
@@ -380,7 +375,7 @@ void CBasePlayer::ItemPostFrame()
 //-----------------------------------------------------------------------------
 // Eye angles
 //-----------------------------------------------------------------------------
-const QAngle &CBasePlayer::EyeAngles( )
+const QAngle &CBasePlayer::EyeAngles_Impl( )
 {
 	// NOTE: Viewangles are measured *relative* to the parent's coordinate system
 	CBaseEntity *pMoveParent = const_cast<CBasePlayer*>(this)->GetMoveParent();
@@ -406,7 +401,7 @@ const QAngle &CBasePlayer::EyeAngles( )
 }
 
 
-const QAngle &CBasePlayer::LocalEyeAngles()
+const QAngle &CBasePlayer::LocalEyeAngles_Impl()
 {
 	return pl.v_angle;
 }
@@ -414,7 +409,7 @@ const QAngle &CBasePlayer::LocalEyeAngles()
 //-----------------------------------------------------------------------------
 // Actual Eye position + angles
 //-----------------------------------------------------------------------------
-Vector CBasePlayer::EyePosition( )
+Vector CBasePlayer::EyePosition_Impl( )
 {
 	if ( GetVehicle() != nullptr )
 	{
@@ -456,10 +451,10 @@ Vector CBasePlayer::EyePosition( )
 		}
 		else
 		{
-			return BaseClass::EyePosition();
+			return BaseClass::EyePosition_Impl();
 		}
 #else
-		return BaseClass::EyePosition();
+		return BaseClass::EyePosition_Impl();
 #endif
 	}
 }
@@ -771,6 +766,7 @@ ConVar sv_max_distance_transmit_footsteps( "sv_max_distance_transmit_footsteps",
 //			fvol - 
 //			force - force sound to play
 //-----------------------------------------------------------------------------
+extern ISoundEmitterSystemBase *soundemitterbase;
 void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, float fvol, bool bForce )
 {
 	ks::ScratchArena<> scratch;
@@ -911,7 +907,6 @@ void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, flo
 	{
 		if (pThisCsPlayer->IsBot() && pThisCsPlayer->HasHeavyArmor())
 		{
-			extern ISoundEmitterSystemBase *soundemitterbase;
 			static const char * const k_HeavyStepSoundName = "Heavy.Step";
 			static HSOUNDSCRIPTHASH const k_HeavyStepSoundHash = soundemitterbase->HashSoundName( k_HeavyStepSoundName );
 			ep.m_pSoundName = k_HeavyStepSoundName;
@@ -1927,6 +1922,7 @@ void CBasePlayer::ResetObserverMode()
 //			zFar - 
 //			fov - 
 //-----------------------------------------------------------------------------
+extern Vector g_cameraFollowPos;
 void CBasePlayer::CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, float &zFar, float &fov )
 {
 #if defined( CLIENT_DLL )
@@ -1969,7 +1965,6 @@ void CBasePlayer::CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, 
 			int boneIdx = cvFollowBoneIndexVar.GetInt();
 			if ( boneIdx >= -1 && boneIdx <	pHdr->numbones() )
 			{
-				extern Vector g_cameraFollowPos;
 				if ( boneIdx == -1 )
 				{
 					VectorCopy( GetRenderOrigin(), g_cameraFollowPos );
@@ -2349,7 +2344,7 @@ float CBasePlayer::GetFOVDistanceAdjustFactor()
 //			&tr - 
 //			iTracerType - 
 //-----------------------------------------------------------------------------
-void CBasePlayer::MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType )
+void CBasePlayer::MakeTracer_Impl( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType )
 {
 	if ( GetActiveWeapon() )
 	{
@@ -2357,7 +2352,7 @@ void CBasePlayer::MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int
 		return;
 	}
 
-	BaseClass::MakeTracer( vecTracerSrc, tr, iTracerType );
+	BaseClass::MakeTracer_Impl( vecTracerSrc, tr, iTracerType );
 }
 
 
@@ -2452,14 +2447,14 @@ void CBasePlayer::AvoidPhysicsProps( CUserCmd *pCmd )
 // Purpose: 
 // Output : const char
 //-----------------------------------------------------------------------------
-const char *CBasePlayer::GetTracerType( void )
+const char *CBasePlayer::GetTracerType_Impl( void )
 {
 	if ( GetActiveWeapon() )
 	{
 		return GetActiveWeapon()->GetTracerType();
 	}
 
-	return BaseClass::GetTracerType();
+	return BaseClass::GetTracerType_Impl();
 }
 
 //-----------------------------------------------------------------------------
@@ -2788,7 +2783,7 @@ float CBasePlayer::GetHeldObjectMass( IPhysicsObject *pHeldObject )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CBasePlayer::VPhysicsShadowUpdate( IPhysicsObject *pPhysics )
+void CBasePlayer::VPhysicsShadowUpdate_Impl( IPhysicsObject *pPhysics )
 {
 	if ( sv_turbophysics.GetBool() )
 		return;

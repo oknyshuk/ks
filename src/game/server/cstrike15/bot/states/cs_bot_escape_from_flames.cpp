@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.core;
 #include "cs_bot.h"
 
 //--------------------------------------------------------------------------------------------------------------
@@ -32,9 +30,7 @@ public:
 		m_safeAreaTravelRange = std::numeric_limits<float>::max();
 	}
 
-	virtual ~CNonDamagingScan() { }
-
-	virtual bool operator() ( CNavArea *area, CNavArea *priorArea, float travelDistanceSoFar )
+	bool operator() ( CNavArea *area, CNavArea *priorArea, float travelDistanceSoFar )
 	{
 		const float maxSearchRange = 2000.0f;
 		if ( travelDistanceSoFar < maxSearchRange )

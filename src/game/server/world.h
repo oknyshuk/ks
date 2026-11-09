@@ -28,17 +28,18 @@ public:
 
 	DECLARE_SERVERCLASS();
 
-	virtual int RequiredEdictIndex( void ) { return 0; }   // the world always needs to be in slot 0
+	int RequiredEdictIndex_Impl( void ) { return 0; }   // the world always needs to be in slot 0
 	
 	static void RegisterSharedActivities( void );
 	static void RegisterSharedEvents( void );
-	virtual void Spawn( void );
-	virtual void Precache( void );
-	virtual void UpdateOnRemove( void );
-	virtual bool KeyValue( const char *szKeyName, const char *szValue );
-	virtual void DecalTrace( trace_t *pTrace, char const *decalName );
-	virtual void VPhysicsCollision( int index, gamevcollisionevent_t *pEvent ) {}
-	virtual void VPhysicsFriction( IPhysicsObject *pObject, float energy, int surfaceProps, int surfacePropsHit ) {}
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	void UpdateOnRemove_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	void DecalTrace_Impl( trace_t *pTrace, char const *decalName );
+	void VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent ) {}
+	void VPhysicsFriction_Impl( IPhysicsObject *pObject, float energy, int surfaceProps, int surfacePropsHit ) {}
 
 	inline void GetWorldBounds( Vector &vecMins, Vector &vecMaxs )
 	{

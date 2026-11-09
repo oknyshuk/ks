@@ -70,7 +70,7 @@ typedef CDataManager<DataCacheItem_t, DataCacheItemData_t, DataCacheItem_t *, st
 class CDataCacheSection : public IDataCacheSection
 {
 public:
-	CDataCacheSection( CDataCache *pSharedCache, IDataCacheClient *pClient, const char *pszName );
+	CDataCacheSection( CDataCache *pSharedCache, IDataCacheClient *pClient, const char *pszName, bool bSupportFastFind = false );
 	~CDataCacheSection();
 
 	IDataCache *GetSharedCache();
@@ -80,10 +80,10 @@ public:
 	//--------------------------------------------------------
 	// IDataCacheSection methods
 	//--------------------------------------------------------
-	virtual void SetLimits( const DataCacheLimits_t &limits );
+	void SetLimits( const DataCacheLimits_t &limits );
 	const DataCacheLimits_t &GetLimits();
-	virtual void SetOptions( unsigned options );
-	virtual void GetStatus( DataCacheStatus_t *pStatus, DataCacheLimits_t *pLimits = nullptr );
+	void SetOptions( unsigned options );
+	void GetStatus( DataCacheStatus_t *pStatus, DataCacheLimits_t *pLimits = nullptr );
 
 	inline unsigned GetNumBytes()			{ return m_status.nBytes; }
 	inline unsigned GetNumItems()			{ return m_status.nItems; }
@@ -94,68 +94,71 @@ public:
 	inline unsigned GetNumBytesUnlocked()	{ return m_status.nBytes - m_status.nBytesLocked; }
 	inline unsigned GetNumItemsUnlocked()	{ return m_status.nItems - m_status.nItemsLocked; }
 
-	virtual void EnsureCapacity( unsigned nBytes, unsigned nItems = 1 );
+	void EnsureCapacity( unsigned nBytes, unsigned nItems = 1 );
 
 	//--------------------------------------------------------
 
-	virtual bool Add( DataCacheClientID_t clientId, const void *pItemData, unsigned size, DataCacheHandle_t *pHandle );
-	virtual bool AddEx( DataCacheClientID_t clientId, const void *pItemData, unsigned size, unsigned flags, DataCacheHandle_t *pHandle );
-	virtual DataCacheHandle_t Find( DataCacheClientID_t clientId );
-	virtual DataCacheRemoveResult_t Remove( DataCacheHandle_t handle, const void **ppItemData = nullptr, unsigned *pItemSize = nullptr, bool bNotify = false );
-	virtual bool IsPresent( DataCacheHandle_t handle );
+	bool Add( DataCacheClientID_t clientId, const void *pItemData, unsigned size, DataCacheHandle_t *pHandle );
+	bool AddEx( DataCacheClientID_t clientId, const void *pItemData, unsigned size, unsigned flags, DataCacheHandle_t *pHandle );
+	DataCacheHandle_t Find( DataCacheClientID_t clientId );
+	DataCacheRemoveResult_t Remove( DataCacheHandle_t handle, const void **ppItemData = nullptr, unsigned *pItemSize = nullptr, bool bNotify = false );
+	bool IsPresent( DataCacheHandle_t handle );
 
 	//--------------------------------------------------------
 
-	virtual void *Lock( DataCacheHandle_t handle );
-	virtual int Unlock( DataCacheHandle_t handle );
-	virtual void *Get( DataCacheHandle_t handle, bool bFrameLock = false );
-	virtual void *GetNoTouch( DataCacheHandle_t handle, bool bFrameLock = false );
-	virtual void GetAndLockMultiple( void **ppData, int nCount, DataCacheHandle_t *pHandles );
-	virtual void LockMutex();
-	virtual void UnlockMutex();
+	void *Lock( DataCacheHandle_t handle );
+	int Unlock( DataCacheHandle_t handle );
+	void *Get( DataCacheHandle_t handle, bool bFrameLock = false );
+	void *GetNoTouch( DataCacheHandle_t handle, bool bFrameLock = false );
+	void GetAndLockMultiple( void **ppData, int nCount, DataCacheHandle_t *pHandles );
+	void LockMutex();
+	void UnlockMutex();
 
 	//--------------------------------------------------------
 
-	virtual int BeginFrameLocking();
-	virtual bool IsFrameLocking();
-	virtual void *FrameLock( DataCacheHandle_t handle );
-	virtual int EndFrameLocking();
+	int BeginFrameLocking();
+	bool IsFrameLocking();
+	void *FrameLock( DataCacheHandle_t handle );
+	int EndFrameLocking();
 
 	//--------------------------------------------------------
 
-	virtual int GetLockCount( DataCacheHandle_t handle );
-	virtual int BreakLock( DataCacheHandle_t handle );
+	int GetLockCount( DataCacheHandle_t handle );
+	int BreakLock( DataCacheHandle_t handle );
 
 	//--------------------------------------------------------
 
-	virtual int *GetFrameUnlockCounterPtr();
+	int *GetFrameUnlockCounterPtr();
 	int			m_nFrameUnlockCounter;
 
 	//--------------------------------------------------------
 
-	virtual bool Touch( DataCacheHandle_t handle );
-	virtual bool Age( DataCacheHandle_t handle );
+	bool Touch( DataCacheHandle_t handle );
+	bool Age( DataCacheHandle_t handle );
 
 	//--------------------------------------------------------
 
-	virtual unsigned Flush( bool bUnlockedOnly = true, bool bNotify = true );
-	virtual unsigned Purge( unsigned nBytes );
+	unsigned Flush( bool bUnlockedOnly = true, bool bNotify = true );
+	unsigned Purge( unsigned nBytes );
 	unsigned PurgeItems( unsigned nItems );
 
 	//--------------------------------------------------------
 
-	virtual void OutputReport( DataCacheReportType_t reportType = DC_SUMMARY_REPORT );
+	void OutputReport( DataCacheReportType_t reportType = DC_SUMMARY_REPORT );
 
-	virtual void UpdateSize( DataCacheHandle_t handle, unsigned int nNewSize );
+	void UpdateSize( DataCacheHandle_t handle, unsigned int nNewSize );
 
-	virtual unsigned int GetOptions();
+	unsigned int GetOptions();
 
 private:
 	friend void DataCacheItem_t::DestroyResource();
 
-	virtual void OnAdd( DataCacheClientID_t clientId, DataCacheHandle_t hCacheItem ) {}
-	virtual DataCacheHandle_t DoFind( DataCacheClientID_t clientId );
-	virtual void OnRemove( DataCacheClientID_t clientId ) {}
+	// A section is either an LRU only (DoFind scans it) or, with fast find, also tracks its items by
+	// client id so that clients can look them up efficiently (a true cache, not just an LRU).
+	void OnAdd( DataCacheClientID_t clientId, DataCacheHandle_t hCacheItem );
+	DataCacheHandle_t DoFind( DataCacheClientID_t clientId );
+	DataCacheHandle_t DoFindScan( DataCacheClientID_t clientId );
+	void OnRemove( DataCacheClientID_t clientId );
 
 	memhandle_t GetFirstUnlockedItem();
 	memhandle_t GetFirstLockedItem();
@@ -185,6 +188,8 @@ private:
 	DataCacheStatus_t	m_status;
 	DataCacheLimits_t	m_limits;
 	IDataCacheClient *	m_pClient;
+	bool				m_bFastFind;
+	std::unordered_map<DataCacheClientID_t, DataCacheHandle_t> m_Handles;	// fast find sections only
 	unsigned			m_options;
 	CDataCache *		m_pSharedCache;
 	char				szName[DC_MAX_CLIENT_NAME + 1];
@@ -196,75 +201,50 @@ protected:
 
 
 //-----------------------------------------------------------------------------
-// CDataCacheSectionFastFind
-//
-// Purpose: A section variant that allows clients to have cache support tracking
-//			efficiently (a true cache, not just an LRU)
-//-----------------------------------------------------------------------------
-class CDataCacheSectionFastFind : public CDataCacheSection
-{
-public:
-	CDataCacheSectionFastFind(CDataCache *pSharedCache, IDataCacheClient *pClient, const char *pszName )
-		: CDataCacheSection( pSharedCache, pClient, pszName )
-	{
-		m_Handles.reserve( 1024 );
-	}
-
-private:
-	virtual DataCacheHandle_t DoFind( DataCacheClientID_t clientId );
-	virtual void OnAdd( DataCacheClientID_t clientId, DataCacheHandle_t hCacheItem );
-	virtual void OnRemove( DataCacheClientID_t clientId );
-
-	std::unordered_map<DataCacheClientID_t, DataCacheHandle_t> m_Handles;
-};
-
-
-//-----------------------------------------------------------------------------
 // CDataCache
 //
 // Purpose: The global shared cache. Manages sections and overall budgets.
 //
 //-----------------------------------------------------------------------------
-class CDataCache : public CTier3AppSystem< IDataCache >
+class CDataCache : public IDataCache
 {
-	typedef CTier3AppSystem< IDataCache > BaseClass;
 
 public:
 	CDataCache();
 
 	//--------------------------------------------------------
-	// IAppSystem methods
+	// App system protocol (a tier 3 system)
 	//--------------------------------------------------------
-	virtual bool Connect( CreateInterfaceFn factory );
-	virtual void Disconnect();
-	virtual void *QueryInterface( const char *pInterfaceName );
-	virtual InitReturnVal_t Init();
-	virtual void Shutdown();
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t Init();
+	void Shutdown();
 
 	//--------------------------------------------------------
 	// IDataCache methods
 	//--------------------------------------------------------
 
-	virtual void SetSize( int nMaxBytes );
-	virtual void SetOptions( unsigned options );
-	virtual void SetSectionLimits( const char *pszSectionName, const DataCacheLimits_t &limits );
-	virtual void GetStatus( DataCacheStatus_t *pStatus, DataCacheLimits_t *pLimits = nullptr );
+	void SetSize( int nMaxBytes );
+	void SetOptions( unsigned options );
+	void SetSectionLimits( const char *pszSectionName, const DataCacheLimits_t &limits );
+	void GetStatus( DataCacheStatus_t *pStatus, DataCacheLimits_t *pLimits = nullptr );
 
 	//--------------------------------------------------------
 
-	virtual IDataCacheSection *AddSection( IDataCacheClient *pClient, const char *pszSectionName, const DataCacheLimits_t &limits = DataCacheLimits_t(), bool bSupportFastFind = false );
-	virtual void RemoveSection( const char *pszClientName, bool bCallFlush = true );
-	virtual IDataCacheSection *FindSection( const char *pszClientName );
+	IDataCacheSection *AddSection( IDataCacheClient *pClient, const char *pszSectionName, const DataCacheLimits_t &limits = DataCacheLimits_t(), bool bSupportFastFind = false );
+	void RemoveSection( const char *pszClientName, bool bCallFlush = true );
+	IDataCacheSection *FindSection( const char *pszClientName );
 
 	//--------------------------------------------------------
 
 	void EnsureCapacity( unsigned nBytes );
-	virtual unsigned Purge( unsigned nBytes );
-	virtual unsigned Flush( bool bUnlockedOnly = true, bool bNotify = true );
+	unsigned Purge( unsigned nBytes );
+	unsigned Flush( bool bUnlockedOnly = true, bool bNotify = true );
 
 	//--------------------------------------------------------
 
-	virtual void OutputReport( DataCacheReportType_t reportType = DC_SUMMARY_REPORT, const char *pszSection = nullptr );
+	void OutputReport( DataCacheReportType_t reportType = DC_SUMMARY_REPORT, const char *pszSection = nullptr );
 
 	//--------------------------------------------------------
 
@@ -277,8 +257,8 @@ public:
 	inline unsigned GetNumBytesUnlocked()	{ return m_status.nBytes - m_status.nBytesLocked; }
 	inline unsigned GetNumItemsUnlocked()	{ return m_status.nItems - m_status.nItemsLocked; }
 
-	virtual int GetSectionCount( void );
-	virtual const char *GetSectionName( int iIndex );
+	int GetSectionCount( void );
+	const char *GetSectionName( int iIndex );
 
 private:
 	//-----------------------------------------------------

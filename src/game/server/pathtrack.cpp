@@ -3,8 +3,6 @@
 
 // Purpose: Used to create a path that can be followed by NPCs and trains.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -69,7 +66,7 @@ CPathTrack::CPathTrack()
 //-----------------------------------------------------------------------------
 // Spawn!
 //-----------------------------------------------------------------------------
-void CPathTrack::Spawn( void )
+void CPathTrack::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	UTIL_SetSize(this, Vector(-8, -8, -8), Vector(8, 8, 8));
@@ -82,9 +79,9 @@ void CPathTrack::Spawn( void )
 //-----------------------------------------------------------------------------
 // Activate!
 //-----------------------------------------------------------------------------
-void CPathTrack::Activate( void )
+void CPathTrack::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( GetEntityName() != NULL_STRING )		// Link to next, and back-link
 	{
@@ -306,7 +303,7 @@ void CPathTrack::InputTogglePath( inputdata_t &inputdata )
 }
 
 
-void CPathTrack::DrawDebugGeometryOverlays() 
+void CPathTrack::DrawDebugGeometryOverlays_Impl() 
 {
 	// ----------------------------------------------
 	// Draw line to next target is bbox is selected
@@ -318,7 +315,7 @@ void CPathTrack::DrawDebugGeometryOverlays()
 			NDebugOverlay::Line(GetAbsOrigin(),m_pnext->GetAbsOrigin(),255,100,100,true,0.0);
 		}
 	}
-	BaseClass::DrawDebugGeometryOverlays();
+	BaseClass::DrawDebugGeometryOverlays_Impl();
 }
 
 CPathTrack	*CPathTrack::ValidPath( CPathTrack	*ppath, int testFlag )

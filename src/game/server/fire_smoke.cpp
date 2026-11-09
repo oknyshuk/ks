@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "edict.h"
 #include "eiface.h"
 #include "iserverentity.h"
@@ -122,12 +120,12 @@ CFireSmoke::~CFireSmoke( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CFireSmoke::Precache()
+void CFireSmoke::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
-void CFireSmoke::Spawn()
+void CFireSmoke::Spawn_Impl()
 {
 	Precache();
 }

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -40,7 +38,6 @@ import ks.tier1;
 
 extern ConVar ai_debug_speech;
 #define DebuggingSpeech() ai_debug_speech.GetBool()
-extern ConVar rr_debugresponses;
 
 ConVar rr_followup_maxdist( "rr_followup_maxdist", "1800", FCVAR_CHEAT, "'then ANY' or 'then ALL' response followups will be dispatched only to characters within this distance." );
 

@@ -12,7 +12,7 @@ class IMaterialProxy;
 class IMaterialProxyFactory
 {
 public:
-	virtual IMaterialProxy *CreateProxy( const char *proxyName ) = 0;
-	virtual void DeleteProxy( IMaterialProxy *pProxy ) = 0;
-	virtual CreateInterfaceFn GetFactory() = 0;
+	IMaterialProxy *CreateProxy( const char *proxyName );
+	void DeleteProxy( IMaterialProxy *pProxy );
+	CreateInterfaceFn GetFactory();
 };

@@ -2,8 +2,6 @@
 // Copyright (c) 2007 Turtle Rock Studios, Inc.
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"

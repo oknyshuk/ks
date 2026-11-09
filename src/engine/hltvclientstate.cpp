@@ -45,7 +45,7 @@ static	ConVar tv_timeout( "tv_timeout", "30", FCVAR_RELEASE, "GOTV connection ti
 
 
 
-CHLTVClientState::CHLTVClientState(CHLTVServer *pHltvServer) : m_pHLTV( pHltvServer )
+CHLTVClientState::CHLTVClientState(CHLTVServer *pHltvServer) : CBaseClientState( state_kind_t::hltv ), m_pHLTV( pHltvServer )
 {
 	m_pNewClientFrame = nullptr;
 	m_pCurrentClientFrame = nullptr;
@@ -183,7 +183,7 @@ bool CHLTVClientState::SetSignonState ( int state, int count, const ks::net::CNE
 {
 	//	ConDMsg ("CL_SignonReply: %i\n", GetBaseLocalClient().signon);
 
-	if ( !CBaseClientState::SetSignonState( state, count, msg ) )
+	if ( !CBaseClientState::SetSignonStateBase( state, count, msg ) )
 		return false;
 	
 	contract_assert( m_nSignonState == state );
@@ -298,7 +298,7 @@ bool CHLTVClientState::NETMsg_StringCmd(const ks::net::CNETMsg_StringCmd& msg)
 
 bool CHLTVClientState::NETMsg_SetConVar(const ks::net::CNETMsg_SetConVar& msg)
 {
-	if ( !CBaseClientState::NETMsg_SetConVar( msg ) )
+	if ( !CBaseClientState::NETMsg_SetConVarBase( msg ) )
 		return false;
 
 	CNETMsg_SetConVar_t sendmsg;
@@ -323,7 +323,7 @@ bool CHLTVClientState::NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAva
 
 void CHLTVClientState::Clear()
 {
-	CBaseClientState::Clear();
+	CBaseClientState::ClearBase();
 
 	m_pNewClientFrame = nullptr;
 	m_pCurrentClientFrame = nullptr;
@@ -352,7 +352,7 @@ bool CHLTVClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg
 	m_pHLTV->StartRelay();
 
 	// Process the message
-	if ( !CBaseClientState::SVCMsg_ServerInfo( msg ) )
+	if ( !CBaseClientState::SVCMsg_ServerInfoBase( msg ) )
 	{
 		Disconnect();
 		return false;
@@ -423,7 +423,7 @@ void CHLTVClientState::PacketEnd( void )
 	{
 		// if so, add a new frame to HLTV
 		m_pCurrentClientFrame = m_pHLTV->AddNewFrame( m_pNewClientFrame );
-		delete m_pNewClientFrame; // release own refernces
+		m_pNewClientFrame->DeleteThis(); // release own refernces
 		m_pNewClientFrame = nullptr;
 	}
 }
@@ -461,7 +461,7 @@ void CHLTVClientState::InstallStringTableCallback( char const *tableName )
 
 bool CHLTVClientState::SVCMsg_SetView( const ks::net::CSVCMsg_SetView& msg )
 {
-	if ( !CBaseClientState::SVCMsg_SetView( msg ) )
+	if ( !CBaseClientState::SVCMsg_SetViewBase( msg ) )
 		return false;
 
 	CSVCMsg_SetView_t sendmsg;
@@ -577,7 +577,7 @@ bool CHLTVClientState::SVCMsg_GameEvent( const ks::net::CSVCMsg_GameEvent& msg )
 
 bool CHLTVClientState::SVCMsg_GameEventList( const ks::net::CSVCMsg_GameEventList& msg )
 {
-	if ( !CBaseClientState::SVCMsg_GameEventList( msg ) )
+	if ( !CBaseClientState::SVCMsg_GameEventListBase( msg ) )
 		return false;
 
 	// cache off the eventids for hltv_status and hltv_title
@@ -696,7 +696,7 @@ bool CHLTVClientState::SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntit
 	// adjust reference count to be 1
 	pSnapshot->ReleaseReference();
 
-	return CBaseClientState::SVCMsg_PacketEntities( msg );
+	return CBaseClientState::SVCMsg_PacketEntitiesBase( msg );
 }
 
 bool CHLTVClientState::SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities &msg )
@@ -977,12 +977,12 @@ int CHLTVClientState::GetConnectionRetryNumber() const
 		return CL_CONNECTION_RETRIES * 4;
 	}
 
-	return CBaseClientState::GetConnectionRetryNumber();
+	return CBaseClientState::GetConnectionRetryNumberBase();
 }
 
 void CHLTVClientState::ConnectionCrashed(const char *reason)
 {
-	CBaseClientState::ConnectionCrashed( reason );
+	CBaseClientState::ConnectionCrashedBase( reason );
 
 	if ( tv_autoretry.GetBool() && m_Remote.Count() > 0 )
 	{
@@ -992,7 +992,7 @@ void CHLTVClientState::ConnectionCrashed(const char *reason)
 
 void CHLTVClientState::ConnectionClosing( const char *reason )
 {
-	CBaseClientState::ConnectionClosing( reason );
+	CBaseClientState::ConnectionClosingBase( reason );
 
 	if ( tv_autoretry.GetBool() && m_Remote.Count() > 0 )
 	{
@@ -1002,7 +1002,7 @@ void CHLTVClientState::ConnectionClosing( const char *reason )
 
 void CHLTVClientState::Disconnect( bool bShowMainMenu /* = true */ )
 {
-	CBaseClientState::Disconnect( bShowMainMenu );
+	CBaseClientState::DisconnectBase( bShowMainMenu );
 
 	// Update hibernation state on the main server which controls hibernation and shutdown criteria
 	sv.UpdateHibernationState();
@@ -1017,7 +1017,7 @@ void CHLTVClientState::Disconnect( bool bShowMainMenu /* = true */ )
 
 void CHLTVClientState::RunFrame()
 {
-	CBaseClientState::RunFrame();
+	CBaseClientState::RunFrameBase();
 
 	if ( m_NetChannel && m_NetChannel->IsTimedOut() && IsConnected() )
 	{

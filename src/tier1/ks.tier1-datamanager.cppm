@@ -15,6 +15,9 @@ using memhandle_t = memhandle_t__ *;
 
 inline const memhandle_t INVALID_MEMHANDLE = (memhandle_t)0xffffffff;
 
+// CRTP base: DERIVED supplies the policy hooks Lock/TryLock/Unlock (thread lock),
+// DestroyResourceStorage( void * ) and GetRealSize( void * ).
+template <class DERIVED>
 class CDataManagerBase
 {
 public:
@@ -54,12 +57,9 @@ public:
 	unsigned int			EnsureCapacity( unsigned int size );
 
 	// Thread lock
-	virtual void			Lock() {}
-	virtual bool			TryLock() { return true; }
-	virtual void			Unlock() {}
-	void					lock() { Lock(); }
-	bool					try_lock() { return TryLock(); }
-	void					unlock() { Unlock(); }
+	void					lock() { Self().Lock(); }
+	bool					try_lock() { return Self().TryLock(); }
+	void					unlock() { Self().Unlock(); }
 
 	// Iteration
 
@@ -84,16 +84,14 @@ protected:
 	void					FreeAllLists()	{ FlushAll(); m_listsAreFreed = true; }
 
 							CDataManagerBase( unsigned int maxSize );
-	virtual					~CDataManagerBase();
+	~CDataManagerBase();
 	
 	
 	inline unsigned int		MemTotal_Inline() const { return m_targetMemorySize; }
 	inline unsigned int		MemAvailable_Inline() const { return m_targetMemorySize - m_memUsed; }
 	inline unsigned int		MemUsed_Inline() const { return m_memUsed; }
 
-// Implemented by derived class:
-	virtual void			DestroyResourceStorage( void * ) = 0;
-	virtual unsigned int	GetRealSize( void * ) = 0;
+	DERIVED					&Self()	{ return *static_cast<DERIVED *>( this ); }
 
 	memhandle_t				ToHandle( unsigned short index );
 	unsigned short			FromHandle( memhandle_t handle );
@@ -219,9 +217,17 @@ protected:
 };
 
 template< class STORAGE_TYPE, class CREATE_PARAMS, class LOCK_TYPE = STORAGE_TYPE *, class MUTEX_TYPE = ks::null_mutex>
-class CDataManager : public CDataManagerBase
+class CDataManager : public CDataManagerBase< CDataManager< STORAGE_TYPE, CREATE_PARAMS, LOCK_TYPE, MUTEX_TYPE > >
 {
-	typedef CDataManagerBase BaseClass;
+	typedef CDataManagerBase< CDataManager< STORAGE_TYPE, CREATE_PARAMS, LOCK_TYPE, MUTEX_TYPE > > BaseClass;
+	friend BaseClass;
+	using BaseClass::m_freeOnDestruct;
+	using BaseClass::FreeAllLists;
+	using BaseClass::m_memoryLists;
+	using BaseClass::m_lruList;
+	using BaseClass::m_lockList;
+	using BaseClass::ToHandle;
+	using BaseClass::FromHandle;
 public:
 
 	CDataManager( unsigned int size = (unsigned)-1 ) : BaseClass(size) {}
@@ -335,9 +341,9 @@ public:
 	}
 
 	MUTEX_TYPE &AccessMutex()	{ return m_mutex; }
-	virtual void Lock() { m_mutex.lock(); }
-	virtual bool TryLock() { return m_mutex.try_lock(); }
-	virtual void Unlock() { m_mutex.unlock(); }
+	void Lock() { m_mutex.lock(); }
+	bool TryLock() { return m_mutex.try_lock(); }
+	void Unlock() { m_mutex.unlock(); }
 
 private:
 	STORAGE_TYPE *StoragePointer( void *pMem )
@@ -345,12 +351,12 @@ private:
 		return static_cast<STORAGE_TYPE *>(pMem);
 	}
 
-	virtual void DestroyResourceStorage( void *pStore )
+	void DestroyResourceStorage( void *pStore )
 	{
 		StoragePointer(pStore)->DestroyResource();
 	}
 	
-	virtual unsigned int GetRealSize( void *pStore )
+	unsigned int GetRealSize( void *pStore )
 	{
 		return StoragePointer(pStore)->Size();
 	}
@@ -360,7 +366,8 @@ private:
 
 //-----------------------------------------------------------------------------
 
-inline unsigned short CDataManagerBase::FromHandle( memhandle_t handle )
+template <class DERIVED>
+inline unsigned short CDataManagerBase<DERIVED>::FromHandle( memhandle_t handle )
 {
 	unsigned int fullWord = (unsigned int)reinterpret_cast<uintp>( handle );
 	unsigned short serial = fullWord>>16;
@@ -371,17 +378,465 @@ inline unsigned short CDataManagerBase::FromHandle( memhandle_t handle )
 	return m_memoryLists.InvalidIndex();
 }
 
-inline int CDataManagerBase::LockCount( memhandle_t handle )
+template <class DERIVED>
+inline int CDataManagerBase<DERIVED>::LockCount( memhandle_t handle )
 {
-	Lock();
+	lock();
 	int result = 0;
 	unsigned short memoryIndex = FromHandle(handle);
 	if ( memoryIndex != m_memoryLists.InvalidIndex() )
 	{
 		result = m_memoryLists[memoryIndex].lockCount;
 	}
-	Unlock();
+	unlock();
 	return result;
+}
+
+
+//-----------------------------------------------------------------------------
+// CDataManagerBase implementation
+//-----------------------------------------------------------------------------
+
+template <class DERIVED>
+CDataManagerBase<DERIVED>::CDataManagerBase( unsigned int maxSize )
+{
+	m_targetMemorySize = maxSize;
+	m_memUsed = 0;
+	m_listsAreFreed = 0;
+	m_freeOnDestruct = 1;
+}
+
+template <class DERIVED>
+CDataManagerBase<DERIVED>::~CDataManagerBase() 
+{
+	contract_assert( !m_freeOnDestruct || m_listsAreFreed );
+}
+
+template <class DERIVED>
+void CDataManagerBase<DERIVED>::NotifySizeChanged( memhandle_t handle, unsigned int oldSize, unsigned int newSize )
+{
+	lock();
+	m_memUsed += (int)newSize - (int)oldSize;
+	unlock();
+}
+
+template <class DERIVED>
+void CDataManagerBase<DERIVED>::SetTargetSize( unsigned int targetSize )
+{
+	m_targetMemorySize = targetSize;
+}
+
+template <class DERIVED>
+unsigned int CDataManagerBase<DERIVED>::FlushAllUnlocked()
+{
+	lock();
+
+	int nFlush = m_memoryLists.Count( m_lruList );
+	std::vector< void * > destroyList;
+	destroyList.reserve( nFlush );
+
+	unsigned nBytesInitial = MemUsed_Inline();
+
+	int node = m_memoryLists.Head(m_lruList);
+	while ( node != m_memoryLists.InvalidIndex() )
+	{
+		int next = m_memoryLists.Next(node);
+		m_memoryLists.Unlink( m_lruList, node );
+		destroyList.push_back( GetForFreeByIndex( node ) );
+		node = next;
+	}
+
+	unlock();
+
+	for ( int i = 0; i < nFlush; i++ )
+	{
+		Self().DestroyResourceStorage( destroyList[i] );
+	}
+
+	return ( nBytesInitial - MemUsed_Inline() );
+}
+
+template <class DERIVED>
+unsigned int CDataManagerBase<DERIVED>::FlushToTargetSize()
+{
+	return EnsureCapacity(0);
+}
+
+// Frees everything!  The LRU AND the LOCKED items.  This is only used to forcibly free the resources,
+// not to make space.
+
+template <class DERIVED>
+unsigned int CDataManagerBase<DERIVED>::FlushAll()
+{
+	lock();
+
+	int nFlush = m_memoryLists.Count( m_lruList ) + m_memoryLists.Count( m_lockList );
+	std::vector< void * > destroyList;
+	destroyList.reserve( nFlush );
+
+	unsigned result = MemUsed_Inline();
+	int node;
+	int nextNode;
+
+	node = m_memoryLists.Head(m_lruList);
+	while ( node != m_memoryLists.InvalidIndex() )
+	{
+		nextNode = m_memoryLists.Next(node);
+		m_memoryLists.Unlink( m_lruList, node );
+		destroyList.push_back( GetForFreeByIndex( node ) );
+		node = nextNode;
+	}
+
+	node = m_memoryLists.Head(m_lockList);
+	while ( node != m_memoryLists.InvalidIndex() )
+	{
+		nextNode = m_memoryLists.Next(node);
+		m_memoryLists.Unlink( m_lockList, node );
+		m_memoryLists[node].lockCount = 0;
+		destroyList.push_back( GetForFreeByIndex( node ) );
+		node = nextNode;
+	}
+
+	m_listsAreFreed = false;
+	unlock();
+
+	for ( int i = 0; i < nFlush; i++ )
+	{
+		Self().DestroyResourceStorage( destroyList[i] );
+	}
+
+	return result;
+}
+
+template <class DERIVED>
+unsigned int CDataManagerBase<DERIVED>::Purge( unsigned int nBytesToPurge )
+{
+	unsigned int nTargetSize = MemUsed_Inline() - nBytesToPurge;
+	if ( nBytesToPurge > MemUsed_Inline() )
+		nTargetSize = 0;
+	unsigned int nImpliedCapacity = MemTotal_Inline() - nTargetSize;
+	return EnsureCapacity( nImpliedCapacity );
+}
+
+
+template <class DERIVED>
+void CDataManagerBase<DERIVED>::DestroyResource( memhandle_t handle )
+{
+	lock();
+	unsigned short index = FromHandle( handle );
+	if ( !m_memoryLists.IsValidIndex(index) )
+	{
+		unlock();
+		return;
+	}
+	
+	contract_assert( m_memoryLists[index].lockCount == 0 );
+	if ( m_memoryLists[index].lockCount )
+		BreakLock( handle );
+	m_memoryLists.Unlink( m_lruList, index );
+	void *p = GetForFreeByIndex( index );
+	unlock();
+
+	Self().DestroyResourceStorage( p );
+}
+
+
+template <class DERIVED>
+void *CDataManagerBase<DERIVED>::LockResource( memhandle_t handle )
+{
+	std::scoped_lock lock( *this );
+	unsigned short memoryIndex = FromHandle(handle);
+	if ( memoryIndex != m_memoryLists.InvalidIndex() )
+	{
+		if ( m_memoryLists[memoryIndex].lockCount == 0 )
+		{
+			m_memoryLists.Unlink( m_lruList, memoryIndex );
+			m_memoryLists.LinkToTail( m_lockList, memoryIndex );
+		}
+		contract_assert( m_memoryLists[memoryIndex].lockCount != (unsigned short)-1 );
+		m_memoryLists[memoryIndex].lockCount++;
+		return m_memoryLists[memoryIndex].pStore;
+	}
+
+	return nullptr;
+}
+
+template <class DERIVED>
+void *CDataManagerBase<DERIVED>::LockResourceReturnCount( int *pCount, memhandle_t handle )
+{
+	std::scoped_lock lock( *this );
+	unsigned short memoryIndex = FromHandle(handle);
+	if ( memoryIndex != m_memoryLists.InvalidIndex() )
+	{
+		if ( m_memoryLists[memoryIndex].lockCount == 0 )
+		{
+			m_memoryLists.Unlink( m_lruList, memoryIndex );
+			m_memoryLists.LinkToTail( m_lockList, memoryIndex );
+		}
+		contract_assert( m_memoryLists[memoryIndex].lockCount != (unsigned short)-1 );
+		*pCount = ++m_memoryLists[memoryIndex].lockCount;
+		return m_memoryLists[memoryIndex].pStore;
+	}
+
+	*pCount = 0;
+	return nullptr;
+}
+
+template <class DERIVED>
+int CDataManagerBase<DERIVED>::UnlockResource( memhandle_t handle )
+{
+	std::scoped_lock lock( *this );
+	unsigned short memoryIndex = FromHandle(handle);
+	if ( memoryIndex != m_memoryLists.InvalidIndex() )
+	{
+		contract_assert( m_memoryLists[memoryIndex].lockCount > 0 );
+		if ( m_memoryLists[memoryIndex].lockCount > 0 )
+		{
+			m_memoryLists[memoryIndex].lockCount--;
+			if ( m_memoryLists[memoryIndex].lockCount == 0 )
+			{
+				m_memoryLists.Unlink( m_lockList, memoryIndex );
+				m_memoryLists.LinkToTail( m_lruList, memoryIndex );
+			}
+		}
+		return m_memoryLists[memoryIndex].lockCount;
+	}
+
+	return 0;
+}
+
+template <class DERIVED>
+void *CDataManagerBase<DERIVED>::GetResource_NoLockNoLRUTouch( memhandle_t handle )
+{
+	std::scoped_lock lock( *this );
+	unsigned short memoryIndex = FromHandle(handle);
+	if ( memoryIndex != m_memoryLists.InvalidIndex() )
+	{
+		return m_memoryLists[memoryIndex].pStore;
+	}
+	return nullptr;
+}
+
+
+template <class DERIVED>
+void *CDataManagerBase<DERIVED>::GetResource_NoLock( memhandle_t handle )
+{
+	std::scoped_lock lock( *this );
+	unsigned short memoryIndex = FromHandle(handle);
+	if ( memoryIndex != m_memoryLists.InvalidIndex() )
+	{
+		TouchByIndex( memoryIndex );
+		return m_memoryLists[memoryIndex].pStore;
+	}
+	return nullptr;
+}
+
+template <class DERIVED>
+void CDataManagerBase<DERIVED>::TouchResource( memhandle_t handle )
+{
+	std::scoped_lock lock( *this );
+	TouchByIndex( FromHandle(handle) );
+}
+
+template <class DERIVED>
+void CDataManagerBase<DERIVED>::MarkAsStale( memhandle_t handle )
+{
+	std::scoped_lock lock( *this );
+	unsigned short memoryIndex = FromHandle(handle);
+	if ( memoryIndex != m_memoryLists.InvalidIndex() )
+	{
+		if ( m_memoryLists[memoryIndex].lockCount == 0 )
+		{
+			m_memoryLists.Unlink( m_lruList, memoryIndex );
+			m_memoryLists.LinkToHead( m_lruList, memoryIndex );
+		}
+	}
+}
+
+template <class DERIVED>
+int CDataManagerBase<DERIVED>::BreakLock( memhandle_t handle )
+{
+	std::scoped_lock lock( *this );
+	unsigned short memoryIndex = FromHandle(handle);
+	if ( memoryIndex != m_memoryLists.InvalidIndex() && m_memoryLists[memoryIndex].lockCount )
+	{
+		int nBroken = m_memoryLists[memoryIndex].lockCount;
+		m_memoryLists[memoryIndex].lockCount = 0;
+		m_memoryLists.Unlink( m_lockList, memoryIndex );
+		m_memoryLists.LinkToTail( m_lruList, memoryIndex );
+
+		return nBroken;
+	}
+	return 0;
+}
+
+template <class DERIVED>
+int CDataManagerBase<DERIVED>::BreakAllLocks()
+{
+	std::scoped_lock lock( *this );
+	int nBroken = 0;
+	int node;
+	int nextNode;
+
+	node = m_memoryLists.Head(m_lockList);
+	while ( node != m_memoryLists.InvalidIndex() )
+	{
+		nBroken++;
+		nextNode = m_memoryLists.Next(node);
+		m_memoryLists[node].lockCount = 0;
+		m_memoryLists.Unlink( m_lockList, node );
+		m_memoryLists.LinkToTail( m_lruList, node );
+		node = nextNode;
+	}
+
+	return nBroken;
+
+}
+
+template <class DERIVED>
+unsigned short CDataManagerBase<DERIVED>::CreateHandle( bool bCreateLocked )
+{
+	std::scoped_lock lock( *this );
+	int memoryIndex = m_memoryLists.Head(m_freeList);
+	ListId_t list = ( bCreateLocked ) ? m_lockList : m_lruList;
+	if ( memoryIndex != m_memoryLists.InvalidIndex() )
+	{
+		m_memoryLists.Unlink( m_freeList, memoryIndex );
+		m_memoryLists.LinkToTail( list, memoryIndex );
+	}
+	else
+	{
+		memoryIndex = m_memoryLists.AddToTail( list );
+	}
+
+	if ( bCreateLocked )
+	{
+		m_memoryLists[memoryIndex].lockCount++;
+	}
+
+	return memoryIndex;
+}
+
+template <class DERIVED>
+memhandle_t CDataManagerBase<DERIVED>::StoreResourceInHandle( unsigned short memoryIndex, void *pStore, unsigned int realSize )
+{
+	std::scoped_lock lock( *this );
+	resource_lru_element_t &mem = m_memoryLists[memoryIndex];
+	mem.pStore = pStore;
+	m_memUsed += realSize;
+	return ToHandle(memoryIndex);
+}
+
+template <class DERIVED>
+void CDataManagerBase<DERIVED>::TouchByIndex( unsigned short memoryIndex )
+{
+	if ( memoryIndex != m_memoryLists.InvalidIndex() )
+	{
+		if ( m_memoryLists[memoryIndex].lockCount == 0 )
+		{
+			m_memoryLists.Unlink( m_lruList, memoryIndex );
+			m_memoryLists.LinkToTail( m_lruList, memoryIndex );
+		}
+	}
+}
+
+template <class DERIVED>
+memhandle_t CDataManagerBase<DERIVED>::ToHandle( unsigned short index )
+{
+	unsigned int hiword = m_memoryLists.Element(index).serial;
+	hiword <<= 16;
+	index++;
+	return reinterpret_cast< memhandle_t >( (uintp)( hiword|index ) );
+}
+
+template <class DERIVED>
+unsigned int CDataManagerBase<DERIVED>::TargetSize() 
+{ 
+	return MemTotal_Inline(); 
+}
+
+template <class DERIVED>
+unsigned int CDataManagerBase<DERIVED>::AvailableSize()
+{ 
+	return MemAvailable_Inline(); 
+}
+
+
+template <class DERIVED>
+unsigned int CDataManagerBase<DERIVED>::UsedSize()
+{ 
+	return MemUsed_Inline(); 
+}
+
+// free resources until there is enough space to hold "size"
+template <class DERIVED>
+unsigned int CDataManagerBase<DERIVED>::EnsureCapacity( unsigned int size )
+{
+	unsigned nBytesInitial = MemUsed_Inline();
+	while ( MemUsed_Inline() > MemTotal_Inline() || MemAvailable_Inline() < size )
+	{
+		lock();
+		int lruIndex = m_memoryLists.Head( m_lruList );
+		if ( lruIndex == m_memoryLists.InvalidIndex() )
+		{
+			unlock();
+			break;
+		}
+		m_memoryLists.Unlink( m_lruList, lruIndex );
+		void *p = GetForFreeByIndex( lruIndex );
+		unlock();
+		Self().DestroyResourceStorage( p );
+	}
+	return ( nBytesInitial - MemUsed_Inline() );
+}
+
+// free this resource and move the handle to the free list
+template <class DERIVED>
+void *CDataManagerBase<DERIVED>::GetForFreeByIndex( unsigned short memoryIndex )
+{
+	void *p = nullptr;
+	if ( memoryIndex != m_memoryLists.InvalidIndex() )
+	{
+		contract_assert( m_memoryLists[memoryIndex].lockCount == 0 );
+
+		resource_lru_element_t &mem = m_memoryLists[memoryIndex];
+		unsigned size = Self().GetRealSize( mem.pStore );
+		if ( size > m_memUsed )
+		{
+			ExecuteOnce( [&]{ Warning( "Data manager 'used' memory incorrect\n" ); } );
+			size = m_memUsed;
+		}
+		m_memUsed -= size;
+		p = mem.pStore;
+		mem.pStore = nullptr;
+		mem.serial++;
+		m_memoryLists.LinkToTail( m_freeList, memoryIndex );
+	}
+	return p;
+}
+
+// get a list of everything in the LRU
+template <class DERIVED>
+void CDataManagerBase<DERIVED>::GetLRUHandleList( std::vector< memhandle_t >& list )
+{
+	for ( int node = m_memoryLists.Tail(m_lruList);
+			node != m_memoryLists.InvalidIndex();
+			node = m_memoryLists.Previous(node) )
+	{
+		list.push_back( ToHandle( node ) );
+	}
+}
+
+// get a list of everything locked
+template <class DERIVED>
+void CDataManagerBase<DERIVED>::GetLockHandleList( std::vector< memhandle_t >& list )
+{
+	for ( int node = m_memoryLists.Head(m_lockList);
+			node != m_memoryLists.InvalidIndex();
+			node = m_memoryLists.Next(node) )
+	{
+		list.push_back( ToHandle( node ) );
+	}
 }
 
 }

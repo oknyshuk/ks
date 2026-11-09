@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -54,7 +52,7 @@ CEnvSoundscapeProxy::CEnvSoundscapeProxy()
 }
 
 
-void CEnvSoundscapeProxy::Activate()
+void CEnvSoundscapeProxy::Activate_Impl()
 {
 	if ( m_MainSoundscapeName != NULL_STRING )
 	{
@@ -78,7 +76,7 @@ void CEnvSoundscapeProxy::Activate()
 		Warning( "env_soundscape_proxy can't find target soundscape: '%s'\n", STRING( m_MainSoundscapeName ) );
 	}
 
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 }
 
 
@@ -162,14 +160,14 @@ void CEnvSoundscape::Enable( void )
 	// Force the player to recheck soundscapes
 }
 
-bool CEnvSoundscape::KeyValue( const char *szKeyName, const char *szValue )
+bool CEnvSoundscape::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "soundscape"))
 	{
 		m_soundscapeName = AllocPooledString( szValue );
 	}
 	else
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 
 	return true;
 }
@@ -347,12 +345,12 @@ void CEnvSoundscape::UpdateForPlayer( ss_update_t &update )
 // when player moves in range and sight.
 //
 //
-void CEnvSoundscape::Spawn( )
+void CEnvSoundscape::Spawn_Impl( )
 {
 	Precache();
 }
 
-void CEnvSoundscape::Precache()
+void CEnvSoundscape::Precache_Impl()
 {
 	if ( m_soundscapeName == NULL_STRING )
 	{
@@ -367,7 +365,7 @@ void CEnvSoundscape::Precache()
 	}
 }
 
-void CEnvSoundscape::DrawDebugGeometryOverlays( void )
+void CEnvSoundscape::DrawDebugGeometryOverlays_Impl( void )
 {
 	if ( m_debugOverlays & (OVERLAY_BBOX_BIT|OVERLAY_PIVOT_BIT|OVERLAY_ABSBOX_BIT) )
 	{
@@ -386,7 +384,7 @@ void CEnvSoundscape::DrawDebugGeometryOverlays( void )
 		}
 	}
 
-	BaseClass::DrawDebugGeometryOverlays();
+	BaseClass::DrawDebugGeometryOverlays_Impl();
 }
 
 
@@ -405,7 +403,7 @@ CEnvSoundscapeTriggerable::CEnvSoundscapeTriggerable()
 
 void CEnvSoundscapeTriggerable::DelegateStartTouch( CBaseEntity *pEnt )
 {
-	CBasePlayer *pPlayer = dynamic_cast< CBasePlayer* >( pEnt );
+	CBasePlayer *pPlayer = entity_cast<CBasePlayer>( pEnt );
 	if ( !pPlayer )
 		return;
 
@@ -421,7 +419,7 @@ void CEnvSoundscapeTriggerable::DelegateStartTouch( CBaseEntity *pEnt )
 
 void CEnvSoundscapeTriggerable::DelegateEndTouch( CBaseEntity *pEnt )
 {
-	CBasePlayer *pPlayer = dynamic_cast< CBasePlayer* >( pEnt );
+	CBasePlayer *pPlayer = entity_cast<CBasePlayer>( pEnt );
 	if ( !pPlayer )
 		return;
 
@@ -447,7 +445,7 @@ void CEnvSoundscapeTriggerable::DelegateEndTouch( CBaseEntity *pEnt )
 }
 
 
-void CEnvSoundscapeTriggerable::Think()
+void CEnvSoundscapeTriggerable::Think_Impl()
 {
 	// Overrides the base class's think and prevents it from running at all.
 }
@@ -465,11 +463,11 @@ public:
 
 	CTriggerSoundscape();
 
-	virtual void StartTouch( CBaseEntity *pOther );
-	virtual void EndTouch( CBaseEntity *pOther );
+	void StartTouch_Impl( CBaseEntity *pOther );
+	void EndTouch_Impl( CBaseEntity *pOther );
 
-	virtual void Spawn();
-	virtual void Activate();
+	void Spawn_Impl();
+	void Activate_Impl();
 
 	void PlayerUpdateThink();
 
@@ -491,27 +489,27 @@ CTriggerSoundscape::CTriggerSoundscape()
 }
 
 
-void CTriggerSoundscape::StartTouch( CBaseEntity *pOther )
+void CTriggerSoundscape::StartTouch_Impl( CBaseEntity *pOther )
 {
 	if ( m_hSoundscape )
 		m_hSoundscape->DelegateStartTouch( pOther );
 
-	BaseClass::StartTouch( pOther );
+	BaseClass::StartTouch_Impl( pOther );
 }
 
 
-void CTriggerSoundscape::EndTouch( CBaseEntity *pOther )
+void CTriggerSoundscape::EndTouch_Impl( CBaseEntity *pOther )
 {
 	if ( m_hSoundscape )
 		m_hSoundscape->DelegateEndTouch( pOther );
 
-	BaseClass::EndTouch( pOther );
+	BaseClass::EndTouch_Impl( pOther );
 }
 
 
-void CTriggerSoundscape::Spawn()
+void CTriggerSoundscape::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	InitTrigger();
 
 	SetThink( &CTriggerSoundscape::PlayerUpdateThink );
@@ -519,10 +517,10 @@ void CTriggerSoundscape::Spawn()
 }
 
 
-void CTriggerSoundscape::Activate()
+void CTriggerSoundscape::Activate_Impl()
 {
 	m_hSoundscape = dynamic_cast< CEnvSoundscapeTriggerable* >( gEntList.FindEntityByName( nullptr, m_SoundscapeName ) );
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 }
 
 

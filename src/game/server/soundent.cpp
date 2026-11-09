@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -254,7 +251,7 @@ CSoundEnt::~CSoundEnt()
 //=========================================================
 // Spawn 
 //=========================================================
-void CSoundEnt::Spawn( void )
+void CSoundEnt::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	Initialize();
@@ -262,9 +259,9 @@ void CSoundEnt::Spawn( void )
 	SetNextThink( gpGlobals->curtime + 1 );
 }
 
-void CSoundEnt::OnRestore()
+void CSoundEnt::OnRestore_Impl()
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	// Make sure the singleton points to the restored version of this.
 	if ( g_pSoundEnt )
@@ -281,7 +278,7 @@ void CSoundEnt::OnRestore()
 // for sounds that have ExpireTimes less than or equal
 // to the current world time, and these sounds are deallocated.
 //=========================================================
-void CSoundEnt::Think ( void )
+void CSoundEnt::Think_Impl ( void )
 {
 	int iSound;
 	int iPreviousSound;
@@ -373,7 +370,7 @@ void CSoundEnt::Think ( void )
 //=========================================================
 // Precache - dummy function
 //=========================================================
-void CSoundEnt::Precache ( void )
+void CSoundEnt::Precache_Impl ( void )
 {
 }
 

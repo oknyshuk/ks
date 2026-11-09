@@ -62,17 +62,18 @@ class CAmbientGeneric : public CPointEntity
 public:
 	DECLARE_CLASS( CAmbientGeneric, CPointEntity );
 
-	virtual bool KeyValue( const char *szKeyName, const char *szValue );
-	virtual void Spawn( void );
-	virtual void Precache( void );
-	virtual void Activate( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	void Activate_Impl( void );
 	void RampThink( void );
 	void InitModulationParms(void);
 	void ComputeMaxAudibleDistance( );
 
 	// Rules about which entities need to transmit along with me
-	virtual void SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
-	virtual void UpdateOnRemove( void );
+	void SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways );
+	void UpdateOnRemove_Impl( void );
 
 	virtual void ToggleSound();
 	virtual void SendSound( SoundFlags_t flags );

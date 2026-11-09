@@ -6,7 +6,6 @@
 
 class ICollideable;
 class IServerNetworkable;
-class CBaseEntity;
 
 
 // This is the server's version of IUnknown. We may want to use a QueryInterface-like
@@ -17,5 +16,6 @@ public:
 	// Gets the interface to the collideable + networkable representation of the entity
 	virtual ICollideable*		GetCollideable() = 0;
 	virtual IServerNetworkable*	GetNetworkable() = 0;
-	virtual CBaseEntity*		GetBaseEntity() = 0;
+	// The game's entity object; the game casts it to its entity class.
+	virtual IServerUnknown*		GetBaseEntity() = 0;
 };

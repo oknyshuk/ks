@@ -35,6 +35,7 @@ import ks.tier1;
 #include "sound.h"
 #include "soundflags.h"
 #include "cl_demoaction_types.h"
+#include "facade/demoaction.inl"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -44,7 +45,7 @@ import ks.tier1;
 bool CDemoActionSkipAhead::Update( const DemoActionTimingContext& tc )
 {
 	// Not active yet
-	if ( !BaseClass::Update( tc ) )
+	if ( !BaseClass::UpdateBase( tc ) )
 		return false;
 
 	if ( GetActionFired() )
@@ -62,7 +63,7 @@ bool CDemoActionSkipAhead::Update( const DemoActionTimingContext& tc )
 //-----------------------------------------------------------------------------
 bool CDemoActionSkipAhead::Init( KeyValues *pInitData )
 {
-	if ( !BaseClass::Init( pInitData ) )
+	if ( !BaseClass::InitBase( pInitData ) )
 		return false;
 
 	SetSkipToTick( pInitData->GetInt( "skiptotick", -1 ) );
@@ -77,7 +78,7 @@ bool CDemoActionSkipAhead::Init( KeyValues *pInitData )
 //-----------------------------------------------------------------------------
 void CDemoActionSkipAhead::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
-	BaseClass::SaveKeysToBuffer( depth, buf );
+	BaseClass::SaveKeysToBufferBase( depth, buf );
 
 	if ( m_nSkipToTick != -1 )
 	{
@@ -143,7 +144,7 @@ DECLARE_DEMOACTION( DEMO_ACTION_SKIPAHEAD, CDemoActionSkipAhead );
 bool CDemoActionStopPlayback::Update( const DemoActionTimingContext& tc )
 {
 	// Not active yet
-	if ( !BaseClass::Update( tc ) )
+	if ( !BaseClass::UpdateBase( tc ) )
 		return false;
 
 	if ( GetActionFired() )
@@ -172,7 +173,7 @@ DECLARE_DEMOACTION( DEMO_ACTION_STOPPLAYBACK, CDemoActionStopPlayback );
 //-----------------------------------------------------------------------------
 bool CDemoActionPlayCommands::Init( KeyValues *pInitData )
 {
-	if ( !BaseClass::Init( pInitData ) )
+	if ( !BaseClass::InitBase( pInitData ) )
 		return false;
 
 	SetCommandStream( pInitData->GetString( "commands", "" ) );
@@ -217,7 +218,7 @@ void CDemoActionPlayCommands::FireAction( void )
 //-----------------------------------------------------------------------------
 void CDemoActionPlayCommands::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
-	BaseClass::SaveKeysToBuffer( depth, buf );
+	BaseClass::SaveKeysToBufferBase( depth, buf );
 
 	BufPrintf( depth, buf, "commands \"%s\"\n",
 		GetCommandStream() );
@@ -232,7 +233,7 @@ DECLARE_DEMOACTION( DEMO_ACTION_PLAYCOMMANDS, CDemoActionPlayCommands );
 //-----------------------------------------------------------------------------
 bool CDemoActionScreenFadeStart::Init( KeyValues *pInitData )
 {
-	if ( !BaseClass::Init( pInitData ) )
+	if ( !BaseClass::InitBase( pInitData ) )
 		return false;
 
 	float duration = pInitData->GetFloat( "duration", 0.0f );
@@ -305,7 +306,7 @@ void CDemoActionScreenFadeStart::FireAction( void )
 //-----------------------------------------------------------------------------
 void CDemoActionScreenFadeStart::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
-	BaseClass::SaveKeysToBuffer( depth, buf );
+	BaseClass::SaveKeysToBufferBase( depth, buf );
 
 	ScreenFade_t const *f = GetScreenFade();
 
@@ -381,7 +382,7 @@ char const *CDemoActionTextMessageStart::GetFontName( void ) const
 //-----------------------------------------------------------------------------
 bool CDemoActionTextMessageStart::Init( KeyValues *pInitData )
 {
-	if ( !BaseClass::Init( pInitData ) )
+	if ( !BaseClass::InitBase( pInitData ) )
 		return false;
 
 	message.fadein = pInitData->GetFloat( "fadein", 0.0f );
@@ -454,7 +455,7 @@ void CDemoActionTextMessageStart::FireAction( void )
 //-----------------------------------------------------------------------------
 void CDemoActionTextMessageStart::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
-	BaseClass::SaveKeysToBuffer( depth, buf );
+	BaseClass::SaveKeysToBufferBase( depth, buf );
 
 	client_textmessage_t const *tm = GetTextMessage();
 
@@ -497,7 +498,7 @@ DECLARE_DEMOACTION( DEMO_ACTION_TEXTMESSAGE_START, CDemoActionTextMessageStart )
 //-----------------------------------------------------------------------------
 bool CDemoActionCDTrackStart::Init( KeyValues *pInitData )
 {
-	if ( !BaseClass::Init( pInitData ) )
+	if ( !BaseClass::InitBase( pInitData ) )
 		return false;
 
 	SetTrack( pInitData->GetInt( "track", -1 ) );
@@ -541,7 +542,7 @@ void CDemoActionCDTrackStart::FireAction( void )
 //-----------------------------------------------------------------------------
 void CDemoActionCDTrackStart::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
-	BaseClass::SaveKeysToBuffer( depth, buf );
+	BaseClass::SaveKeysToBufferBase( depth, buf );
 
 	BufPrintf( depth, buf, "track \"%i\"\n",
 		GetTrack() );
@@ -566,7 +567,7 @@ DECLARE_DEMOACTION( DEMO_ACTION_PLAYCDTRACK_STOP, CDemoActionCDTrackStop );
 //-----------------------------------------------------------------------------
 bool CDemoActionPlaySoundStart::Init( KeyValues *pInitData )
 {
-	if ( !BaseClass::Init( pInitData ) )
+	if ( !BaseClass::InitBase( pInitData ) )
 		return false;
 
 	SetSoundName( pInitData->GetString( "sound", "" ) );
@@ -629,7 +630,7 @@ void CDemoActionPlaySoundStart::FireAction( void )
 //-----------------------------------------------------------------------------
 void CDemoActionPlaySoundStart::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
-	BaseClass::SaveKeysToBuffer( depth, buf );
+	BaseClass::SaveKeysToBufferBase( depth, buf );
 
 	BufPrintf( depth, buf, "sound \"%s\"\n", GetSoundName() );
 }
@@ -644,7 +645,7 @@ DECLARE_DEMOACTION( DEMO_ACTION_PLAYSOUND_START, CDemoActionPlaySoundStart );
 bool CBaseDemoActionWithStopTime::Update( const DemoActionTimingContext& tc )
 {
 	// Not active yet
-	if ( !BaseClass::Update( tc ) )
+	if ( !BaseClass::UpdateBase( tc ) )
 		return false;
 
 	if ( GetActionFired() )
@@ -676,7 +677,7 @@ bool CBaseDemoActionWithStopTime::Update( const DemoActionTimingContext& tc )
 //-----------------------------------------------------------------------------
 bool CBaseDemoActionWithStopTime::Init( KeyValues *pInitData )
 {
-	if ( !BaseClass::Init( pInitData ) )
+	if ( !BaseClass::InitBase( pInitData ) )
 		return false;
 
 	SetStopTick( pInitData->GetInt( "stoptick", -1 ) );
@@ -691,7 +692,7 @@ bool CBaseDemoActionWithStopTime::Init( KeyValues *pInitData )
 //-----------------------------------------------------------------------------
 void CBaseDemoActionWithStopTime::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
-	BaseClass::SaveKeysToBuffer( depth, buf );
+	BaseClass::SaveKeysToBufferBase( depth, buf );
 
 	if ( m_nStopTick != -1 )
 	{
@@ -884,7 +885,7 @@ CDemoActionZoom::CDemoActionZoom()
 
 bool CDemoActionZoom::Init( KeyValues *pInitData )
 {
-	if ( !BaseClass::Init( pInitData ) )
+	if ( !BaseClass::InitBase( pInitData ) )
 		return false;
 
 	m_bSpline = pInitData->GetBool( "spline", true );
@@ -906,7 +907,7 @@ bool CDemoActionZoom::Init( KeyValues *pInitData )
 bool CDemoActionZoom::Update( const DemoActionTimingContext& tc )
 {
 	// Not active yet
-	if ( !BaseClass::Update( tc ) )
+	if ( !BaseClass::UpdateBase( tc ) )
 		return false;
 
 	if ( GetActionFired() )
@@ -985,7 +986,7 @@ void CDemoActionZoom::FireAction( void )
 
 void CDemoActionZoom::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
-	BaseClass::SaveKeysToBuffer( depth, buf );
+	BaseClass::SaveKeysToBufferBase( depth, buf );
 
 	BufPrintf( depth, buf, "spline \"%i\"\n",
 		m_bSpline ? 1 : 0 );

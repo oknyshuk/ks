@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -537,10 +535,6 @@ public:
 		g_pEffects->SuppressEffectsSounds( true );
 		SuppressParticleEffects( true );
 
-		// While playing back, suppress recording
-		bool bIsRecording = clienttools->IsInRecordingMode();
-		clienttools->EnableRecordingMode( false );
-
 		CBroadcastRecipientFilter filter;
 
 		TERecordingType_t type = (TERecordingType_t)pKeyValues->GetInt( "te" );
@@ -678,7 +672,6 @@ public:
 
 		SuppressParticleEffects( false );
 		g_pEffects->SuppressEffectsSounds( false );
-		clienttools->EnableRecordingMode( bIsRecording );
 	}
 };
 

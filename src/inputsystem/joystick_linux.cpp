@@ -19,10 +19,10 @@ static bool JoystickSDLWatcher( void *userInfo, SDL_Event *event );
 ConVar joy_axisbutton_threshold( "joy_axisbutton_threshold", "0.3", FCVAR_ARCHIVE, "Analog axis range before a button press is registered." );
 ConVar joy_axis_deadzone( "joy_axis_deadzone", "0.2", FCVAR_ARCHIVE, "Dead zone near the zero point to not report movement." );
 
-static void joy_active_changed_f( IConVar *var, const char *pOldValue, float flOldValue );
+static void joy_active_changed_f( ConVar *var, const char *pOldValue, float flOldValue );
 ConVar joy_active( "joy_active", "-1", FCVAR_NONE, "Which of the connected joysticks / gamepads to use (-1 means first found)", &joy_active_changed_f);
 
-static void joy_gamecontroller_config_changed_f( IConVar *var, const char *pOldValue, float flOldValue );
+static void joy_gamecontroller_config_changed_f( ConVar *var, const char *pOldValue, float flOldValue );
 ConVar joy_gamecontroller_config( "joy_gamecontroller_config", "", FCVAR_ARCHIVE, "Game controller mapping (passed to SDL with SDL_HINT_GAMECONTROLLERCONFIG).", &joy_gamecontroller_config_changed_f );
 
 void SearchForDevice()
@@ -62,7 +62,7 @@ void SearchForDevice()
 //---------------------------------------------------------------------------------------
 // Switch our active joystick to another device
 //---------------------------------------------------------------------------------------
-void joy_active_changed_f( IConVar *var, const char *pOldValue, float flOldValue )
+void joy_active_changed_f( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	SearchForDevice();
 }
@@ -70,7 +70,7 @@ void joy_active_changed_f( IConVar *var, const char *pOldValue, float flOldValue
 //---------------------------------------------------------------------------------------
 // Reinitialize the game controller layer when the joy_gamecontroller_config is updated.
 //---------------------------------------------------------------------------------------
-void joy_gamecontroller_config_changed_f( IConVar *var, const char *pOldValue, float flOldValue )
+void joy_gamecontroller_config_changed_f( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	CInputSystem *pInputSystem = (CInputSystem *)g_pInputSystem;
 	if ( pInputSystem && SDL_WasInit(SDL_INIT_GAMEPAD) )

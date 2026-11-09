@@ -108,7 +108,7 @@ public:
 	};
 
 	CFileWriter( bool bAsync = false );
-	virtual ~CFileWriter();
+	~CFileWriter();
 
 	bool BFileOpen();
 	bool BSetFile( const char *pchFile, bool bAllowOpenExisting = false );

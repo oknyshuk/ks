@@ -33,10 +33,10 @@ public:
 
 	inline CAI_Expresser *GetExpresser( void ) { return m_pExpresser; }
 	inline const CAI_Expresser *GetMultiplayerExpresser( void ) const { return m_pExpresser; }
-	virtual IResponseSystem *GetResponseSystem( void );
-	virtual void Spawn();
-	void Think( void );
-	virtual int OnTakeDamage( const CTakeDamageInfo &info ); //< stubbed out, does nothing, flexexpressers are immortal
+	IResponseSystem *GetResponseSystem_Impl( void );
+	void Spawn_Impl();
+	void Think_Impl( void );
+	int OnTakeDamage_Impl( const CTakeDamageInfo &info ); //< stubbed out, does nothing, flexexpressers are immortal
 	[[= ks::reflect::Input{ .name = "SpeakResponseConcept", .type = FIELD_STRING } ]] void InputSpeakResponseConcept( inputdata_t &inputdata );
 
 	/// given a pointer to a CBaseEntity, return a CFlexExpresser * if that base entity is a prop_talker, NULL otherwise

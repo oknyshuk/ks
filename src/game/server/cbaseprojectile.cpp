@@ -15,8 +15,6 @@
 // demand for this feature (sjb) 11/27/07
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -95,7 +93,7 @@ void CBaseProjectile::Spawn(	char *pszModel,
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-void CBaseProjectile::Touch( CBaseEntity *pOther )
+void CBaseProjectile::Touch_Impl( CBaseEntity *pOther )
 {
 	if ( pOther->IsSolidFlagSet(FSOLID_TRIGGER) )
 	{
@@ -130,7 +128,7 @@ void CBaseProjectile::HandleTouch( CBaseEntity *pOther )
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-void CBaseProjectile::Think()
+void CBaseProjectile::Think_Impl()
 {
 	HandleThink();
 }

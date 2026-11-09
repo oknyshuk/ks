@@ -29,28 +29,35 @@ import ks.tier1;
 //-----------------------------------------------------------------------------
 // The Base implementation of the shader device
 //-----------------------------------------------------------------------------
-class CShaderDeviceMgrBase : public CBaseAppSystem< IShaderDeviceMgr >
+class CShaderDeviceMgrBase
 {
 public:
 	// constructor, destructor
 	CShaderDeviceMgrBase();
-	virtual ~CShaderDeviceMgrBase();
+	~CShaderDeviceMgrBase();
 
 	// Methods of IAppSystem
-	virtual bool Connect( CreateInterfaceFn factory );
-	virtual void Disconnect();
-	virtual void *QueryInterface( const char *pInterfaceName );
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
+
+	// Implemented by CShaderDeviceMgrDx8
+	void GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter ) const;
+	int GetAdapterCount() const;
+	void GetAdapterInfo( int nAdapter, MaterialAdapterInfo_t& info ) const;
+	int GetModeCount( int nAdapter ) const;
+	void GetModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter, int nMode ) const;
 
 	// Methods of IShaderDeviceMgr
-	virtual bool GetRecommendedConfigurationInfo( int nAdapter, int nDXLevel, KeyValues *pCongifuration );
-	virtual void AddModeChangeCallback( ShaderModeChangeCallbackFunc_t func );
-	virtual void RemoveModeChangeCallback( ShaderModeChangeCallbackFunc_t func );
-	virtual bool GetRecommendedVideoConfig( int nAdapter, KeyValues *pConfiguration );
+	bool GetRecommendedConfigurationInfo( int nAdapter, int nDXLevel, KeyValues *pCongifuration );
+	void AddModeChangeCallback( ShaderModeChangeCallbackFunc_t func );
+	void RemoveModeChangeCallback( ShaderModeChangeCallbackFunc_t func );
+	bool GetRecommendedVideoConfig( int nAdapter, KeyValues *pConfiguration );
 
-	virtual void AddDeviceDependentObject( IShaderDeviceDependentObject *pObject );
-	virtual void RemoveDeviceDependentObject( IShaderDeviceDependentObject *pObject );
-	virtual void InvokeDeviceLostNotifications( void );
-	virtual void InvokeDeviceResetNotifications( IDirect3DDevice9 *pDevice, D3DPRESENT_PARAMETERS *pPresentParameters, void *pHWnd );
+	void AddDeviceDependentObject( IShaderDeviceDependentObject *pObject );
+	void RemoveDeviceDependentObject( IShaderDeviceDependentObject *pObject );
+	void InvokeDeviceLostNotifications( void );
+	void InvokeDeviceResetNotifications( IDirect3DDevice9 *pDevice, D3DPRESENT_PARAMETERS *pPresentParameters, void *pHWnd );
 
 	// Reads in the hardware caps from the dxsupport.cfg file
 	void ReadHardwareCaps( HardwareCaps_t &caps, int nDxLevel );
@@ -91,10 +98,10 @@ private:
 	bool GetRecommendedConfigurationInfo( int nAdapter, int nDXLevel, int nVendorID, int nDeviceID, KeyValues *pConfiguration );
 
 	// Returns the amount of video memory in bytes for a particular adapter
-	virtual int GetVidMemBytes( int nAdapter ) const = 0;
+	int GetVidMemBytes( int nAdapter ) const;
 
 	// Returns the physical screen desktop resolution
-	virtual void GetDesktopResolution( int *pWidth, int *pHeight, int nAdapter ) const = 0;
+	void GetDesktopResolution( int *pWidth, int *pHeight, int nAdapter ) const;
 
 	// Looks for override keyvalues in the dxsupport cfg keyvalues
 	KeyValues *FindDXLevelSpecificConfig( KeyValues *pKeyValues, int nDxLevel );
@@ -119,7 +126,7 @@ protected:
 //-----------------------------------------------------------------------------
 // The Base implementation of the shader device
 //-----------------------------------------------------------------------------
-class CShaderDeviceBase : public IShaderDevice
+class CShaderDeviceBase
 {
 public:
 	enum IPCMessage_t
@@ -129,28 +136,32 @@ public:
 		EVICT_MESSAGE		= 0x5E740DE2,
 	};
 
+	// Implemented by CShaderDeviceDx8 / CShaderAPIDx8
+	ImageFormat GetBackBufferFormat() const;
+	int StencilBufferBits() const;
+	bool IsAAEnabled() const;
+	void ReleaseResources( bool bReleaseManagedResources = true );
+	void ReacquireResources();
+
 	// Methods of IShaderDevice
 public:
-	virtual ImageFormat GetBackBufferFormat() const;
-	virtual int StencilBufferBits() const;
-	virtual bool IsAAEnabled() const;
-	virtual bool AddView( void* hWnd );
-	virtual void RemoveView( void* hWnd );
-	virtual void SetView( void* hWnd );
-	virtual void GetWindowSize( int& nWidth, int& nHeight ) const;
+	bool AddView( void* hWnd );
+	void RemoveView( void* hWnd );
+	void SetView( void* hWnd );
+	void GetWindowSize( int& nWidth, int& nHeight ) const;
 
-	// Methods exposed to the rest of shader api
-	virtual bool InitDevice( void *hWnd, int nAdapter, const ShaderDeviceInfo_t& mode ) = 0;
-	virtual void ShutdownDevice() = 0;
-	virtual bool IsDeactivated() const = 0;
+	// Methods exposed to the rest of shader api; implemented by CShaderDeviceDx8 / CShaderAPIDx8
+	bool InitDevice( void *hWnd, int nAdapter, const ShaderDeviceInfo_t& mode );
+	void ShutdownDevice();
+	bool IsDeactivated() const;
 
 public:
 	// constructor, destructor
 	CShaderDeviceBase();
-	virtual ~CShaderDeviceBase();
+	~CShaderDeviceBase();
 
-	virtual void OtherAppInitializing( bool initializing ) {}
-	virtual void EvictManagedResourcesInternal() {}
+	void OtherAppInitializing( bool initializing );
+	void EvictManagedResourcesInternal();
 
 	void* GetIPCHWnd();
 	void SendIPCMessage( IPCMessage_t message );
@@ -188,36 +199,3 @@ inline void* CShaderDeviceBase::GetIPCHWnd()
 {
 	return m_hWndCookie;
 }
-
-
-//-----------------------------------------------------------------------------
-// Helper class to reduce code related to shader buffers
-//-----------------------------------------------------------------------------
-template< class T >
-class CShaderBuffer : public IShaderBuffer
-{
-public:
-	CShaderBuffer( T *pBlob ) : m_pBlob( pBlob ) {}
-
-	virtual std::size_t GetSize() const
-	{
-		return m_pBlob ? m_pBlob->GetBufferSize() : 0;
-	}
-
-	virtual const void* GetBits() const
-	{
-		return m_pBlob ? m_pBlob->GetBufferPointer() : nullptr;
-	}
-
-	virtual void Release()
-	{
-		if ( m_pBlob )
-		{
-			m_pBlob->Release();
-		}
-		delete this;
-	}
-
-private:
-	T *m_pBlob;
-};

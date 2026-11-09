@@ -6,8 +6,6 @@
 // designer/worldcraft perspective, but by the time they reach the game, the
 // brush model is gone and this is, in effect, a point entity.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -25,7 +23,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -60,11 +57,12 @@ public:
 
 					CAreaPortal();
 
-	virtual void	Spawn( void );
-	virtual void	Precache( void );
-	virtual void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	virtual bool	KeyValue( const char *szKeyName, const char *szValue );
-	virtual int		UpdateTransmitState();
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
+	void	Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
+	int		UpdateTransmitState_Impl();
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "Open", .type = FIELD_VOID } ]] [[= ks::reflect::Input{ .name = "TurnOff", .type = FIELD_VOID } ]] void InputOpen( inputdata_t &inputdata );
@@ -93,7 +91,7 @@ CAreaPortal::CAreaPortal()
 }
 
 
-void CAreaPortal::Spawn( void )
+void CAreaPortal::Spawn_Impl( void )
 {
 	AddEffects( EF_NORECEIVESHADOW | EF_NOSHADOW );
 	Precache();
@@ -103,7 +101,7 @@ void CAreaPortal::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: notify the engine of the state at startup/restore
 //-----------------------------------------------------------------------------
-void CAreaPortal::Precache( void )
+void CAreaPortal::Precache_Impl( void )
 {
 	UpdateState();
 }
@@ -159,7 +157,7 @@ bool CAreaPortal::UpdateVisibility( const std::vector< Vector > &vecOrigins, flo
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
-void CAreaPortal::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CAreaPortal::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	if ( useType == USE_ON )
 	{
@@ -178,7 +176,7 @@ void CAreaPortal::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE u
 }
 
 
-bool CAreaPortal::KeyValue( const char *szKeyName, const char *szValue )
+bool CAreaPortal::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if( FStrEq( szKeyName, "StartOpen" ) )
 	{
@@ -188,7 +186,7 @@ bool CAreaPortal::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 }
 
@@ -200,7 +198,7 @@ bool CAreaPortal::UpdateState()
 }
 
 
-int CAreaPortal::UpdateTransmitState()
+int CAreaPortal::UpdateTransmitState_Impl()
 {
 	// Our brushes are kept around so don't transmit anything since we don't want to draw them.
 	return SetTransmitState( FL_EDICT_DONTSEND );

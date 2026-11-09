@@ -64,7 +64,6 @@ import std;
 #include "snd_audio_source.h"
 #include "sys.h"
 #include "sys_dll.h"
-#include "avi/iavi.h"
 #include "host_state.h"
 #include "enginethreads.h"
 #include "pure_server.h"
@@ -80,7 +79,6 @@ extern IVEngineClient *engineClient;
 
 void R_UnloadSkys( void );
 void CL_ResetEntityBits( void );
-void EngineTool_UpdateScreenshot();
 
 // If we get more than 250 messages in the incoming buffer queue, dump any above this #
 constexpr auto MAX_INCOMING_MESSAGES = 250;
@@ -88,7 +86,6 @@ constexpr auto MAX_INCOMING_MESSAGES = 250;
 constexpr auto MAX_CMD_BUFFER = 4000;
 
 CGlobalVarsBase g_ClientGlobalVariables( true );
-AVIHandle_t g_hCurrentAVI = AVIHANDLE_INVALID;
 
 extern ConVar rcon_password;
 extern ConVar host_framerate;
@@ -451,7 +448,7 @@ void CL_ReadPackets ( bool bFinalTick )
 		if ( !cl_ignorepackets.GetInt() )
 		{
 			// process data from net socket
-			NET_ProcessSocket( NS_CLIENT, &cl );
+			NET_ProcessSocket( NS_CLIENT, [&]( netpacket_t *packet ) { return cl.ProcessConnectionlessPacket( packet ); } );
 
 			if( net_earliertempents.GetBool() )
 			{
@@ -1574,17 +1571,11 @@ void CL_TakeSnapshotAndSwap()
 	{
 		flLastTime = Plat_FloatTime();
 	}
-
-	// take a screenshot for savegames if necessary
-
-	// take screenshot for bx movie maker
-	EngineTool_UpdateScreenshot();
 }
 
 static float s_flPreviousHostFramerate = 0;
 void CL_StartMovie( const char *filename, int flags, int nWidth, int nHeight, float flFrameRate, int jpeg_quality )
 {
-	contract_assert( g_hCurrentAVI == AVIHANDLE_INVALID );
 
 	// StartMove depends on host_framerate not being 0.
 	s_flPreviousHostFramerate = host_framerate.GetFloat();
@@ -1594,40 +1585,6 @@ void CL_StartMovie( const char *filename, int flags, int nWidth, int nHeight, fl
 	V_strncpy( cl_movieinfo.moviename, filename, sizeof( cl_movieinfo.moviename ) );
 	cl_movieinfo.type = flags;
 	cl_movieinfo.jpeg_quality = jpeg_quality;
-
-	if ( cl_movieinfo.DoAVI() || cl_movieinfo.DoAVISound() )
-	{
-// HACK:  THIS MUST MATCH snd_device.h.  Should be exposed more cleanly!!!
-#define SOUND_DMA_SPEED		44100		// hardware playback rate
-
-		AVIParams_t params;
-		V_strncpy( params.m_pFileName, filename, sizeof( params.m_pFileName ) );
-		V_strncpy( params.m_pPathID, "MOD", sizeof( params.m_pPathID ) );
-		params.m_nNumChannels = 2;
-		params.m_nSampleBits = 16;
-		params.m_nSampleRate = SOUND_DMA_SPEED;
-		params.m_nWidth = nWidth;
-		params.m_nHeight = nHeight;
-
-		if ( IsIntegralValue( flFrameRate ) )
-		{
-			params.m_nFrameRate = RoundFloatToInt( flFrameRate );
-			params.m_nFrameScale = 1;
-		}
-		else if ( IsIntegralValue( flFrameRate * 1001.0f / 1000.0f ) ) // 1001 is the ntsc divisor (30*1000/1001 = 29.97, etc)
-		{
-			params.m_nFrameRate = RoundFloatToInt( flFrameRate * 1001 );
-			params.m_nFrameScale = 1001;
-		}
-		else
-		{
-			// arbitrarily choosing 1000 as the divisor
-			params.m_nFrameRate = RoundFloatToInt( flFrameRate * 1000 );
-			params.m_nFrameScale = 1000;
-		}
-
-		g_hCurrentAVI = avi->StartAVI( params );
-	}
 
 	SND_MovieStart();
 }
@@ -1642,12 +1599,6 @@ void CL_EndMovie()
 
 	SND_MovieEnd();
 	
-	if ( cl_movieinfo.DoAVI() || cl_movieinfo.DoAVISound() )
-	{
-		avi->FinishAVI( g_hCurrentAVI );
-		g_hCurrentAVI = AVIHANDLE_INVALID;
-	}
-
 	cl_movieinfo.Reset();
 }
 
@@ -1672,7 +1623,6 @@ static void startmovie( const CCommand &args )
 	{
 		ConMsg( "startmovie <filename>\n [\n" );
 		ConMsg( " (default = TGAs + .wav file)\n" );
-		ConMsg( " avi = AVI + AVISOUND\n" );
 		ConMsg( " raw = TGAs + .wav file, same as default\n" );
 		ConMsg( " tga = TGAs\n" );
 		ConMsg( " jpg/jpeg = JPegs\n" );
@@ -1680,7 +1630,6 @@ static void startmovie( const CCommand &args )
 		ConMsg( " jpeg_quality nnn = set jpeq quality to nnn (range 1 to 100), default %d\n", DEFAULT_JPEG_QUALITY );
 		ConMsg( " ]\n" );
 		ConMsg( "e.g.:  startmovie testmovie jpg wav jpeg_qality 75\n" );
-		ConMsg( "Using AVI will bring up a dialog for choosing the codec, which may not show if you are running the engine in fullscreen mode!\n" );
 		return;
 	}
 
@@ -1698,10 +1647,6 @@ static void startmovie( const CCommand &args )
 		flags = 0;
 		for ( int i = 2; i < args.ArgC(); ++i )
 		{
-			if ( !V_stricmp( args[ i ], "avi" ) )
-			{
-				flags |= MovieInfo_t::FMOVIE_AVI | MovieInfo_t::FMOVIE_AVISOUND;
-			}
 			if ( !V_stricmp( args[ i ], "raw" ) )
 			{
 				flags |= MovieInfo_t::FMOVIE_TGA | MovieInfo_t::FMOVIE_WAV;
@@ -1729,7 +1674,7 @@ static void startmovie( const CCommand &args )
 
 	if ( flags == 0 )
 	{
-		Warning( "Missing or unknown recording types, must specify one or both of 'avi' or 'raw'\n" );
+		Warning( "Missing or unknown recording types, must specify one of 'raw', 'tga', 'jpg' or 'wav'\n" );
 		return;
 	}
 

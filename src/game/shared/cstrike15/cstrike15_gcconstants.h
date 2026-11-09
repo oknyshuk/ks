@@ -7,8 +7,6 @@
 //			with undefined length (like int).  Always use an explicit type
 //			(like int32).
 
-import std;
-import ks.core;
 
 //=============================================================================
 

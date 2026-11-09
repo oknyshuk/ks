@@ -11,10 +11,10 @@
 #include "reflect.h"
 #include "reflect_fielddesc.h"
 
-import std;
 
-namespace ks::reflect::pred
+namespace ksr::pred
 {
+using namespace ::ks::reflect;
 
 // An embedded entry: the member's type has a prediction map of its own, which is what
 // DEFINE_PRED_TYPEDESCRIPTION names. The flags are the macro's own, and it sets no size.
@@ -102,7 +102,7 @@ std::vector<typedescription_t> &fields()
 	return out;
 }
 
-} // namespace ks::reflect::pred
+} // namespace ksr::pred
 
 // Replaces BEGIN_PREDICTION_DATA / END_PREDICTION_DATA. m_PredMap is public -- DECLARE_PREDICTABLE
 // opens with `public:` -- so unlike the datamap it can be named directly. BaseClass resolves here
@@ -115,7 +115,7 @@ std::vector<typedescription_t> &fields()
 	{                                                                                              \
 		static const bool g_filled = []                                                             \
 		{                                                                                            \
-			auto &f = ks::reflect::pred::fields<className>();                                          \
+			auto &f = ksr::pred::fields<className>();                                          \
 			className::m_PredMap.dataDesc      = f.data();                                             \
 			className::m_PredMap.dataNumFields = (int)f.size();                                        \
 			return true;                                                                               \

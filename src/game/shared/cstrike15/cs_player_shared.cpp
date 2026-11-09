@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "string_t.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"
@@ -28,7 +25,6 @@ import ks.tier1;
 #include "npcevent.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -690,7 +686,7 @@ static bool TraceToExit( Vector start, Vector dir, Vector &end, trace_t &trEnter
 					}
 				}
 			}
-			else if ( trEnter.DidHitNonWorldEntity() && IsBreakableEntity( trEnter.Ent<CBaseEntity>() ) )
+			else if ( TraceDidHitNonWorldEntity( trEnter ) && IsBreakableEntity( trEnter.Ent<CBaseEntity>() ) )
 			{
 				// if we hit a breakable, make the assumption that we broke it if we can't find an exit (hopefully..)
 				// fake the end pos
@@ -948,6 +944,7 @@ bool CCSPlayer::IsOtherEnemyAndPlaying( int nEntIndex )
 	return false;
 }
 
+extern ConVar sv_buy_status_override;
 bool CCSPlayer::CanPlayerBuy( bool display )
 {
 	if ( !CSGameRules() )
@@ -1007,7 +1004,6 @@ bool CCSPlayer::CanPlayerBuy( bool display )
 					static ConVarRef sv_buy_status_override_ref( "sv_buy_status_override" );
 					int iBuyStatus = sv_buy_status_override_ref.GetInt();
 #else
-					extern ConVar sv_buy_status_override;
 					int iBuyStatus = sv_buy_status_override.GetInt();
 #endif
 					if ( iBuyStatus > 0 && ( ( nTeam == TEAM_CT && iBuyStatus != 1 ) || ( nTeam == TEAM_TERRORIST && iBuyStatus != 2 ) ) )
@@ -1215,6 +1211,9 @@ struct DelayedDamageInfoData_t
 };
 #endif
 
+extern ConVar cl_weapon_debug_print_accuracy;
+extern ConVar cl_weapon_debug_show_accuracy;
+extern ConVar cl_weapon_debug_show_accuracy_duration;
 void CCSPlayer::FireBullet( 
 	Vector vecSrc,	// shooting postion
 	const QAngle &shootAngles,  //shooting angle
@@ -1458,9 +1457,6 @@ void CCSPlayer::FireBullet(
 		//
 		if ( bFirstHit )
 		{
-			extern ConVar cl_weapon_debug_print_accuracy;
-			extern ConVar cl_weapon_debug_show_accuracy;
-			extern ConVar cl_weapon_debug_show_accuracy_duration;
 
 			if ( ( cl_weapon_debug_print_accuracy.GetBool( ) || cl_weapon_debug_show_accuracy.GetBool( ) ) && this->IsLocalPlayer( ) )
 			{
@@ -2329,7 +2325,7 @@ void CCSPlayer::DisplayPenetrationDebug( Vector vecEnter, Vector vecExit, float 
 #endif
 }
 
-void CCSPlayer::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
+void CCSPlayer::ImpactTrace_Impl( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
 {
 
 #ifdef CLIENT_DLL
@@ -2579,7 +2575,7 @@ bool CCSPlayer::CanMove() const
 	}
 }
 
-unsigned int CCSPlayer::PhysicsSolidMaskForEntity( void ) const
+unsigned int CCSPlayer::PhysicsSolidMaskForEntity_Impl( void ) const
 {
 	if ( !CSGameRules()->IsTeammateSolid() )
 	{
@@ -2740,6 +2736,8 @@ int CCSPlayer::GetCarryLimit( CSWeaponID weaponId )
 	return 1;
 }
 
+extern ConVar mp_weapons_allow_zeus;
+extern ConVar mp_weapons_allow_typecount;
 AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::Type acquireMethod, CEconItemView *pItem )
 {
 	const CCSWeaponInfo *pWeaponInfo = nullptr;
@@ -2933,8 +2931,6 @@ AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::T
 		return AcquireResult::AlreadyOwned;
 	}
 
-	extern ConVar mp_weapons_allow_zeus;
-	extern ConVar mp_weapons_allow_typecount;
 	// special case for limiting taser to classic casual; data drive this if it becomes more complex
 	if ( weaponId == WEAPON_TASER )
 	{
@@ -3175,8 +3171,8 @@ public:
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 
-	virtual int UpdateTransmitState( void );
-	virtual void Spawn( void );
+	KS_VIRTUAL int UpdateTransmitState_Impl( void );
+	KS_VIRTUAL void Spawn_Impl( void );
 
 	CNetworkVar( string_t, m_source, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "Source" } ]] );
 	CNetworkVar( string_t, m_destination, [[= ks::reflect::Net{} ]] [[= ks::reflect::Key{ .name = "Destination" } ]] );
@@ -3189,12 +3185,12 @@ IMPLEMENT_REFLECT_DATAMAP( CFootstepControl )
 
 IMPLEMENT_REFLECT_SERVERCLASS( CFootstepControl, DT_FootstepControl )
 
-int CFootstepControl::UpdateTransmitState( void )
+int CFootstepControl::UpdateTransmitState_Impl( void )
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
 
-void CFootstepControl::Spawn( void )
+void CFootstepControl::Spawn_Impl( void )
 {
 	InitTrigger();
 }

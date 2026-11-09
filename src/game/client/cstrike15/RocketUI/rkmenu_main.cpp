@@ -25,8 +25,6 @@
 #include "rkhud_model.h"
 
 #include <rocketui/rmlui.h>
-import ks.tier1;
-import std;
 
 #include "rkpanel_options.h"
 #include "rkpanel_play.h"

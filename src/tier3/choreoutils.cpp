@@ -3,12 +3,14 @@
 
 // Purpose: Helper methods + classes for file access
 
+import std;
+import ks.core;
+import ks.math;
 import ks.tier1;
 #include "tier3/choreoutils.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "studio.h"
 #include "../game/shared/choreoevent.h"
-import std;
 #include "bone_setup.h"
 #include "soundchars.h"
 

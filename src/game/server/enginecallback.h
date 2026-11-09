@@ -9,24 +9,7 @@
 #include "tier3/tier3.h"
 #include "tier2/tier2_logging.h"
 #include "proto_types.h"
-import std;
 
-class IFileSystem;				// include FileSystem.h
-class IUniformRandomStream;		// include vstdlib/random.h
-class IEngineSound;				// include engine/IEngineSound.h
-class IVEngineServer;			
-class IVoiceServer;
-class IStaticPropMgrServer;
-class ISpatialPartition;
-class IVModelInfo;
-class IEngineTrace;
-class IGameEventManager2;
-class IVDebugOverlay;
-class IDataCache;
-class IMDLCache;
-class IServerEngineTools;
-class IScriptManager;
-class IServerFoundry;
 
 extern IVEngineServer			*engine;
 extern IVoiceServer				*g_pVoiceServer;
@@ -36,11 +19,9 @@ extern ISpatialPartition		*partition;
 extern IEngineSound				*enginesound;
 extern IVModelInfo				*modelinfo;
 extern IEngineTrace				*enginetrace;
-extern IFileLoggingListener		*filelogginglistener;
+extern CFileLoggingListener		*filelogginglistener;
 extern IGameEventManager2		*gameeventmanager;
 extern IVDebugOverlay			*debugoverlay;
-extern IServerEngineTools		*serverenginetools;
-extern IServerFoundry			*serverfoundry;
 extern IScriptManager			*scriptmanager;
 
 
@@ -83,7 +64,6 @@ int GetEffectIndex( const char *pParticleSystemName );
 const char *GetEffectNameFromIndex( int nIndex );
 
 
-class IRecipientFilter;
 void EntityMessageBegin( CBaseEntity * entity, bool reliable = false );
 void MessageEnd( void );
 
@@ -138,7 +118,6 @@ inline constexpr auto WRITE_VEC3_INTEGRAL = (MessageWriteBitVecIntegral);
 //-----------------------------------------------------------------------------
 // Send a user message
 //-----------------------------------------------------------------------------
-class IRecipientFilter;
 // Serializes and hands the engine bytes, so the interface carries no schema.
 template < class T >
 void SendUserMessage( IRecipientFilter &filter, int message, const T &msg )

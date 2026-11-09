@@ -109,7 +109,7 @@ CInputSystem::~CInputSystem()
 //-----------------------------------------------------------------------------
 InitReturnVal_t CInputSystem::Init()
 {
-	InitReturnVal_t nRetVal = BaseClass::Init();
+	InitReturnVal_t nRetVal = AppSystemTier1Init();
 	if ( nRetVal != INIT_OK )
 		return nRetVal;
 
@@ -150,12 +150,17 @@ InitReturnVal_t CInputSystem::Init()
 
 bool CInputSystem::Connect( CreateInterfaceFn factory )
 {
-	if ( !BaseClass::Connect( factory ) )
+	if ( !AppSystemTier2Connect( factory ) )
 		return false;
 
 	m_pLauncherMgr = (ILauncherMgr *)factory(  SDLMGR_INTERFACE_VERSION, nullptr );
 
 return true;
+}
+
+void CInputSystem::Disconnect()
+{
+	AppSystemTier2Disconnect();
 }
 
 
@@ -167,7 +172,7 @@ void CInputSystem::Shutdown()
 
 	ShutdownCursors();
 
-	BaseClass::Shutdown();
+	AppSystemTier1Shutdown();
 }
 
 
@@ -1302,3 +1307,9 @@ bool CInputSystem::IsSamplingForCurrentDevice( void )
 {
 	return m_setCurrentInputDeviceOnNextButtonPress;
 }
+
+
+//-----------------------------------------------------------------------------
+// The IInputSystem members forward to CInputSystem
+//-----------------------------------------------------------------------------
+#include "facade/iinputsystem.inl"

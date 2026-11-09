@@ -23,7 +23,6 @@ class IShaderSystemInternal;
 class IMaterialInternal;
 class IColorCorrectionSystem;
 class IMaterialVar;
-class IClientMaterialSystem;
 
 
 //-----------------------------------------------------------------------------
@@ -55,7 +54,6 @@ extern IShaderAPI*	g_pShaderAPI;
 extern IShaderDeviceMgr* g_pShaderDeviceMgr;
 extern IShaderDevice*	g_pShaderDevice;
 extern IShaderShadow* g_pShaderShadow;
-extern IClientMaterialSystem *g_pClientMaterialSystem;
 
 extern IMaterialInternal *g_pErrorMaterial;
 

@@ -64,20 +64,21 @@ public:
 
 			CFuncTank();
 			~CFuncTank();
-	void	Spawn( void );
-	void	Activate( void );
-	void	Precache( void );
-	bool	CreateVPhysics( void );
-	bool	KeyValue( const char *szKeyName, const char *szValue );
-	void	UpdateOnRemove();
+	void	Spawn_Impl( void );
+	void	Activate_Impl( void );
+	void	Precache_Impl( void );
+	bool	CreateVPhysics_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
+	void	UpdateOnRemove_Impl();
 
-	int	ObjectCaps( void ) 
+	int	ObjectCaps_Impl( void ) 
 	{ 
-		return ( BaseClass::ObjectCaps() | FCAP_IMPULSE_USE | FCAP_USE_IN_RADIUS ); 
+		return ( BaseClass::ObjectCaps_Impl() | FCAP_IMPULSE_USE | FCAP_USE_IN_RADIUS ); 
 	}
 
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	void	Think( void );
+	void	Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void	Think_Impl( void );
 
 	int		GetAmmoCount( void )						{ return m_iAmmoCount; }
 
@@ -106,7 +107,7 @@ public:
 	const float PitchCenterWorld() const { return m_pitchCenterWorld; }
 	const float PitchRange() const { return m_pitchRange; }
 
-	virtual void PhysicsSimulate( void );
+	void PhysicsSimulate_Impl( void );
 
 	virtual void OnStartControlled() {}
 	virtual void OnStopControlled() {}
@@ -118,7 +119,7 @@ public:
 	inline bool IsNPCSetController( void )	{ return ( m_spawnflags & SF_TANK_NPC_SET_CONTROLLER ) ? true : false; }
 
 	virtual void DoMuzzleFlash( void );
-	virtual const char *GetTracerType( void );
+	const char *GetTracerType_Impl( void );
 
 protected:
 	virtual float GetShotSpeed() { return 0; }
@@ -142,8 +143,10 @@ protected:
 
 private:
 	void	TrackTarget( void );
-	int		DrawDebugTextOverlays(void);
-	void	DrawDebugGeometryOverlays(void);
+	public: int		DrawDebugTextOverlays_Impl(void);
+	private:
+	public: void	DrawDebugGeometryOverlays_Impl(void);
+	private:
 
 	virtual void FiringSequence( const Vector &barrelEnd, const Vector &forward, CBaseEntity *pAttacker );
 
@@ -179,7 +182,8 @@ private:
 
 	DECLARE_DATADESC();
 
-	bool OnControls( CBaseEntity *pTest );
+	public: bool OnControls_Impl( CBaseEntity *pTest );
+	private:
 	bool HasController( void );
 
 	CBaseEntity *FindTarget( string_t targetName, CBaseEntity *pActivator );

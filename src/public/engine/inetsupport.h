@@ -85,9 +85,6 @@ public:
 	// When client event is fired
 	virtual void OnMatchEvent( KeyValues *pEvent ) = 0;
 
-	// Process incoming net packets on the socket
-	virtual void ProcessSocket( int sock, IConnectionlessPacketHandler * pHandler ) = 0;
-
 	// Send a network packet
 	virtual int SendPacket (
 		INetChannel *chan, int sock,  const netadr_t &to,

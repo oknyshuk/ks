@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2007 Valve Corporation
 
+
 import std;
 import ks.math;
 
@@ -27,5 +28,3 @@ public:
 		float flTime
 		) = 0;
 };
-
-extern IPoseDebugger *g_pPoseDebugger;

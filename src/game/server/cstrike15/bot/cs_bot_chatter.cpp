@@ -3,8 +3,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -82,6 +80,53 @@ bool GetRandomSpotAtPlace( Place place, Vector *pPos )
 
 //---------------------------------------------------------------------------------------------------------------
 /**
+ * Cause the given bot to act on this meme (forwards to the concrete type according to the Kind)
+ */
+void BotMeme::Interpret( CCSBot *sender, CCSBot *receiver ) const
+{
+	switch ( m_kind )
+	{
+	case Kind::Help:	static_cast< const BotHelpMeme * >( this )->Interpret( sender, receiver );	break;
+	case Kind::BombsiteStatus:	static_cast< const BotBombsiteStatusMeme * >( this )->Interpret( sender, receiver );	break;
+	case Kind::BombStatus:	static_cast< const BotBombStatusMeme * >( this )->Interpret( sender, receiver );	break;
+	case Kind::Follow:	static_cast< const BotFollowMeme * >( this )->Interpret( sender, receiver );	break;
+	case Kind::DefendHere:	static_cast< const BotDefendHereMeme * >( this )->Interpret( sender, receiver );	break;
+	case Kind::WhereBomb:	static_cast< const BotWhereBombMeme * >( this )->Interpret( sender, receiver );	break;
+	case Kind::RequestReport:	static_cast< const BotRequestReportMeme * >( this )->Interpret( sender, receiver );	break;
+	case Kind::AllHostagesGone:	static_cast< const BotAllHostagesGoneMeme * >( this )->Interpret( sender, receiver );	break;
+	case Kind::HostageBeingTaken:	static_cast< const BotHostageBeingTakenMeme * >( this )->Interpret( sender, receiver );	break;
+	case Kind::HeardNoise:	static_cast< const BotHeardNoiseMeme * >( this )->Interpret( sender, receiver );	break;
+	case Kind::WarnSniper:	static_cast< const BotWarnSniperMeme * >( this )->Interpret( sender, receiver );	break;
+	}
+}
+
+//---------------------------------------------------------------------------------------------------------------
+/**
+ * Delete a meme through its concrete type
+ */
+void BotMeme::Destroy( BotMeme *meme )
+{
+	if ( meme == nullptr )
+		return;
+
+	switch ( meme->m_kind )
+	{
+	case Kind::Help:	delete static_cast< BotHelpMeme * >( meme );	break;
+	case Kind::BombsiteStatus:	delete static_cast< BotBombsiteStatusMeme * >( meme );	break;
+	case Kind::BombStatus:	delete static_cast< BotBombStatusMeme * >( meme );	break;
+	case Kind::Follow:	delete static_cast< BotFollowMeme * >( meme );	break;
+	case Kind::DefendHere:	delete static_cast< BotDefendHereMeme * >( meme );	break;
+	case Kind::WhereBomb:	delete static_cast< BotWhereBombMeme * >( meme );	break;
+	case Kind::RequestReport:	delete static_cast< BotRequestReportMeme * >( meme );	break;
+	case Kind::AllHostagesGone:	delete static_cast< BotAllHostagesGoneMeme * >( meme );	break;
+	case Kind::HostageBeingTaken:	delete static_cast< BotHostageBeingTakenMeme * >( meme );	break;
+	case Kind::HeardNoise:	delete static_cast< BotHeardNoiseMeme * >( meme );	break;
+	case Kind::WarnSniper:	delete static_cast< BotWarnSniperMeme * >( meme );	break;
+	}
+}
+
+//---------------------------------------------------------------------------------------------------------------
+/**
  * Transmit meme to other bots
  */
 void BotMeme::Transmit( CCSBot *sender ) const
@@ -115,7 +160,7 @@ void BotMeme::Transmit( CCSBot *sender ) const
 		if (!player->IsBot())
 			continue;
 
-		CCSBot *bot = dynamic_cast<CCSBot *>( player );
+		CCSBot *bot = ToCSBot( player );
 
 		if ( !bot )
 			continue;
@@ -918,7 +963,7 @@ BotStatement::BotStatement( BotChatterInterface *chatter, BotStatementType type,
 
 BotStatement::~BotStatement() 
 {
-    delete m_meme;
+    BotMeme::Destroy( m_meme );
 }
 
 
@@ -1425,8 +1470,9 @@ enum PitchHack
 
 static int nextPitch = P_HI;
 
-BotChatterInterface::BotChatterInterface( CCSBot *me )
+BotChatterInterface::BotChatterInterface( CCSBot *me, Kind kind )
 {
+	m_kind = kind;
 	m_me = me;
 	m_statementList = nullptr;
 
@@ -1448,6 +1494,40 @@ BotChatterInterface::BotChatterInterface( CCSBot *me )
 	nextPitch = (nextPitch + 1) % 3;
 
 	Reset();
+}
+
+//---------------------------------------------------------------------------------------------------------------
+// Use BotChatterCoop's version for Kind::Coop, the default one otherwise
+void BotChatterInterface::EnemySpotted( void )
+{
+	if ( m_kind == Kind::Coop )
+		static_cast< BotChatterCoop * >( this )->EnemySpotted();
+	else
+		EnemySpottedDefault();
+}
+
+void BotChatterInterface::KilledMyEnemy( int victimID )
+{
+	if ( m_kind == Kind::Coop )
+		static_cast< BotChatterCoop * >( this )->KilledMyEnemy( victimID );
+	else
+		KilledMyEnemyDefault( victimID );
+}
+
+void BotChatterInterface::EnemiesRemaining( void )
+{
+	if ( m_kind == Kind::Coop )
+		static_cast< BotChatterCoop * >( this )->EnemiesRemaining();
+	else
+		EnemiesRemainingDefault();
+}
+
+void BotChatterInterface::CelebrateWin( void )
+{
+	if ( m_kind == Kind::Coop )
+		static_cast< BotChatterCoop * >( this )->CelebrateWin();
+	else
+		CelebrateWinDefault();
 }
 
 //---------------------------------------------------------------------------------------------------------------
@@ -1804,7 +1884,7 @@ BotStatement *BotChatterInterface::GetActiveStatement( void )
 		if (player->IsOtherEnemy( m_me->entindex() ))
 			continue;
 
-		CCSBot *bot = dynamic_cast<CCSBot *>(player);
+		CCSBot *bot = ToCSBot( player );
 
 		// if not a bot, fail the test
 		/// @todo Check if human is currently talking
@@ -1882,7 +1962,7 @@ inline void SayWhere( BotStatement *say, Place place )
 /**
  * Report enemy sightings
  */
-void BotChatterInterface::EnemySpotted( void )
+void BotChatterInterface::EnemySpottedDefault( void )
 {
 	// NOTE: This could be a few seconds out of date (enemy is in an adjacent place)
 	Place place = m_me->GetEnemyPlace();
@@ -2172,7 +2252,7 @@ void BotChatterInterface::HeardNoise( const Vector &pos )
 
 
 //---------------------------------------------------------------------------------------------------------------
-void BotChatterInterface::KilledMyEnemy( int victimID )
+void BotChatterInterface::KilledMyEnemyDefault( int victimID )
 {
 	// only report if we killed the last enemy in the area
 	if (m_me->GetNearbyEnemyCount() <= 1)
@@ -2187,7 +2267,7 @@ void BotChatterInterface::KilledMyEnemy( int victimID )
 }
 
 //---------------------------------------------------------------------------------------------------------------
-void BotChatterInterface::EnemiesRemaining( void )
+void BotChatterInterface::EnemiesRemainingDefault( void )
 {
 	// only report if we killed the last enemy in the area
 	if (m_me->GetNearbyEnemyCount() > 1)
@@ -2457,7 +2537,7 @@ void BotChatterInterface::Scared( void )
 }
 
 //---------------------------------------------------------------------------------------------------------------
-void BotChatterInterface::CelebrateWin( void )
+void BotChatterInterface::CelebrateWinDefault( void )
 {
 	BotStatement *say = new BotStatement( this, REPORT_EMOTE, 15.0f );
 

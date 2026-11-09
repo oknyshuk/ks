@@ -4,8 +4,6 @@
 // Purpose: Client side interactive, shootable chicken
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"

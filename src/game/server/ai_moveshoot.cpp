@@ -10,8 +10,6 @@
 // - Support the activity ACT_GESTURE_RANGE_ATTACK1 as a gesture that plays
 //	 over ACT_WALK_AIM and ACT_RUN_AIM.
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"

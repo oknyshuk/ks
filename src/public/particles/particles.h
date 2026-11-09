@@ -19,9 +19,7 @@ import ks.vstdlib;
 #include "trace.h"
 #include "raytrace.h"
 #include "materialsystem/imesh.h"
-#if defined( CLIENT_DLL )
-#include "c_pixel_visibility.h"
-#endif
+#include "particles/particle_operator_list.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -30,7 +28,11 @@ struct DmxElementUnpackStructure_t;
 class CParticleSystemDefinition;
 class CParticleCollection;
 class CParticleOperatorInstance;
-typedef std::vector< std::unique_ptr< CParticleOperatorInstance > > ParticleOperatorList_t;
+struct CParticleOperatorDeleter
+{
+	void operator()( CParticleOperatorInstance *pOp ) const;
+};
+typedef std::vector< std::unique_ptr< CParticleOperatorInstance, CParticleOperatorDeleter > > ParticleOperatorList_t;
 class CParticleSystemDictionary;
 namespace ks
 {
@@ -292,50 +294,110 @@ enum KillListFlags
 // Interface to allow the particle system to call back into the client
 //-----------------------------------------------------------------------------
 
-inline constexpr const char *PARTICLE_SYSTEM_QUERY_INTERFACE_VERSION = "VParticleSystemQuery004";
+// The game side that has something to answer with (the client) hands the manager one of these:
+// the particle library lives in the shared image, the game classes live in the side's namespace, so
+// the game's answers reach the library as borrowed callables. An IParticleSystemQuery without hooks
+// answers with the engine's defaults (what the server and the tools get).
+struct ParticleQueryHooks
+{
+	std::function_ref< void( const Vector &vecOrigin, Color &tint ) > GetLightingAtPoint;
+	std::function_ref< void( const Vector &vecAbsStart, const Vector &vecAbsEnd, unsigned int mask,
+							 const class IHandleEntity *ignore, int collisionGroup, CBaseTrace *ptr ) > TraceLine;
+	std::function_ref< bool( const Vector &vecPos, const int nContentsMask ) > IsPointInSolid;
+	std::function_ref< bool( CParticleCollection *pParticles, void *pObject, Vector *pPnt ) > MovePointInsideControllingObject;
+	std::function_ref< int( const char *pszRtEnvName ) > GetRayTraceEnvironmentFromName;
+	std::function_ref< int( const char *pszCollisionGroupName ) > GetCollisionGroupFromName;
+	std::function_ref< void( CParticleCollection *pParticles, int nControlPointNumber, int nNumPtsOut, float flBBoxScale,
+							 int nNumTrysToGetAPointInsideTheModel, Vector *pPntsOut, Vector vecDirectionBias,
+							 Vector *pHitBoxRelativeCoordOut, int *pHitBoxIndexOut, int nDesiredHitbox,
+							 const char *pszHitboxSetName ) > GetRandomPointsOnControllingObjectHitBox;
+	std::function_ref< void( CParticleCollection *pParticles, int nControlPointNumber, int nNumPtsIn, float flBBoxScale,
+							 Vector *pPntsIn, Vector *pHitBoxRelativeCoordOut, int *pHitBoxIndexOut, int nDesiredHitbox,
+							 const char *pszHitboxSetName ) > GetClosestControllingObjectHitBox;
+	std::function_ref< int( CParticleCollection *pParticles, int nControlPointNumber, int nBufSize,
+							ModelHitBoxInfo_t *pHitBoxOutputBuffer, const char *pszHitboxSetName ) > GetControllingObjectHitBoxInfo;
+	std::function_ref< void( CParticleCollection *pParticles, int nControlPointNumber, Vector vecMin, Vector vecMax ) > GetControllingObjectOBBox;
+	std::function_ref< void( int envnumber, const FourRays &rays, fltx4 TMin, fltx4 TMax,
+							 RayTracingResult *rslt_out, int32 skip_id ) > TraceAgainstRayTraceEnv;
+	std::function_ref< Vector() > GetLocalPlayerPos;
+	std::function_ref< void( Vector *pForward, Vector *pRight, Vector *pUp ) > GetLocalPlayerEyeVectors;
+	std::function_ref< Vector() > GetCurrentViewOrigin;
+	std::function_ref< int() > GetActivityCount;
+	std::function_ref< const char *( int nActivityIndex ) > GetActivityNameFromIndex;
+	std::function_ref< int( void *pModel, const char *pszActivityName ) > GetActivityNumber;
+	std::function_ref< float( int *pQueryHandle, const Vector &vecOrigin, float flScale ) > GetPixelVisibility;
+	std::function_ref< void( const Vector &pos ) > SetUpLightingEnvironment;
+	std::function_ref< void() > PreSimulate;
+	std::function_ref< void() > PostSimulate;
+	std::function_ref< void( const Vector &origin, const Vector &dest, int r, int g, int b, bool noDepthTest, float duration ) > DebugDrawLine;
+	std::function_ref< void *( char const *pMdlName ) > GetModel;
+	std::function_ref< void( void *pModel, const matrix3x4_t &DrawMatrix, CParticleCollection *pParticles, int nParticleNumber,
+							 int nBodyPart, int nSubModel, int nSkin, int nAnimationSequence, float flAnimationRate,
+							 float r, float g, float b, float a ) > DrawModel;
+	std::function_ref< void( const int nParticleID, IMaterial *pMaterial, Vector &vOrigin, float flRadius, float flRotation,
+							 float r, float g, float b, float a, void *&pUserVar ) > UpdateProjectedTexture;
+};
 
-class IParticleSystemQuery : public IAppSystem
+class IParticleSystemQuery
 {
 public:
-	virtual bool IsEditor( ) = 0;
+	IParticleSystemQuery() = default;
+	explicit IParticleSystemQuery( const ParticleQueryHooks &hooks ) : m_pHooks( &hooks ) {}
 
-	virtual void GetLightingAtPoint( const Vector& vecOrigin, Color &tint ) = 0;
-	virtual void TraceLine( const Vector& vecAbsStart,
-							const Vector& vecAbsEnd, unsigned int mask, 
-							const class IHandleEntity *ignore,
-							int collisionGroup,
-							CBaseTrace *ptr ) = 0;
+	bool IsEditor( ) { return false; }
 
-	virtual bool IsPointInSolid( const Vector& vecPos, const int nContentsMask ) = 0;
+	void GetLightingAtPoint( const Vector& vecOrigin, Color &tint )
+	{
+		if ( m_pHooks )
+			m_pHooks->GetLightingAtPoint( vecOrigin, tint );
+		else
+			tint.SetColor( 255, 255, 255, 255 );
+	}
+
+	void TraceLine( const Vector& vecAbsStart,
+					const Vector& vecAbsEnd, unsigned int mask, 
+					const class IHandleEntity *ignore,
+					int collisionGroup,
+					CBaseTrace *ptr )
+	{
+		if ( m_pHooks )
+			m_pHooks->TraceLine( vecAbsStart, vecAbsEnd, mask, ignore, collisionGroup, ptr );
+		else
+			ptr->fraction = 1.0;							// no hit
+	}
+
+	bool IsPointInSolid( const Vector& vecPos, const int nContentsMask )
+	{
+		return m_pHooks ? m_pHooks->IsPointInSolid( vecPos, nContentsMask ) : false;
+	}
 
 	// given a possible spawn point, tries to movie it to be on or in the source object. returns
 	// true if it succeeded
-	virtual bool MovePointInsideControllingObject( CParticleCollection *pParticles,
-												   void *pObject,
-												   Vector *pPnt )
+	bool MovePointInsideControllingObject( CParticleCollection *pParticles,
+										   void *pObject,
+										   Vector *pPnt )
 	{
-		return true;
+		return m_pHooks ? m_pHooks->MovePointInsideControllingObject( pParticles, pObject, pPnt ) : true;
 	}
 
-	virtual	bool IsPointInControllingObjectHitBox( 
+	bool IsPointInControllingObjectHitBox( 
 		CParticleCollection *pParticles,
 		int nControlPointNumber, Vector vecPos, bool bBBoxOnly = false )
 	{
 		return true;
 	}
 
-
-	virtual int GetRayTraceEnvironmentFromName( const char *pszRtEnvName )
+	int GetRayTraceEnvironmentFromName( const char *pszRtEnvName )
 	{
-		return 0;											// == PRECIPITATION
+		return m_pHooks ? m_pHooks->GetRayTraceEnvironmentFromName( pszRtEnvName ) : 0;	// == PRECIPITATION
 	}
 
-	virtual int GetCollisionGroupFromName( const char *pszCollisionGroupName )
+	int GetCollisionGroupFromName( const char *pszCollisionGroupName )
 	{
-		return 0;											// == COLLISION_GROUP_NONE
+		return m_pHooks ? m_pHooks->GetCollisionGroupFromName( pszCollisionGroupName ) : 0;	// == COLLISION_GROUP_NONE
 	}
 	
-	virtual void GetRandomPointsOnControllingObjectHitBox( 
+	void GetRandomPointsOnControllingObjectHitBox( 
 		CParticleCollection *pParticles,
 		int nControlPointNumber, 
 		int nNumPtsOut,
@@ -346,9 +408,22 @@ public:
 		Vector *pHitBoxRelativeCoordOut = nullptr,
 		int *pHitBoxIndexOut = nullptr, 
 		int nDesiredHitbox = -1, 
-		const char *pszHitboxSetName = nullptr ) = 0;
+		const char *pszHitboxSetName = nullptr )
+	{
+		if ( m_pHooks )
+		{
+			m_pHooks->GetRandomPointsOnControllingObjectHitBox( pParticles, nControlPointNumber, nNumPtsOut, flBBoxScale,
+				nNumTrysToGetAPointInsideTheModel, pPntsOut, vecDirectionBias, pHitBoxRelativeCoordOut, pHitBoxIndexOut,
+				nDesiredHitbox, pszHitboxSetName );
+			return;
+		}
+		for ( int i = 0; i < nNumPtsOut; ++i )
+		{
+			pPntsOut[i].Init();
+		}
+	}
 
-	virtual void GetClosestControllingObjectHitBox( 
+	void GetClosestControllingObjectHitBox( 
 		CParticleCollection *pParticles,
 		int nControlPointNumber, 
 		int nNumPtsIn,
@@ -357,9 +432,25 @@ public:
 		Vector *pHitBoxRelativeCoordOut = nullptr,
 		int *pHitBoxIndexOut = nullptr,
 		int nDesiredHitbox = -1, 
-		const char *pszHitboxSetName = nullptr ) = 0;
+		const char *pszHitboxSetName = nullptr )
+	{
+		if ( m_pHooks )
+		{
+			m_pHooks->GetClosestControllingObjectHitBox( pParticles, nControlPointNumber, nNumPtsIn, flBBoxScale, pPntsIn,
+				pHitBoxRelativeCoordOut, pHitBoxIndexOut, nDesiredHitbox, pszHitboxSetName );
+			return;
+		}
+		for ( int i=0; i < nNumPtsIn; i++ )
+		{
+			if ( pHitBoxIndexOut )
+				pHitBoxIndexOut[i] = 0;
 
-	virtual int GetControllingObjectHitBoxInfo(
+			if ( pHitBoxRelativeCoordOut )
+				pHitBoxRelativeCoordOut[i].Init();
+		}
+	}
+
+	int GetControllingObjectHitBoxInfo(
 		CParticleCollection *pParticles,
 		int nControlPointNumber,
 		int nBufSize,										// # of output slots available
@@ -367,68 +458,112 @@ public:
 		const char *pszHitboxSetName )
 	{
 		// returns number of hit boxes output
-		return 0;
+		return m_pHooks ? m_pHooks->GetControllingObjectHitBoxInfo( pParticles, nControlPointNumber, nBufSize, pHitBoxOutputBuffer, pszHitboxSetName ) : 0;
 	}
 
-	virtual void GetControllingObjectOBBox( CParticleCollection *pParticles,
+	void GetControllingObjectOBBox( CParticleCollection *pParticles,
 		int nControlPointNumber,
 		Vector vecMin, Vector vecMax )
 	{
-		vecMin = vecMax = vec3_origin;
+		if ( m_pHooks )
+			m_pHooks->GetControllingObjectOBBox( pParticles, nControlPointNumber, vecMin, vecMax );
+		else
+			vecMin = vecMax = vec3_origin;
 	}
-
 
 	// Traces Four Rays against a defined RayTraceEnvironment
-	virtual void TraceAgainstRayTraceEnv( 
+	void TraceAgainstRayTraceEnv( 
 		int envnumber, 
 		const FourRays &rays, fltx4 TMin, fltx4 TMax,
-		RayTracingResult *rslt_out, int32 skip_id ) const = 0;
-
-	virtual Vector GetLocalPlayerPos( void )
+		RayTracingResult *rslt_out, int32 skip_id ) const
 	{
-		return vec3_origin;
+		if ( m_pHooks )
+		{
+			m_pHooks->TraceAgainstRayTraceEnv( envnumber, rays, TMin, TMax, rslt_out, skip_id );
+			return;
+		}
+		rslt_out->HitDistance = Four_Ones;
+		rslt_out->surface_normal.DuplicateVector( vec3_origin );
 	}
 
-	virtual void GetLocalPlayerEyeVectors( Vector *pForward, Vector *pRight = nullptr, Vector *pUp = nullptr )
+	Vector GetLocalPlayerPos( void )
 	{
+		return m_pHooks ? m_pHooks->GetLocalPlayerPos() : vec3_origin;
+	}
+
+	void GetLocalPlayerEyeVectors( Vector *pForward, Vector *pRight = nullptr, Vector *pUp = nullptr )
+	{
+		if ( m_pHooks )
+		{
+			m_pHooks->GetLocalPlayerEyeVectors( pForward, pRight, pUp );
+			return;
+		}
 		*pForward = vec3_origin;
 		*pRight = vec3_origin;
 		*pUp = vec3_origin;
 	}
 
-	virtual Vector GetCurrentViewOrigin()
+	Vector GetCurrentViewOrigin()
 	{
-		return vec3_origin;
+		return m_pHooks ? m_pHooks->GetCurrentViewOrigin() : vec3_origin;
 	}
 
-	virtual int GetActivityCount() = 0;
+	int GetActivityCount() { return m_pHooks ? m_pHooks->GetActivityCount() : 0; }
 
-	virtual const char *GetActivityNameFromIndex( int nActivityIndex ) { return 0; }
+	const char *GetActivityNameFromIndex( int nActivityIndex ) { return m_pHooks ? m_pHooks->GetActivityNameFromIndex( nActivityIndex ) : nullptr; }
 
-	virtual int GetActivityNumber( void *pModel, const char *m_pszActivityName ) { return -1; }
+	int GetActivityNumber( void *pModel, const char *m_pszActivityName ) { return m_pHooks ? m_pHooks->GetActivityNumber( pModel, m_pszActivityName ) : -1; }
 
-	virtual float GetPixelVisibility( int *pQueryHandle, const Vector &vecOrigin, float flScale ) = 0;
-
-	virtual void SetUpLightingEnvironment( const Vector& pos )
+	float GetPixelVisibility( int *pQueryHandle, const Vector &vecOrigin, float flScale )
 	{
+		return m_pHooks ? m_pHooks->GetPixelVisibility( pQueryHandle, vecOrigin, flScale ) : 0.0f;
 	}
 
-	virtual void PreSimulate( ) = 0;
+	void SetUpLightingEnvironment( const Vector& pos )
+	{
+		if ( m_pHooks )
+			m_pHooks->SetUpLightingEnvironment( pos );
+	}
 
-	virtual void PostSimulate( ) = 0;
+	void PreSimulate( )
+	{
+		if ( m_pHooks )
+			m_pHooks->PreSimulate();
+	}
 
-	virtual void DebugDrawLine(const Vector& origin, const Vector& dest, int r, int g, int b,bool noDepthTest, float duration) = 0;
+	void PostSimulate( )
+	{
+		if ( m_pHooks )
+			m_pHooks->PostSimulate();
+	}
 
-	virtual void *GetModel( char const *pMdlName ) { return nullptr; }
+	void DebugDrawLine(const Vector& origin, const Vector& dest, int r, int g, int b,bool noDepthTest, float duration)
+	{
+		if ( m_pHooks )
+			m_pHooks->DebugDrawLine( origin, dest, r, g, b, noDepthTest, duration );
+	}
 
-	virtual void DrawModel( void *pModel, const matrix3x4_t &DrawMatrix, CParticleCollection *pParticles, int nParticleNumber, int nBodyPart, int nSubModel,
-							int nSkin, int nAnimationSequence = 0, float flAnimationRate = 30.0f, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f ) = 0;
+	void *GetModel( char const *pMdlName ) { return m_pHooks ? m_pHooks->GetModel( pMdlName ) : nullptr; }
 
-	virtual void BeginDrawModels( int nNumModels, Vector const &vecCenter, CParticleCollection *pParticles ) {}
+	void DrawModel( void *pModel, const matrix3x4_t &DrawMatrix, CParticleCollection *pParticles, int nParticleNumber, int nBodyPart, int nSubModel,
+					int nSkin, int nAnimationSequence = 0, float flAnimationRate = 30.0f, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f )
+	{
+		if ( m_pHooks )
+			m_pHooks->DrawModel( pModel, DrawMatrix, pParticles, nParticleNumber, nBodyPart, nSubModel, nSkin, nAnimationSequence, flAnimationRate, r, g, b, a );
+	}
 
-	virtual void FinishDrawModels( CParticleCollection *pParticles ) {}
+	void BeginDrawModels( int nNumModels, Vector const &vecCenter, CParticleCollection *pParticles ) {}
 
-	virtual void UpdateProjectedTexture( const int nParticleID, IMaterial *pMaterial, Vector &vOrigin, float flRadius, float flRotation, float r, float g, float b, float a, void *&pUserVar ) = 0;
+	void FinishDrawModels( CParticleCollection *pParticles ) {}
+
+	void UpdateProjectedTexture( const int nParticleID, IMaterial *pMaterial, Vector &vOrigin, float flRadius, float flRotation, float r, float g, float b, float a, void *&pUserVar )
+	{
+		if ( m_pHooks )
+			m_pHooks->UpdateProjectedTexture( nParticleID, pMaterial, vOrigin, flRadius, flRotation, r, g, b, a, pUserVar );
+	}
+
+private:
+	const ParticleQueryHooks *m_pHooks = nullptr;
 };
 
 
@@ -706,17 +841,42 @@ enum ParticleOperatorId_t
 class IParticleOperatorDefinition
 {
 public:
-	virtual const char *GetName() const = 0;
-	virtual CParticleOperatorInstance *CreateInstance( const DmObjectId_t &id ) const = 0;
-//	virtual void DestroyInstance( CParticleOperatorInstance *pInstance ) const = 0;
-	virtual const DmxElementUnpackStructure_t* GetUnpackStructure() const = 0;
-	virtual ParticleOperatorId_t GetId() const = 0;
-	virtual uint32 GetFilter() const = 0;
-	virtual bool IsObsolete() const = 0;
+	// the definition of a built-in operator class
+	IParticleOperatorDefinition( ParticleOperatorKind kind, const char *pFactoryName, ParticleOperatorId_t id, bool bIsObsolete,
+								 DmxElementUnpackStructure_t *const *ppUnpackParams )
+		: m_Kind( kind ), m_Group( ParticleOperatorGroupOf( kind ) ), m_bCreatable( true ),
+		  m_pFactoryName( pFactoryName ), m_Id( id ), m_bIsObsolete( bIsObsolete ), m_ppUnpackParams( ppUnpackParams )
+	{
+	}
+
+	// the faked definition of the editor's child entry: it only has an unpack structure
+	explicit IParticleOperatorDefinition( DmxElementUnpackStructure_t *const *ppUnpackParams )
+		: m_Kind( ParticleOperatorKind() ), m_Group( ParticleOperatorGroup() ), m_bCreatable( false ),
+		  m_pFactoryName( nullptr ), m_Id( OPERATOR_GENERIC ), m_bIsObsolete( false ), m_ppUnpackParams( ppUnpackParams )
+	{
+	}
+
+	const char *GetName() const { return m_pFactoryName; }
+	CParticleOperatorInstance *CreateInstance( const DmObjectId_t &id ) const;
+	const DmxElementUnpackStructure_t* GetUnpackStructure() const { return *m_ppUnpackParams; }
+	ParticleOperatorId_t GetId() const { return m_Id; }
+	// Editor won't display obsolete operators
+	bool IsObsolete() const { return m_bIsObsolete; }
+	ParticleOperatorKind GetKind() const { return m_Kind; }
+	ParticleOperatorGroup GetGroup() const { return m_Group; }
 
 	[[gnu::always_inline]] inline void RecordExecutionTime( float flETime )
 	{
 	}
+
+private:
+	ParticleOperatorKind m_Kind;
+	ParticleOperatorGroup m_Group;
+	bool m_bCreatable;
+	const char *m_pFactoryName;
+	ParticleOperatorId_t m_Id;
+	bool m_bIsObsolete;
+	DmxElementUnpackStructure_t *const *m_ppUnpackParams;
 };
 
 
@@ -732,216 +892,18 @@ public:
 	void operator delete( void *pData );
 	void operator delete( void* p, int nBlockUse, const char *pFileName, int nLine );
 
-	// unpack structure will be applied by creator. add extra initialization needed here
-	virtual void InitParams( CParticleSystemDefinition *pDef )
-	{
-	}
-
-	virtual std::size_t GetRequiredContextBytes( ) const 
-	{
-		return 0;
-	}
-
-	virtual void InitializeContextData( CParticleCollection *pParticles, void *pContext ) const
-	{
-	}
-
-	virtual uint32 GetWrittenAttributes( void ) const = 0;
-	virtual uint32 GetReadAttributes( void ) const = 0;
-
-	virtual uint64 GetReadControlPointMask() const
-	{
-		return 0;
-	}
-
-	virtual uint32 GetFilter( void ) const
-	{
-		uint32 filter = 0;
-		uint32 wrAttrib = GetWrittenAttributes();
-
-		if (wrAttrib & ATTRIBUTES_WHICH_ARE_POSITION_AND_VELOCITY)
-		{
-			filter = filter | FILTER_POSITION_AND_VELOCITY_MASK;
-		}
-		if (wrAttrib & ATTRIBUTES_WHICH_ARE_LIFE_DURATION)
-		{
-			filter = filter | FILTER_LIFE_DURATION_MASK;
-		}
-		if (wrAttrib & ATTRIBUTES_WHICH_ARE_ROTATION)
-		{
-			filter = filter | FILTER_ROTATION_MASK;
-		}
-		if (wrAttrib & ATTRIBUTES_WHICH_ARE_SIZE)
-		{
-			filter = filter | FILTER_SIZE_MASK;
-		}
-		if (wrAttrib & ATTRIBUTES_WHICH_ARE_COLOR_AND_OPACITY)
-		{
-			filter = filter | FILTER_COLOR_AND_OPACITY_MASK;
-		}
-		if (wrAttrib & ATTRIBUTES_WHICH_ARE_ANIMATION_SEQUENCE)
-		{
-			filter = filter | FILTER_ANIMATION_SEQUENCE_MASK;
-		}
-		if (wrAttrib & ATTRIBUTES_WHICH_ARE_HITBOX)
-		{
-			filter = filter | FILTER_HITBOX_MASK;
-		}
-		if (wrAttrib & ATTRIBUTES_WHICH_ARE_NORMAL)
-		{
-			filter = filter | FILTER_NORMAL_MASK;
-		}
-
-		return filter;
-	}
-
-
-	// these control points are NOT positions or matrices (ie don't try to transform them)
-	virtual uint64 GetNonPositionalControlPointMask() const
-	{
-		return 0;
-	}
-
-	//  Used when an operator needs to read the attributes of a particle at spawn time
-	virtual uint32 GetReadInitialAttributes( void ) const
-	{
-		return 0;
-	}
-
-	// a particle simulator does this
-	virtual void Operate( CParticleCollection *pParticles, float flOpStrength, void *pContext ) const
-	{
-	}
-
-	virtual void PostSimulate( CParticleCollection *pParticles, void *pContext ) const
-	{
-	}
-
-	// a renderer overrides this
-	virtual void Render( IMatRenderContext *pRenderContext, 
-						 CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const
-	{
-	}
-
-	virtual bool IsBatchable() const
-	{
-		return true;
-	}
-
-	virtual bool IsOrderImportant() const
-	{
-		return false;
-	}
-
-	virtual bool ShouldRun( bool bApplyingParentKillList ) const
-	{
-		return !bApplyingParentKillList;
-	}
-
-	virtual void RenderUnsorted( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const
-	{
-	}
-
-	// Returns the number of verts + indices to render
-	virtual int GetParticlesToRender( CParticleCollection *pParticles, void *pContext, int nFirstParticle, int nRemainingVertices, int nRemainingIndices, int *pVertsUsed, int *pIndicesUsed ) const
-	{
-		*pVertsUsed = 0;
-		*pIndicesUsed = 0;
-		return 0;
-	}
-
-
-	// emitters over-ride this. Return a mask of what fields you initted
-	virtual uint32 Emit( CParticleCollection *pParticles, float flOpCurStrength,
-						 void *pContext ) const
-	{
-		return 0;
-	}
-
-	// emitters over-ride this. 
-	virtual void StopEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly = false ) const
-	{
-	}
-	virtual void StartEmission( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly = false ) const
-	{
-	}
-	virtual void Restart( CParticleCollection *pParticles, void *pContext ) {}
-
-	// initters over-ride this
-	virtual void InitParticleSystem( CParticleCollection *pParticles, void *pContext ) const
-	{
-	}
-
-
-	// a force generator does this. It accumulates in the force array
-	virtual void AddForces( FourVectors *AccumulatedForces, 
-							CParticleCollection *pParticles,
-							int nBlocks,
-							float flCurStrength,
-							void *pContext ) const
-	{
-	}
-
-
-	// this is called for each constarint every frame. It can set up data like nearby world traces,
-	// etc
-	virtual void SetupConstraintPerFrameData( CParticleCollection *pParticles,
-											  void *pContext ) const
-	{
-	}
-
-
-	// a constraint overrides this. It shold return a true if it did anything
-	virtual bool EnforceConstraint( int nStartBlock,
-									int nNumBlocks,
-									CParticleCollection *pParticles,
-									void *pContext, 
-									int nNumValidParticlesInLastChunk ) const
-	{
-		return false;
-	}
-	
-	// should the constraint be run only once after all other constraints?
-	virtual bool IsFinalConstaint( void ) const
-	{
-		return false;
-	}
-
-	// determines if a mask needs to be initialized multiple times. 
-	virtual bool InitMultipleOverride()
-	{
-		return false;
-	}
-
-
-	// Indicates if this initializer is scrub-safe (initializers don't use random numbers, for example)
-	virtual bool IsScrubSafe()
-	{
-		return false;
-	}
-
-	// particle-initters over-ride this
-	virtual void InitNewParticlesScalar( CParticleCollection *pParticles, int nFirstParticle, int n_particles, int attribute_write_mask, void *pContext ) const
-	{
-	}
-
-	// init new particles in blocks of 4. initters that have sse smarts should over ride this. the scalar particle initter will still be cllaed for head/tail.
-	virtual void InitNewParticlesBlock( CParticleCollection *pParticles, int start_block, int n_blocks, int attribute_write_mask, void *pContext ) const
-	{
-		// default behaviour is to call the scalar one 4x times
-		InitNewParticlesScalar( pParticles, 4*start_block, 4*n_blocks, attribute_write_mask, pContext );
-	}
+	// The entry points. CParticleOperatorInstance is not polymorphic: each of these runs the operator's
+	// own member of that name, selected by the operator's kind (ParticleOps, below), so calling one
+	// through a CParticleOperatorInstance pointer is always right. The defaults an operator class gets when
+	// it does not define an entry are the <entry>_Default members further down; they are protected.
+#define KS_PARTICLE_OP_DECLARE_DISPATCHER( Ret, Name, Const, Params, Args ) \
+	Ret Name Params Const;
+	KS_PARTICLE_OP_ENTRIES( KS_PARTICLE_OP_DECLARE_DISPATCHER )
+#undef KS_PARTICLE_OP_DECLARE_DISPATCHER
+	// (GetWrittenAttributes() and GetReadAttributes() have no default: every operator defines them)
 
 	// splits particle initialization up into scalar and block sections, callingt he right code
 	void InitNewParticles( CParticleCollection *pParticles, int nFirstParticle, int n_particles, int attribute_write_mask , void *pContext) const;
-
-
-	// this function is queried to determine if a particle system is over and doen with. A particle
-	// system is done with when it has noparticles and no operators intend to create any more
-	virtual bool MayCreateMoreParticles( CParticleCollection const *pParticles, void *pContext ) const
-	{
-		return false;
-	}
 
 	// Returns the operator definition that spawned this operator
 	const IParticleOperatorDefinition *GetDefinition()
@@ -949,19 +911,8 @@ public:
 		return m_pDef;
 	}
 
-	virtual bool ShouldRunBeforeEmitters( void ) const
-	{
-		return false;
-	}
-
-	// Called when the SFM wants to skip forward in time
-	virtual void SkipToTime( float flTime, CParticleCollection *pParticles, void *pContext ) const {}
-
 	// Returns a unique ID for this definition
 	const DmObjectId_t& GetId() { return m_Id; }
-
-	// Used for editing + debugging to visualize the operator in 3D
-	virtual void Render( CParticleCollection *pParticles ) const {}
 
 	// Used as a debugging mechanism to prevent bogus calls to RandomInt or RandomFloat inside operators
 	// Use CParticleCollection::RandomInt/RandomFloat instead
@@ -1008,19 +959,186 @@ public:
 	
 	int m_nOpEndCapState;
 
-	virtual void Precache( void )
+
+
+protected:
+	// What an operator class inherits for an entry point it does not define (the dispatch picks it; see
+	// ParticleOps). They are named apart from the entry points on purpose.
+
+	// unpack structure will be applied by creator. add extra initialization needed here
+	void InitParams_Default( CParticleSystemDefinition *pDef )
 	{
 	}
 
-	virtual void Uncache( void )
+	std::size_t GetRequiredContextBytes_Default( ) const 
+	{
+		return 0;
+	}
+
+	void InitializeContextData_Default( CParticleCollection *pParticles, void *pContext ) const
 	{
 	}
 
-
-
-	virtual ~CParticleOperatorInstance( void )
+	uint64 GetReadControlPointMask_Default() const
 	{
-		// so that sheet references, etc can be cleaned up
+		return 0;
+	}
+
+	uint32 GetFilter_Default( void ) const;
+
+	// these control points are NOT positions or matrices (ie don't try to transform them)
+	uint64 GetNonPositionalControlPointMask_Default() const
+	{
+		return 0;
+	}
+
+	//  Used when an operator needs to read the attributes of a particle at spawn time
+	uint32 GetReadInitialAttributes_Default( void ) const
+	{
+		return 0;
+	}
+
+	// a particle simulator does this
+	void Operate_Default( CParticleCollection *pParticles, float flOpStrength, void *pContext ) const
+	{
+	}
+
+	void PostSimulate_Default( CParticleCollection *pParticles, void *pContext ) const
+	{
+	}
+
+	// a renderer overrides this
+	void Render_Default( IMatRenderContext *pRenderContext, 
+						 CParticleCollection *pParticles, const Vector4D &vecDiffuseModulation, void *pContext, int nViewRecursionDepth ) const
+	{
+	}
+
+	bool IsBatchable_Default() const
+	{
+		return true;
+	}
+
+	bool IsOrderImportant_Default() const
+	{
+		return false;
+	}
+
+	bool ShouldRun_Default( bool bApplyingParentKillList ) const
+	{
+		return !bApplyingParentKillList;
+	}
+
+	void RenderUnsorted_Default( CParticleCollection *pParticles, void *pContext, IMatRenderContext *pRenderContext, CMeshBuilder &meshBuilder, int nVertexOffset, int nFirstParticle, int nParticleCount ) const
+	{
+	}
+
+	// Returns the number of verts + indices to render
+	int GetParticlesToRender_Default( CParticleCollection *pParticles, void *pContext, int nFirstParticle, int nRemainingVertices, int nRemainingIndices, int *pVertsUsed, int *pIndicesUsed ) const
+	{
+		*pVertsUsed = 0;
+		*pIndicesUsed = 0;
+		return 0;
+	}
+
+	// emitters over-ride this. Return a mask of what fields you initted
+	uint32 Emit_Default( CParticleCollection *pParticles, float flOpCurStrength,
+						 void *pContext ) const
+	{
+		return 0;
+	}
+
+	// emitters over-ride this. 
+	void StopEmission_Default( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
+	{
+	}
+
+	void StartEmission_Default( CParticleCollection *pParticles, void *pContext, bool bInfiniteOnly ) const
+	{
+	}
+
+	void Restart_Default( CParticleCollection *pParticles, void *pContext ) {}
+
+	// initters over-ride this
+	void InitParticleSystem_Default( CParticleCollection *pParticles, void *pContext ) const
+	{
+	}
+
+	// a force generator does this. It accumulates in the force array
+	void AddForces_Default( FourVectors *AccumulatedForces, 
+							CParticleCollection *pParticles,
+							int nBlocks,
+							float flCurStrength,
+							void *pContext ) const
+	{
+	}
+
+	// this is called for each constarint every frame. It can set up data like nearby world traces,
+	// etc
+	void SetupConstraintPerFrameData_Default( CParticleCollection *pParticles,
+											  void *pContext ) const
+	{
+	}
+
+	// a constraint overrides this. It shold return a true if it did anything
+	bool EnforceConstraint_Default( int nStartBlock,
+									int nNumBlocks,
+									CParticleCollection *pParticles,
+									void *pContext, 
+									int nNumValidParticlesInLastChunk ) const
+	{
+		return false;
+	}
+
+	// should the constraint be run only once after all other constraints?
+	bool IsFinalConstaint_Default( void ) const
+	{
+		return false;
+	}
+
+	// determines if a mask needs to be initialized multiple times. 
+	bool InitMultipleOverride_Default()
+	{
+		return false;
+	}
+
+	// Indicates if this initializer is scrub-safe (initializers don't use random numbers, for example)
+	bool IsScrubSafe_Default()
+	{
+		return false;
+	}
+
+	// particle-initters over-ride this
+	void InitNewParticlesScalar_Default( CParticleCollection *pParticles, int nFirstParticle, int n_particles, int attribute_write_mask, void *pContext ) const
+	{
+	}
+
+	// init new particles in blocks of 4. initters that have sse smarts should over ride this. the scalar particle initter will still be cllaed for head/tail.
+	void InitNewParticlesBlock_Default( CParticleCollection *pParticles, int start_block, int n_blocks, int attribute_write_mask, void *pContext ) const;
+
+	// this function is queried to determine if a particle system is over and doen with. A particle
+	// system is done with when it has noparticles and no operators intend to create any more
+	bool MayCreateMoreParticles_Default( CParticleCollection const *pParticles, void *pContext ) const
+	{
+		return false;
+	}
+
+	bool ShouldRunBeforeEmitters_Default( void ) const
+	{
+		return false;
+	}
+
+	// Called when the SFM wants to skip forward in time
+	void SkipToTime_Default( float flTime, CParticleCollection *pParticles, void *pContext ) const {}
+
+	// Used for editing + debugging to visualize the operator in 3D
+	void RenderDebug_Default( CParticleCollection *pParticles ) const {}
+
+	void Precache_Default( void )
+	{
+	}
+
+	void Uncache_Default( void )
+	{
 	}
 
 protected:
@@ -1043,11 +1161,18 @@ private:
 	friend class CParticleCollection;
 	friend class CParticleSystemDefinition;
 	friend class CParticleSystemMgr;
+	friend class IParticleOperatorDefinition;
+	friend struct ParticleOps;
 
 	const IParticleOperatorDefinition *m_pDef;
+	// which of the closed set of operator classes this is: what ParticleOps dispatches on
+	ParticleOperatorKind m_Kind;
+	ParticleOperatorGroup m_Group;
 	void SetDefinition( const IParticleOperatorDefinition * pDef, const DmObjectId_t &id )
 	{
 		m_pDef = pDef;
+		m_Kind = pDef->GetKind();
+		m_Group = pDef->GetGroup();
 		CopyUniqueId( id, &m_Id );
 	}
 
@@ -1060,7 +1185,7 @@ class CParticleInitializerOperatorInstance : public CParticleOperatorInstance
 {
 public:
 
-	virtual bool ShouldRun( bool bApplyingParentKillList ) const
+	bool ShouldRun( bool bApplyingParentKillList ) const
 	{
 		return ( !bApplyingParentKillList ) || m_bRunForParentApplyKillList;
 	}
@@ -1078,61 +1203,160 @@ public:
 //-----------------------------------------------------------------------------
 // Helper macro for creating particle operator factories
 //-----------------------------------------------------------------------------
+// What the definition of an operator class adds is the unpack structure the class' own
+// BEGIN/END_PARTICLE_OPERATOR_UNPACK fills in.
 template < class T >
 class CParticleOperatorDefinition : public IParticleOperatorDefinition
 {
 public:
-	CParticleOperatorDefinition( const char *pFactoryName, ParticleOperatorId_t id, bool bIsObsolete ) : m_pFactoryName( pFactoryName ), m_Id( id )
+	CParticleOperatorDefinition( ParticleOperatorKind kind, const char *pFactoryName, ParticleOperatorId_t id, bool bIsObsolete )
+		: IParticleOperatorDefinition( kind, pFactoryName, id, bIsObsolete, &m_pUnpackParams )
 	{
-		m_bIsObsolete = bIsObsolete;
 	}
-
-	virtual const char *GetName() const
-	{
-		return m_pFactoryName;
-	}
-
-	virtual ParticleOperatorId_t GetId() const
-	{
-		return m_Id;
-	}
-
-	virtual CParticleOperatorInstance *CreateInstance( const DmObjectId_t &id ) const
-	{
-		CParticleOperatorInstance *pOp = new T;
-		pOp->SetDefinition( this, id );
-		return pOp;
-	}
-
-	virtual const DmxElementUnpackStructure_t* GetUnpackStructure() const
-	{
-		return m_pUnpackParams;
-	}
-
-	// Editor won't display obsolete operators
-	virtual bool IsObsolete() const 
-	{ 
-		return m_bIsObsolete; 
-	}
-
-	virtual uint32 GetFilter() const { T temp; return temp.GetFilter(); }
 
 private:
-	const char *m_pFactoryName;
-	ParticleOperatorId_t m_Id;
-	bool m_bIsObsolete;
 	static DmxElementUnpackStructure_t *m_pUnpackParams;
 };
 
+//-----------------------------------------------------------------------------
+// Dispatch over the closed set of particle operators
+//
+// Every operator class is a ParticleOperatorKind (particle_operator_list.h). The operators are not
+// virtual: the entry points of CParticleOperatorInstance (Operate, Emit, Render, ...) switch on the
+// group (the source file that defines the class) and then on the kind, and call the class' member of
+// that name. A class that does not define an entry gets the CParticleOperatorInstance::<entry>_Default
+// instead (detected by the member name resolving to the base's own dispatcher); the defaults are
+// protected and named apart, so no call through a base pointer can reach one by accident. The group
+// switch exists so that each group's classes are only visible in the one translation unit that defines
+// them (particle_operator_dispatch.inl is included at the end of each).
+//
+// ParticleOps is the implementation of that: only CParticleOperatorInstance calls into it (plus the
+// create/destroy functions, which are public).
+//-----------------------------------------------------------------------------
+struct ParticleOps
+{
+	// construction and destruction of an instance of a kind
+	static CParticleOperatorInstance *Create( ParticleOperatorKind kind );
+	static void Destroy( CParticleOperatorInstance *pOp );
+
+private:
+	friend class CParticleOperatorInstance;
+
+#define KS_PARTICLE_OP_DECLARE_ENTRY( Ret, Name, Const, Params, Args ) \
+	static Ret Name( KS_PARTICLE_OP_SIGNATURE( Const, KS_PARTICLE_OP_UNPAREN Params ) ); \
+	static Ret Name##_Constraints( KS_PARTICLE_OP_SIGNATURE( Const, KS_PARTICLE_OP_UNPAREN Params ) ); \
+	static Ret Name##_Initializers( KS_PARTICLE_OP_SIGNATURE( Const, KS_PARTICLE_OP_UNPAREN Params ) ); \
+	static Ret Name##_Emitters( KS_PARTICLE_OP_SIGNATURE( Const, KS_PARTICLE_OP_UNPAREN Params ) ); \
+	static Ret Name##_Forces( KS_PARTICLE_OP_SIGNATURE( Const, KS_PARTICLE_OP_UNPAREN Params ) ); \
+	static Ret Name##_Operators( KS_PARTICLE_OP_SIGNATURE( Const, KS_PARTICLE_OP_UNPAREN Params ) ); \
+	static Ret Name##_Renderers( KS_PARTICLE_OP_SIGNATURE( Const, KS_PARTICLE_OP_UNPAREN Params ) ); \
+	/* the call of the entry on an operator class: its own member, or else the base's default */ \
+	template < class Op > static Ret Name##_Call( KS_PARTICLE_OP_SIGNATURE( Const, KS_PARTICLE_OP_UNPAREN Params ) );
+	KS_PARTICLE_OP_ENTRIES( KS_PARTICLE_OP_DECLARE_ENTRY )
+#undef KS_PARTICLE_OP_DECLARE_ENTRY
+
+	static CParticleOperatorInstance *Create_Constraints( ParticleOperatorKind kind );
+	static CParticleOperatorInstance *Create_Initializers( ParticleOperatorKind kind );
+	static CParticleOperatorInstance *Create_Emitters( ParticleOperatorKind kind );
+	static CParticleOperatorInstance *Create_Forces( ParticleOperatorKind kind );
+	static CParticleOperatorInstance *Create_Operators( ParticleOperatorKind kind );
+	static CParticleOperatorInstance *Create_Renderers( ParticleOperatorKind kind );
+	static void Destroy_Constraints( CParticleOperatorInstance *pOp );
+	static void Destroy_Initializers( CParticleOperatorInstance *pOp );
+	static void Destroy_Emitters( CParticleOperatorInstance *pOp );
+	static void Destroy_Forces( CParticleOperatorInstance *pOp );
+	static void Destroy_Operators( CParticleOperatorInstance *pOp );
+	static void Destroy_Renderers( CParticleOperatorInstance *pOp );
+};
+
+// The entry points of CParticleOperatorInstance
+#define KS_PARTICLE_OP_THIS_ARGS( ... ) this __VA_OPT__( , ) __VA_ARGS__
+#define KS_PARTICLE_OP_DEFINE_DISPATCHER( Ret, Name, Const, Params, Args ) \
+	inline Ret CParticleOperatorInstance::Name Params Const \
+	{ \
+		return ParticleOps::Name( KS_PARTICLE_OP_THIS_ARGS Args ); \
+	}
+KS_PARTICLE_OP_ENTRIES( KS_PARTICLE_OP_DEFINE_DISPATCHER )
+#undef KS_PARTICLE_OP_DEFINE_DISPATCHER
+#undef KS_PARTICLE_OP_THIS_ARGS
+
+// The call of an entry on operator class Op: the member Op defines, or else (when the name only finds
+// the dispatcher of CParticleOperatorInstance) the default. An entry without a default (see the list)
+// that an operator does not define does not compile.
+#define KS_PARTICLE_OP_DEFINE_CALL( Ret, Name, Const, Params, Args ) \
+	template < class Op > Ret ParticleOps::Name##_Call( KS_PARTICLE_OP_SIGNATURE( Const, KS_PARTICLE_OP_UNPAREN Params ) ) \
+	{ \
+		Const Op *pThis = static_cast< Const Op * >( pOp ); \
+		if constexpr ( std::is_same_v< decltype( &Op::Name ), decltype( &CParticleOperatorInstance::Name ) > ) \
+			return pThis->Name##_Default Args; \
+		else \
+			return pThis->Name Args; \
+	}
+KS_PARTICLE_OP_ENTRIES( KS_PARTICLE_OP_DEFINE_CALL )
+#undef KS_PARTICLE_OP_DEFINE_CALL
+
+inline uint32 CParticleOperatorInstance::GetFilter_Default( void ) const
+{
+	uint32 filter = 0;
+	uint32 wrAttrib = GetWrittenAttributes();
+
+	if (wrAttrib & ATTRIBUTES_WHICH_ARE_POSITION_AND_VELOCITY)
+	{
+		filter = filter | FILTER_POSITION_AND_VELOCITY_MASK;
+	}
+	if (wrAttrib & ATTRIBUTES_WHICH_ARE_LIFE_DURATION)
+	{
+		filter = filter | FILTER_LIFE_DURATION_MASK;
+	}
+	if (wrAttrib & ATTRIBUTES_WHICH_ARE_ROTATION)
+	{
+		filter = filter | FILTER_ROTATION_MASK;
+	}
+	if (wrAttrib & ATTRIBUTES_WHICH_ARE_SIZE)
+	{
+		filter = filter | FILTER_SIZE_MASK;
+	}
+	if (wrAttrib & ATTRIBUTES_WHICH_ARE_COLOR_AND_OPACITY)
+	{
+		filter = filter | FILTER_COLOR_AND_OPACITY_MASK;
+	}
+	if (wrAttrib & ATTRIBUTES_WHICH_ARE_ANIMATION_SEQUENCE)
+	{
+		filter = filter | FILTER_ANIMATION_SEQUENCE_MASK;
+	}
+	if (wrAttrib & ATTRIBUTES_WHICH_ARE_HITBOX)
+	{
+		filter = filter | FILTER_HITBOX_MASK;
+	}
+	if (wrAttrib & ATTRIBUTES_WHICH_ARE_NORMAL)
+	{
+		filter = filter | FILTER_NORMAL_MASK;
+	}
+
+	return filter;
+}
+
+inline void CParticleOperatorInstance::InitNewParticlesBlock_Default( CParticleCollection *pParticles, int start_block, int n_blocks, int attribute_write_mask, void *pContext ) const
+{
+	// default behaviour is to call the scalar one 4x times
+	InitNewParticlesScalar( pParticles, 4*start_block, 4*n_blocks, attribute_write_mask, pContext );
+}
+
+inline void CParticleOperatorDeleter::operator()( CParticleOperatorInstance *pOp ) const
+{
+	ParticleOps::Destroy( pOp );
+}
+
 #define DECLARE_PARTICLE_OPERATOR( _className )				\
 	DECLARE_DMXELEMENT_UNPACK()								\
-	friend class CParticleOperatorDefinition<_className >
+	friend class CParticleOperatorDefinition<_className >;	\
+	friend struct ParticleOps
 
 #define DEFINE_PARTICLE_OPERATOR( _className, _operatorName, _id )	\
-	static CParticleOperatorDefinition<_className> s_##_className##Factory( _operatorName, _id, false )
+	static CParticleOperatorDefinition<_className> s_##_className##Factory( ParticleOperatorKind::_className, _operatorName, _id, false )
 
 #define DEFINE_PARTICLE_OPERATOR_OBSOLETE( _className, _operatorName, _id )	\
-	static CParticleOperatorDefinition<_className> s_##_className##Factory( _operatorName, _id, true )
+	static CParticleOperatorDefinition<_className> s_##_className##Factory( ParticleOperatorKind::_className, _operatorName, _id, true )
 
 #define BEGIN_PARTICLE_OPERATOR_UNPACK( _className )										\
 	BEGIN_DMXELEMENT_UNPACK( _className )													\

@@ -3,8 +3,6 @@
 
 // Purpose: Drops particles where the entity was.
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -87,9 +85,9 @@ CEntityParticleTrail *CEntityParticleTrail::Create( CBaseEntity *pTarget, const 
 //-----------------------------------------------------------------------------
 // Spawn
 //-----------------------------------------------------------------------------
-void CEntityParticleTrail::Spawn()
+void CEntityParticleTrail::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	/*
 	SetThink( &CEntityParticleTrail::BoogieThink );
@@ -106,24 +104,24 @@ void CEntityParticleTrail::Spawn()
 //-----------------------------------------------------------------------------
 // Spawn
 //-----------------------------------------------------------------------------
-void CEntityParticleTrail::UpdateOnRemove()
+void CEntityParticleTrail::UpdateOnRemove_Impl()
 {
 	g_pNotify->ClearEntity( this );
 
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 
 //-----------------------------------------------------------------------------
 // Force our constraint entity to be trasmitted
 //-----------------------------------------------------------------------------
-void CEntityParticleTrail::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
+void CEntityParticleTrail::SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways )
 {
 	// Are we already marked for transmission?
 	if ( (*pInfo->m_pTransmitEdict)[ entindex() ] )
 		return;
 
-	BaseClass::SetTransmit( pInfo, bAlways );
+	BaseClass::SetTransmit_Impl( pInfo, bAlways );
 	
 	// Force our constraint entity to be sent too.
 	if ( m_hConstraintEntity )
@@ -161,9 +159,9 @@ void CEntityParticleTrail::DecrementRefCount()
 //-----------------------------------------------------------------------------
 // Clean up when the entity goes away.
 //-----------------------------------------------------------------------------
-void CEntityParticleTrail::NotifySystemEvent( CBaseEntity *pNotify, notify_system_event_t eventType, const notify_system_event_params_t &params )
+void CEntityParticleTrail::NotifySystemEvent_Impl( CBaseEntity *pNotify, notify_system_event_t eventType, const notify_system_event_params_t &params )
 {
-	BaseClass::NotifySystemEvent( pNotify, eventType, params );
+	BaseClass::NotifySystemEvent_Impl( pNotify, eventType, params );
 	if ( eventType == NOTIFY_EVENT_DESTROY )
 	{
 		FollowEntity( nullptr );

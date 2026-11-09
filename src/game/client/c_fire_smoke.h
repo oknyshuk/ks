@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 
@@ -10,8 +9,6 @@ import ks.tier1;
 #include "tempent.h"
 #include "glow_overlay.h"
 #include "view.h"
-#include "particle_litsmokeemitter.h"
-import std;
 #include "sharedInterface.h"
 #include "c_baseplayer.h"
 
@@ -173,7 +170,6 @@ protected:
 	void	UpdateEffects( void );
 
 	//ks::intrusive_ptr<CEmberEffect> m_pEmberEmitter;
-	ks::intrusive_ptr<CLitSmokeEmitter> m_pSmokeEmitter;
 
 	C_FireSprite			m_entFlames[NUM_CHILD_FLAMES];
 	C_FireFromAboveSprite	m_entFlamesFromAbove[NUM_CHILD_FLAMES];

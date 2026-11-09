@@ -6,8 +6,6 @@
 // Purpose: Minimal econ item schema for CS:GO weapon system
 //         Provides essential item definitions for weapon creation and lookups
 
-import ks.tier1;
-import std;
 
 // Forward declarations
 class CEconItemSchema;

@@ -10,57 +10,20 @@
 #include "tier2/tier2_logging.h"
 #include "videocfg/videocfg.h"
 
-class IVModelRender;
-class IVEngineClient;
-class IVModelRender;
-class IVEfx;
-class IVRenderView;
-class IVDebugOverlay;
-class IMaterialSystem;
-class IMaterialSystemStub;
-class IDataCache;
-class IMDLCache;
-class IVModelInfoClient;
-class IEngineUI;
-class ISpatialPartition;
-class IBaseClientDLL;
-class ISpatialPartition;
-class IFileSystem;
-class IStaticPropMgrClient;
-class IShadowMgr;
-class IEngineSound;
-class IMatSystemSurface;
-class IMaterialSystemHardwareConfig;
 class ISharedGameRules;
-class IEngineTrace;
-class IGameUIFuncs;
-class IGameEventManager2;
-class IPhysicsGameTrace;
-class CGlobalVarsBase;
-class IClientTools;
 class C_BaseAnimating;
-class IColorCorrectionSystem;
-class IInputSystem;
-class ISceneFileCache;
-class IAvi;
-class IBik;
-class IReplayHistoryManager;
-class ISoundEmitterSystemBase;
-class IGameTypes;
+class C_BaseEntity;
 class AchievementsAndStatsInterface;
-enum CPULevel_t;
-enum GPULevel_t;
-class IRenderToRTHelper;
 
+extern IVEfx *effects;
+extern IVRenderView *render;
+extern IEngineUI *engineui;
+extern IRenderToRTHelper *g_pRenderToRTHelper;
 extern IVModelRender *modelrender;
 extern IVEngineClient	*engine;
 extern IVModelRender *modelrender;
-extern IVEfx *effects;
-extern IVRenderView *render;
 extern IVDebugOverlay *debugoverlay;
-extern IMaterialSystemStub *materials_stub;
 extern IVModelInfoClient *modelinfo;
-extern IEngineUI *engineui;
 extern ISpatialPartition* partition;
 extern IBaseClientDLL *clientdll;
 extern IFileSystem *filesystem;
@@ -68,24 +31,18 @@ extern IStaticPropMgrClient *staticpropmgr;
 extern IShadowMgr *shadowmgr;
 extern IEngineSound *enginesound;
 extern IEngineTrace *enginetrace;
-extern IFileLoggingListener	*filelogginglistener;
+extern CFileLoggingListener	*filelogginglistener;
 extern IGameUIFuncs *gameuifuncs;
 extern IGameEventManager2 *gameeventmanager;
-extern IPhysicsGameTrace *physgametrace;
 extern CGlobalVarsBase *gpGlobals;
-extern IClientTools *clienttools;
 extern IInputSystem *inputsystem;
 extern ISceneFileCache *scenefilecache;
-extern IAvi *avi;
-extern IBik *bik;
 extern IUploadGameStats *gamestatsuploader;
 extern ISoundEmitterSystemBase *soundemitterbase;
 
-extern IGameTypes *g_pGameTypes;
 
 extern AchievementsAndStatsInterface* g_pAchievementsAndStatsInterface;
 
-extern IRenderToRTHelper *g_pRenderToRTHelper;
 
 // Returns the CPU/GPU level
 CPULevel_t GetCPULevel();
@@ -233,6 +190,5 @@ inline C_BasePlayer *GetSplitScreenViewPlayer( void ) { return GetSplitScreenVie
 inline bool IsLocalSplitScreenPlayer( void ) { return IsLocalSplitScreenPlayer( GET_ACTIVE_SPLITSCREEN_SLOT() ); };
 
 // Returns XBX_GetUserId( GET_ACTIVE_SPLITSCREEN_SLOT() )
-int XBX_GetActiveUserId();
 
 #define XBX_GetPrimaryUserId() _Use_XBX_GetActiveUserId_Instead

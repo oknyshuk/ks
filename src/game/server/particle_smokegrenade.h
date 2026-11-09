@@ -22,8 +22,8 @@ public:
 	
 	virtual				~ParticleSmokeGrenade();
 
-	virtual void		Spawn( void );
-	virtual int			UpdateTransmitState( void );
+	void		Spawn_Impl( void );
+	int			UpdateTransmitState_Impl( void );
 	void				SetCreator(CBasePlayer *creator);
 	CBasePlayer*		GetCreator();
 
@@ -41,7 +41,7 @@ public:
 	// Set the tint color of the grenade smoke.
 	void				SetSmokeColor(Vector color);
 
-	void				Think( void );
+	void				Think_Impl( void );
 
 public:
 	

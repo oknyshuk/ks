@@ -4,8 +4,6 @@
 
 // Purpose: Color correction entity.
 
-import std;
-import ks.math;
 #include "shareddefs.h"
 #include "util.h"
 #include "predictable_entity.h"
@@ -45,11 +43,11 @@ public:
 
 	CColorCorrection();
 
-	void Spawn( void );
-	int  UpdateTransmitState();
-	void Activate( void );
+	void Spawn_Impl( void );
+	int  UpdateTransmitState_Impl();
+	void Activate_Impl( void );
 
-	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	int	ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION; }
 
 	bool IsMaster( void ) const { return HasSpawnFlags( SF_COLORCORRECTION_MASTER ); }
 
@@ -116,7 +114,7 @@ public:
 
 	virtual void LevelInitPreEntity();
 	virtual void LevelInitPostEntity();
-	virtual void FireGameEvent( IGameEvent *pEvent );
+	void FireGameEvent( IGameEvent *pEvent );
 	CColorCorrection *GetMasterColorCorrection( void )			{ return m_hMasterController; }
 
 private:

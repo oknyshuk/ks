@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
 #elif defined(GAME_DLL)
-import ks.tier1;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -24,7 +20,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -43,8 +38,9 @@ import ks.math;
 #endif
 #include "reflect_datamap.h"
 
-namespace ks::reflect::dmap
+namespace ksr::dmap
 {
+using namespace ::ks::reflect;
 
 typedescription_t make_field( const FieldDesc &d, bool output )
 {
@@ -58,4 +54,4 @@ typedescription_t make_field( const FieldDesc &d, bool output )
 	return MakeField( f );
 }
 
-} // namespace ks::reflect::dmap
+} // namespace ksr::dmap

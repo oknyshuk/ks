@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -52,7 +49,7 @@ class CDebugHistory : public CBaseEntity
 	DECLARE_CLASS( CDebugHistory, CBaseEntity );
 public:
 
-	void	Spawn();
+	void	Spawn_Impl();
 	void	AddDebugHistoryLine( int iCategory, const char *szLine );
 	void	ClearHistories( void );
 	void	DumpDebugHistory( int iCategory );
@@ -73,9 +70,9 @@ static CHandle< CDebugHistory >	s_DebugHistory;
 //-----------------------------------------------------------------------------
 // Spawn
 //-----------------------------------------------------------------------------
-void CDebugHistory::Spawn()
+void CDebugHistory::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 #ifdef DISABLE_DEBUG_HISTORY
 	UTIL_Remove( this );

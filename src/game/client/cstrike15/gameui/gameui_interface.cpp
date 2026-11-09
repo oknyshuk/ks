@@ -4,8 +4,6 @@
 // Purpose: Implements all the functions exported by the GameUI dll
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -138,10 +136,8 @@ CGameUI::~CGameUI()
 //-----------------------------------------------------------------------------
 void CGameUI::Initialize( CreateInterfaceFn factory )
 {
-	ConnectTier1Libraries( &factory, 1 );
-	ConnectTier2Libraries( &factory, 1 );
-	ConVar_Register( FCVAR_CLIENTDLL );
-	ConnectTier3Libraries( &factory, 1 );
+	// The tier libraries are shared with the engine, which has connected them.
+	ConVar_Register( ks::client_registry().convars, FCVAR_CLIENTDLL );
 
 	enginesound = (IEngineSound *)factory(IENGINESOUND_CLIENT_INTERFACE_VERSION, nullptr);
 	engine = (IVEngineClient *)factory( VENGINE_CLIENT_INTERFACE_VERSION, nullptr );
@@ -345,10 +341,7 @@ void CGameUI::Shutdown()
 
 	ModInfo().FreeModInfo();
 	
-	ConVar_Unregister();
-	DisconnectTier3Libraries();
-	DisconnectTier2Libraries();
-	DisconnectTier1Libraries();
+	ConVar_Unregister( ks::client_registry().convars );
 }
 
 //-----------------------------------------------------------------------------

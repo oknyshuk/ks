@@ -3,8 +3,6 @@
 
 // Purpose: @TODO (toml 06-26-02): The entry points in this file need to be organized
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"

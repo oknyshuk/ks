@@ -9,7 +9,6 @@ import ks.tier1;
 #include "net_ws_headers.h"
 #include "net_ws_queued_packet_sender.h"
 #include "matchmaking/imatchframework.h"
-#include "ienginetoolinternal.h"
 #include "server.h"
 #include "mathlib/IceKey.H"
 #include "engine/inetsupport.h"
@@ -74,6 +73,7 @@ extern ConVar net_showudp_remoteonly;
 extern ConVar net_showtcp;
 extern ConVar net_blocksize;
 extern int host_framecount;
+extern ConVar host_timescale;
 
 extern bool ShouldChecksumPackets();
 extern unsigned short BufferToShortChecksum( const void *pvData, std::size_t nLength );
@@ -642,7 +642,7 @@ void NET_RemoveNetChannel(INetChannel *netchan, bool bDeleteNetChan)
 	NET_ClearQueuedPacketsForChannel( netchan );
 	
 	if ( bDeleteNetChan )
-		delete netchan;
+		delete static_cast<CNetChan*>( netchan );
 
 	++ g_NetChannelsRefreshCounter;
 }
@@ -1637,7 +1637,7 @@ void NET_ProcessListen(int sock)
 	}
 }
 
-void NET_ProcessSocket( int sock, IConnectionlessPacketHandler *handler )
+void NET_ProcessSocket( int sock, ConnectionlessPacketHandler_t handler )
 {
 	class CAutoNetProcessSocketStartEnd
 	{
@@ -1710,7 +1710,7 @@ void NET_ProcessSocket( int sock, IConnectionlessPacketHandler *handler )
 //				Msg( "\n" );
 			}
 
-			handler->ProcessConnectionlessPacket( packet );
+			handler( packet );
 			continue;
 		}
 
@@ -1993,7 +1993,7 @@ static std::atomic<int32> s_SplitPacketSequenceNumber[ MAX_SOCKETS ] = {1};
 
 static int NET_SendLong( INetChannel *chan, int sock, SOCKET s, const char * buf, int len, const ns_address &to, int nMaxRoutableSize )
 {
-	CNetChan *netchan = dynamic_cast< CNetChan * >( chan );
+	CNetChan *netchan = static_cast< CNetChan * >( chan );
 
 	short nSplitSizeMinusHeader = nMaxRoutableSize - sizeof( SPLITPACKET );
 
@@ -2686,7 +2686,7 @@ void NET_SetTime( double realtime )
 
 #if !defined( DEDICATED )
 	// adjust network time so fakelag works with host_timescale
-	net_time += frametime * g_pEngineToolInternal->GetTimescale();
+	net_time += frametime * host_timescale.GetFloat() * sv.GetTimescale();
 #else
     	net_time += frametime * sv.GetTimescale();
 #endif

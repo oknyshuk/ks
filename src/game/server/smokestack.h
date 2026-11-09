@@ -41,10 +41,11 @@ public:
 					CSmokeStack();
 					~CSmokeStack();
 
-	virtual void	Spawn( void );
-	virtual void	Activate();
-	virtual bool	KeyValue( const char *szKeyName, const char *szValue );
-	virtual void	Precache();
+	void	Spawn_Impl( void );
+	void	Activate_Impl();
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
+	void	Precache_Impl();
 
 
 protected:

@@ -21,10 +21,10 @@
 #include "sendproxy.h"
 #include "networkvar.h"
 
-import std;
 
-namespace ks::reflect::net
+namespace ksr::net
 {
+using namespace ::ks::reflect;
 
 // A SubTable<>'s Table argument is `auto`, so one annotation vocabulary serves both
 // directions: the send side names &DT_X::g_SendTable and the receive side
@@ -633,7 +633,7 @@ SendTable &table()
 	return t;
 }
 
-} // namespace ks::reflect::net
+} // namespace ksr::net
 
 
 // Replaces IMPLEMENT_SERVERCLASS_ST plus its prop list once the gate has proven the generated
@@ -644,7 +644,7 @@ SendTable &table()
 	namespace tableName { SendTable g_SendTable; }                                               \
 	static const int g_##className##_ReflectSendInit = []                                        \
 	{                                                                                            \
-		auto &p = ks::reflect::net::table_props<className>();                                    \
+		auto &p = ksr::net::table_props<className>();                                    \
 		tableName::g_SendTable.Construct( p.data(), (int)p.size(), #tableName );                  \
 		return 1;                                                                                \
 	}();                                                                                         \
@@ -660,7 +660,7 @@ SendTable &table()
 	namespace tableName { SendTable g_SendTable; }                                                       \
 	static const int g_##className##_##tableName##_ReflectInit = []                               \
 	{                                                                                            \
-		auto &p = ks::reflect::net::table_props_in<className, #tableName>();                        \
+		auto &p = ksr::net::table_props_in<className, #tableName>();                        \
 		tableName::g_SendTable.Construct( p.data(), (int)p.size(), #tableName );                    \
 		return 1;                                                                                \
 	}();
@@ -677,7 +677,7 @@ SendTable &table()
 	namespace tableName { SendTable g_SendTable; }                                               \
 	static const int g_##className##_ReflectSendInit = []                                        \
 	{                                                                                            \
-		auto &p = ks::reflect::net::table_props<className>();                                    \
+		auto &p = ksr::net::table_props<className>();                                    \
 		tableName::g_SendTable.Construct( p.data(), (int)p.size(), #tableName );                  \
 		return 1;                                                                                \
 	}();

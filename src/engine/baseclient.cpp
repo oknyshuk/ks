@@ -56,7 +56,8 @@ ConVar	sv_duplicate_playernames_ok( "sv_duplicate_playernames_ok", "0", FCVAR_RE
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CBaseClient::CBaseClient()
+CBaseClient::CBaseClient( client_kind_t kind )
+	: m_GameEventCallback( std::cw<&CBaseClient::FireGameEvent>, this ), m_client_kind( kind )
 {
 	// init all pointers
 	m_NetChannel = nullptr;
@@ -77,20 +78,16 @@ CBaseClient::CBaseClient()
 	V_memset( m_SplitScreenUsers, 0, sizeof( m_SplitScreenUsers ) );
 	m_SplitScreenUsers[ 0 ] = this;
 	m_ClientPlatform = CROSSPLAYPLATFORM_THISPLATFORM;
-
-	m_nDebugID = EVENT_DEBUG_ID_INIT;
 }
 
 CBaseClient::~CBaseClient()
 {
 	// first remove the client as listener
 	g_GameEventManager.RemoveListener( this );
-
-	m_nDebugID = EVENT_DEBUG_ID_SHUTDOWN;
 }
 
 
-void CBaseClient::SetRate(int nRate, bool bForce )
+void CBaseClient::SetRateBase(int nRate, bool bForce )
 {
 	if ( m_NetChannel )
 		m_NetChannel->SetDataRate( nRate );
@@ -141,11 +138,16 @@ bool CBaseClient::FillUserInfo( player_info_s &userInfo )
 void CBaseClient::ClientPrintf (const char *fmt, ...)
 {
 	std::va_list		argptr;
+	__builtin_va_start (argptr,fmt);
+	ClientPrintfV( fmt, argptr );
+	__builtin_va_end (argptr);
+}
+
+void CBaseClient::ClientPrintfV (const char *fmt, std::va_list argptr)
+{
 	char		string[1024];
 
-	__builtin_va_start (argptr,fmt);
 	V_vsnprintf (string, sizeof( string ), fmt,argptr);
-	__builtin_va_end (argptr);
 
 	CSVCMsg_Print_t print;
 	print.text = string;
@@ -158,7 +160,7 @@ void CBaseClient::ClientPrintf (const char *fmt, ...)
 // Input  : *fmt -
 //			... -
 //-----------------------------------------------------------------------------
-bool CBaseClient::SendNetMsg( INetMessage &msg, bool bForceReliable, bool bVoice )
+bool CBaseClient::SendNetMsgBase( INetMessage &msg, bool bForceReliable, bool bVoice )
 {
 	if ( !m_NetChannel )
 	{
@@ -238,7 +240,7 @@ void CBaseClient::SetUserCVar( const char *cvar, const char *value)
 	m_ConVars->SetString( cvar, value );
 }
 
-void CBaseClient::SetUpdateRate( float fUpdateRate, bool bForce)
+void CBaseClient::SetUpdateRateBase( float fUpdateRate, bool bForce)
 {
 	fUpdateRate = clamp( fUpdateRate, 1, 128.0f );
 
@@ -281,7 +283,7 @@ void CBaseClient::SetSignonState( int nState )
 	}
 }
 
-void CBaseClient::Clear()
+void CBaseClient::ClearBase()
 {
 	// Throw away any residual garbage in the channel.
 	if ( m_NetChannel )
@@ -338,7 +340,7 @@ void CBaseClient::Clear()
 	V_memset( m_nCustomFiles, 0, sizeof(m_nCustomFiles) );
 }
 
-bool CBaseClient::ProcessSignonStateMsg(int state, int spawncount)
+bool CBaseClient::ProcessSignonStateMsgBase(int state, int spawncount)
 {
 	if ( IsSplitScreenUser() )
 		return true;
@@ -420,7 +422,7 @@ bool CBaseClient::ProcessSignonStateMsg(int state, int spawncount)
 												// Broadcast to this user avatars of all other users who already uploaded their avatars
 												for ( int iClient = 0; iClient < sv.GetClientCount(); ++iClient )
 												{
-													CBaseClient *pClient = dynamic_cast< CBaseClient * >( sv.GetClient( iClient ) );
+													CBaseClient *pClient = static_cast< CBaseClient * >( sv.GetClient( iClient ) );
 													if ( !pClient->IsConnected() )
 														continue;
 
@@ -444,7 +446,7 @@ bool CBaseClient::ProcessSignonStateMsg(int state, int spawncount)
 	return true;
 }
 
-void CBaseClient::Reconnect( void )
+void CBaseClient::ReconnectBase( void )
 {
 	ConMsg("Forcing client reconnect (%i)\n", GetSignonState() );
 	
@@ -457,7 +459,7 @@ void CBaseClient::Reconnect( void )
 	m_NetChannel->SendNetMsg( signon );
 }
 
-void CBaseClient::Inactivate( void )
+void CBaseClient::InactivateBase( void )
 {
 	FreeBaselines();
 
@@ -581,7 +583,7 @@ void CBaseClient::SetName(const char * name)
 	m_Server->UserInfoChanged( m_nClientSlot );
 }
 
-void CBaseClient::ActivatePlayer()
+void CBaseClient::ActivatePlayerBase()
 {
 	COM_TimestampedLog( "CBaseClient::ActivatePlayer" );
 
@@ -595,7 +597,7 @@ void CBaseClient::ActivatePlayer()
 	NotifyDedicatedServerUI("UpdatePlayers");
 }
 
-void CBaseClient::SpawnPlayer( void )
+void CBaseClient::SpawnPlayerBase( void )
 {
 	COM_TimestampedLog( "CBaseClient::SpawnPlayer" );
 
@@ -624,7 +626,7 @@ void CBaseClient::SpawnPlayer( void )
 	SendNetMsg( signonState );
 }
 
-bool CBaseClient::SendSignonData( void )
+bool CBaseClient::SendSignonDataBase( void )
 {
 	COM_TimestampedLog( " CBaseClient::SendSignonData" );
 #ifndef DEDICATED
@@ -650,7 +652,7 @@ bool CBaseClient::SendSignonData( void )
 	return m_NetChannel->SendNetMsg( signonState );
 }
 
-void CBaseClient::Connect( const char *szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars /*= NULL*/ )
+void CBaseClient::ConnectBase( const char *szName, int nUserID, INetChannel *pNetChannel, bool bFakePlayer, CrossPlayPlatform_t clientPlatform, const ks::net::CMsg_CVars *pVecCvars /*= NULL*/ )
 {
 	COM_TimestampedLog( "CBaseClient::Connect" );
 
@@ -703,7 +705,7 @@ void CBaseClient::Connect( const char *szName, int nUserID, INetChannel *pNetCha
 //			*fmt -
 //			... -
 //-----------------------------------------------------------------------------
-void CBaseClient::PerformDisconnection( const char *pReason )
+void CBaseClient::PerformDisconnectionBase( const char *pReason )
 {
 
 	SetSignonState( SIGNONSTATE_NONE );
@@ -746,7 +748,7 @@ void CBaseClient::PerformDisconnection( const char *pReason )
 	Clear(); // clear state
 }
 
-void CBaseClient::Disconnect( const char *fmt )
+void CBaseClient::DisconnectBase( const char *fmt )
 {
 	if ( GetSignonState() == SIGNONSTATE_NONE )
 		return;	// no recursion
@@ -800,7 +802,7 @@ void CBaseClient::Disconnect( const char *fmt )
 }
 
 
-void CBaseClient::FireGameEvent( IGameEvent *event, bool bPassthrough )
+void CBaseClient::SendGameEvent( IGameEvent *event, bool bPassthrough )
 {
 	CSVCMsg_GameEvent_t eventMsg;
 
@@ -825,11 +827,6 @@ void CBaseClient::FireGameEvent( IGameEvent *event, bool bPassthrough )
 	}
 }
 
-
-int CBaseClient::GetEventDebugID( void )
-{
-	return m_nDebugID;
-}
 
 bool CBaseClient::SendServerInfo( void )
 {
@@ -936,13 +933,13 @@ bool CBaseClient::SendServerInfo( void )
 	return true;
 }
 
-CClientFrame *CBaseClient::GetDeltaFrame( int nTick )
+CClientFrame *CBaseClient::GetDeltaFrameBase( int nTick )
 {
 	contract_assert( 0 ); // derive moe
 	return nullptr; // CBaseClient has no delta frames
 }
 
-void CBaseClient::WriteGameSounds(bf_write &buf, int nMaxSounds )
+void CBaseClient::WriteGameSoundsBase(bf_write &buf, int nMaxSounds )
 {
 	// CBaseClient has no events
 }
@@ -1019,7 +1016,7 @@ bool CBaseClient::NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg )
 	return true;
 }
 
-bool CBaseClient::NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg )
+bool CBaseClient::NETMsg_PlayerAvatarDataBase( const ks::net::CNETMsg_PlayerAvatarData& msg )
 {
 	if ( sv_reliableavatardata.GetInt() != 1 )
 		return true;
@@ -1039,7 +1036,7 @@ void CBaseClient::OnPlayerAvatarDataChanged()
 	// Broadcast this user's avatar to all other users who already got other updates
 	for ( int iClient = 0; iClient < sv.GetClientCount(); ++iClient )
 	{
-		CBaseClient *pClient = dynamic_cast< CBaseClient * >( sv.GetClient( iClient ) );
+		CBaseClient *pClient = static_cast< CBaseClient * >( sv.GetClient( iClient ) );
 		if ( !pClient->IsActive() )
 			continue;
 
@@ -1098,7 +1095,7 @@ void CBaseClient::ApplyConVars( const ks::net::CMsg_CVars& list, bool bCreateIfN
 	}
 }
 
-bool CBaseClient::NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg )
+bool CBaseClient::NETMsg_SetConVarBase( const ks::net::CNETMsg_SetConVar& msg )
 {
 	ApplyConVars( msg.convars, false );	// followup cvars, must be set on connect
 	return true;
@@ -1130,7 +1127,7 @@ bool CBaseClient::NETMsg_SignonState( const ks::net::CNETMsg_SignonState& msg )
 	return ProcessSignonStateMsg( msg.signon_state, msg.spawn_count );
 }
 
-bool CBaseClient::CLCMsg_ClientInfo( const ks::net::CCLCMsg_ClientInfo& msg )
+bool CBaseClient::CLCMsg_ClientInfoBase( const ks::net::CCLCMsg_ClientInfo& msg )
 {
 	m_nSendtableCRC = msg.send_table_crc;
 
@@ -1238,7 +1235,7 @@ bool CBaseClient::CLCMsg_BaselineAck( const ks::net::CCLCMsg_BaselineAck& msg )
 	return true;
 }
 
-bool CBaseClient::CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg )
+bool CBaseClient::CLCMsg_ListenEventsBase( const ks::net::CCLCMsg_ListenEvents& msg )
 {
 	// first remove the client as listener
 	g_GameEventManager.RemoveListener( this );
@@ -1265,7 +1262,7 @@ bool CBaseClient::CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg 
 
 		if ( descriptor )
 		{
-			g_GameEventManager.AddListener( this, descriptor, CGameEventManager::CLIENTSTUB );
+			g_GameEventManager.AddListener( this, m_GameEventCallback, descriptor, CGameEventManager::CLIENTSTUB );
 		}
 		else
 		{
@@ -1387,7 +1384,7 @@ void CBaseClient::SetTraceThreshold( int nThreshold )
 static ConVar sv_multiplayer_maxtempentities( "sv_multiplayer_maxtempentities", "32" );
 ConVar sv_multiplayer_maxsounds( "sv_multiplayer_sounds", "20" );
 
-bool CBaseClient::SendSnapshot( CClientFrame *pFrame )
+bool CBaseClient::SendSnapshotBase( CClientFrame *pFrame )
 {
 
 	// never send the same snapshot twice
@@ -1551,7 +1548,7 @@ bool CBaseClient::SendSnapshot( CClientFrame *pFrame )
 	return true;
 }
 
-bool CBaseClient::ExecuteStringCommand( const char *pCommand )
+bool CBaseClient::ExecuteStringCommandBase( const char *pCommand )
 {
 	if ( !pCommand || !pCommand[0] )
 		return false;
@@ -1571,7 +1568,7 @@ void CBaseClient::DemoRestart()
 	
 }
 
-bool CBaseClient::ShouldSendMessages( void )
+bool CBaseClient::ShouldSendMessagesBase( void )
 {
 	if ( !IsConnected() )
 		return false;
@@ -1650,7 +1647,7 @@ void CBaseClient::UpdateSendState( void )
 	}
 }
 
-void CBaseClient::UpdateUserSettings()
+void CBaseClient::UpdateUserSettingsBase()
 {
 	// set user name
 	SetName( m_ConVars->GetString( "name", "unnamed") );
@@ -1687,7 +1684,7 @@ void CBaseClient::OnRequestFullUpdate( char const *pchReason )
 // Purpose: 
 // Input  : *cl - 
 //-----------------------------------------------------------------------------
-bool CBaseClient::UpdateAcknowledgedFramecount(int tick)
+bool CBaseClient::UpdateAcknowledgedFramecountBase(int tick)
 {
 	if ( IsFakeClient() )
 	{
@@ -1865,7 +1862,7 @@ uint64 CBaseClient::GetClientXuid() const
 		return m_PlayerUID.ConvertToUint64();
 }
 
-bool CBaseClient::IgnoreTempEntity( CEventInfo *event )
+bool CBaseClient::IgnoreTempEntityBase( CEventInfo *event )
 {
 	int iPlayerIndex = GetPlayerSlot()+1;
 
@@ -2068,7 +2065,7 @@ void HostValidateSessionImpl()
 	}
 }
 
-bool CBaseClient::CheckConnect()
+bool CBaseClient::CheckConnectBase()
 {
 	return true;
 }
@@ -2111,7 +2108,7 @@ bool CBaseClient::CLCMsg_SplitPlayerConnect( const ks::net::CCLCMsg_SplitPlayerC
 	return true;
 }
 
-bool CBaseClient::CLCMsg_CmdKeyValues( const ks::net::CCLCMsg_CmdKeyValues& msg )
+bool CBaseClient::CLCMsg_CmdKeyValuesBase( const ks::net::CCLCMsg_CmdKeyValues& msg )
 {
 	return true;
 }

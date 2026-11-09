@@ -17,8 +17,6 @@
 #include "c_cs_player.h"
 
 #include <rocketui/rmlui.h>
-import ks.core;
-import std;
 
 DECLARE_HUDELEMENT( RkHudKillfeed );
 

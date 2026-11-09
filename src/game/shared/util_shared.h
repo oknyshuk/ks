@@ -4,10 +4,8 @@
 
 // Purpose: Shared util code between client and server.
 
-import ks.tier1;
 #include "reflect_annotations.h"
 
-import std;
 #include "cmodel.h"
 #include "networkvar.h"
 #include "engine/IEngineTrace.h"
@@ -27,11 +25,25 @@ import std;
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class CGameTrace;
 class CBasePlayer;
-typedef CGameTrace trace_t;
 
 extern ConVar developer;	// developer mode
+
+// Clear all recipients of a send proxy and set only the specified client (and its split screen
+// players), or set all recipients save for it. Server only. Note: these are CLIENT indices.
+void SendProxyRecipients_SetOnly( CSendProxyRecipients *pRecipients, int iClient );
+void SendProxyRecipients_ExcludeOnly( CSendProxyRecipients *pRecipients, int iClient );
+
+// Returns true if the trace hit the world entity.
+// If this returns true, then you can't use GetHitBoxIndex().
+bool TraceDidHitWorld( const CGameTrace &tr );
+
+// Returns true if the trace hit something and it wasn't the world.
+bool TraceDidHitNonWorldEntity( const CGameTrace &tr );
+
+// Gets the entity's network index if the trace has hit an entity.
+// If not, returns -1.
+int TraceGetEntityIndex( const CGameTrace &tr );
 
 
 //-----------------------------------------------------------------------------
@@ -85,13 +97,13 @@ inline const CBaseEntity *EntityFromEntityHandle( const IHandleEntity *pConstHan
 
 #ifdef CLIENT_DLL
 	IClientUnknown *pUnk = (IClientUnknown*)pHandleEntity;
-	return pUnk->GetBaseEntity();
+	return EntityCast<const C_BaseEntity>( pUnk->GetBaseEntity() );
 #else
 	if ( staticpropmgr->IsStaticProp( pHandleEntity ) )
 		return nullptr;
 
 	IServerUnknown *pUnk = (IServerUnknown*)pHandleEntity;
-	return pUnk->GetBaseEntity();
+	return EntityCast<const CBaseEntity>( pUnk->GetBaseEntity() );
 #endif
 }
 
@@ -99,14 +111,14 @@ inline CBaseEntity *EntityFromEntityHandle( IHandleEntity *pHandleEntity )
 {
 #ifdef CLIENT_DLL
 	IClientUnknown *pUnk = (IClientUnknown*)pHandleEntity;
-	return pUnk->GetBaseEntity();
+	return EntityCast<C_BaseEntity>( pUnk->GetBaseEntity() );
 #else
 	if ( staticpropmgr->IsStaticProp( pHandleEntity ) )
 		return nullptr;
 
 	IServerUnknown *pUnk = (IServerUnknown*)pHandleEntity;
 	contract_assert( !pUnk || pUnk->GetBaseEntity() );
-	return pUnk->GetBaseEntity();
+	return EntityCast<CBaseEntity>( pUnk->GetBaseEntity() );
 #endif
 }
 
@@ -164,35 +176,6 @@ protected:
 	std::vector< IHandleEntity* >	m_PassEntities;
 };
 
-class CTraceFilterOnlyHitThis : public CTraceFilterEntitiesOnly
-{
-public:
-	// It does have a base, but we'll never network anything below here..
-	DECLARE_CLASS_NOBASE( CTraceFilterOnlyHitThis );
-
-	CTraceFilterOnlyHitThis( const IHandleEntity *hitentity );
-	virtual bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask );
-
-private:
-	const IHandleEntity *m_pHitEnt;
-};
-
-class CTraceFilterOnlyNPCsAndPlayer : public CTraceFilterSimple
-{
-public:
-	CTraceFilterOnlyNPCsAndPlayer( const IHandleEntity *passentity, int collisionGroup )
-		: CTraceFilterSimple( passentity, collisionGroup )
-	{
-	}
-
-	virtual TraceType_t	GetTraceType() const
-	{
-		return TRACE_ENTITIES_ONLY;
-	}
-
-	virtual bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask );
-};
-
 class CTraceFilterNoNPCsOrPlayer : public CTraceFilterSimple
 {
 public:
@@ -215,6 +198,7 @@ public:
 	virtual bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask );
 };
 
+#ifndef CLIENT_DLL
 //-----------------------------------------------------------------------------
 // Purpose: Custom trace filter used for NPC LOS traces
 //-----------------------------------------------------------------------------
@@ -224,52 +208,7 @@ public:
 	CTraceFilterLOS( IHandleEntity *pHandleEntity, int collisionGroup, IHandleEntity *pHandleEntity2 = nullptr );
 	bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask );
 };
-
-class CTraceFilterSkipClassname : public CTraceFilterSimple
-{
-public:
-	CTraceFilterSkipClassname( const IHandleEntity *passentity, const char *pchClassname, int collisionGroup );
-	virtual bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask );
-
-private:
-
-	const char *m_pchClassname;
-};
-
-class CTraceFilterSkipTwoClassnames : public CTraceFilterSkipClassname
-{
-public:
-	// It does have a base, but we'll never network anything below here..
-	DECLARE_CLASS( CTraceFilterSkipTwoClassnames, CTraceFilterSkipClassname );
-
-	CTraceFilterSkipTwoClassnames( const IHandleEntity *passentity, const char *pchClassname, const char *pchClassname2, int collisionGroup );
-	virtual bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask );
-
-private:
-	const char *m_pchClassname2;
-};
-
-class CTraceFilterSimpleClassnameList : public CTraceFilterSimple
-{
-public:
-	CTraceFilterSimpleClassnameList( const IHandleEntity *passentity, int collisionGroup );
-	virtual bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask );
-
-	void	AddClassnameToIgnore( const char *pchClassname );
-private:
-	std::vector< const char* >	m_PassClassnames;
-};
-
-class CTraceFilterChain : public CTraceFilter
-{
-public:
-	CTraceFilterChain( ITraceFilter *pTraceFilter1, ITraceFilter *pTraceFilter2 );
-	virtual bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask );
-
-private:
-	ITraceFilter	*m_pTraceFilter1;
-	ITraceFilter	*m_pTraceFilter2;
-};
+#endif // !CLIENT_DLL
 
 // helper
 void DebugDrawLine( const Vector& vecAbsStart, const Vector& vecAbsEnd, int r, int g, int b, bool test, float duration );
@@ -446,7 +385,9 @@ float UTIL_WaterLevel( const Vector &position, float minz, float maxz );
 
 // Like UTIL_WaterLevel, but *way* less expensive.
 // I didn't replace UTIL_WaterLevel everywhere to avoid breaking anything.
+#ifndef CLIENT_DLL
 float UTIL_FindWaterSurface( const Vector &position, float minz, float maxz );
+#endif
 
 void		UTIL_StringToVector( float *pVector, const char *pString );
 void		UTIL_StringToFloatArray( float *pVector, int count, const char *pString );
@@ -983,24 +924,6 @@ private:
 	CBaseEntity		**m_pList;
 	int				m_listMax;
 	int				m_flagMask;
-	int				m_count;
-};
-
-class CHurtableEntitiesEnum : public IPartitionEnumerator
-{
-public:
-	CHurtableEntitiesEnum( CBaseEntity **pList, int listMax );
-
-	// This gets called	by the enumeration methods with each element
-	// that passes the test.
-	virtual IterationRetval_t EnumElement( IHandleEntity *pHandleEntity );
-
-	int GetCount() { return m_count; }
-	bool AddToList( CBaseEntity *pEntity );
-
-private:
-	CBaseEntity		**m_pList;
-	int				m_listMax;
 	int				m_count;
 };
 

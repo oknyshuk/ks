@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -385,7 +383,7 @@ void CGlobalEntityList::UpdateName( IHandleEntity *pHandleEnt, CBaseHandle hEnt 
 {
 	CEntInfo *pEntInfo = const_cast<CEntInfo *>( GetEntInfoPtr( hEnt ) );
 	IServerUnknown *pUnk = static_cast<IServerUnknown*>(LookupEntity( hEnt ));
-	CBaseEntity *pEnt = pUnk->GetBaseEntity();
+	CBaseEntity *pEnt = EntityCast<CBaseEntity>( pUnk->GetBaseEntity() );
 	pEntInfo->m_iClassName = MAKE_STRING( pEnt->GetClassname() );
 	pEntInfo->m_iName = pEnt->GetEntityName();
 }
@@ -1350,7 +1348,7 @@ void CGlobalEntityList::OnAddEntity( IHandleEntity *pEnt, CBaseHandle handle )
 		m_iHighestEnt = i;
 
 	// If it's a CBaseEntity, notify the listeners.
-	CBaseEntity *pBaseEnt = static_cast<IServerUnknown*>(pEnt)->GetBaseEntity();
+	CBaseEntity *pBaseEnt = EntityCast<CBaseEntity>( static_cast<IServerUnknown*>(pEnt)->GetBaseEntity() );
 	if ( pBaseEnt->edict() )
 		m_iNumEdicts++;
 	
@@ -1382,7 +1380,7 @@ void CGlobalEntityList::OnRemoveEntity( IHandleEntity *pEnt, CBaseHandle handle 
 	}
 #endif
 
-	CBaseEntity *pBaseEnt = static_cast<IServerUnknown*>(pEnt)->GetBaseEntity();
+	CBaseEntity *pBaseEnt = EntityCast<CBaseEntity>( static_cast<IServerUnknown*>(pEnt)->GetBaseEntity() );
 	if ( pBaseEnt->edict() )
 		m_iNumEdicts--;
 

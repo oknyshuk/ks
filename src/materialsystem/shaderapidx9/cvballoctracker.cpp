@@ -80,12 +80,12 @@ typedef std::vector< short				>	CAllocNameHashes;
 #endif // ENABLE_VB_ALLOC_TRACKER
 
 
-class CVBAllocTracker : public IVBAllocTracker
+class CVBAllocTracker
 {
 public:
-	virtual void			CountVB( void * buffer, bool isDynamic, int bufferSize, int vertexSize, VertexFormat_t fmt );
-	virtual void			UnCountVB( void * buffer );
-	virtual bool			TrackMeshAllocations( const char * allocatorName );
+	void			CountVB( void * buffer, bool isDynamic, int bufferSize, int vertexSize, VertexFormat_t fmt );
+	void			UnCountVB( void * buffer );
+	bool			TrackMeshAllocations( const char * allocatorName );
 
 	void					DumpVBAllocs();
 
@@ -220,7 +220,26 @@ static ConVar mem_vballocspew( "mem_vballocspew", "0", FCVAR_MATERIAL_SYSTEM_THR
 //-----------------------------------------------------------------------------
 
 static CVBAllocTracker s_VBAllocTracker;
-static InterfaceReg s_Reg_CVBAllocTracker_IVBAllocTracker( []() -> void * { return static_cast<IVBAllocTracker *>( &s_VBAllocTracker ); }, VB_ALLOC_TRACKER_INTERFACE_VERSION );;
+
+// IVBAllocTracker is a stateless facade that forwards to the one tracker.
+static IVBAllocTracker s_VBAllocTrackerFacade;
+
+void IVBAllocTracker::CountVB( void * buffer, bool isDynamic, int bufferSize, int vertexSize, VertexFormat_t fmt )
+{
+	s_VBAllocTracker.CountVB( buffer, isDynamic, bufferSize, vertexSize, fmt );
+}
+
+void IVBAllocTracker::UnCountVB( void * buffer )
+{
+	s_VBAllocTracker.UnCountVB( buffer );
+}
+
+bool IVBAllocTracker::TrackMeshAllocations( const char * allocatorName )
+{
+	return s_VBAllocTracker.TrackMeshAllocations( allocatorName );
+}
+
+static InterfaceReg s_Reg_CVBAllocTracker_IVBAllocTracker( []() -> void * { return &s_VBAllocTrackerFacade; }, VB_ALLOC_TRACKER_INTERFACE_VERSION );;
 
 //-----------------------------------------------------------------------------
 //

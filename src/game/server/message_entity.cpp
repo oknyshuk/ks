@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.vstdlib;
 #include "edict.h"
 #include "iserverentity.h"
 #include "shareddefs.h"
@@ -14,7 +12,6 @@ import ks.vstdlib;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "baseentity_shared.h"
 #include "basetoggle.h"
@@ -53,12 +50,12 @@ class CMessageEntity : public CPointEntity
 	DECLARE_CLASS( CMessageEntity, CPointEntity );
 
 public:
-	void	Spawn( void );
-	void	Activate( void );
-	void	Think( void );
+	void	Spawn_Impl( void );
+	void	Activate_Impl( void );
+	void	Think_Impl( void );
 	void	DrawOverlays(void);
 
-	virtual void UpdateOnRemove();
+	void UpdateOnRemove_Impl();
 
 	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void	InputEnable( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void	InputDisable( inputdata_t &inputdata );
@@ -82,7 +79,7 @@ static std::vector< CHandle< CMessageEntity > >	g_MessageEntities;
 //-----------------------------------------
 // Spawn
 //-----------------------------------------
-void CMessageEntity::Spawn( void )
+void CMessageEntity::Spawn_Impl( void )
 {
 	SetNextThink( gpGlobals->curtime + 0.1f );
 	m_drawText = false;
@@ -94,9 +91,9 @@ void CMessageEntity::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CMessageEntity::Activate( void )
+void CMessageEntity::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	CHandle< CMessageEntity > h;
 	h = this;
@@ -106,21 +103,21 @@ void CMessageEntity::Activate( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CMessageEntity::UpdateOnRemove()
+void CMessageEntity::UpdateOnRemove_Impl()
 {
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 
 	CHandle< CMessageEntity > h;
 	h = this;
 	ks::erase_first( g_MessageEntities, h );
 
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 //-----------------------------------------
 // Think
 //-----------------------------------------
-void CMessageEntity::Think( void )
+void CMessageEntity::Think_Impl( void )
 {
 	SetNextThink( gpGlobals->curtime + 0.1f );
 

@@ -15,8 +15,10 @@ import std;
 #include "edict.h"
 #include "host.h"
 
-#include "replayserver.h"	// TODO: Remove
 #include "sv_client.h"
+#ifndef DEDICATED
+#include "demo.h"
+#endif
 #ifndef DEDICATED
 #include "cdll_int.h"
 #include "client.h"
@@ -54,10 +56,13 @@ public:
 		Close();
 	}
 
-	virtual bool Init( DemoBufferInitParams_t const& params )
+	bool Init( DemoBufferInitParams_t const& params )
 	{
 		// Convert to proper type
-		StreamDemoBufferInitParams_t const* pParams = dynamic_cast< StreamDemoBufferInitParams_t const* >( &params );		contract_assert( pParams );
+		contract_assert( params.m_kind == DemoBufferInitParams_t::kind_t::stream );
+		if ( params.m_kind != DemoBufferInitParams_t::kind_t::stream )
+			return false;
+		StreamDemoBufferInitParams_t const* pParams = static_cast< StreamDemoBufferInitParams_t const* >( &params );
 
 		Close();
 
@@ -95,9 +100,9 @@ public:
 		return IsInitialized();
 	}
 
-	virtual void NotifySignonComplete() {}
+	void NotifySignonComplete() {}
 
-	virtual void WriteHeader( void const *pData, int nSize )
+	void WriteHeader( void const *pData, int nSize )
 	{
 		// Goto file start
 		SeekPut( true, 0 );
@@ -106,35 +111,35 @@ public:
 		Put( pData, nSize );
 	}
 
-	virtual void				NotifyBeginFrame() {}
-	virtual void				NotifyEndFrame() {}
+	void				NotifyBeginFrame() {}
+	void				NotifyEndFrame() {}
 
-	virtual void				PutChar( char c )						{ Put( &c, sizeof( c ) ); }
-	virtual void				PutUnsignedChar( unsigned char uc )		{ Put( &uc, sizeof( uc ) ); }
-	virtual void				PutInt( int i )							{ Put( &i, sizeof( i ) ); }
+	void				PutChar( char c )						{ Put( &c, sizeof( c ) ); }
+	void				PutUnsignedChar( unsigned char uc )		{ Put( &uc, sizeof( uc ) ); }
+	void				PutInt( int i )							{ Put( &i, sizeof( i ) ); }
 
-	virtual void				WriteTick( int nTick )					{ Put( &nTick, sizeof( nTick ) ); }
+	void				WriteTick( int nTick )					{ Put( &nTick, sizeof( nTick ) ); }
 
-	virtual char				GetChar() override
+	char				GetChar()
 	{
 		char c = 0;
 		Get( &c, sizeof( c ) );
 		return c;
 	}
-	virtual unsigned char		GetUnsignedChar() override
+	unsigned char		GetUnsignedChar()
 	{
 		unsigned char uc = 0;
 		Get( &uc, sizeof( uc ) );
 		return uc;
 	}
-	virtual int					GetInt() override
+	int					GetInt()
 	{
 		int i = 0;
 		Get( &i, sizeof( i ) );
 		return i;
 	}
 
-	virtual void				Get( void* pMem, int size )	override
+	void				Get( void* pMem, int size )
 	{
 #ifndef DEDICATED
 		if ( m_pPlaybackParams )
@@ -146,7 +151,7 @@ public:
 		GetRaw( pMem, size );
 	}
 
-	virtual void				Put( const void* pMem, int size )
+	void				Put( const void* pMem, int size )
 	{
 		if ( size <= 0 || !IsWritable() )
 			return;
@@ -168,11 +173,11 @@ public:
 #endif
 	}
 
-	virtual bool				IsValid() const							{ return !m_bGetFailed && !m_bPutFailed; }
-	virtual bool				IsInitialized() const					{ return IsValid() && m_hFile != FILESYSTEM_INVALID_HANDLE; }
+	bool				IsValid() const							{ return !m_bGetFailed && !m_bPutFailed; }
+	bool				IsInitialized() const					{ return IsValid() && m_hFile != FILESYSTEM_INVALID_HANDLE; }
 
 	// Change where I'm writing (put)/reading (get)
-	virtual void				SeekPut( bool bAbsolute, int offset )
+	void				SeekPut( bool bAbsolute, int offset )
 	{
 		if ( m_bReadOnly )
 			return;
@@ -188,22 +193,22 @@ public:
 		m_nMaxPut = std::max( m_nMaxPut, m_nPut );
 	}
 
-	virtual void				SeekGet( bool bAbsolute, int offset )
+	void				SeekGet( bool bAbsolute, int offset )
 	{
 		m_nGet = bAbsolute ? offset : m_nGet + offset;
 		m_bGetFailed = m_nGet < 0 || m_nGet > m_nMaxPut;
 	}
 
 	// Where am I writing (put)/reading (get)?
-	virtual int					TellPut( ) const						{ return m_nPut; }
-	virtual int					TellGet( ) const						{ return m_nGet; }
+	int					TellPut( ) const						{ return m_nPut; }
+	int					TellGet( ) const						{ return m_nGet; }
 
-	virtual int					TellMaxPut( ) const						{ return m_nMaxPut; }
+	int					TellMaxPut( ) const						{ return m_nMaxPut; }
 
-	virtual void				UpdateStartTick( int& nStartTick ) const {}
-	virtual void				DumpToFile( char const* pFilename, const demoheader_t &header ) const {}
+	void				UpdateStartTick( int& nStartTick ) const {}
+	void				DumpToFile( char const* pFilename, const demoheader_t &header ) const {}
 
-private:
+public:
 	static constexpr int		READ_CHUNK_SIZE = 1024 * 1024;
 
 	bool IsWritable() const	{ return !m_bReadOnly && !m_bPutFailed && m_hFile != FILESYSTEM_INVALID_HANDLE; }
@@ -348,6 +353,9 @@ private:
 	CDemoPlaybackParameters_t const *m_pPlaybackParams = nullptr;
 };
 
+#include "facade/idemobuffer.inl"
+
+
 
 //-----------------------------------------------------------------------------
 // Specialty class with overrides for stream buffer
@@ -365,9 +373,14 @@ IDemoBuffer *CreateDemoBuffer( bool bMemoryBuffer, const DemoBufferInitParams_t&
 
 	if ( !pRet->Init( params ) )
 	{
-		delete pRet;
+		DestroyDemoBuffer( pRet );
 		return nullptr;
 	}
 
 	return pRet;
+}
+
+void DestroyDemoBuffer( IDemoBuffer *pBuffer )
+{
+	delete static_cast< CDiskDemoBuffer * >( pBuffer );
 }

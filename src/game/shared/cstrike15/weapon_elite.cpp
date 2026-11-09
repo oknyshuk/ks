@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "const.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"
@@ -25,7 +22,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -84,8 +80,8 @@ public:
 	
 	CWeaponElite();
 
-	virtual void Spawn();
-	virtual void Precache();
+	KS_VIRTUAL void Spawn_Impl();
+	KS_VIRTUAL void Precache_Impl();
 
 	virtual void PrimaryAttack();
 
@@ -133,13 +129,13 @@ CWeaponElite::CWeaponElite()
 }
 
 
-void CWeaponElite::Spawn( )
+void CWeaponElite::Spawn_Impl( )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 
-void CWeaponElite::Precache()
+void CWeaponElite::Precache_Impl()
 {
 	m_inPrecache = true;
 
@@ -148,7 +144,7 @@ void CWeaponElite::Precache()
 	PrecacheModel( "models/weapons/w_eq_eholster.mdl" );
 	PrecacheModel( "models/weapons/w_pist_elite_single.mdl" );
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	PrecacheEffect( "CS_MuzzleFlash" );
 	m_inPrecache = false;

@@ -3,17 +3,13 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 
-import std;
-import ks.math;
 #include "iclientrenderable.h"
 #include "materialsystem/MaterialSystemUtil.h"
 #include "util_shared.h"
 #include "cdll_client_int.h"
 #include "sharedInterface.h"
 
-class ITexture;
 
-struct dlight_t;
 
 
 class CFlashlightEffect

@@ -13,71 +13,11 @@ import ks.tier1;
 static const int MAX_PARAMETER_LEN = 128;
 
 //-----------------------------------------------------------------------------
-// Purpose: Implements ICommandLine
-//-----------------------------------------------------------------------------
-class CCommandLine : public ICommandLine
-{
-public:
-	// Construction
-						CCommandLine( void );
-	virtual 			~CCommandLine( void );
-
-	// Implements ICommandLine
-	virtual void		CreateCmdLine( const char *commandline  );
-	virtual void		CreateCmdLine( int argc, char **argv );
-	virtual const char	*GetCmdLine( void ) const;
-	virtual	const char	*CheckParm( const char *psz, const char **ppszValue = 0 ) const;
-	// A bool return of whether param exists, useful for just checking if param that is just a flag is set
-	virtual bool		HasParm( const char *psz ) const;
-
-	virtual void		RemoveParm( const char *parm );
-	virtual void		AppendParm( const char *pszParm, const char *pszValues );
-
-	virtual int			ParmCount() const;
-	virtual int			FindParm( const char *psz ) const;
-	virtual const char* GetParm( int nIndex ) const;
-
-	virtual const char	*ParmValue( const char *psz, const char *pDefaultVal = nullptr ) const;
-	virtual int			ParmValue( const char *psz, int nDefaultVal ) const;
-	virtual float		ParmValue( const char *psz, float flDefaultVal ) const;
-	virtual void        SetParm( int nIndex, char const *pParm );
-
-	virtual const char **GetParms() const { return (const char**)m_ppParms; }
-
-private:
-	enum
-	{
-		MAX_PARAMETER_LEN = 128,
-		MAX_PARAMETERS = 256,
-	};
-
-	// When the commandline contains @name, it reads the parameters from that file
-	void LoadParametersFromFile( const char *&pSrc, char *&pDst, intp maxDestLen, bool bInQuotes );
-
-	// Parse command line...
-	void ParseCommandLine();
-
-	// Frees the command line arguments
-	void CleanUpParms();
-
-	// Adds an argument..
-	void AddArgument( const char *pFirst, const char *pLast );
-
-	// Copy of actual command line
-	char *m_pszCmdLine;
-
-	// Pointers to each argument...
-	int m_nParmCount;
-	char *m_ppParms[MAX_PARAMETERS];
-};
-
-
-//-----------------------------------------------------------------------------
 // Instance singleton and expose interface to rest of code
 //-----------------------------------------------------------------------------
 ICommandLine *CommandLine()
 {
-	static CCommandLine s_CmdLine;
+	static ICommandLine s_CmdLine;
 	return &s_CmdLine;
 }
 
@@ -85,7 +25,7 @@ ICommandLine *CommandLine()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CCommandLine::CCommandLine( void )
+ICommandLine::ICommandLine( void )
 {
 	m_pszCmdLine = nullptr;
 	m_nParmCount = 0;
@@ -94,7 +34,7 @@ CCommandLine::CCommandLine( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CCommandLine::~CCommandLine( void )
+ICommandLine::~ICommandLine( void )
 {
 	CleanUpParms();
 	delete[] m_pszCmdLine;
@@ -104,7 +44,7 @@ CCommandLine::~CCommandLine( void )
 //-----------------------------------------------------------------------------
 // Read commandline from file instead...
 //-----------------------------------------------------------------------------
-void CCommandLine::LoadParametersFromFile( const char *&pSrc, char *&pDst, intp maxDestLen, bool bInQuotes )
+void ICommandLine::LoadParametersFromFile( const char *&pSrc, char *&pDst, intp maxDestLen, bool bInQuotes )
 {
 	// Suck out the file name
 	char szFileName[ MAX_PATH ];
@@ -173,7 +113,7 @@ void CCommandLine::LoadParametersFromFile( const char *&pSrc, char *&pDst, intp 
 //-----------------------------------------------------------------------------
 // Creates a command line from the arguments passed in
 //-----------------------------------------------------------------------------
-void CCommandLine::CreateCmdLine( int argc, char **argv )
+void ICommandLine::CreateCmdLine( int argc, char **argv )
 {
 	char cmdline[2048];
 	cmdline[0] = 0;
@@ -196,7 +136,7 @@ void CCommandLine::CreateCmdLine( int argc, char **argv )
 //  Note that if you pass in a @filename, then the routine will read settings
 //  from a file instead of the command line
 //-----------------------------------------------------------------------------
-void CCommandLine::CreateCmdLine( const char *commandline )
+void ICommandLine::CreateCmdLine( const char *commandline )
 {
 	const bool bNoAutoArgs = (Plat_GetEnv("autoargs")) == nullptr;
 	if ( m_pszCmdLine )
@@ -302,7 +242,7 @@ static char * _stristr( char * pStr, const char * pSearch )
 // Purpose: Remove specified string ( and any args attached to it ) from command line
 // Input  : *pszParm - 
 //-----------------------------------------------------------------------------
-void CCommandLine::RemoveParm( const char *pszParm )
+void ICommandLine::RemoveParm( const char *pszParm )
 {
 	if ( !m_pszCmdLine )
 		return;
@@ -379,7 +319,7 @@ void CCommandLine::RemoveParm( const char *pszParm )
 // Input  : *pszParm - 
 //			*pszValues - 
 //-----------------------------------------------------------------------------
-void CCommandLine::AppendParm( const char *pszParm, const char *pszValues )
+void ICommandLine::AppendParm( const char *pszParm, const char *pszValues )
 {
 	intp nNewLength = 0;
 	char *pCmdString;
@@ -434,7 +374,7 @@ void CCommandLine::AppendParm( const char *pszParm, const char *pszValues )
 // Purpose: Return current command line
 // Output : const char
 //-----------------------------------------------------------------------------
-const char *CCommandLine::GetCmdLine( void ) const
+const char *ICommandLine::GetCmdLine( void ) const
 {
 	return m_pszCmdLine;
 }
@@ -446,7 +386,7 @@ const char *CCommandLine::GetCmdLine( void ) const
 //			**ppszValue - 
 // Output : char
 //-----------------------------------------------------------------------------
-const char *CCommandLine::CheckParm( const char *psz, const char **ppszValue ) const
+const char *ICommandLine::CheckParm( const char *psz, const char **ppszValue ) const
 {
 	if ( ppszValue )
 		*ppszValue = nullptr;
@@ -474,13 +414,13 @@ const char *CCommandLine::CheckParm( const char *psz, const char **ppszValue ) c
 //-----------------------------------------------------------------------------
 // Adds an argument..
 //-----------------------------------------------------------------------------
-void CCommandLine::AddArgument( const char *pFirst, const char *pLast )
+void ICommandLine::AddArgument( const char *pFirst, const char *pLast )
 {
 	if ( pLast == pFirst )
 		return;
 
 	if ( m_nParmCount >= MAX_PARAMETERS )
-		Error( "CCommandLine::AddArgument: exceeded %d parameters", MAX_PARAMETERS );
+		Error( "ICommandLine::AddArgument: exceeded %d parameters", MAX_PARAMETERS );
 
 	std::size_t nLen = ( pLast - pFirst ) + 1;
 	m_ppParms[m_nParmCount] = new char[nLen];
@@ -494,7 +434,7 @@ void CCommandLine::AddArgument( const char *pFirst, const char *pLast )
 //-----------------------------------------------------------------------------
 // Parse command line...
 //-----------------------------------------------------------------------------
-void CCommandLine::ParseCommandLine()
+void ICommandLine::ParseCommandLine()
 {
 	CleanUpParms();
 	if (!m_pszCmdLine)
@@ -556,7 +496,7 @@ void CCommandLine::ParseCommandLine()
 //-----------------------------------------------------------------------------
 // Individual command line arguments
 //-----------------------------------------------------------------------------
-void CCommandLine::CleanUpParms()
+void ICommandLine::CleanUpParms()
 {
 	for ( int i = 0; i < m_nParmCount; ++i )
 	{
@@ -570,12 +510,12 @@ void CCommandLine::CleanUpParms()
 //-----------------------------------------------------------------------------
 // Returns individual command line arguments
 //-----------------------------------------------------------------------------
-int CCommandLine::ParmCount() const
+int ICommandLine::ParmCount() const
 {
 	return m_nParmCount;
 }
 
-int CCommandLine::FindParm( const char *psz ) const
+int ICommandLine::FindParm( const char *psz ) const
 {
 	// Start at 1 so as to not search the exe name
 	for ( int i = 1; i < m_nParmCount; ++i )
@@ -586,19 +526,19 @@ int CCommandLine::FindParm( const char *psz ) const
 	return 0;
 }
 
-bool CCommandLine::HasParm( const char *psz ) const
+bool ICommandLine::HasParm( const char *psz ) const
 {
 	return ( FindParm( psz ) != 0 );
 }
 
-const char* CCommandLine::GetParm( int nIndex ) const
+const char* ICommandLine::GetParm( int nIndex ) const
 {
 	contract_assert( (nIndex >= 0) && (nIndex < m_nParmCount) );
 	if ( (nIndex < 0) || (nIndex >= m_nParmCount) )
 		return "";
 	return m_ppParms[nIndex];
 }
-void CCommandLine::SetParm( int nIndex, char const *pParm )
+void ICommandLine::SetParm( int nIndex, char const *pParm )
 {
 	if ( pParm )
 	{
@@ -620,7 +560,7 @@ void CCommandLine::SetParm( int nIndex, char const *pParm )
 //-----------------------------------------------------------------------------
 // Returns the argument after the one specified, or the default if not found
 //-----------------------------------------------------------------------------
-const char *CCommandLine::ParmValue( const char *psz, const char *pDefaultVal ) const
+const char *ICommandLine::ParmValue( const char *psz, const char *pDefaultVal ) const
 {
 	int nIndex = FindParm( psz );
 	if (( nIndex == 0 ) || (nIndex == m_nParmCount - 1))
@@ -633,7 +573,7 @@ const char *CCommandLine::ParmValue( const char *psz, const char *pDefaultVal ) 
 	return m_ppParms[nIndex + 1];
 }
 
-int	CCommandLine::ParmValue( const char *psz, int nDefaultVal ) const
+int	ICommandLine::ParmValue( const char *psz, int nDefaultVal ) const
 {
 	int nIndex = FindParm( psz );
 	if (( nIndex == 0 ) || (nIndex == m_nParmCount - 1))
@@ -646,7 +586,7 @@ int	CCommandLine::ParmValue( const char *psz, int nDefaultVal ) const
 	return std::atoi( m_ppParms[nIndex + 1] );
 }
 
-float CCommandLine::ParmValue( const char *psz, float flDefaultVal ) const
+float ICommandLine::ParmValue( const char *psz, float flDefaultVal ) const
 {
 	int nIndex = FindParm( psz );
 	if (( nIndex == 0 ) || (nIndex == m_nParmCount - 1))

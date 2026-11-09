@@ -4,13 +4,11 @@
 
 // Client-side CBasePlayer
 
-import ks.tier1;
 #include "reflect_annotations.h"
 
 #include "c_baseanimatingoverlay.h"
 #include "sceneentity_shared.h"
 
-import std;
 
 //-----------------------------------------------------------------------------
 // Purpose: Item in list of loaded scene files
@@ -29,7 +27,6 @@ public:
 
 // For phoneme emphasis track
 struct Emphasized_Phoneme;
-class CSentence;
 
 //-----------------------------------------------------------------------------
 // Purpose: 

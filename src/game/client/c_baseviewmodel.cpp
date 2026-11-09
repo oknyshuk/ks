@@ -5,8 +5,6 @@
 //			the view model.
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "const.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"

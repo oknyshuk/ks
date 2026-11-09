@@ -22,10 +22,12 @@
 class CBaseEntityOutput;
 #endif
 
-import std;
 
-namespace ks::reflect::dmap
+extern ISaveRestoreOps *eventFuncs;	// the save/restore ops of entity outputs (server)
+
+namespace ksr::dmap
 {
+using namespace ::ks::reflect;
 
 consteval bool is_output_type( std::meta::info t )
 {
@@ -181,7 +183,7 @@ std::vector<typedescription_t> &fields()
 	return out;
 }
 
-} // namespace ks::reflect::dmap
+} // namespace ksr::dmap
 
 
 // Replaces the legacy BEGIN_DATADESC/END_DATADESC emitters, which are gone. The two definitions
@@ -207,12 +209,28 @@ std::vector<typedescription_t> &fields()
 		    ^^className, "m_DataMap" ) :]; }                                                       \
 		static const bool g_filled = []                                                           \
 		{                                                                                         \
-			auto &f = ks::reflect::dmap::fields<className>();                                     \
+			auto &f = ksr::dmap::fields<className>();                                     \
 			Map().dataDesc      = f.data();                                                       \
 			Map().dataNumFields = (int)f.size();                                                   \
 			Map().baseMap       = &[: ks::reflect::static_member_of(                               \
 			    ks::reflect::base_with_static_member( ^^className, "m_DataMap" ),                  \
 			    "m_DataMap" ) :];                                                                   \
+			return true;                                                                           \
+		}();                                                                                     \
+	}
+
+// For a class of a shared library: the library defines the (empty) m_DataMap, the game that
+// uses the class fills it in.
+#define IMPLEMENT_REFLECT_DATAMAP_FILL( className )                                               \
+	namespace className##_ReflectDataDescInit                                                     \
+	{                                                                                             \
+		static datamap_t &Map() { return [: ks::reflect::static_member_of(                         \
+		    ^^className, "m_DataMap" ) :]; }                                                       \
+		static const bool g_filled = []                                                         \
+		{                                                                                         \
+			auto &f = ksr::dmap::fields<className>();                                     \
+			Map().dataDesc      = f.data();                                                       \
+			Map().dataNumFields = (int)f.size();                                                   \
 			return true;                                                                           \
 		}();                                                                                     \
 	}
@@ -226,7 +244,7 @@ std::vector<typedescription_t> &fields()
 		    ^^className, "m_DataMap" ) :]; }                                                       \
 		static const bool g_filled = []                                                         \
 		{                                                                                         \
-			auto &f = ks::reflect::dmap::fields<className>();                                     \
+			auto &f = ksr::dmap::fields<className>();                                     \
 			Map().dataDesc      = f.data();                                                       \
 			Map().dataNumFields = (int)f.size();                                                   \
 			return true;                                                                           \
@@ -247,7 +265,7 @@ std::vector<typedescription_t> &fields()
 		    ^^className, "m_DataMap" ) :]; }                                                       \
 		static const bool g_filled = []                                                         \
 		{                                                                                         \
-			auto &f = ks::reflect::dmap::fields<className>();                                     \
+			auto &f = ksr::dmap::fields<className>();                                     \
 			Map().dataDesc      = f.data();                                                       \
 			Map().dataNumFields = (int)f.size();                                                   \
 			Map().baseMap       = &[: ks::reflect::static_member_of(                              \
@@ -272,7 +290,7 @@ std::vector<typedescription_t> &fields()
 		    ^^className, "m_DataMap" ) :]; }                                                       \
 		static const bool g_filled = []                                                         \
 		{                                                                                         \
-			auto &f = ks::reflect::dmap::fields<className>();                                     \
+			auto &f = ksr::dmap::fields<className>();                                     \
 			Map().dataDesc      = f.data();                                                       \
 			Map().dataNumFields = (int)f.size();                                                   \
 			return true;                                                                           \

@@ -52,7 +52,7 @@ public:
 
 	// Constructor and Destructor
 	CSHA1();
-	virtual ~CSHA1() ;
+	~CSHA1() ;
 
 	unsigned int m_state[5];
 	unsigned int m_count[2];

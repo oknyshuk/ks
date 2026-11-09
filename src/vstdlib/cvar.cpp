@@ -9,214 +9,21 @@ import std;
 
 
 //-----------------------------------------------------------------------------
-// Default implementation  of CvarQuery
+// Default linkage rule: any two ConVars may be aliased
 //-----------------------------------------------------------------------------
-class CDefaultCvarQuery : public CBaseAppSystem< ICvarQuery >
+static bool DefaultAreConVarsLinkable( const ConVar *child, const ConVar *parent )
 {
-public:
-	virtual void *QueryInterface( const char *pInterfaceName )
-	{
-		if ( !V_stricmp( pInterfaceName, CVAR_QUERY_INTERFACE_VERSION ) )
-			return (ICvarQuery*)this;
-		return nullptr;
-	
-	}
-
-	virtual bool AreConVarsLinkable( const ConVar *child, const ConVar *parent )
-	{
-		return true;
-	}
-};
-
-static CDefaultCvarQuery s_DefaultCvarQuery;
-static ICvarQuery *s_pCVarQuery = nullptr;
-
-#include "concommandhash.h"
-
-//-----------------------------------------------------------------------------
-// Default implementation
-//-----------------------------------------------------------------------------
-class CCvar : public CBaseAppSystem< ICvar >
-{
-public:
-	CCvar();
-
-	// Methods of IAppSystem
-	virtual bool Connect( CreateInterfaceFn factory );
-	virtual void Disconnect();
-	virtual void *QueryInterface( const char *pInterfaceName );
-	virtual InitReturnVal_t Init();
-	virtual void Shutdown();
-
-	// Inherited from ICVar
-	virtual CVarDLLIdentifier_t AllocateDLLIdentifier();
-	virtual void			RegisterConCommand( ConCommandBase *pCommandBase );
-	virtual void			UnregisterConCommand( ConCommandBase *pCommandBase );
-	virtual void			UnregisterConCommands( CVarDLLIdentifier_t id );
-	virtual const char*		GetCommandLineValue( const char *pVariableName );
-	virtual ConCommandBase *FindCommandBase( const char *name );
-	virtual const ConCommandBase *FindCommandBase( const char *name ) const;
-	virtual ConVar			*FindVar ( const char *var_name );
-	virtual const ConVar	*FindVar ( const char *var_name ) const;
-	virtual ConCommand		*FindCommand( const char *name );
-	virtual const ConCommand *FindCommand( const char *name ) const;
-	virtual void			InstallGlobalChangeCallback( FnChangeCallback_t callback );
-	virtual void			RemoveGlobalChangeCallback( FnChangeCallback_t callback );
-	virtual void			CallGlobalChangeCallbacks( ConVar *var, const char *pOldString, float flOldValue );
-	virtual void			InstallConsoleDisplayFunc( IConsoleDisplayFunc* pDisplayFunc );
-	virtual void			RemoveConsoleDisplayFunc( IConsoleDisplayFunc* pDisplayFunc );
-	virtual void			ConsoleColorPrintf( const Color& clr, const char *pFormat, ... ) const;
-	virtual void			ConsolePrintf( const char *pFormat, ... ) const;
-	virtual void			ConsoleDPrintf( const char *pFormat, ... ) const;
-	virtual void			RevertFlaggedConVars( int nFlag );
-	virtual void			InstallCVarQuery( ICvarQuery *pQuery );
-
-	virtual void			SetMaxSplitScreenSlots( int nSlots );
-	virtual int				GetMaxSplitScreenSlots() const;
-
-	virtual void			AddSplitScreenConVars();
-	virtual void			RemoveSplitScreenConVars( CVarDLLIdentifier_t id );
-
-	virtual int				GetConsoleDisplayFuncCount() const;
-	virtual void			GetConsoleText( int nDisplayFuncIndex, char *pchText, std::size_t bufSize ) const;
-	virtual bool			IsMaterialThreadSetAllowed( ) const;
-	virtual void			QueueMaterialThreadSetValue( ConVar *pConVar, const char *pValue );
-	virtual void			QueueMaterialThreadSetValue( ConVar *pConVar, int nValue );
-	virtual void			QueueMaterialThreadSetValue( ConVar *pConVar, float flValue );
-	virtual bool			HasQueuedMaterialThreadConVarSets() const;
-	virtual int				ProcessQueuedMaterialThreadConVarSets();
-
-private:
-	enum
-	{
-		CONSOLE_COLOR_PRINT = 0,
-		CONSOLE_PRINT,
-		CONSOLE_DPRINT,
-	};
-
-	void DisplayQueuedMessages( );
-
-	std::vector< FnChangeCallback_t >	m_GlobalChangeCallbacks;
-	std::vector< IConsoleDisplayFunc* >	m_DisplayFuncs;
-	int									m_nNextDLLIdentifier;
-
-	ConCommandBase						*m_pConCommandList;
-	CConCommandHash						m_CommandHash;
-
-	// temporary console area so we can store prints before console display funs are installed
-	mutable ks::byte_writer				m_TempConsoleBuffer;
-	int									m_nMaxSplitScreenSlots;
-
-protected:
-
-	// internals for  ICVarIterator
-	class CCVarIteratorInternal : public ICVarIteratorInternal
-	{
-	public:
-		CCVarIteratorInternal( CCvar *outer ) 
-			: m_pOuter( outer ), m_pHash( &outer->m_CommandHash ) // remember my CCvar, iterator starts invalid
-		{}
-		virtual void		SetFirst( void ) __restrict__;
-		virtual void		Next( void ) __restrict__;
-		virtual	bool		IsValid( void ) __restrict__;
-		virtual ConCommandBase *Get( void ) __restrict__;
-	protected:
-		CCvar * const m_pOuter;
-		CConCommandHash * const m_pHash;
-		CConCommandHash::CCommandHashIterator_t m_hashIter;
-	};
-
-	virtual ICVarIteratorInternal	*FactoryInternalIterator( void );
-	friend class CCVarIteratorInternal;
-
-	enum ConVarSetType_t
-	{
-		CONVAR_SET_STRING = 0,
-		CONVAR_SET_INT,
-		CONVAR_SET_FLOAT,
-	};
-
-	struct QueuedConVarSet_t
-	{
-		ConVar *m_pConVar;
-		ConVarSetType_t m_nType;
-		int m_nInt;
-		float m_flFloat;
-		std::string m_String;
-	};
-
-	struct SplitScreenConVar_t
-	{
-		SplitScreenConVar_t()
-		{
-			Reset();
-		}
-
-		void Reset()
-		{
-			m_VarName = "";
-			m_pVar = nullptr;
-		}
-
-		std::string					m_VarName;
-		CSplitScreenAddedConVar		*m_pVar;
-	};
-
-	struct SplitScreenAddedConVars_t
-	{
-		SplitScreenAddedConVars_t() 
-		{
-			for ( int i = 0; i < MAX_SPLITSCREEN_CLIENTS - 1; ++i )
-			{
-				m_Vars[ i ].Reset();
-			}
-		}
-
-		// Var names need "static" buffers...
-		SplitScreenConVar_t		m_Vars[ MAX_SPLITSCREEN_CLIENTS - 1 ];
-	};
-
-	std::map< ConVar *, SplitScreenAddedConVars_t > m_SplitScreenAddedConVarsMap;
-	std::vector< QueuedConVarSet_t > m_QueuedConVarSets;
-	bool m_bMaterialSystemThreadSetAllowed;
-
-private:
-	// Standard console commands -- DO NOT PLACE ANY HIGHER THAN HERE BECAUSE THESE MUST BE THE FIRST TO DESTRUCT
-	void Find( const CCommand &args );
-	CConCommandMemberAccessor< CCvar > m_Find_register{ this, "find", &CCvar::Find, "Find concommands with the specified string in their name/help text.", 0 };
-};
-
-void CCvar::CCVarIteratorInternal::SetFirst( void ) __restrict__
-{
-	m_hashIter = m_pHash->First();
+	return true;
 }
 
-void CCvar::CCVarIteratorInternal::Next( void ) __restrict__
-{
-	m_hashIter = m_pHash->Next( m_hashIter );
-}
+static FnConVarsLinkable_t s_fnLinkable = DefaultAreConVarsLinkable;
 
-bool CCvar::CCVarIteratorInternal::IsValid( void ) __restrict__
-{
-	return m_pHash->IsValidIterator( m_hashIter );
-}
-
-ConCommandBase *CCvar::CCVarIteratorInternal::Get( void ) __restrict__
-{
-	contract_assert( m_pHash->IsValidIterator( m_hashIter ) );
-	return (*m_pHash)[m_hashIter];
-}
-
-ICvar::ICVarIteratorInternal *CCvar::FactoryInternalIterator( void )
-{
-	return new CCVarIteratorInternal( this );
-}
 
 //-----------------------------------------------------------------------------
 // Factor for CVars 
 //-----------------------------------------------------------------------------
-static CCvar s_Cvar;
-static InterfaceReg s_Reg_CCvar_ICvar( []() -> void * { return static_cast<ICvar *>( &s_Cvar ); }, CVAR_INTERFACE_VERSION );;
+static ICvar s_Cvar;
+static InterfaceReg s_Reg_ICvar( []() -> void * { return static_cast<ICvar *>( &s_Cvar ); }, CVAR_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------
@@ -231,7 +38,7 @@ CreateInterfaceFn VStdLib_GetICVarFactory()
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
-CCvar::CCvar() : m_TempConsoleBuffer( 1024 )
+ICvar::ICvar() : m_TempConsoleBuffer( 1024 )
 {
 	m_nNextDLLIdentifier = 0;
 	m_pConCommandList = nullptr;
@@ -241,41 +48,35 @@ CCvar::CCvar() : m_TempConsoleBuffer( 1024 )
 }
 
 //-----------------------------------------------------------------------------
-// Methods of IAppSystem
+// App system protocol
 //-----------------------------------------------------------------------------
-bool CCvar::Connect( CreateInterfaceFn factory )
+bool ICvar::Connect( CreateInterfaceFn factory )
 {
 	ConnectTier1Libraries( &factory, 1 );
-
-	s_pCVarQuery = (ICvarQuery*)factory( CVAR_QUERY_INTERFACE_VERSION, nullptr );
-	if ( !s_pCVarQuery )
-	{
-		s_pCVarQuery = &s_DefaultCvarQuery;
-	}
 
 	ConVar_Register();
 	return true;
 }
 
-void CCvar::Disconnect()
+void ICvar::Disconnect()
 {
 	ConVar_Unregister();
-	s_pCVarQuery = nullptr;
+	s_fnLinkable = DefaultAreConVarsLinkable;
 	DisconnectTier1Libraries();
 
 	contract_assert( m_SplitScreenAddedConVarsMap.empty() );
 }
 
-InitReturnVal_t CCvar::Init()
+InitReturnVal_t ICvar::Init()
 {
 	return INIT_OK;
 }
 
-void CCvar::Shutdown()
+void ICvar::Shutdown()
 {
 }
 
-void *CCvar::QueryInterface( const char *pInterfaceName )
+void *ICvar::QueryInterface( const char *pInterfaceName )
 {
 	// We implement the ICvar interface
 	if ( !V_strcmp( pInterfaceName, CVAR_INTERFACE_VERSION ) )
@@ -286,19 +87,18 @@ void *CCvar::QueryInterface( const char *pInterfaceName )
 
 
 //-----------------------------------------------------------------------------
-// Method allowing the engine ICvarQuery interface to take over
+// Method allowing the engine's linkage rules to take over
 //-----------------------------------------------------------------------------
-void CCvar::InstallCVarQuery( ICvarQuery *pQuery )
+void ICvar::InstallCVarQuery( FnConVarsLinkable_t fnLinkable )
 {
-	contract_assert( s_pCVarQuery == &s_DefaultCvarQuery );
-	s_pCVarQuery = pQuery ? pQuery : &s_DefaultCvarQuery;
+	s_fnLinkable = fnLinkable;
 }
 
 
 //-----------------------------------------------------------------------------
 // Used by DLLs to be able to unregister all their commands + convars 
 //-----------------------------------------------------------------------------
-CVarDLLIdentifier_t CCvar::AllocateDLLIdentifier()
+CVarDLLIdentifier_t ICvar::AllocateDLLIdentifier()
 {
 	return m_nNextDLLIdentifier++;
 }
@@ -308,7 +108,7 @@ CVarDLLIdentifier_t CCvar::AllocateDLLIdentifier()
 // Purpose: 
 // Input  : *variable - 
 //-----------------------------------------------------------------------------
-void CCvar::RegisterConCommand( ConCommandBase *variable )
+void ICvar::RegisterConCommand( ConCommandBase *variable )
 {
 	// Already registered
 	if ( variable->IsRegistered() )
@@ -340,7 +140,7 @@ void CCvar::RegisterConCommand( ConCommandBase *variable )
 			ConVar *pParentVar = const_cast< ConVar* >( static_cast< const ConVar* >( pOther ) );
 
 			// See if it's a valid linkage
-			if ( s_pCVarQuery->AreConVarsLinkable( pChildVar, pParentVar ) )
+			if ( s_fnLinkable( pChildVar, pParentVar ) )
 			{
 				// Make sure the default values are the same (but only spew about this for FCVAR_REPLICATED)
 				if(  pChildVar->m_pszDefaultValue && pParentVar->m_pszDefaultValue &&
@@ -427,7 +227,7 @@ void CCvar::RegisterConCommand( ConCommandBase *variable )
 	}
 }
 
-void CCvar::AddSplitScreenConVars()
+void ICvar::AddSplitScreenConVars()
 {
 	if ( m_nMaxSplitScreenSlots == 1 )
 		return;
@@ -461,10 +261,10 @@ void CCvar::AddSplitScreenConVars()
 		}
 	}
 
-	ConCommandBase::s_pConCommandBases = nullptr;
+	ks::engine_registry().convars.m_pFirst = nullptr;
 }
 
-void CCvar::RemoveSplitScreenConVars( CVarDLLIdentifier_t id )
+void ICvar::RemoveSplitScreenConVars( CVarDLLIdentifier_t id )
 
 {
 	if ( m_nMaxSplitScreenSlots == 1 )
@@ -501,7 +301,7 @@ void CCvar::RemoveSplitScreenConVars( CVarDLLIdentifier_t id )
 	}
 }
 
-void CCvar::UnregisterConCommand( ConCommandBase *pCommandToRemove )
+void ICvar::UnregisterConCommand( ConCommandBase *pCommandToRemove )
 {
 	// Not registered? Don't bother
 	if ( !pCommandToRemove->IsRegistered() )
@@ -533,7 +333,7 @@ void CCvar::UnregisterConCommand( ConCommandBase *pCommandToRemove )
 	}
 }
 
-void CCvar::UnregisterConCommands( CVarDLLIdentifier_t id )
+void ICvar::UnregisterConCommands( CVarDLLIdentifier_t id )
 {
 	ConCommandBase	*pNewList;
 	ConCommandBase  *pCommand, *pNext;
@@ -570,18 +370,18 @@ void CCvar::UnregisterConCommands( CVarDLLIdentifier_t id )
 //-----------------------------------------------------------------------------
 // Finds base commands 
 //-----------------------------------------------------------------------------
-const ConCommandBase *CCvar::FindCommandBase( const char *name ) const
+const ConCommandBase *ICvar::FindCommandBase( const char *name ) const
 {
-	VProfIncrementCounter<"CCvar::FindCommandBase">( 1 );
-	CVProfScope _( "CCvar::FindCommandBase", 0, VPROF_BUDGETGROUP_CVAR_FIND, false, BUDGETFLAG_OTHER );
+	VProfIncrementCounter<"ICvar::FindCommandBase">( 1 );
+	CVProfScope _( "ICvar::FindCommandBase", 0, VPROF_BUDGETGROUP_CVAR_FIND, false, BUDGETFLAG_OTHER );
 
 	return m_CommandHash.FindPtr( name );
 }
 
-ConCommandBase *CCvar::FindCommandBase( const char *name )
+ConCommandBase *ICvar::FindCommandBase( const char *name )
 {
-	VProfIncrementCounter<"CCvar::FindCommandBase">( 1 );
-	CVProfScope _( "CCvar::FindCommandBase", 0, VPROF_BUDGETGROUP_CVAR_FIND, false, BUDGETFLAG_OTHER );
+	VProfIncrementCounter<"ICvar::FindCommandBase">( 1 );
+	CVProfScope _( "ICvar::FindCommandBase", 0, VPROF_BUDGETGROUP_CVAR_FIND, false, BUDGETFLAG_OTHER );
 
 	return m_CommandHash.FindPtr( name );
 }
@@ -590,7 +390,7 @@ ConCommandBase *CCvar::FindCommandBase( const char *name )
 //-----------------------------------------------------------------------------
 // Purpose Finds ConVars
 //-----------------------------------------------------------------------------
-const ConVar *CCvar::FindVar( const char *var_name ) const
+const ConVar *ICvar::FindVar( const char *var_name ) const
 {
 	const ConCommandBase *var = FindCommandBase( var_name );
 	if ( !var )
@@ -609,7 +409,7 @@ const ConVar *CCvar::FindVar( const char *var_name ) const
 	return static_cast<const ConVar*>(var);
 }
 
-ConVar *CCvar::FindVar( const char *var_name )
+ConVar *ICvar::FindVar( const char *var_name )
 {
 	ConCommandBase *var = FindCommandBase( var_name );
 	if ( !var )
@@ -632,7 +432,7 @@ ConVar *CCvar::FindVar( const char *var_name )
 //-----------------------------------------------------------------------------
 // Purpose Finds ConCommands
 //-----------------------------------------------------------------------------
-const ConCommand *CCvar::FindCommand( const char *pCommandName ) const
+const ConCommand *ICvar::FindCommand( const char *pCommandName ) const
 {
 	const ConCommandBase *var = FindCommandBase( pCommandName );
 	if ( !var || !var->IsCommand() )
@@ -641,7 +441,7 @@ const ConCommand *CCvar::FindCommand( const char *pCommandName ) const
 	return static_cast<const ConCommand*>(var);
 }
 
-ConCommand *CCvar::FindCommand( const char *pCommandName )
+ConCommand *ICvar::FindCommand( const char *pCommandName )
 {
 	ConCommandBase *var = FindCommandBase( pCommandName );
 	if ( !var || !var->IsCommand() )
@@ -651,7 +451,7 @@ ConCommand *CCvar::FindCommand( const char *pCommandName )
 }
 
 
-const char* CCvar::GetCommandLineValue( const char *pVariableName )
+const char* ICvar::GetCommandLineValue( const char *pVariableName )
 {
 	ks::ScratchArena<> scratch;
 	int nLen = V_strlen(pVariableName);
@@ -664,13 +464,13 @@ const char* CCvar::GetCommandLineValue( const char *pVariableName )
 //-----------------------------------------------------------------------------
 // Install, remove global callbacks
 //-----------------------------------------------------------------------------
-void CCvar::InstallGlobalChangeCallback( FnChangeCallback_t callback )
+void ICvar::InstallGlobalChangeCallback( FnChangeCallback_t callback )
 {
 	contract_assert( callback && ks::find_index( m_GlobalChangeCallbacks, callback ) < 0 );
 	m_GlobalChangeCallbacks.push_back( callback );
 }
 
-void CCvar::RemoveGlobalChangeCallback( FnChangeCallback_t callback )
+void ICvar::RemoveGlobalChangeCallback( FnChangeCallback_t callback )
 {
 	contract_assert( callback );
 	ks::erase_first( m_GlobalChangeCallbacks, callback );
@@ -680,7 +480,7 @@ void CCvar::RemoveGlobalChangeCallback( FnChangeCallback_t callback )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CCvar::CallGlobalChangeCallbacks( ConVar *var, const char *pOldString, float flOldValue )
+void ICvar::CallGlobalChangeCallbacks( ConVar *var, const char *pOldString, float flOldValue )
 {
 	int nCallbackCount = std::ssize( m_GlobalChangeCallbacks );
 	for ( int i = 0; i < nCallbackCount; ++i )
@@ -693,7 +493,7 @@ void CCvar::CallGlobalChangeCallbacks( ConVar *var, const char *pOldString, floa
 //-----------------------------------------------------------------------------
 // Sets convars containing the flags to their default value
 //-----------------------------------------------------------------------------
-void CCvar::RevertFlaggedConVars( int nFlag )
+void ICvar::RevertFlaggedConVars( int nFlag )
 {
 	for ( CConCommandHash::CCommandHashIterator_t i = m_CommandHash.First() ;
 		  m_CommandHash.IsValidIterator( i ) ; 
@@ -721,13 +521,13 @@ void CCvar::RevertFlaggedConVars( int nFlag )
 //-----------------------------------------------------------------------------
 // Deal with queued material system convars
 //-----------------------------------------------------------------------------
-bool CCvar::IsMaterialThreadSetAllowed( ) const
+bool ICvar::IsMaterialThreadSetAllowed( ) const
 {
 	contract_assert( ThreadInMainThread() );
 	return m_bMaterialSystemThreadSetAllowed;
 }
 
-void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, const char *pValue )
+void ICvar::QueueMaterialThreadSetValue( ConVar *pConVar, const char *pValue )
 {
 	contract_assert( ThreadInMainThread() );
 	int j = std::ssize( m_QueuedConVarSets ); m_QueuedConVarSets.emplace_back();
@@ -736,7 +536,7 @@ void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, const char *pValue )
 	m_QueuedConVarSets[j].m_String = ks::nz( pValue );
 }
 
-void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, int nValue )
+void ICvar::QueueMaterialThreadSetValue( ConVar *pConVar, int nValue )
 {
 	contract_assert( ThreadInMainThread() );
 	int j = std::ssize( m_QueuedConVarSets ); m_QueuedConVarSets.emplace_back();
@@ -745,7 +545,7 @@ void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, int nValue )
 	m_QueuedConVarSets[j].m_nInt = nValue;
 }
 
-void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, float flValue )
+void ICvar::QueueMaterialThreadSetValue( ConVar *pConVar, float flValue )
 {
 	contract_assert( ThreadInMainThread() );
 	int j = std::ssize( m_QueuedConVarSets ); m_QueuedConVarSets.emplace_back();
@@ -754,13 +554,13 @@ void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, float flValue )
 	m_QueuedConVarSets[j].m_flFloat = flValue;
 }
 
-bool CCvar::HasQueuedMaterialThreadConVarSets() const
+bool ICvar::HasQueuedMaterialThreadConVarSets() const
 {
 	contract_assert( ThreadInMainThread() );
 	return !m_QueuedConVarSets.empty();
 }
 
-int CCvar::ProcessQueuedMaterialThreadConVarSets()
+int ICvar::ProcessQueuedMaterialThreadConVarSets()
 {
 	contract_assert( ThreadInMainThread() );
 	m_bMaterialSystemThreadSetAllowed = true;
@@ -795,7 +595,7 @@ int CCvar::ProcessQueuedMaterialThreadConVarSets()
 //-----------------------------------------------------------------------------
 // Display queued messages
 //-----------------------------------------------------------------------------
-void CCvar::DisplayQueuedMessages( )
+void ICvar::DisplayQueuedMessages( )
 {
 	// Display any queued up messages
 	if ( m_TempConsoleBuffer.size() == 0 )
@@ -837,29 +637,23 @@ void CCvar::DisplayQueuedMessages( )
 //-----------------------------------------------------------------------------
 // Install a console printer
 //-----------------------------------------------------------------------------
-void CCvar::InstallConsoleDisplayFunc( IConsoleDisplayFunc* pDisplayFunc )
+void ICvar::InstallConsoleDisplayFunc( const void *pOwner, ConsoleDisplayFn_t fnDisplay )
 {
-	contract_assert( ks::find_index( m_DisplayFuncs, pDisplayFunc ) < 0 );
-	m_DisplayFuncs.push_back( pDisplayFunc );
+	contract_assert( std::ranges::none_of( m_DisplayFuncs, [pOwner]( const ConsoleDisplay_t &d ) { return d.m_pOwner == pOwner; } ) );
+	m_DisplayFuncs.push_back( ConsoleDisplay_t{ pOwner, fnDisplay } );
 	DisplayQueuedMessages();
 }
 
-void CCvar::RemoveConsoleDisplayFunc( IConsoleDisplayFunc* pDisplayFunc )
+void ICvar::RemoveConsoleDisplayFunc( const void *pOwner )
 {
-	ks::erase_first( m_DisplayFuncs, pDisplayFunc );
+	auto it = std::ranges::find( m_DisplayFuncs, pOwner, &ConsoleDisplay_t::m_pOwner );
+	if ( it != m_DisplayFuncs.end() )
+	{
+		m_DisplayFuncs.erase( it );
+	}
 }
 
-int CCvar::GetConsoleDisplayFuncCount() const
-{
-	return std::ssize( m_DisplayFuncs );
-}
-
-void CCvar::GetConsoleText( int nDisplayFuncIndex, char *pchText, std::size_t bufSize ) const
-{
-	m_DisplayFuncs[ nDisplayFuncIndex ]->GetConsoleText( pchText, bufSize );
-}
-
-void CCvar::ConsoleColorPrintf( const Color& clr, const char *pFormat, ... ) const
+void ICvar::ConsoleColorPrintf( const Color& clr, const char *pFormat, ... ) const
 {
 	char temp[ 8192 ];
 	std::va_list argptr;
@@ -879,11 +673,11 @@ void CCvar::ConsoleColorPrintf( const Color& clr, const char *pFormat, ... ) con
 
 	for ( int i = 0 ; i < c; ++i )
 	{
-		m_DisplayFuncs[ i ]->ColorPrint( clr, temp );
+		m_DisplayFuncs[ i ].m_fnDisplay( ConsoleDisplayOp_t::ColorPrint, clr, temp );
 	}
 }
 
-void CCvar::ConsolePrintf( const char *pFormat, ... ) const
+void ICvar::ConsolePrintf( const char *pFormat, ... ) const
 {
 	char temp[ 8192 ];
 	std::va_list argptr;
@@ -902,11 +696,11 @@ void CCvar::ConsolePrintf( const char *pFormat, ... ) const
 
 	for ( int i = 0 ; i < c; ++i )
 	{
-		m_DisplayFuncs[ i ]->Print( temp );
+		m_DisplayFuncs[ i ].m_fnDisplay( ConsoleDisplayOp_t::Print, Color(), temp );
 	}
 }
 
-void CCvar::ConsoleDPrintf( const char *pFormat, ... ) const
+void ICvar::ConsoleDPrintf( const char *pFormat, ... ) const
 {
 	char temp[ 8192 ];
 	std::va_list argptr;
@@ -925,7 +719,7 @@ void CCvar::ConsoleDPrintf( const char *pFormat, ... ) const
 
 	for ( int i = 0 ; i < c; ++i )
 	{
-		m_DisplayFuncs[ i ]->DPrint( temp );
+		m_DisplayFuncs[ i ].m_fnDisplay( ConsoleDisplayOp_t::DPrint, Color(), temp );
 	}
 }
 
@@ -946,7 +740,7 @@ struct ConVarSortLess
 //-----------------------------------------------------------------------------
 // Console commands
 //-----------------------------------------------------------------------------
-void CCvar::Find( const CCommand &args )
+void ICvar::Find( const CCommand &args )
 {
 	const char *search = nullptr;
 	const char *subSearch = nullptr;
@@ -991,14 +785,14 @@ void CCvar::Find( const CCommand &args )
 
 
 
-void CCvar::SetMaxSplitScreenSlots( int nSlots )
+void ICvar::SetMaxSplitScreenSlots( int nSlots )
 {
 	m_nMaxSplitScreenSlots = nSlots;
 
 	AddSplitScreenConVars();
 }
 
-int CCvar::GetMaxSplitScreenSlots() const
+int ICvar::GetMaxSplitScreenSlots() const
 {
 	return m_nMaxSplitScreenSlots;
 }

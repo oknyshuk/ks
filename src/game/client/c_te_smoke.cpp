@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -55,33 +53,6 @@ C_TESmoke::~C_TESmoke( void )
 
 
 //-----------------------------------------------------------------------------
-// Recording
-//-----------------------------------------------------------------------------
-static inline void RecordSmoke( const Vector &start, float flScale, int nFrameRate )
-{
-	if ( !ToolsEnabled() )
-		return;
-
-	if ( clienttools->IsInRecordingMode() )
-	{
-		KeyValues *msg = new KeyValues( "TempEntity" );
-
- 		msg->SetInt( "te", TE_SMOKE );
- 		msg->SetString( "name", "TE_Smoke" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetFloat( "originx", start.x );
-		msg->SetFloat( "originy", start.y );
-		msg->SetFloat( "originz", start.z );
-		msg->SetFloat( "scale", flScale );
-		msg->SetInt( "framerate", nFrameRate );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
-}
-
-
-//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void C_TESmoke::PostDataUpdate( DataUpdateType_t updateType )
@@ -90,7 +61,6 @@ void C_TESmoke::PostDataUpdate( DataUpdateType_t updateType )
 
 	// The number passed down is 10 times smaller...
 	g_pEffects->Smoke( m_vecOrigin, m_nModelIndex, m_fScale * 10.0f, m_nFrameRate );
-	RecordSmoke( m_vecOrigin, m_fScale * 10.0f, m_nFrameRate );
 }
 
 void TE_Smoke( IRecipientFilter& filter, float delay,
@@ -98,7 +68,6 @@ void TE_Smoke( IRecipientFilter& filter, float delay,
 {
 	// The number passed down is 10 times smaller...
 	g_pEffects->Smoke( *pos, modelindex, scale * 10.0f, framerate );
-	RecordSmoke( *pos, scale * 10.0f, framerate );
 }
 
 IMPLEMENT_REFLECT_CLIENTCLASS_EVENT( C_TESmoke, DT_TESmoke, CTESmoke )

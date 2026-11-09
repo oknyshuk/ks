@@ -7,8 +7,6 @@
 
 // Purpose: Base class for simple projectiles
 
-enum MoveType_t;
-enum MoveCollide_t;
 
 //=============================================================================
 //=============================================================================
@@ -17,10 +15,10 @@ class CBaseProjectile : public CBaseAnimating
 	DECLARE_CLASS( CBaseProjectile, CBaseAnimating );
 
 public:
-	void Touch( CBaseEntity *pOther );
+	void Touch_Impl( CBaseEntity *pOther );
 	virtual void HandleTouch( CBaseEntity *pOther );
 
-	void Think();
+	void Think_Impl();
 	virtual void HandleThink();
 
 	void Spawn(	char *pszModel,
@@ -33,7 +31,7 @@ public:
 		int iDamageType,
 		CBaseEntity *pIntendedTarget = nullptr );
 
-	virtual void Precache( void ) {};
+	void Precache_Impl( void ) {};
 
 	int	m_iDmg;
 	int m_iDmgType;

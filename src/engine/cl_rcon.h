@@ -55,7 +55,7 @@ private:
 };
 
 
-class CRConClient : public ISocketCreatorListener
+class CRConClient
 {
 public:
 	CRConClient();
@@ -89,10 +89,10 @@ public:
 
 	void SetRemoteFileDirectory( const char *pDir );
 
-	// Inherited from ISocketCreatorListener
-	virtual bool ShouldAcceptSocket( SocketHandle_t hSocket, const netadr_t & netAdr ); 
-	virtual void OnSocketAccepted( SocketHandle_t hSocket, const netadr_t & netAdr, void** ppData ); 
-	virtual void OnSocketClosed( SocketHandle_t hSocket, const netadr_t & netAdr, void* pData );
+	// Socket listener methods (bound by CSocketCreator)
+	bool ShouldAcceptSocket( SocketHandle_t hSocket, const netadr_t & netAdr ); 
+	void OnSocketAccepted( SocketHandle_t hSocket, const netadr_t & netAdr, void** ppData ); 
+	void OnSocketClosed( SocketHandle_t hSocket, const netadr_t & netAdr, void* pData );
 
 private:
 	SocketHandle_t GetSocketHandle() const;

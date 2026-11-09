@@ -3,8 +3,6 @@
 
 // Purpose: A gib is a chunk of a body, or a piece of wood/metal/rocks/etc.
 
-import std;
-import ks.vstdlib;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -392,7 +390,7 @@ void CGib::WaitTillLand ( void )
 	}
 }
 
-bool CGib::SUB_AllowedToFade( void )
+bool CGib::SUB_AllowedToFade_Impl( void )
 {
 	if( VPhysicsGetObject() )
 	{
@@ -455,7 +453,7 @@ void CGib::DieThink ( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CGib::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CGib::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	CBasePlayer *pPlayer = ToBasePlayer( pActivator );
 
@@ -493,7 +491,7 @@ void CGib::OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t Reason )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-CBasePlayer *CGib::HasPhysicsAttacker( float dt )
+CBasePlayer *CGib::HasPhysicsAttacker_Impl( float dt )
 {
 	if (gpGlobals->curtime - dt <= m_flLastPhysicsInfluenceTime)
 	{

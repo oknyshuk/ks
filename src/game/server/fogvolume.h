@@ -23,8 +23,8 @@ class CFogVolume : public CServerOnlyEntity
 public:
 	CFogVolume();
 	virtual ~CFogVolume();
-	virtual void Spawn( void );
-	virtual void Activate();
+	void Spawn_Impl( void );
+	void Activate_Impl();
 
 	static CFogVolume *FindFogVolumeForPosition( const Vector &position );
 

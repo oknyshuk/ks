@@ -225,11 +225,23 @@ struct LoggingContext_t
 class ILoggingListener
 {
 public:
-	virtual void Log( const LoggingContext_t *pContext, const tchar *pMessage ) = 0;
+	typedef std::move_only_function< void( const LoggingContext_t *pContext, const tchar *pMessage ) > LogFn_t;
+
+	// The listener is identified by its address (registering / unregistering compares pointers),
+	// so it is neither copyable nor movable.  Classes with state of their own derive from this
+	// and hand it a callable that forwards to their own Log().
+	explicit ILoggingListener( LogFn_t fnLog ) : m_fnLog( std::move( fnLog ) ) {}
+	ILoggingListener( const ILoggingListener & ) = delete;
+	ILoggingListener &operator=( const ILoggingListener & ) = delete;
+
+	void Log( const LoggingContext_t *pContext, const tchar *pMessage ) { m_fnLog( pContext, pMessage ); }
+
+private:
+	LogFn_t m_fnLog;
 };
 
 //-----------------------------------------------------------------------------
-// Interface for policy classes which determine how to behave when a 
+// Class for policies which determine how to behave when a 
 // message is logged.
 //
 // Can return:
@@ -240,7 +252,16 @@ public:
 class ILoggingResponsePolicy
 {
 public:
-	virtual LoggingResponse_t OnLog( const LoggingContext_t *pContext ) = 0;
+	typedef std::move_only_function< LoggingResponse_t( const LoggingContext_t *pContext ) > OnLogFn_t;
+
+	explicit ILoggingResponsePolicy( OnLogFn_t fnOnLog ) : m_fnOnLog( std::move( fnOnLog ) ) {}
+	ILoggingResponsePolicy( const ILoggingResponsePolicy & ) = delete;
+	ILoggingResponsePolicy &operator=( const ILoggingResponsePolicy & ) = delete;
+
+	LoggingResponse_t OnLog( const LoggingContext_t *pContext ) { return m_fnOnLog( pContext ); }
+
+private:
+	OnLogFn_t m_fnOnLog;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -254,32 +275,32 @@ class CSimpleLoggingListener : public ILoggingListener
 {
 public:
 	CSimpleLoggingListener( bool bQuietPrintf = false, bool bQuietDebugger = false ) : 
-	  m_bQuietPrintf( bQuietPrintf ), 
-		  m_bQuietDebugger( bQuietDebugger ) 
-	  { 
-	  }
+		ILoggingListener( [this]( const LoggingContext_t *pContext, const tchar *pMessage ) { Log( pContext, pMessage ); } ),
+		m_bQuietPrintf( bQuietPrintf ), 
+		m_bQuietDebugger( bQuietDebugger ) 
+	{ 
+	}
 
-	  virtual void Log( const LoggingContext_t *pContext, const tchar *pMessage )
-	  {
-		  {
-			  if ( !m_bQuietPrintf )
-			  {
-				  std::printf( "%s", pMessage );
-			  }
+	void Log( const LoggingContext_t *pContext, const tchar *pMessage )
+	{
+		if ( !m_bQuietPrintf )
+		{
+			std::printf( "%s", pMessage );
+		}
+	}
 
-		  }
-	  }
-
-	  // If set to true, does not print anything to stdout.
-	  bool m_bQuietPrintf;
-	  // If set to true, does not print anything to debugger.
-	  bool m_bQuietDebugger;
+	// If set to true, does not print anything to stdout.
+	bool m_bQuietPrintf;
+	// If set to true, does not print anything to debugger.
+	bool m_bQuietDebugger;
 };
 
 class CDefaultLoggingResponsePolicy : public ILoggingResponsePolicy
 {
 public:
-	virtual LoggingResponse_t OnLog( const LoggingContext_t *pContext )
+	CDefaultLoggingResponsePolicy() : ILoggingResponsePolicy( [this]( const LoggingContext_t *pContext ) { return OnLog( pContext ); } ) {}
+
+	LoggingResponse_t OnLog( const LoggingContext_t *pContext )
 	{
 		if ( pContext->m_Severity == LS_ASSERT && !CommandLine()->FindParm( "-noassert" ) )
 		{
@@ -302,7 +323,9 @@ public:
 class CNonFatalLoggingResponsePolicy : public ILoggingResponsePolicy
 {
 public:
-	virtual LoggingResponse_t OnLog( const LoggingContext_t *pContext )
+	CNonFatalLoggingResponsePolicy() : ILoggingResponsePolicy( [this]( const LoggingContext_t *pContext ) { return OnLog( pContext ); } ) {}
+
+	LoggingResponse_t OnLog( const LoggingContext_t *pContext )
 	{
 		if ( ( pContext->m_Severity == LS_ASSERT && !CommandLine()->FindParm( "-noassert" ) ) || pContext->m_Severity == LS_ERROR )
 		{

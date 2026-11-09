@@ -5,11 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
-import ks.vstdlib;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "sharedvar.h"
@@ -27,7 +23,6 @@ import ks.vstdlib;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -129,7 +124,6 @@ bool CheckEmitReasonablePhysicsSpew()
 }
 
 
-LoggingChannelID_t LOG_DEVELOPER_VERBOSE = LoggingSystem_RegisterLoggingChannel( "DeveloperVerbose", nullptr );;
 
 //-----------------------------------------------------------------------------
 // Purpose: Spawn some blood particles
@@ -160,17 +154,17 @@ void CBaseEntity::UnsetPlayerSimulated( void )
 }
 
 // position of eyes
-Vector CBaseEntity::EyePosition( void )
+Vector CBaseEntity::EyePosition_Impl( void )
 { 
 	return GetAbsOrigin() + m_vecViewOffset; 
 }
 
-const QAngle &CBaseEntity::EyeAngles( void )
+const QAngle &CBaseEntity::EyeAngles_Impl( void )
 {
 	return GetAbsAngles();
 }
 
-const QAngle &CBaseEntity::LocalEyeAngles( void )
+const QAngle &CBaseEntity::LocalEyeAngles_Impl( void )
 {
 	return GetLocalAngles();
 }
@@ -195,7 +189,7 @@ const Vector& CBaseEntity::GetViewOffset() const
 //-----------------------------------------------------------------------------
 // center point of entity
 //-----------------------------------------------------------------------------
-const Vector &CBaseEntity::WorldSpaceCenter( ) const 
+const Vector &CBaseEntity::WorldSpaceCenter_Impl( ) const 
 {
 	return CollisionProp()->WorldSpaceCenter();
 }
@@ -368,7 +362,7 @@ void CBaseEntity::ParseMapData( CEntityMapData *mapData )
 //-----------------------------------------------------------------------------
 // Parse data from a map file
 //-----------------------------------------------------------------------------
-bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue ) 
+bool CBaseEntity::KeyValue_Impl( const char *szKeyName, const char *szValue ) 
 {
 	//!! temp hack, until worldcraft is fixed
 	// strip the # tokens from (duplicate) key names
@@ -620,7 +614,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const char *szValue )
 	return false;
 }
 
-bool CBaseEntity::KeyValue( const char *szKeyName, float flValue ) 
+bool CBaseEntity::KeyValue_Impl( const char *szKeyName, float flValue ) 
 {
 	char	string[256];
 
@@ -629,7 +623,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, float flValue )
 	return KeyValue( szKeyName, string );
 }
 
-bool CBaseEntity::KeyValue( const char *szKeyName, int nValue ) 
+bool CBaseEntity::KeyValue_Impl( const char *szKeyName, int nValue ) 
 {
 	char	string[256];
 
@@ -638,7 +632,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, int nValue )
 	return KeyValue( szKeyName, string );
 }
 
-bool CBaseEntity::KeyValue( const char *szKeyName, const Vector &vecValue ) 
+bool CBaseEntity::KeyValue_Impl( const char *szKeyName, const Vector &vecValue ) 
 {
 	char	string[256];
 
@@ -653,7 +647,7 @@ bool CBaseEntity::KeyValue( const char *szKeyName, const Vector &vecValue )
 // Output :
 //-----------------------------------------------------------------------------
 
-bool CBaseEntity::GetKeyValue( const char *szKeyName, char *szValue, int iMaxLen )
+bool CBaseEntity::GetKeyValue_Impl( const char *szKeyName, char *szValue, int iMaxLen )
 {
 	if ( FStrEq( szKeyName, "rendercolor" ) || FStrEq( szKeyName, "rendercolor32" ))
 	{
@@ -757,7 +751,7 @@ bool CBaseEntity::GetKeyValue( const char *szKeyName, char *szValue, int iMaxLen
 // Input  : collisionGroup - 
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-bool CBaseEntity::ShouldCollide( int collisionGroup, int contentsMask ) const
+bool CBaseEntity::ShouldCollide_Impl( int collisionGroup, int contentsMask ) const
 {
 	if ( m_CollisionGroup == COLLISION_GROUP_DEBRIS )
 	{
@@ -796,7 +790,7 @@ void CBaseEntity::SetPredictionRandomSeed( const CUserCmd *cmd )
 //------------------------------------------------------------------------------
 // Purpose : Base implimentation for entity handling decals
 //------------------------------------------------------------------------------
-void CBaseEntity::DecalTrace( trace_t *pTrace, char const *decalName )
+void CBaseEntity::DecalTrace_Impl( trace_t *pTrace, char const *decalName )
 {
 	int index = decalsystem->GetDecalIndexForName( decalName );
 	if ( index < 0 )
@@ -806,13 +800,13 @@ void CBaseEntity::DecalTrace( trace_t *pTrace, char const *decalName )
 
 	CBroadcastRecipientFilter filter;
 	te->Decal( filter, 0.0, &pTrace->endpos, &pTrace->startpos,
-		pTrace->GetEntityIndex(), pTrace->hitbox, index );
+		TraceGetEntityIndex( *pTrace ), pTrace->hitbox, index );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Base handling for impacts against entities
 //-----------------------------------------------------------------------------
-void CBaseEntity::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
+void CBaseEntity::ImpactTrace_Impl( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
 {
 	CVProfScope _( "CBaseEntity::ImpactTrace", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	contract_assert( pTrace->Ent<CBaseEntity>() );
@@ -852,7 +846,7 @@ void CBaseEntity::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCu
 // Input  : bitsDamageType - the damage type
 // Output : the index of the damage decal to use
 //-----------------------------------------------------------------------------
-char const *CBaseEntity::DamageDecal( int bitsDamageType, int gameMaterial )
+char const *CBaseEntity::DamageDecal_Impl( int bitsDamageType, int gameMaterial )
 {
 	if ( m_nRenderMode == kRenderTransAlpha )
 		return "";
@@ -1310,7 +1304,7 @@ int CheckEntityVelocity( Vector &v )
 //-----------------------------------------------------------------------------
 // Purpose: My physics object has been updated, react or extract data
 //-----------------------------------------------------------------------------
-void CBaseEntity::VPhysicsUpdate( IPhysicsObject *pPhysics )
+void CBaseEntity::VPhysicsUpdate_Impl( IPhysicsObject *pPhysics )
 {
 	switch( GetMoveType() )
 	{
@@ -1483,7 +1477,7 @@ void CBaseEntity::VPhysicsSwapObject( IPhysicsObject *pSwap )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseEntity::VPhysicsDestroyObject( void )
+void CBaseEntity::VPhysicsDestroyObject_Impl( void )
 {
 	if ( m_pPhysicsObject )
 	{
@@ -1599,7 +1593,7 @@ IPhysicsObject *CBaseEntity::VPhysicsInitShadow( bool allowPhysicsMovement, bool
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CBaseEntity::CreateVPhysics()
+bool CBaseEntity::CreateVPhysics_Impl()
 {
 	return false;
 }
@@ -1838,7 +1832,7 @@ public:
 typedef CTraceFilterSimpleList CBulletsTraceFilter;
 #endif
 
-void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
+void CBaseEntity::FireBullets_Impl( const FireBulletsInfo_t &info )
 {
 	static int	tracerCount;
 	trace_t		tr;
@@ -2252,7 +2246,7 @@ void CBaseEntity::DispatchTraceAttack( const CTakeDamageInfo &info, const Vector
 	TraceAttack( info, vecDir, ptr );
 }
 
-void CBaseEntity::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
+void CBaseEntity::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
 	Vector vecOrigin = ptr->endpos - vecDir * 4;
 
@@ -2274,7 +2268,7 @@ void CBaseEntity::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir
 //-----------------------------------------------------------------------------
 // Allows the shooter to change the impact effect of his bullets
 //-----------------------------------------------------------------------------
-void CBaseEntity::DoImpactEffect( trace_t &tr, int nDamageType )
+void CBaseEntity::DoImpactEffect_Impl( trace_t &tr, int nDamageType )
 {
 	// give shooter a chance to do a custom impact.
 	UTIL_ImpactTrace( &tr, nDamageType );
@@ -2337,7 +2331,7 @@ void CBaseEntity::ComputeTracerStartPosition( const Vector &vecShotSrc, Vector *
 //
 // Output :
 //-----------------------------------------------------------------------------
-void CBaseEntity::MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType )
+void CBaseEntity::MakeTracer_Impl( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType )
 {
 	const char *pszTracerName = GetTracerType();
 
@@ -2373,7 +2367,7 @@ int CBaseEntity::GetTracerAttachment( void )
 }
 
 
-int CBaseEntity::BloodColor()
+int CBaseEntity::BloodColor_Impl()
 {
 	return DONT_BLEED; 
 }
@@ -2451,7 +2445,7 @@ void CBaseEntity::TraceBleed( float flDamage, const Vector &vecDir, trace_t *ptr
 }
 
 
-const char* CBaseEntity::GetTracerType()
+const char* CBaseEntity::GetTracerType_Impl()
 {
 	return nullptr;
 }
@@ -2625,13 +2619,13 @@ void CBaseEntity::SetCollisionGroup( int collisionGroup )
 }
 
 
+extern bool PhysIsInCallback();
 void CBaseEntity::CollisionRulesChanged()
 {
 	// ivp maintains state based on recent return values from the collision filter, so anything
 	// that can change the state that a collision filter will return (like m_Solid) needs to call RecheckCollisionFilter.
 	if ( VPhysicsGetObject() )
 	{
-		extern bool PhysIsInCallback();
 		if ( PhysIsInCallback() )
 		{
 			Warning("Changing collision rules within a callback is likely to cause crashes!\n");
@@ -2706,7 +2700,7 @@ bool CBaseEntity::IsToolRecording() const
 extern void TouchTriggerPlayerMovement( C_BaseEntity *pEntity );
 #endif
 
-void CBaseEntity::PhysicsTouchTriggers( const Vector *pPrevAbsOrigin )
+void CBaseEntity::PhysicsTouchTriggers_Impl( const Vector *pPrevAbsOrigin )
 {
 #if defined( CLIENT_DLL )
 #if defined( FAST_TRIGGER_TOUCH )

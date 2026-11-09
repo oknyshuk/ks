@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "string_t.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"
@@ -27,7 +24,6 @@ import ks.tier1;
 #include "npcevent.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "shareddefs.h"
@@ -489,7 +485,7 @@ void CBaseWeaponWorldModel::ApplyCustomMaterialsAndStickers( void )
 
 #else
 
-int CBaseWeaponWorldModel::ShouldTransmit( const CCheckTransmitInfo *pInfo )
+int CBaseWeaponWorldModel::ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo )
 {
 	CBaseCombatWeapon *pWeaponParent = m_hCombatWeaponParent->Get();
 	if ( pWeaponParent )
@@ -510,7 +506,7 @@ int CBaseWeaponWorldModel::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 	}
 }
 
-int CBaseWeaponWorldModel::UpdateTransmitState( void )
+int CBaseWeaponWorldModel::UpdateTransmitState_Impl( void )
 {
 	return SetTransmitState( FL_EDICT_FULLCHECK );
 }
@@ -635,9 +631,9 @@ CBaseCombatWeapon::~CBaseCombatWeapon( void )
 	InvalidateMdlCache();
 }
 
-void CBaseCombatWeapon::Activate( void )
+void CBaseCombatWeapon::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 #ifndef CLIENT_DLL
 	if ( GetOwnerEntity() )
@@ -678,7 +674,7 @@ void CBaseCombatWeapon::GiveDefaultAmmo( void )
 //-----------------------------------------------------------------------------
 // Purpose: Set mode to world model and start falling to the ground
 //-----------------------------------------------------------------------------
-void CBaseCombatWeapon::Spawn( void )
+void CBaseCombatWeapon::Spawn_Impl( void )
 {
 	Precache();
 
@@ -747,9 +743,9 @@ void CBaseCombatWeapon::Spawn( void )
 }
 
 #ifndef CLIENT_DLL
-void CBaseCombatWeapon::PhysicsSimulate( void )
+void CBaseCombatWeapon::PhysicsSimulate_Impl( void )
 {
-	BaseClass::PhysicsSimulate();
+	BaseClass::PhysicsSimulate_Impl();
 	
 	// remember the last time we were flying through the air
 	if ( GetOwner() == nullptr && !(GetFlags() & FL_ONGROUND) )
@@ -771,7 +767,7 @@ const unsigned char *CBaseCombatWeapon::GetEncryptionKey( void )
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CBaseCombatWeapon::Precache( void )
+void CBaseCombatWeapon::Precache_Impl( void )
 {
 	m_iPrimaryAmmoType = m_iSecondaryAmmoType = -1;
 
@@ -1284,13 +1280,13 @@ void CBaseCombatWeapon::OnPickedUp( CBaseCombatCharacter *pNewOwner )
 //			&tr - 
 //			iTracerType - 
 //-----------------------------------------------------------------------------
-void CBaseCombatWeapon::MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType )
+void CBaseCombatWeapon::MakeTracer_Impl( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType )
 {
 	CBaseEntity *pOwner = GetOwner();
 
 	if ( pOwner == nullptr )
 	{
-		BaseClass::MakeTracer( vecTracerSrc, tr, iTracerType );
+		BaseClass::MakeTracer_Impl( vecTracerSrc, tr, iTracerType );
 		return;
 	}
 
@@ -1517,10 +1513,10 @@ void CBaseCombatWeapon::Equip( CBaseCombatCharacter *pOwner )
 	VerifyAndSetContextSensitiveWeaponModel();
 }
 
-CStudioHdr* CBaseCombatWeapon::OnNewModel()
+CStudioHdr* CBaseCombatWeapon::OnNewModel_Impl()
 {
 	ClassifyWeaponModel();
-	return BaseClass::OnNewModel();
+	return BaseClass::OnNewModel_Impl();
 }
 
 void CBaseCombatWeapon::ClassifyWeaponModel( void )
@@ -3053,7 +3049,7 @@ void* SendProxy_SendActiveLocalWeaponDataTable( const SendProp *pProp, const voi
 		CBasePlayer *pPlayer = ToBasePlayer( pWeapon->GetOwner() );
 		if ( pPlayer /*&& pPlayer->GetActiveWeapon() == pWeapon*/ )
 		{
-			pRecipients->SetOnly( pPlayer->GetClientIndex() );
+			SendProxyRecipients_SetOnly( pRecipients,  pPlayer->GetClientIndex() );
 			return (void*)pVarData;
 		}
 	}
@@ -3075,7 +3071,7 @@ void* SendProxy_SendLocalWeaponDataTable( const SendProp *pProp, const void *pSt
 		CBasePlayer *pPlayer = ToBasePlayer( pWeapon->GetOwner() );
 		if ( pPlayer )
 		{
-			pRecipients->SetOnly( pPlayer->GetClientIndex() );
+			SendProxyRecipients_SetOnly( pRecipients,  pPlayer->GetClientIndex() );
 			return (void*)pVarData;
 		}
 	}
@@ -3231,11 +3227,11 @@ int CBaseCombatWeapon::SetReserveAmmoCount( AmmoPosition_t nAmmoPosition, int nC
 	 return iAdd;
 }
 
+extern ConVar sv_infinite_ammo;
 int CBaseCombatWeapon::GiveReserveAmmo( AmmoPosition_t nAmmoPosition, int nCount, bool bSuppressSound /* = false */, CBaseCombatCharacter * pForcedOwner/* = NULL*/ )
 {
 	if ( nCount <= 0 )
 	{
-		extern ConVar sv_infinite_ammo;
 		if ( sv_infinite_ammo.GetInt() == 2 ) // infinite total ammo but magazine reloads are still required.
 			return 0;
 

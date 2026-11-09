@@ -4,8 +4,6 @@
 // Purpose: Weapons Resource implementation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"

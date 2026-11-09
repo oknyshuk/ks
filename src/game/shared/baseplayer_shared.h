@@ -4,8 +4,6 @@
 
 // PlayerUse defines
 
-import std;
-import ks.math;
 #include "ehandle.h"
 #ifdef CLIENT_DLL
 class C_BaseEntity;

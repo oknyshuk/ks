@@ -28,8 +28,6 @@
 #include "ivieweffects.h"
 #include "inputsystem/iinputsystem.h"
 #include <voice_status.h>
-import ks.tier1;
-import std;
 
 extern ConVar cam_idealpitch;
 extern ConVar cam_idealyaw;
@@ -52,7 +50,7 @@ ConVar cl_sidespeed( "cl_sidespeed", MAX_LINEAR_SPEED, FCVAR_CHEAT );
 ConVar cl_forwardspeed( "cl_forwardspeed", MAX_LINEAR_SPEED, FCVAR_CHEAT );
 ConVar cl_backspeed( "cl_backspeed", MAX_LINEAR_SPEED, FCVAR_CHEAT );
 
-void IN_JoystickChangedCallback_f( IConVar *pConVar, const char *pOldString, float flOldValue );
+void IN_JoystickChangedCallback_f( ConVar *pConVar, const char *pOldString, float flOldValue );
 ConVar in_joystick( "joystick", "1", FCVAR_ARCHIVE, "True if the joystick is enabled, false otherwise.", true, 0.0f, true, 1.0f, IN_JoystickChangedCallback_f );
 
 ConVar thirdperson_platformer( "thirdperson_platformer", "0", 0, "Player will aim in the direction they are moving." );
@@ -198,7 +196,7 @@ void IN_Joystick_Advanced_f (const CCommand& args)
 }
 
 
-void IN_JoystickChangedCallback_f( IConVar *pConVar, const char *pOldString, float flOldValue )
+void IN_JoystickChangedCallback_f( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	::input->Joystick_Advanced( true );
 }

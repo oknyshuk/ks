@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.vstdlib;
 #include "sharedInterface.h"
 
 extern ConVar ai_shot_bias_min;

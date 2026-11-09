@@ -48,144 +48,155 @@ enum InputStandardCursor_t
 /// the last call to PollInputState. It also contains facilities for cursor
 /// control and creation.
 ///-----------------------------------------------------------------------------
-class IInputSystem : public IAppSystem
+class IInputSystem
 {
 public:
+	//--------------------------------------------------------
+	// App system protocol. Not an IAppSystem: CAppSystemGroup drives it by kind (see AppSystemRef).
+	//--------------------------------------------------------
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t Init();
+	void Shutdown();
+	const AppSystemInfo_t *GetDependencies() { return nullptr; }
+	void Reconnect( CreateInterfaceFn factory, const char *pInterfaceName ) { ReconnectInterface( factory, pInterfaceName ); }
+
 	/// Attach, detach input system from a particular window
 	/// This window should be the root window for the application
 	/// Only 1 window should be attached at any given time.
-	virtual void AttachToWindow( void* hWnd ) = 0;
-	virtual void DetachFromWindow( ) = 0;
+	void AttachToWindow( void* hWnd );
+	void DetachFromWindow( );
 
 	/// Enables/disables input. PollInputState will not update current 
 	/// button/analog states when it is called if the system is disabled.
-	virtual void EnableInput( bool bEnable ) = 0;
+	void EnableInput( bool bEnable );
 
 	/// Enables/disables the windows message pump. PollInputState will not
 	/// Peek/Dispatch messages if this is disabled
-	virtual void EnableMessagePump( bool bEnable ) = 0;
+	void EnableMessagePump( bool bEnable );
 
 	/// Polls the current input state
-	virtual void PollInputState( bool bIsInGame = false ) = 0;
+	void PollInputState( bool bIsInGame = false );
 
 	/// Gets the time of the last polling in ms
-	virtual int GetPollTick() const = 0;
+	int GetPollTick() const;
 
 	/// Is a button down? "Buttons" are binary-state input devices (mouse buttons, keyboard keys)
-	virtual bool IsButtonDown( ButtonCode_t code ) const = 0;
+	bool IsButtonDown( ButtonCode_t code ) const;
 
 	/// Returns the tick at which the button was pressed and released
-	virtual int GetButtonPressedTick( ButtonCode_t code ) const = 0;
-	virtual int GetButtonReleasedTick( ButtonCode_t code ) const = 0;
+	int GetButtonPressedTick( ButtonCode_t code ) const;
+	int GetButtonReleasedTick( ButtonCode_t code ) const;
 
 	/// Gets the value of an analog input device this frame
 	/// Includes joysticks, mousewheel, mouse
-	virtual int GetAnalogValue( AnalogCode_t code ) const = 0;
+	int GetAnalogValue( AnalogCode_t code ) const;
 
 	/// Gets the change in a particular analog input device this frame
 	/// Includes joysticks, mousewheel, mouse
-	virtual int GetAnalogDelta( AnalogCode_t code ) const = 0;
+	int GetAnalogDelta( AnalogCode_t code ) const;
 
 	/// Returns the input events since the last poll
-	virtual int GetEventCount() const = 0;
-	virtual const InputEvent_t* GetEventData( ) const = 0;
+	int GetEventCount() const;
+	const InputEvent_t* GetEventData( ) const;
 
 	// Motion Controller status
-	virtual bool	   MotionControllerActive() const = 0;
-	virtual Quaternion GetMotionControllerOrientation() const = 0; // Pointer direction
-	virtual float	   GetMotionControllerPosX() const = 0;
-	virtual float	   GetMotionControllerPosY() const = 0;
-	virtual int		   GetMotionControllerDeviceStatus() const = 0;
-	virtual uint64		   GetMotionControllerDeviceStatusFlags() const = 0;
-	virtual void	   SetMotionControllerDeviceStatus( int nStatus ) = 0;
-	virtual void	   SetMotionControllerCalibrationInvalid( void ) = 0;
-	virtual void	   StepMotionControllerCalibration( void ) = 0;
-	virtual void	   ResetMotionControllerScreenCalibration( void ) = 0;
+	bool	   MotionControllerActive() const;
+	Quaternion GetMotionControllerOrientation() const; // Pointer direction
+	float	   GetMotionControllerPosX() const;
+	float	   GetMotionControllerPosY() const;
+	int		   GetMotionControllerDeviceStatus() const;
+	uint64		   GetMotionControllerDeviceStatusFlags() const;
+	void	   SetMotionControllerDeviceStatus( int nStatus );
+	void	   SetMotionControllerCalibrationInvalid( void );
+	void	   StepMotionControllerCalibration( void );
+	void	   ResetMotionControllerScreenCalibration( void );
 
 	/// Posts a user-defined event into the event queue; this is expected
 	/// to be called in overridden wndprocs connected to the root panel.
-	virtual void PostUserEvent( const InputEvent_t &event ) = 0;
+	void PostUserEvent( const InputEvent_t &event );
 
 	/// Returns the number of joysticks
-	virtual int GetJoystickCount() const = 0;
+	int GetJoystickCount() const;
 
 	/// Enable/disable joystick, it has perf costs
-	virtual void EnableJoystickInput( int nJoystick, bool bEnable ) = 0;
+	void EnableJoystickInput( int nJoystick, bool bEnable );
 
 	/// Enable/disable diagonal joystick POV (simultaneous POV buttons down)
-	virtual void EnableJoystickDiagonalPOV( int nJoystick, bool bEnable ) = 0;
+	void EnableJoystickDiagonalPOV( int nJoystick, bool bEnable );
 
 	/// Sample the joystick and append events to the input queue
-	virtual void SampleDevices( void ) = 0;
+	void SampleDevices( void );
 
 	// FIXME: Currently force-feedback is only supported on the Xbox 360
-	virtual void SetRumble( float fLeftMotor, float fRightMotor, int userId = INVALID_USER_ID ) = 0;
-	virtual void StopRumble( int userId = INVALID_USER_ID ) = 0;
+	void SetRumble( float fLeftMotor, float fRightMotor, int userId = INVALID_USER_ID );
+	void StopRumble( int userId = INVALID_USER_ID );
 
 	/// Resets the input state
-	virtual void ResetInputState() = 0;
+	void ResetInputState();
 
 	/// Convert back + forth between ButtonCode/AnalogCode + strings
-	virtual const char *ButtonCodeToString( ButtonCode_t code ) const = 0;
-	virtual const char *AnalogCodeToString( AnalogCode_t code ) const = 0;
-	virtual ButtonCode_t StringToButtonCode( const char *pString ) const = 0;
-	virtual AnalogCode_t StringToAnalogCode( const char *pString ) const = 0;
+	const char *ButtonCodeToString( ButtonCode_t code ) const;
+	const char *AnalogCodeToString( AnalogCode_t code ) const;
+	ButtonCode_t StringToButtonCode( const char *pString ) const;
+	AnalogCode_t StringToAnalogCode( const char *pString ) const;
 
 	/// Sleeps until input happens. Pass a negative number to sleep infinitely
-	virtual void SleepUntilInput( int nMaxSleepTimeMS = -1 ) = 0;
+	void SleepUntilInput( int nMaxSleepTimeMS = -1 );
 
 	/// Convert back + forth between virtual codes + button codes
 	// FIXME: This is a temporary piece of code
-	virtual ButtonCode_t VirtualKeyToButtonCode( int nVirtualKey ) const = 0;
-	virtual int ButtonCodeToVirtualKey( ButtonCode_t code ) const = 0;
-	virtual ButtonCode_t ScanCodeToButtonCode( int lParam ) const = 0;
+	ButtonCode_t VirtualKeyToButtonCode( int nVirtualKey ) const;
+	int ButtonCodeToVirtualKey( ButtonCode_t code ) const;
+	ButtonCode_t ScanCodeToButtonCode( int lParam ) const;
 
 	/// How many times have we called PollInputState?
-	virtual int GetPollCount() const = 0;
+	int GetPollCount() const;
 
 	/// Sets the cursor position
-	virtual void SetCursorPosition( int x, int y ) = 0;
+	void SetCursorPosition( int x, int y );
 
 	/// Tells the input system to generate UI-related events, defined
 	/// in inputsystem/inputenums.h (see IE_FirstUIEvent)
 	/// We could have multiple clients that care about UI-related events
 	/// so we refcount the clients with an Add/Remove strategy. If there
 	/// are no interested clients, the UI events are not generated
-	virtual void AddUIEventListener() = 0;
-	virtual void RemoveUIEventListener() = 0;
+	void AddUIEventListener();
+	void RemoveUIEventListener();
 
 	/// Returns the currently attached window
-	virtual PlatWindow_t GetAttachedWindow() const = 0;
+	PlatWindow_t GetAttachedWindow() const;
 
 	/// Creates a cursor using one of the well-known cursor icons
-	virtual InputCursorHandle_t GetStandardCursor( InputStandardCursor_t id ) = 0;
+	InputCursorHandle_t GetStandardCursor( InputStandardCursor_t id );
 
 	/// Loads a cursor defined in a file
-	virtual InputCursorHandle_t LoadCursorFromFile( const char *pFileName, const char *pPathID = nullptr ) = 0;
+	InputCursorHandle_t LoadCursorFromFile( const char *pFileName, const char *pPathID = nullptr );
 
 	/// Sets the cursor icon
-	virtual void SetCursorIcon( InputCursorHandle_t hCursor ) = 0;
+	void SetCursorIcon( InputCursorHandle_t hCursor );
 
 	/// Gets the cursor position
-	virtual void GetCursorPosition( int *pX, int *pY ) = 0;
+	void GetCursorPosition( int *pX, int *pY );
 
 	/// Mouse capture
-	virtual void EnableMouseCapture( PlatWindow_t hWnd ) = 0;
-	virtual void DisableMouseCapture() = 0;
+	void EnableMouseCapture( PlatWindow_t hWnd );
+	void DisableMouseCapture();
 	
 	// Mouse visibility, tell inputsystem when we hide stuff rather than querying the OS which is expensive on OSX
-	virtual void SetMouseCursorVisible( bool bVisible ) = 0;
+	void SetMouseCursorVisible( bool bVisible );
 
 
-	virtual void DisableHardwareCursor( void ) = 0;
-	virtual void EnableHardwareCursor( void ) = 0;
+	void DisableHardwareCursor( void );
+	void EnableHardwareCursor( void );
 	
 	/// Reset the current cursor icon.  Used to reset the icon in the case of alt+tabs where the cursor has been forced to a different
 	/// icon because it was outside of the client rect during the reload.
-	virtual void ResetCursorIcon() = 0;
+	void ResetCursorIcon();
 
 	// read and clear accumulated raw input values
-	virtual void GetRawMouseAccumulators( float& accumX, float& accumY ) = 0;
+	void GetRawMouseAccumulators( float& accumX, float& accumY );
 
 	// ========================================================================
 	// Platform Input Device Interface
@@ -217,19 +228,19 @@ public:
 	// ================================================================
 
 	// Manage the list of input devices that are connected
-	virtual InputDevice_t GetConnectedInputDevices( void ) = 0;				// returns the bitfield of all connected devices
-	virtual bool IsInputDeviceConnected( InputDevice_t device ) = 0;
-	virtual void SetInputDeviceConnected( InputDevice_t device, bool connected = true ) = 0;
-	virtual InputDevice_t IsOnlySingleDeviceConnected( void ) = 0;
+	InputDevice_t GetConnectedInputDevices( void );				// returns the bitfield of all connected devices
+	bool IsInputDeviceConnected( InputDevice_t device );
+	void SetInputDeviceConnected( InputDevice_t device, bool connected = true );
+	InputDevice_t IsOnlySingleDeviceConnected( void );
 
 	// Access the currently selected Input device
-	virtual InputDevice_t GetCurrentInputDevice( void ) = 0;				// returns the enum referring to the one currently selected device
-	virtual bool IsDeviceReadingInput( InputDevice_t device ) const = 0;			// returns whether the passed in device is the current device.  Returns true if no current device is defined.
-	virtual void SetCurrentInputDevice( InputDevice_t device ) = 0;
-	virtual void ResetCurrentInputDevice( void ) = 0;						// sets the input device to the platform default
+	InputDevice_t GetCurrentInputDevice( void );				// returns the enum referring to the one currently selected device
+	bool IsDeviceReadingInput( InputDevice_t device ) const;			// returns whether the passed in device is the current device.  Returns true if no current device is defined.
+	void SetCurrentInputDevice( InputDevice_t device );
+	void ResetCurrentInputDevice( void );						// sets the input device to the platform default
 
-	virtual void SampleInputToFindCurrentDevice( bool ) = 0;  // looks for the next 'significant' button press to determine and set the current input device
-	virtual bool IsSamplingForCurrentDevice( void ) = 0;
+	void SampleInputToFindCurrentDevice( bool );  // looks for the next 'significant' button press to determine and set the current input device
+	bool IsSamplingForCurrentDevice( void );
 };
 
 extern IInputSystem *g_pInputSystem;;

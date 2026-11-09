@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 2008 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -891,9 +888,9 @@ static void script_reload_code( const CCommand &args )
 
 static void script_reload_entity_code( const CCommand &args );
 static ConCommand script_reload_entity_code_command( "script_reload_entity_code", script_reload_entity_code, "Execute all of this entity's VScripts, replacing existing functions with the functions in the run scripts" );
+extern CBaseEntity *GetNextCommandEntity( CBasePlayer *pPlayer, const char *name, CBaseEntity *ent );
 static void script_reload_entity_code( const CCommand &args )
 {
-	extern CBaseEntity *GetNextCommandEntity( CBasePlayer *pPlayer, const char *name, CBaseEntity *ent );
 
 	const char *pszTarget = "";
 	if ( *args[1] )
@@ -931,9 +928,9 @@ static void script_reload_entity_code( const CCommand &args )
 
 static void script_reload_think( const CCommand &args );
 static ConCommand script_reload_think_command( "script_reload_think", script_reload_think, "Execute an activation script, replacing existing functions with the functions in the run script" );
+extern CBaseEntity *GetNextCommandEntity( CBasePlayer *pPlayer, const char *name, CBaseEntity *ent );
 static void script_reload_think( const CCommand &args )
 {
-	extern CBaseEntity *GetNextCommandEntity( CBasePlayer *pPlayer, const char *name, CBaseEntity *ent );
 
 	const char *pszTarget = "";
 	if ( *args[1] )

@@ -13,14 +13,14 @@ import std;
 class JoltPhysicsObjectPairHash final : public IPhysicsObjectPairHash
 {
 public:
-	void AddObjectPair( void *pObject0, void *pObject1 ) override;
-	void RemoveObjectPair( void *pObject0, void *pObject1 ) override;
-	bool IsObjectPairInHash( void *pObject0, void *pObject1 ) override;
-	void RemoveAllPairsForObject( void *pObject0 ) override;
-	bool IsObjectInHash( void *pObject0 ) override;
+	void AddObjectPair( void *pObject0, void *pObject1 );
+	void RemoveObjectPair( void *pObject0, void *pObject1 );
+	bool IsObjectPairInHash( void *pObject0, void *pObject1 );
+	void RemoveAllPairsForObject( void *pObject0 );
+	bool IsObjectInHash( void *pObject0 );
 
-	int GetPairCountForObject( void *pObject0 ) override;
-	int GetPairListForObject( void *pObject0, int nMaxCount, void **ppObjectList ) override;
+	int GetPairCountForObject( void *pObject0 );
+	int GetPairListForObject( void *pObject0, int nMaxCount, void **ppObjectList );
 
 private:
 	using Neighbours = std::unordered_set< void * >;

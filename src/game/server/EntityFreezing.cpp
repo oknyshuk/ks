@@ -6,8 +6,6 @@
 //			   to ignite a target entity.
 //			2) An entity that can be created at runtime to ignite a target entity.
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -62,7 +60,7 @@ PRECACHE_REGISTER( env_entity_freezing );
 //-----------------------------------------------------------------------------
 // Precache
 //-----------------------------------------------------------------------------
-void CEntityFreezing::Precache()
+void CEntityFreezing::Precache_Impl()
 {
 	if ( NULL_STRING != GetModelName() )
 	{
@@ -78,9 +76,9 @@ void CEntityFreezing::Precache()
 //-----------------------------------------------------------------------------
 // Spawn
 //-----------------------------------------------------------------------------
-void CEntityFreezing::Spawn()
+void CEntityFreezing::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	Precache();
 	UTIL_SetModel( this, STRING( GetModelName() ) );
 }

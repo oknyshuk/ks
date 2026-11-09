@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -28,7 +26,7 @@ void CEntityMaterialProxy::OnBind( void *pRenderable )
 		return;
 
 	IClientRenderable *pRend = ( IClientRenderable* )pRenderable;
-	C_BaseEntity *pEnt = pRend->GetIClientUnknown()->GetBaseEntity();
+	C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( pRend->GetIClientUnknown()->GetBaseEntity() );
 	if ( pEnt )
 	{
 		OnBind( pEnt );

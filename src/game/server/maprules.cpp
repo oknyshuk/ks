@@ -3,8 +3,6 @@
 
 // Purpose: Contains entities for implementing/changing game rules dynamically within each BSP.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -57,7 +54,7 @@ import ks.tier1;
 IMPLEMENT_REFLECT_DATAMAP( CRuleEntity )
 
 
-void CRuleEntity::Spawn( void )
+void CRuleEntity::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	SetMoveType( MOVETYPE_NONE );
@@ -86,9 +83,9 @@ bool CRuleEntity::CanFireForActivator( CBaseEntity *pActivator )
 IMPLEMENT_REFLECT_DATAMAP( CRulePointEntity )
 
 
-void CRulePointEntity::Spawn( void )
+void CRulePointEntity::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	SetModelName( NULL_STRING );
 	m_Score = 0;
 }
@@ -102,15 +99,15 @@ class CRuleBrushEntity : public CRuleEntity
 public:
 	DECLARE_CLASS( CRuleBrushEntity, CRuleEntity );
 
-	void		Spawn( void );
+	void		Spawn_Impl( void );
 
 private:
 };
 
-void CRuleBrushEntity::Spawn( void )
+void CRuleBrushEntity::Spawn_Impl( void )
 {
 	SetModel( STRING( GetModelName() ) );
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 
@@ -128,9 +125,10 @@ public:
 	DECLARE_CLASS( CGameScore, CRulePointEntity );
 	DECLARE_DATADESC();
 
-	void	Spawn( void );
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	bool	KeyValue( const char *szKeyName, const char *szValue );
+	void	Spawn_Impl( void );
+	void	Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
 
 	inline	int		Points( void ) { return m_Score; }
 	inline	bool	AllowNegativeScore( void ) { return m_spawnflags & SF_SCORE_NEGATIVE; }
@@ -149,22 +147,22 @@ LINK_ENTITY_TO_CLASS( game_score, CGameScore );
 
 IMPLEMENT_REFLECT_DATAMAP( CGameScore )
 
-void CGameScore::Spawn( void )
+void CGameScore::Spawn_Impl( void )
 {
 	int iScore = Points();
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	SetPoints( iScore );
 }
 
 
-bool CGameScore::KeyValue( const char *szKeyName, const char *szValue )
+bool CGameScore::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "points"))
 	{
 		SetPoints( std::atoi(szValue) );
 	}
 	else
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 
 	return true;
 }
@@ -212,7 +210,7 @@ void CGameScore::InputAddScoreCT( inputdata_t &inputdata )
 }
 
 
-void CGameScore::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CGameScore::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	if ( !CanFireForActivator( pActivator ) )
 		return;
@@ -240,15 +238,15 @@ LINK_ENTITY_TO_CLASS( game_coopmission_manager, CGameCoopMissionManager );
 
 IMPLEMENT_REFLECT_DATAMAP( CGameCoopMissionManager )
 
-void CGameCoopMissionManager::Spawn( void )
+void CGameCoopMissionManager::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 
-bool CGameCoopMissionManager::KeyValue( const char *szKeyName, const char *szValue )
+bool CGameCoopMissionManager::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 int	CGameCoopMissionManager::GetWaveNumber( void )
@@ -328,7 +326,7 @@ public:
 	DECLARE_CLASS( CGameMoney, CRulePointEntity );
 	DECLARE_DATADESC();
 
-	void	Spawn( void );
+	void	Spawn_Impl( void );
 	inline	int		Money( void ) { return m_nMoney; }
 
 	[[= ks::reflect::Input{ .name = "SetMoneyAmount", .type = FIELD_INTEGER } ]] void InputSetMoneyAmount( inputdata_t &inputdata );
@@ -350,9 +348,9 @@ LINK_ENTITY_TO_CLASS( game_money, CGameMoney );
 
 IMPLEMENT_REFLECT_DATAMAP( CGameMoney )
 
-void CGameMoney::Spawn( void )
+void CGameMoney::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 void CGameMoney::InputSetMoneyAmount( inputdata_t &inputdata )
@@ -406,7 +404,7 @@ public:
 	DECLARE_DATADESC();
 
 	[[= ks::reflect::Input{ .name = "EndGame", .type = FIELD_VOID } ]] void	InputGameEnd( inputdata_t &inputdata );
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void	Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 private:
 };
 
@@ -420,7 +418,7 @@ void CGameEnd::InputGameEnd( inputdata_t &inputdata )
 	g_pGameRules->EndMultiplayerGame();
 }
 
-void CGameEnd::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CGameEnd::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	if ( !CanFireForActivator( pActivator ) )
 		return;
@@ -438,7 +436,7 @@ public:
 	DECLARE_DATADESC();
 
 	CGameRoundEnd();
-	virtual void FireGameEvent( IGameEvent *event );
+	void FireGameEvent( IGameEvent *event );
 
 	[[= ks::reflect::Input{ .name = "EndRound_Draw", .type = FIELD_FLOAT } ]] void	InputEndRound_Draw( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "EndRound_TerroristsWin", .type = FIELD_FLOAT } ]] void	InputEndRound_TerroristsWin( inputdata_t &inputdata );
@@ -506,7 +504,8 @@ class
 public:
 	DECLARE_CLASS( CGameText, CRulePointEntity );
 
-	bool	KeyValue( const char *szKeyName, const char *szValue );
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
 
 	DECLARE_DATADESC();
 
@@ -527,7 +526,7 @@ public:
 	[[= ks::reflect::Input{ .name = "SetTextColor2", .type = FIELD_COLOR32 } ]] void InputSetTextColor2( inputdata_t &inputdata );
 	void SetTextColor2( color32 color );
 
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 	{
 		Display( pActivator );
 	}
@@ -546,7 +545,7 @@ IMPLEMENT_REFLECT_DATAMAP( CGameText )
 
 
 
-bool CGameText::KeyValue( const char *szKeyName, const char *szValue )
+bool CGameText::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "color"))
 	{
@@ -567,7 +566,7 @@ bool CGameText::KeyValue( const char *szKeyName, const char *szValue )
 		m_textParms.a2 = color[3];
 	}
 	else
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 
 	return true;
 }
@@ -860,14 +859,14 @@ void CGamePlayerEquip::InputTriggerForAllPlayers( inputdata_t &inputdata )
 
 void CGamePlayerEquip::InputTriggerForActivatedPlayer( inputdata_t &inputdata )
 {
-	CBasePlayer *pPlayer = dynamic_cast<CBasePlayer*>( inputdata.pActivator );
+	CBasePlayer *pPlayer = entity_cast<CBasePlayer>( inputdata.pActivator );
 	if ( pPlayer )
 		TriggerForActivatedPlayer( pPlayer, inputdata.value.String() );
 }
 
-bool CGamePlayerEquip::KeyValue( const char *szKeyName, const char *szValue )
+bool CGamePlayerEquip::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
-	if ( !BaseClass::KeyValue( szKeyName, szValue ) )
+	if ( !BaseClass::KeyValue_Impl( szKeyName, szValue ) )
 	{
 		for ( int i = 0; i < MAX_EQUIP; i++ )
 		{
@@ -914,7 +913,7 @@ void CGamePlayerEquip::TriggerForActivatedPlayer( CBasePlayer *pPlayer, const ch
 	}
 }
 
-void CGamePlayerEquip::Touch( CBaseEntity *pOther )
+void CGamePlayerEquip::Touch_Impl( CBaseEntity *pOther )
 {
 	if ( !CanFireForActivator( pOther ) )
 		return;
@@ -1023,7 +1022,7 @@ void CGamePlayerEquip::EquipPlayer( CBaseEntity *pEntity, const char *szWeapon )
 }
 
 
-void CGamePlayerEquip::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CGamePlayerEquip::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	EquipPlayer( pActivator ); // note: pActivator may sometimes be NULL
 }
@@ -1044,7 +1043,7 @@ class CGamePlayerTeam : public CRulePointEntity
 public:
 	DECLARE_CLASS( CGamePlayerTeam, CRulePointEntity );
 
-	void		Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void		Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 private:
 
@@ -1072,7 +1071,7 @@ const char *CGamePlayerTeam::TargetTeamName( const char *pszTargetName, CBaseEnt
 }
 
 
-void CGamePlayerTeam::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CGamePlayerTeam::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	if ( !CanFireForActivator( pActivator ) )
 		return;

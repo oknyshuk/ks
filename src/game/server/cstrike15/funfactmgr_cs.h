@@ -2,7 +2,6 @@
 
 #include "GameEventListener.h"
 #include "funfact_cs.h"
-import std;
 #include "cs_shareddefs.h"
 #include "igamesystem.h"
 
@@ -22,7 +21,9 @@ public:
 
 protected:
 	float ScoreFunFact( const FunFact& funfact );
+public:
 	void FireGameEvent( IGameEvent *event );
+protected:
 
 private:
 

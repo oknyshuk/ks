@@ -18,8 +18,6 @@
 #include "c_playerresource.h"
 
 #include <rocketui/rmlui.h>
-import ks.core;
-import std;
 
 DECLARE_HUDELEMENT( RkHudRoundTimer );
 

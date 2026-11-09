@@ -40,17 +40,3 @@ struct ContextValue_t
 		return p->m_dwValue;
 	}
 };
-
-
-//
-// Rule evaluation
-//
-
-class IPropertyRule
-{
-public:
-	virtual bool ApplyRuleUint64( uint64 uiBase, uint64 &uiNew ) = 0;
-	virtual bool ApplyRuleFloat( float flBase, float &flNew ) = 0;
-};
-
-IPropertyRule * GetRuleByName( char const *szRuleName );

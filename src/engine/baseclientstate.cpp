@@ -75,7 +75,7 @@ static void SendClanTag( const char *pTag, const char *pName )
 }
 
 // ---------------------------------------------------------------------------------------- //
-void CL_ClanIdChanged( IConVar *pConVar, const char *pOldString, float flOldValue )
+void CL_ClanIdChanged( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	// Get the clan ID we're trying to select
 	ConVarRef var( pConVar );
@@ -327,7 +327,8 @@ void CServerMsg_Ping::ResponseReceived( const ns_address& from, bf_read &msg, in
 // C_ServerClassInfo implementation.
 // ---------------------------------------------------------------------------------------- //
 
-CBaseClientState::CBaseClientState()
+CBaseClientState::CBaseClientState( state_kind_t kind )
+	: INetChannelHandler( handler_kind_t::state ), m_state_kind( kind )
 {
 	m_bSplitScreenUser = false;
 	m_Socket = NS_CLIENT;
@@ -390,7 +391,7 @@ CBaseClientState::~CBaseClientState()
 	m_BaselineHandles.clear();
 }
 
-void CBaseClientState::Clear( void )
+void CBaseClientState::ClearBase( void )
 {
 	m_nServerCount = -1;
 	m_nDeltaTick = -1;
@@ -449,17 +450,17 @@ void CBaseClientState::Clear( void )
 	m_mapPlayerAvatarData.clear();
 }
 
-void CBaseClientState::FileReceived( const char * fileName, unsigned int transferID, bool bIsReplayDemoFile )
+void CBaseClientState::FileReceivedBase( const char * fileName, unsigned int transferID, bool bIsReplayDemoFile )
 {
 	ConMsg( "CBaseClientState::FileReceived: %s.\n", fileName );
 }
 
-void CBaseClientState::FileDenied(const char *fileName, unsigned int transferID, bool bIsReplayDemoFile )
+void CBaseClientState::FileDeniedBase(const char *fileName, unsigned int transferID, bool bIsReplayDemoFile )
 {
 	ConMsg( "CBaseClientState::FileDenied: %s.\n", fileName );
 }
 
-void CBaseClientState::FileRequested(const char *fileName, unsigned int transferID, bool bIsReplayDemoFile )
+void CBaseClientState::FileRequestedBase(const char *fileName, unsigned int transferID, bool bIsReplayDemoFile )
 {
 	ConMsg( "File '%s' requested from %s.\n", fileName, m_NetChannel->GetAddress() );
 
@@ -472,7 +473,7 @@ void CBaseClientState::FileSent(const char *fileName, unsigned int transferID, b
 }
 
 
-void CBaseClientState::ConnectionStart(INetChannel *chan)
+void CBaseClientState::ConnectionStartBase(INetChannel *chan)
 {
 	m_NETMsgTick.Bind< CNETMsg_Tick_t >( chan, std::bind_front( &CBaseClientState::NETMsg_Tick, this ) );
 	m_NETMsgStringCmd.Bind< CNETMsg_StringCmd_t >( chan, std::bind_front( &CBaseClientState::NETMsg_StringCmd, this ) );
@@ -509,7 +510,7 @@ void CBaseClientState::ConnectionStart(INetChannel *chan)
 	m_SVCMsgEntityMsg.Bind< CSVCMsg_EntityMsg_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_EntityMsg, this ) );	
 }
 
-void CBaseClientState::ConnectionStop( )
+void CBaseClientState::ConnectionStopBase( )
 {
 	m_NETMsgTick.Unbind();
 	m_NETMsgStringCmd.Unbind();
@@ -545,7 +546,7 @@ void CBaseClientState::ConnectionStop( )
 	m_SVCMsgSounds.Unbind();
 	m_SVCMsgEntityMsg.Unbind();
 }
-void CBaseClientState::ConnectionClosing( const char *reason )
+void CBaseClientState::ConnectionClosingBase( const char *reason )
 {
 	ConMsg( "Disconnect: %s.\n", reason?reason:"unknown reason" );
 	Disconnect();
@@ -555,7 +556,7 @@ void CBaseClientState::ConnectionClosing( const char *reason )
 // Purpose: A svc_signonnum has been received, perform a client side setup
 // Output : void CL_SignonReply
 //-----------------------------------------------------------------------------
-bool CBaseClientState::SetSignonState ( int state, int count, const ks::net::CNETMsg_SignonState *msg )
+bool CBaseClientState::SetSignonStateBase ( int state, int count, const ks::net::CNETMsg_SignonState *msg )
 {
 	//	ConDMsg ("CL_SignonReply: %i\n", GetBaseLocalClient().signon);
 
@@ -652,9 +653,9 @@ void CBaseClientState::SendConnectPacket ( const ns_address &netAdrRemote, int c
 	{
 		CCLCMsg_SplitPlayerConnect_t splitMsg;
 		Host_BuildUserInfoUpdateMessage( playerCount, &splitMsg.convars.mut(), false );
-		if ( CHLTVClientState *pHLTVClientState = dynamic_cast< CHLTVClientState * >( this ) )
+		if ( m_state_kind == state_kind_t::hltv )
 		{
-			pHLTVClientState->SetLocalInfoConvarsForUpstreamConnection( splitMsg.convars.mut(), true );
+			static_cast< CHLTVClientState * >( this )->SetLocalInfoConvarsForUpstreamConnection( splitMsg.convars.mut(), true );
 		}
 #ifdef _DEBUG
 		for ( int ii = 0; ii < splitMsg.convars->cvars.size(); ++ ii )
@@ -922,7 +923,7 @@ void CBaseClientState::ForceFullUpdate( char const *pchReason )
 	DevMsg( "Requesting full game update (%s)...\n", pchReason );
 }
 
-void CBaseClientState::FullConnect( const ns_address &adr, int nEncryptionKey )
+void CBaseClientState::FullConnectBase( const ns_address &adr, int nEncryptionKey )
 {
 	// Initiate the network channel
 
@@ -982,13 +983,13 @@ void CBaseClientState::FullConnect( const ns_address &adr, int nEncryptionKey )
 #endif
 }
 
-void CBaseClientState::ConnectionCrashed(const char *reason)
+void CBaseClientState::ConnectionCrashedBase(const char *reason)
 {
 	ConMsg( "Connection lost: %s.\n", reason?reason:"unknown reason" );
 	Disconnect();
 }
 
-void CBaseClientState::Disconnect( bool bShowMainMenu )
+void CBaseClientState::DisconnectBase( bool bShowMainMenu )
 {
 	m_DeferredConnection.m_bActive = false;
 	m_bWaitingForPassword = false;
@@ -1019,7 +1020,7 @@ void CBaseClientState::Disconnect( bool bShowMainMenu )
 #endif // DEDICATED
 }
 
-void CBaseClientState::RunFrame (void)
+void CBaseClientState::RunFrameBase (void)
 {
 	CVProfScope _( "CBaseClientState::RunFrame", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	if ( (m_nSignonState > SIGNONSTATE_NEW) && m_NetChannel && g_GameEventManager.HasClientListenersChanged() )
@@ -1291,7 +1292,7 @@ static void Read_S2A_INFO_SRC( const ns_address &from, bf_read *msg )
 	}
 }
 
-bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
+bool CBaseClientState::ProcessConnectionlessPacketBase( netpacket_t *packet )
 {
 	CVProfScope _( "ProcessConnectionlessPacket", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
@@ -1719,7 +1720,7 @@ void CBaseClientState::HandleDeferredConnection()
 }
 
 
-bool CBaseClientState::NETMsg_Tick( const ks::net::CNETMsg_Tick& msg )
+bool CBaseClientState::NETMsg_TickBase( const ks::net::CNETMsg_Tick& msg )
 {
 	CVProfScope _( "ProcessTick", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
@@ -1756,7 +1757,7 @@ void CBaseClientState::SendStringCmd(const char * command)
 	}
 }
 
-bool CBaseClientState::NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg )
+bool CBaseClientState::NETMsg_StringCmdBase( const ks::net::CNETMsg_StringCmd& msg )
 {
 	CVProfScope _( "ProcessStringCmd", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
@@ -1788,7 +1789,7 @@ bool CBaseClientState::InternalProcessStringCmd( const ks::net::CNETMsg_StringCm
 }
 
 
-bool CBaseClientState::NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg )
+bool CBaseClientState::NETMsg_PlayerAvatarDataBase( const ks::net::CNETMsg_PlayerAvatarData& msg )
 {
 	auto pClientDataCopy = std::make_unique< CNETMsg_PlayerAvatarData_t >();
 	pClientDataCopy->CopyFrom( msg );
@@ -1798,7 +1799,7 @@ bool CBaseClientState::NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAva
 	return true;
 }
 
-bool CBaseClientState::NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg )
+bool CBaseClientState::NETMsg_SetConVarBase( const ks::net::CNETMsg_SetConVar& msg )
 {
 	CVProfScope _( "ProcessSetConVar", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
@@ -1855,7 +1856,7 @@ bool CBaseClientState::SVCMsg_Print( const ks::net::CSVCMsg_Print& msg )
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_Menu( const ks::net::CSVCMsg_Menu& msg )
+bool CBaseClientState::SVCMsg_MenuBase( const ks::net::CSVCMsg_Menu& msg )
 {
 	CVProfScope _( "SVCMsg_Menu", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
@@ -1865,7 +1866,7 @@ bool CBaseClientState::SVCMsg_Menu( const ks::net::CSVCMsg_Menu& msg )
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg )
+bool CBaseClientState::SVCMsg_ServerInfoBase( const ks::net::CSVCMsg_ServerInfo& msg )
 {
 	CVProfScope _( "SVCMsg_ServerInfo", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
@@ -2099,7 +2100,7 @@ bool CBaseClientState::SVCMsg_SendTable( const ks::net::CSVCMsg_SendTable& msg )
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg )
+bool CBaseClientState::SVCMsg_ClassInfoBase( const ks::net::CSVCMsg_ClassInfo& msg )
 {
 	CVProfScope _( "SVCMsg_ClassInfo", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
@@ -2152,7 +2153,7 @@ bool CBaseClientState::SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg )
 	return LinkClasses();	// link server and client classes
 }
 
-bool CBaseClientState::SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg )
+bool CBaseClientState::SVCMsg_SetPauseBase( const ks::net::CSVCMsg_SetPause& msg )
 {
 	CVProfScope _( "SVCMsg_SetPause", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
@@ -2212,14 +2213,14 @@ bool CBaseClientState::SVCMsg_UpdateStringTable( const ks::net::CSVCMsg_UpdateSt
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_SetView( const ks::net::CSVCMsg_SetView& msg )
+bool CBaseClientState::SVCMsg_SetViewBase( const ks::net::CSVCMsg_SetView& msg )
 {
 
 	m_nViewEntity = msg.entity_index;
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntities &msg )
+bool CBaseClientState::SVCMsg_PacketEntitiesBase( const ks::net::CSVCMsg_PacketEntities &msg )
 {
 	CVProfScope _( "ProcessPacketEntities", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
@@ -2470,7 +2471,7 @@ bool CBaseClientState::GetClassBaseline( int iClass, SerializedEntityHandle_t *p
 	return *pHandle != SERIALIZED_ENTITY_HANDLE_INVALID;
 }
 
-bool CBaseClientState::SVCMsg_GameEventList( const ks::net::CSVCMsg_GameEventList& msg )
+bool CBaseClientState::SVCMsg_GameEventListBase( const ks::net::CSVCMsg_GameEventList& msg )
 {
 	CVProfScope _( "SVCMsg_GameEventList", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
@@ -2596,7 +2597,7 @@ bool CBaseClientState::SVCMsg_CmdKeyValues( const ks::net::CSVCMsg_CmdKeyValues&
 	return true;
 }
 
-bool CBaseClientState::SVCMsg_EncryptedData( const ks::net::CSVCMsg_EncryptedData& msg )
+bool CBaseClientState::SVCMsg_EncryptedDataBase( const ks::net::CSVCMsg_EncryptedData& msg )
 {
 #ifndef DEDICATED
 	// Decrypt the message and process embedded data

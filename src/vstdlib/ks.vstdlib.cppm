@@ -10,6 +10,4 @@ export import :vcover;
 export import :vstrtools;
 export import :jobthread;
 export import :cvar;
-export import :ieventsystem;
-export import :iprocessutils;
 export import :callqueue;

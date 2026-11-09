@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -120,15 +117,15 @@ public:
 	DECLARE_CLASS( CEnvEffectsScript, CBaseAnimating );
 	DECLARE_DATADESC();
 
-	virtual void Precache();
-	virtual void Spawn();
-	virtual int  UpdateTransmitState();
+	void Precache_Impl();
+	void Spawn_Impl();
+	int  UpdateTransmitState_Impl();
 
 	[[= ks::reflect::Input{ .name = "SetSequence", .type = FIELD_STRING } ]] void InputSetSequence( inputdata_t &inputdata );
 	void ParseScriptFile( void );
 	void LoadFromBuffer( const char *scriptfile, const char *buffer );
 
-	virtual void Think( void );
+	void Think_Impl( void );
 
 	void ParseNewEffect( void );
 
@@ -210,7 +207,7 @@ LINK_ENTITY_TO_CLASS( env_effectscript, CEnvEffectsScript );
 //-----------------------------------------------------------------------------
 // Should we transmit it to the client?
 //-----------------------------------------------------------------------------
-int CEnvEffectsScript::UpdateTransmitState()
+int CEnvEffectsScript::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
@@ -218,9 +215,9 @@ int CEnvEffectsScript::UpdateTransmitState()
 //-----------------------------------------------------------------------------
 // Precache
 //-----------------------------------------------------------------------------
-void CEnvEffectsScript::Precache()
+void CEnvEffectsScript::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 	PrecacheModel( STRING( GetModelName() ) );
 
 	if ( m_iszScriptName != NULL_STRING )
@@ -232,10 +229,10 @@ void CEnvEffectsScript::Precache()
 //-----------------------------------------------------------------------------
 // Spawn
 //-----------------------------------------------------------------------------
-void CEnvEffectsScript::Spawn()
+void CEnvEffectsScript::Spawn_Impl()
 {
 	Precache();
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	// We need a model for its animation sequences even though we don't render it
 	SetModel( STRING( GetModelName() ) );
@@ -246,7 +243,7 @@ void CEnvEffectsScript::Spawn()
 	SetNextThink( gpGlobals->curtime + 0.1f );
 }
 
-void CEnvEffectsScript::Think( void )
+void CEnvEffectsScript::Think_Impl( void )
 {
 	StudioFrameAdvance();
 	DispatchAnimEvents( this );

@@ -265,3 +265,6 @@ void JoltPhysicsFluidController::ClearCachedObjectsInShape()
 
 	m_ObjectsInShape.clear();
 }
+
+//-------------------------------------------------------------------------------------------------
+#include "facade/iphysicsfluidcontroller.inl"

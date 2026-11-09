@@ -5,8 +5,6 @@
 // Simple fish behavior
 // Author: Michael S. Booth, April 2005
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -24,7 +22,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -136,7 +133,7 @@ void CFish::Initialize( CFishPool *pool, unsigned int id )
 
 
 //-------------------------------------------------------------------------------------------------------------
-void CFish::Spawn( void )
+void CFish::Spawn_Impl( void )
 {
 	Precache();
 
@@ -174,7 +171,7 @@ void CFish::Spawn( void )
 
 
 //-------------------------------------------------------------------------------------------------------------
-void CFish::Event_Killed( const CTakeDamageInfo &info )
+void CFish::Event_Killed_Impl( const CTakeDamageInfo &info )
 {
 	m_takedamage = DAMAGE_NO;
 	m_lifeState = LIFE_DEAD;
@@ -185,7 +182,7 @@ void CFish::Event_Killed( const CTakeDamageInfo &info )
 /**
  * In contact with "other"
  */
-void CFish::Touch( CBaseEntity *other )
+void CFish::Touch_Impl( CBaseEntity *other )
 {
 	if (other && other->IsPlayer())
 	{
@@ -555,7 +552,7 @@ CFishPool::CFishPool( void )
 /**
  * Initialize the fish pool
  */
-void CFishPool::Spawn()
+void CFishPool::Spawn_Impl()
 {
 	SetThink( &CFishPool::Update );
 	SetNextThink( gpGlobals->curtime );
@@ -584,7 +581,7 @@ void CFishPool::Spawn()
 /**
  * Parse KeyValue pairs
  */
-bool CFishPool::KeyValue( const char *szKeyName, const char *szValue )
+bool CFishPool::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq( szKeyName, "fish_count" ))
 	{
@@ -612,7 +609,7 @@ bool CFishPool::KeyValue( const char *szKeyName, const char *szValue )
 		SetModelName( AllocPooledString( szValue ) );
 	}
 
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 

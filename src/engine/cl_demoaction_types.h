@@ -14,15 +14,15 @@ class CDemoActionSkipAhead : public CBaseDemoAction
 	typedef CBaseDemoAction BaseClass;
 
 public:
-	virtual bool Init( KeyValues *pInitData );
-	virtual bool Update( const DemoActionTimingContext& tc );
-	virtual void FireAction( void );
-	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
+	bool Init( KeyValues *pInitData );
+	bool Update( const DemoActionTimingContext& tc );
+	void FireAction( void );
+	void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	void SetSkipToTick( int tick );
 	void SetSkipToTime( float t );
 	
-private:
+public:
 
 	bool		m_bUsingSkipTick;
 	int			m_nSkipToTick;
@@ -39,10 +39,10 @@ class CDemoActionStopPlayback : public CBaseDemoAction
 	typedef CBaseDemoAction BaseClass;
 
 public:
-	virtual bool Update( const DemoActionTimingContext& tc );
-	virtual void			FireAction( void );
+	bool Update( const DemoActionTimingContext& tc );
+	void			FireAction( void );
 
-private:
+public:
 
 	friend class CBaseActionStopPlaybackDialog;
 };
@@ -55,14 +55,14 @@ class CDemoActionPlayCommands : public CBaseDemoAction
 	typedef CBaseDemoAction BaseClass;
 
 public:
-	virtual bool Init( KeyValues *pInitData );
-	virtual void FireAction( void );
-	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
+	bool Init( KeyValues *pInitData );
+	void FireAction( void );
+	void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	void		SetCommandStream( char const *stream );
 	char const	*GetCommandStream( void ) const;
 
-private:
+public:
 
 	enum
 	{
@@ -80,13 +80,13 @@ class CDemoActionScreenFadeStart : public CBaseDemoAction
 	typedef CBaseDemoAction BaseClass;
 
 public:
-	virtual bool Init( KeyValues *pInitData );
-	virtual void FireAction( void );
-	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
+	bool Init( KeyValues *pInitData );
+	void FireAction( void );
+	void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	ScreenFade_t *GetScreenFade( void );
 
-private:
+public:
 	ScreenFade_t		fade;
 
 	friend class CBaseActionScreenFadeStartDialog;
@@ -100,9 +100,9 @@ class CDemoActionTextMessageStart : public CBaseDemoAction
 	typedef CBaseDemoAction BaseClass;
 
 public:
-	virtual bool Init( KeyValues *pInitData );
-	virtual void			FireAction( void );
-	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
+	bool Init( KeyValues *pInitData );
+	void			FireAction( void );
+	void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	client_textmessage_t *GetTextMessage( void );
 
@@ -112,7 +112,7 @@ public:
 	void						SetFontName( char const *font );
 	char const					*GetFontName( void ) const;
 
-private:
+public:
 	enum
 	{
 		MAX_MESSAGE_TEXT = 512,
@@ -132,14 +132,14 @@ class CDemoActionCDTrackStart : public CBaseDemoAction
 	typedef CBaseDemoAction BaseClass;
 
 public:
-	virtual bool Init( KeyValues *pInitData );
-	virtual void			FireAction( void );
-	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
+	bool Init( KeyValues *pInitData );
+	void			FireAction( void );
+	void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	void		SetTrack( int track );
 	int			GetTrack( void ) const;
 
-private:
+public:
 	int			m_nCDTrack;
 };
 
@@ -151,9 +151,9 @@ class CDemoActionCDTrackStop : public CBaseDemoAction
 	typedef CBaseDemoAction BaseClass;
 
 public:
-	virtual void			FireAction( void );
+	void			FireAction( void );
 
-private:
+public:
 };
 
 //-----------------------------------------------------------------------------
@@ -164,14 +164,14 @@ class CDemoActionPlaySoundStart : public CBaseDemoAction
 	typedef CBaseDemoAction BaseClass;
 
 public:
-	virtual bool Init( KeyValues *pInitData );
-	virtual void			FireAction( void );
-	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
+	bool Init( KeyValues *pInitData );
+	void			FireAction( void );
+	void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	void		SetSoundName( char const *name );
 	char const	*GetSoundName( void ) const;
 
-private:
+public:
 
 	enum
 	{
@@ -189,14 +189,14 @@ class CBaseDemoActionWithStopTime : public CBaseDemoAction
 	typedef CBaseDemoAction BaseClass;
 
 public:
-	virtual bool Init( KeyValues *pInitData );
-	virtual bool Update( const DemoActionTimingContext& tc );
-	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
+	bool Init( KeyValues *pInitData );
+	bool Update( const DemoActionTimingContext& tc );
+	void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	void		SetStopTick( int tick );
 	void		SetStopTime( float time );
 	
-private:
+public:
 
 	bool		m_bUsingStopTick;
 	int			m_nStopTick;
@@ -215,16 +215,16 @@ class CDemoActionChangePlaybackRate : public CBaseDemoActionWithStopTime
 public:
 	CDemoActionChangePlaybackRate();
 
-	virtual bool Init( KeyValues *pInitData );
-	virtual void FireAction( void );
-	virtual void	OnActionFinished( void );
+	bool Init( KeyValues *pInitData );
+	void FireAction( void );
+	void	OnActionFinished( void );
 
-	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
+	void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	void		SetPlaybackRate( float rate );
 	float		GetPlaybackRate( void ) const;
 
-private:
+public:
 
 	float		m_flPlaybackRate;
 	float		m_flSavePlaybackRate;
@@ -242,15 +242,15 @@ class CDemoActionPausePlayback : public CBaseDemoActionWithStopTime
 public:
 	CDemoActionPausePlayback();
 
-	virtual bool Init( KeyValues *pInitData );
-	virtual void FireAction( void );
+	bool Init( KeyValues *pInitData );
+	void FireAction( void );
 
-	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
+	void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	void		SetPauseTime( float t );
 	float		GetPauseTime( void ) const;
 
-private:
+public:
 
 	float		m_flPauseTime;
 
@@ -263,11 +263,11 @@ class CDemoActionZoom : public CBaseDemoAction
 public:
 	CDemoActionZoom();
 
-	virtual bool Init( KeyValues *pInitData );
-	virtual bool Update( const DemoActionTimingContext& tc );
-	virtual void FireAction( void );
-	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
-private:
+	bool Init( KeyValues *pInitData );
+	bool Update( const DemoActionTimingContext& tc );
+	void FireAction( void );
+	void SaveKeysToBuffer( int depth, ks::text_writer& buf );
+public:
 
 	bool			m_bSpline;
 	bool			m_bStayout;

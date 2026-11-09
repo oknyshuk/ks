@@ -12,10 +12,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -28,7 +25,6 @@ import ks.tier1;
 #include "cdll_client_int.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -43,7 +39,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -122,7 +117,6 @@ import ks.math;
     #include "networkstringtable_gamedll.h"
     #include "func_bomb_target.h"
     #include "func_hostage_rescue.h"
-    import ks.vstdlib;
     #include "platforminputdevice.h"
     #include "cs_entity_spotting.h"
     #include "props.h"
@@ -188,7 +182,7 @@ ConVar mp_team_timeout_time( "mp_team_timeout_time", "60", FCVAR_RELEASE | FCVAR
 ConVar mp_team_timeout_max( "mp_team_timeout_max", "1", FCVAR_RELEASE | FCVAR_GAMEDLL | FCVAR_REPLICATED, "Number of timeouts each team gets per match." );
 
 
-void MaxAllowedNetGraphCallback( IConVar *var, const char *pOldValue, float flOldValue );
+void MaxAllowedNetGraphCallback( ConVar *var, const char *pOldValue, float flOldValue );
 ConVar sv_max_allowed_net_graph( "sv_max_allowed_net_graph", "1", FCVAR_NOTIFY | FCVAR_RELEASE | FCVAR_REPLICATED, "Determines max allowed net_graph value for clients.", MaxAllowedNetGraphCallback );
 
 #ifdef CLIENT_DLL
@@ -197,10 +191,10 @@ ConVar sv_max_allowed_net_graph( "sv_max_allowed_net_graph", "1", FCVAR_NOTIFY |
 ConVar net_graph( "net_graph", "0", FCVAR_ARCHIVE, "Draw the network usage data (renderer pending rewrite)." );
 #endif
 
-void MaxAllowedNetGraphCallback( IConVar *var, const char *pOldValue, float flOldValue )
+extern ConVar net_graph;
+void MaxAllowedNetGraphCallback( ConVar *var, const char *pOldValue, float flOldValue )
 {
 #ifdef CLIENT_DLL
-	extern ConVar net_graph;
 
 	if ( net_graph.GetInt() > sv_max_allowed_net_graph.GetInt() )
 	{
@@ -279,11 +273,11 @@ extern ConVar spec_replay_bot;
 IMPLEMENT_REFLECT_DATAMAP( SpawnPoint )
 
 LINK_ENTITY_TO_CLASS( info_player_terrorist, SpawnPoint );
-LINK_ENTITY_TO_CLASS( info_player_counterterrorist, SpawnPoint );
-LINK_ENTITY_TO_CLASS( info_player_logo, CPointEntity );
-LINK_ENTITY_TO_CLASS( info_deathmatch_spawn, SpawnPoint );
-LINK_ENTITY_TO_CLASS( info_armsrace_counterterrorist, SpawnPoint );
-LINK_ENTITY_TO_CLASS( info_armsrace_terrorist, SpawnPoint );
+LINK_ENTITY_TO_CLASS_ALIAS( info_player_counterterrorist, SpawnPoint );
+LINK_ENTITY_TO_CLASS_ALIAS( info_player_logo, CPointEntity );
+LINK_ENTITY_TO_CLASS_ALIAS( info_deathmatch_spawn, SpawnPoint );
+LINK_ENTITY_TO_CLASS_ALIAS( info_armsrace_counterterrorist, SpawnPoint );
+LINK_ENTITY_TO_CLASS_ALIAS( info_armsrace_terrorist, SpawnPoint );
 
 template< typename TIssue >
 void NewTeamIssue()
@@ -306,9 +300,9 @@ SpawnPoint::SpawnPoint() : m_bEnabled( true ), m_nType( 0 )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void SpawnPoint::Spawn( void )
+void SpawnPoint::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	if ( CSGameRules() )
 		CSGameRules()->AddSpawnPointToMasterList( this );
@@ -362,22 +356,22 @@ SpawnPointCoopEnemy::SpawnPointCoopEnemy( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void SpawnPointCoopEnemy::Spawn( void )
+void SpawnPointCoopEnemy::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	Precache();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void SpawnPointCoopEnemy::Precache( void )
+void SpawnPointCoopEnemy::Precache_Impl( void )
 {
 	if ( V_stricmp( GetPlayerModelToUse(), "" ) != 0 )
 	{
 		PrecacheModel( GetPlayerModelToUse() );
 	}
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 CNavArea * SpawnPointCoopEnemy::FindNearestArea( void )
@@ -395,8 +389,8 @@ class CPointGiveAmmo : public CPointEntity
 	DECLARE_CLASS( CPointGiveAmmo, CPointEntity );
 
 	public:
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "GiveAmmo", .type = FIELD_VOID } ]] void InputGiveAmmo( inputdata_t &inputdata );
@@ -418,7 +412,7 @@ LINK_ENTITY_TO_CLASS( point_give_ammo, CPointGiveAmmo );
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPointGiveAmmo::Spawn( void )
+void CPointGiveAmmo::Spawn_Impl( void )
 {
 	SetThink( nullptr );
 	SetUse( nullptr );
@@ -431,9 +425,9 @@ void CPointGiveAmmo::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPointGiveAmmo::Precache( void )
+void CPointGiveAmmo::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 //-----------------------------------------------------------------------------
@@ -495,8 +489,8 @@ class CCoopBonusCoin : public CDynamicProp
 	void CoinTouch( CBaseEntity *pOther );
 	void CoinFadeOut( void );
 	//void CoinThink( void );
-	void Precache( void );
-	void Spawn( void ) override; 
+	void Precache_Impl( void );
+	void Spawn_Impl( void ) KS_OVERRIDE; 
 	void StartFadeOut( float delay );
 };
 
@@ -525,19 +519,19 @@ void CCoopBonusCoin::CoinTouch( CBaseEntity *pOther )
 // 	StudioFrameAdvance();
 // }
 
-void CCoopBonusCoin::Precache( void )
+void CCoopBonusCoin::Precache_Impl( void )
 {
 	PrecacheModel( "models/coop/challenge_coin.mdl" );
 	PrecacheScriptSound( "CollectableCoin.Collect" );
 }
 
-void CCoopBonusCoin::Spawn( void )
+void CCoopBonusCoin::Spawn_Impl( void )
 {
 	Precache();
 	SetModel( "models/coop/challenge_coin.mdl" );
 	SetModelName( MAKE_STRING( "models/coop/challenge_coin.mdl" ) );
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	//m_bShouldGlow = true;
 
@@ -625,7 +619,7 @@ ConVar mp_teammatchstat_2( "mp_teammatchstat_2", "", FCVAR_RELEASE, "A non-empty
 
 ConVar mp_teamscore_1( "mp_teamscore_1", "", FCVAR_RELEASE, "A non-empty string for best-of-N maps won by the first team." );
 ConVar mp_teamscore_2( "mp_teamscore_2", "", FCVAR_RELEASE, "A non-empty string for best-of-N maps won by the second team." );
-void FnChangeCallback_mp_teamscore_max( IConVar *var, const char *pOldValue, float flOldValue )
+void FnChangeCallback_mp_teamscore_max( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	ConVarRef ref( var );
 	int nVal = ref.GetInt();
@@ -1697,7 +1691,7 @@ static void mp_warmup_end( const CCommand &args )
 }
 #endif
 
-static void mpwarmuptime_f( IConVar *pConVar, const char *pOldString, float flOldValue )
+static void mpwarmuptime_f( ConVar *pConVar, const char *pOldString, float flOldValue )
 {
 	if ( CSGameRules() )
 	{ 
@@ -2130,7 +2124,7 @@ ConVar mp_use_respawn_waves(
 	"When set to 1, and that player's team is set to respawn, they will respawn in waves. If set to 2, teams will respawn when the whole team is dead." );
 
 
-void ProhibitedItemsCallback( IConVar *var, const char *pOldValue, float flOldValue )
+void ProhibitedItemsCallback( ConVar *var, const char *pOldValue, float flOldValue )
 {
 #ifdef GAME_DLL
 
@@ -2169,13 +2163,13 @@ ConVar mp_items_prohibited(
 
 
 
-void RespawnWaveTimeCTCallback( IConVar *var, const char *pOldValue, float flOldValue );
-void RespawnWaveTimeTCallback( IConVar *var, const char *pOldValue, float flOldValue );
+void RespawnWaveTimeCTCallback( ConVar *var, const char *pOldValue, float flOldValue );
+void RespawnWaveTimeTCallback( ConVar *var, const char *pOldValue, float flOldValue );
 
-void RespawnWaveTimeCTCallback( IConVar *var, const char *pOldValue, float flOldValue )
+extern ConVar mp_respawnwavetime_ct;
+void RespawnWaveTimeCTCallback( ConVar *var, const char *pOldValue, float flOldValue )
 {
 #ifdef CLIENT_DLL
-	extern ConVar mp_respawnwavetime_ct;
 	float flTime = mp_respawnwavetime_ct.GetFloat();
 	if ( CSGameRules() )
 	{
@@ -2185,10 +2179,10 @@ void RespawnWaveTimeCTCallback( IConVar *var, const char *pOldValue, float flOld
 #endif
 }
 
-void RespawnWaveTimeTCallback( IConVar *var, const char *pOldValue, float flOldValue )
+extern ConVar mp_respawnwavetime_t;
+void RespawnWaveTimeTCallback( ConVar *var, const char *pOldValue, float flOldValue )
 {
 #ifdef CLIENT_DLL
-	extern ConVar mp_respawnwavetime_t;
 	float flTime = mp_respawnwavetime_t.GetFloat();
 	if ( CSGameRules() )
 	{
@@ -4726,6 +4720,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
     // Input  :
     // Output :
     //-----------------------------------------------------------------------------
+extern ConVar nextmap_print_enabled;
     bool CCSGameRules::ClientCommand( CBaseEntity *pEdict, const CCommand &args )
     {
         CCSPlayer *pPlayer = ToCSPlayer( pEdict );
@@ -4740,7 +4735,6 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
             if ( pPlayer == nullptr )
                 return true;
 
-			extern ConVar nextmap_print_enabled;
 			if ( !nextmap_print_enabled.GetBool() )
 				return true;
 
@@ -4780,13 +4774,13 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
         {
             return true;
         }
-        else if ( TheBots->ServerCommand( args.GetCommandString() ) )
+        else if ( TheCSBots()->ServerCommand( args.GetCommandString() ) )
         {
             return true;
         }
         else
         {
-            return TheBots->ClientCommand( pPlayer, args );
+            return TheCSBots()->ClientCommand( pPlayer, args );
         }
     }
 
@@ -4881,7 +4875,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
         {
             retval = 1.0;
         }
-        else if (!(tr.DidHitWorld()) && (tr.Ent<CBaseEntity>() != nullptr) && (tr.Ent<CBaseEntity>() != pEntityToIgnore) && (tr.Ent<CBaseEntity>()->GetOwnerEntity() != pEntityToIgnore))
+        else if (!(TraceDidHitWorld( tr )) && (tr.Ent<CBaseEntity>() != nullptr) && (tr.Ent<CBaseEntity>() != pEntityToIgnore) && (tr.Ent<CBaseEntity>()->GetOwnerEntity() != pEntityToIgnore))
         {
             // if we didn't hit world geometry perhaps there's still damage to be done here.
 
@@ -5509,6 +5503,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 
 
 
+extern ConVar ff_damage_reduction_bullets;
 	void CCSGameRules::PlayerKilled( CBasePlayer *pVictim, const CTakeDamageInfo &info )
     {
         CBaseEntity *pInflictor = info.GetInflictor();
@@ -5679,7 +5674,6 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 					// of teammates crossing in front of AWP'er on de_dust2
 					// Weapons that will not instantly ban for TK at round start must have zoom levels and
 					// team damage from headshot must kill with a single kill
-					extern ConVar ff_damage_reduction_bullets;
 					if ( !pWeaponInfo || !pWeapon ||
 						( pWeapon->GetZoomLevels() < 2 ) ||	// weapon doesn't have 2 zoom levels, worth the ban
 						( float( pWeapon->GetDamage() ) * 4.0f * ff_damage_reduction_bullets.GetFloat() <= 99.0f ) || // single friendly headshot will not kill, worth the ban
@@ -7321,6 +7315,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
     }
 
     // Perform round-related processing at the point when the next round is beginning
+extern ConVar sv_guardian_heavy_count;
     void CCSGameRules::RestartRound()
     {
 		// save off how many players were alive at the very end of this round
@@ -8052,7 +8047,6 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 			m_nGuardianModeWaveNumber = 1;
 			m_nGuardianGrenadesToGiveBots = 0;
 
-			extern ConVar sv_guardian_heavy_count;
 			m_nNumHeaviesToSpawn = sv_guardian_heavy_count.GetInt();
 
 			m_nGuardianModeSpecialKillsRemaining = mp_guardian_special_kills_needed.GetInt();
@@ -8654,6 +8648,9 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
         }
     }
 
+extern void ServerThinkReplayUploader();
+extern ConVar mp_do_warmup_period;
+extern ConVar mp_warmup_pausetimer;
     void CCSGameRules::Think()
     {
         // NOTE: We are skipping calling CTeamplayRules::Think() and  CMultiplayRules::Think()
@@ -8664,7 +8661,6 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 // 			m_DeferredCallQueue.CallQueued();
 // 		}
 
-		extern void ServerThinkReplayUploader();
 		ServerThinkReplayUploader();
 
 		if ( IsQueuedMatchmaking() )
@@ -9060,11 +9056,9 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 #endif
             //bool bIsPlayingProgressive = CSGameRules() && CSGameRules()->IsPlayingGunGameProgressive();
 			
-			extern ConVar mp_do_warmup_period;
 
             if ( ( UTIL_HumansInGame( true, true ) > 0 && ( GetWarmupPeriodEndTime() - 5 < gpGlobals->curtime) ) || !mp_do_warmup_period.GetBool() )
             {
-				extern ConVar mp_warmup_pausetimer;
 				mp_warmup_pausetimer.SetValue( 0 ); // Timer is unpausable within 5 seconds of its end.
 
 				if (GetWarmupPeriodEndTime() <= gpGlobals->curtime)
@@ -9454,7 +9448,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
     // bone positions multiple times a frame.
     void CCSGameRules::EndGameFrame( void )
     {
-        TheBots->StartFrame();
+        TheCSBots()->StartFrame();
 
         BaseClass::EndGameFrame();
     }
@@ -9465,6 +9459,8 @@ void ServerThinkReplayUploader()
 }
 
 
+extern ConVar mp_match_restart_delay;
+extern ConVar nextmap_print_enabled;
     bool CCSGameRules::CheckGameOver()
     {
         if ( g_fGameOver )   // someone else quit the game already
@@ -9477,7 +9473,6 @@ void ServerThinkReplayUploader()
 			//
 			if ( IsQueuedMatchmaking() )
 			{
-				extern ConVar mp_match_restart_delay;
 				switch ( m_eQueuedMatchmakingRematchState )
 				{
 				case k_EQueuedMatchmakingRematchState_MatchInProgress:
@@ -9541,7 +9536,6 @@ void ServerThinkReplayUploader()
 			// if we're in a "season" map group, let players vote to pick the next map at the end of the match
 			if ( IsEndMatchVotingForNextMap() )
 			{
-				extern ConVar mp_match_restart_delay;
 				switch ( m_eEndMatchMapVoteState )
 				{
 				case k_EEndMatchMapVoteState_MatchInProgress:
@@ -9743,7 +9737,6 @@ void ServerThinkReplayUploader()
 								if ( internalMapName && V_strcmp( "undefined", internalMapName ) != 0 && V_strlen( internalMapName ) > 0 )
 								{
 									engine->ServerCommand( CFmtStr( "nextlevel %s;", internalMapName ) );
-									extern ConVar nextmap_print_enabled;
 									if ( nextmap_print_enabled.GetBool() )
 									{
 										UTIL_ClientPrintAll( HUD_PRINTTALK, "#game_nextmap", V_GetFileName( internalMapName ) );
@@ -10270,6 +10263,7 @@ void ServerThinkReplayUploader()
 	{
 	}
 
+extern ConVar nextmap_print_enabled;
 	void CCSGameRules::GoToIntermission( bool bAbortedMatch )
 	{
 		Msg( "Going to intermission...\n" );
@@ -10346,7 +10340,6 @@ void ServerThinkReplayUploader()
 				pPlayer->SetPendingTeamNum( TEAM_UNASSIGNED );
 				UpdateMatchStats( pPlayer, m_match.GetWinningTeam() );
 
-				extern ConVar nextmap_print_enabled;
 				if ( szNextMap[ 0 ] && nextmap_print_enabled.GetBool() )
 				{
 					ClientPrint( pPlayer, HUD_PRINTTALK, "#game_nextmap", V_GetFileName( szNextMap ) );
@@ -10887,9 +10880,9 @@ void ServerThinkReplayUploader()
         }
     }
 
+extern ConVar bot_join_delay;
     void CCSGameRules::DumpTimers( void ) const
     {
-        extern ConVar bot_join_delay;
         CBasePlayer *player = UTIL_GetCommandClient();
         CFmtStr str;
 
@@ -14118,8 +14111,6 @@ static void mp_dump_timers( const CCommand &args )
 
 		if ( IsQueuedMatchmaking() )
 		{
-			// new CQueuedMatchmakingRematch;
-			// new CQueuedMatchmakingContinue;
 			NewTeamIssue< CSurrender >();
 		}
 		else
@@ -16357,7 +16348,6 @@ bool CCSGameRules::IsPlayingOffline( void ) const
     if ( engine->IsDedicatedServer() )
         return false;
 #endif
-    extern ConVar game_online;
     return !game_online.GetBool();
 }
 
@@ -16398,7 +16388,6 @@ int	CCSGameRules::GetCustomBotDifficulty( void ) const
 
 bool CCSGameRules::ForceSplitScreenPlayersOnToSameTeam( void )
 {
-    extern ConVar game_online;
     return game_online.GetBool();
 }
 

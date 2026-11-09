@@ -4,8 +4,6 @@
 // Purpose: Material proxy to get the cycle from a CBaseAnimateing derived entity.
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"

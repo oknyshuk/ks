@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -46,7 +43,7 @@ class CFuncLadderEndPoint : public CBaseEntity
 public:
 	DECLARE_CLASS( CFuncLadderEndPoint, CBaseEntity );
 
-	virtual void Activate();
+	void Activate_Impl();
 
 private:
 	bool		Validate();
@@ -54,9 +51,9 @@ private:
 
 LINK_ENTITY_TO_CLASS( func_ladderendpoint, CFuncLadderEndPoint );
 
-void CFuncLadderEndPoint::Activate()
+void CFuncLadderEndPoint::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	if ( IsMarkedForDeletion() )
 		return;

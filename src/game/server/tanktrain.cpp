@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -64,12 +61,12 @@ class CFuncTankTrain : public CFuncTrackTrain
 public:
 	DECLARE_CLASS( CFuncTankTrain, CFuncTrackTrain );
 
-	void Spawn( void );
+	void Spawn_Impl( void );
 
 	// Filter out damage messages that don't contain blast damage (impervious to other forms of attack)
-	int	OnTakeDamage( const CTakeDamageInfo &info );
-	void Event_Killed( const CTakeDamageInfo &info );
-	void Blocked( CBaseEntity *pOther )
+	int	OnTakeDamage_Impl( const CTakeDamageInfo &info );
+	void Event_Killed_Impl( const CTakeDamageInfo &info );
+	void Blocked_Impl( CBaseEntity *pOther )
 	{
 		// FIxme, set speed to zero?
 	}
@@ -85,19 +82,19 @@ LINK_ENTITY_TO_CLASS( func_tanktrain, CFuncTankTrain );
 IMPLEMENT_REFLECT_DATAMAP( CFuncTankTrain )
 
 
-void CFuncTankTrain::Spawn( void )
+void CFuncTankTrain::Spawn_Impl( void )
 {
 	m_takedamage = true;
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 // Filter out damage messages that don't contain blast damage (impervious to other forms of attack)
-int	CFuncTankTrain::OnTakeDamage( const CTakeDamageInfo &info )
+int	CFuncTankTrain::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	if ( ! (info.GetDamageType() & DMG_BLAST) )
 		return 0;
 
-	return BaseClass::OnTakeDamage( info );
+	return BaseClass::OnTakeDamage_Impl( info );
 }
 
 
@@ -108,7 +105,7 @@ int	CFuncTankTrain::OnTakeDamage( const CTakeDamageInfo &info )
 //			flDamage - The damage that the killing blow inflicted.
 //			bitsDamageType - Bitfield of damage types that were inflicted.
 //-----------------------------------------------------------------------------
-void CFuncTankTrain::Event_Killed( const CTakeDamageInfo &info )
+void CFuncTankTrain::Event_Killed_Impl( const CTakeDamageInfo &info )
 {
 	m_takedamage = DAMAGE_NO;
 	m_lifeState = LIFE_DEAD;
@@ -125,8 +122,8 @@ class CTankTargetChange : public CPointEntity
 public:
 	DECLARE_CLASS( CTankTargetChange, CPointEntity );
 
-	void Precache( void );
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Precache_Impl( void );
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	DECLARE_DATADESC();
 
@@ -140,15 +137,15 @@ LINK_ENTITY_TO_CLASS( tanktrain_aitarget, CTankTargetChange );
 IMPLEMENT_REFLECT_DATAMAP( CTankTargetChange )
 
 
-void CTankTargetChange::Precache( void )
+void CTankTargetChange::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	// This needs to be in Precache so save/load works
 	m_newTarget.SetString( m_newTargetName );
 }
 
-void CTankTargetChange::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CTankTargetChange::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	CBaseEntity *pTarget = gEntList.FindEntityByName( nullptr, m_target, nullptr, pActivator, pCaller );
 
@@ -170,10 +167,10 @@ public:
 
 	virtual ~CTankTrainAI( void );
 
-	void Precache( void );
-	void Spawn( void );
-	void Activate( void );
-	void Think( void );
+	void Precache_Impl( void );
+	void Spawn_Impl( void );
+	void Activate_Impl( void );
+	void Think_Impl( void );
 
 	int		SoundEnginePitch( void );
 	void	SoundEngineStart( void );
@@ -245,7 +242,7 @@ CTankTrainAI::~CTankTrainAI( void )
 	}
 }
 
-void CTankTrainAI::Precache( void )
+void CTankTrainAI::Precache_Impl( void )
 {
 	PrecacheScriptSound( STRING( m_startSoundName ) );
 	PrecacheScriptSound( STRING( m_engineSoundName ) );
@@ -343,16 +340,16 @@ void CTankTrainAI::SoundShutdown( void )
 //-----------------------------------------------------------------------------
 // Purpose: Set up think and AI
 //-----------------------------------------------------------------------------
-void CTankTrainAI::Spawn( void )
+void CTankTrainAI::Spawn_Impl( void )
 {
 	Precache();
 	m_soundPlaying = false;
 	m_hTargetEntity = nullptr;
 }
 
-void CTankTrainAI::Activate( void )
+void CTankTrainAI::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	
 	CBaseEntity *pTarget = nullptr;
 
@@ -465,7 +462,7 @@ int PathFindDirection( CPathTrack *pStart, const Vector &startPosition, const Ve
 //-----------------------------------------------------------------------------
 // Purpose: Find a point on my path near to the target and move toward it
 //-----------------------------------------------------------------------------
-void CTankTrainAI::Think( void )
+void CTankTrainAI::Think_Impl( void )
 {
 	CFuncTrackTrain *pTrain = m_hTrain;
 

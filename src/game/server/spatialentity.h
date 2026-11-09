@@ -25,10 +25,10 @@ public:
 
 	CSpatialEntity();
 
-	void Spawn( void );
-	int  UpdateTransmitState();
+	void Spawn_Impl( void );
+	int  UpdateTransmitState_Impl();
 
-	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	int	ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION; }
 
 	// Inputs
 	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void	InputEnable( inputdata_t &inputdata );

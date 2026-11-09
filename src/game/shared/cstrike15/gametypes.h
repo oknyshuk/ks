@@ -4,10 +4,16 @@
 
 // Purpose: Game types and modes
 
-import ks.vstdlib;
 #include "gametypes/igametypes.h"
 #include "const.h"
-import std;
+
+// The game type and mode of the running game; built once with the game types (gametypes.cpp).
+class ConVar;
+extern ConVar game_online;
+extern ConVar game_public;
+extern ConVar game_type;
+extern ConVar game_mode;
+extern IGameTypes *g_pGameTypes;
 
 inline constexpr auto GAMETYPES_MAX_NAME = 64;
 inline constexpr auto GAMETYPES_MAX_ID = 64;

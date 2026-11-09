@@ -15,35 +15,21 @@ typedef void * FileHandle_t;
 
 inline constexpr const char *FILELOGGINGLISTENER_INTERFACE_VERSION = "FileLoggingListener001";
 
-class IFileLoggingListener : public ILoggingListener
-{
-public:
-	virtual void Log( const LoggingContext_t *pContext, const char *pMessage ) = 0;
-
-	virtual LoggingFileHandle_t BeginLoggingToFile( const char *pFilename, const char *pOptions, const char *pPathID = nullptr ) = 0;
-	virtual void EndLoggingToFile( LoggingFileHandle_t fileHandle ) = 0;
-
-	virtual void AssignLogChannel( LoggingChannelID_t channelID, LoggingFileHandle_t loggingFileHandle ) = 0;
-	virtual void UnassignLogChannel( LoggingChannelID_t channelID ) = 0;
-	virtual void AssignAllLogChannels( LoggingFileHandle_t loggingFileHandle ) = 0;
-	virtual void UnassignAllLogChannels() = 0;
-};
-
-class CFileLoggingListener : public IFileLoggingListener
+class CFileLoggingListener : public ILoggingListener
 {
 public:
 	CFileLoggingListener();
 	~CFileLoggingListener();
 
-	virtual void Log( const LoggingContext_t *pContext, const char *pMessage );
+	void Log( const LoggingContext_t *pContext, const char *pMessage );
 
-	virtual LoggingFileHandle_t BeginLoggingToFile( const char *pFilename, const char *pOptions, const char *pPathID = nullptr );
-	virtual void EndLoggingToFile( LoggingFileHandle_t fileHandle );
+	LoggingFileHandle_t BeginLoggingToFile( const char *pFilename, const char *pOptions, const char *pPathID = nullptr );
+	void EndLoggingToFile( LoggingFileHandle_t fileHandle );
 
-	virtual void AssignLogChannel( LoggingChannelID_t channelID, LoggingFileHandle_t loggingFileHandle );
-	virtual void UnassignLogChannel( LoggingChannelID_t channelID );
-	virtual void AssignAllLogChannels( LoggingFileHandle_t loggingFileHandle );
-	virtual void UnassignAllLogChannels();
+	void AssignLogChannel( LoggingChannelID_t channelID, LoggingFileHandle_t loggingFileHandle );
+	void UnassignLogChannel( LoggingChannelID_t channelID );
+	void AssignAllLogChannels( LoggingFileHandle_t loggingFileHandle );
+	void UnassignAllLogChannels();
 
 private:
 	int GetUnusedFileInfo() const;

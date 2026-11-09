@@ -15,6 +15,6 @@ public:
 
 	static CEntityBlocker *Create( const Vector &origin, const Vector &mins, const Vector &maxs, CBaseEntity *pOwner = nullptr, bool bBlockPhysics = false );
 
-	void Spawn( void );
-	bool TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace );
+	void Spawn_Impl( void );
+	bool TestCollision_Impl( const Ray_t &ray, unsigned int mask, trace_t& trace );
 };

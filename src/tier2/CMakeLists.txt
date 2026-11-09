@@ -11,7 +11,6 @@ add_library(tier2 STATIC
     meshutils.cpp
     renderutils.cpp
     riff.cpp
-    soundutils.cpp
     tier2.cpp
     tier2_logging.cpp
     tokenreader.cpp

@@ -14,7 +14,7 @@ export extern "C++" {
 
 typedef unsigned MemoryStackMark_t;
 
-class CMemoryStack : private IMemoryInfo
+class CMemoryStack
 {
 public:
 	CMemoryStack();
@@ -55,11 +55,7 @@ private:
 	// Track the highest alloc limit seen.
 	byte *m_pHighestAllocLimit;
 
-	const char* GetMemoryName() const override; // User friendly name for this stack or pool
-	std::size_t GetAllocatedBytes() const override; // Number of bytes currently allocated
-	std::size_t GetCommittedBytes() const override; // Bytes committed -- may be greater than allocated.
-	std::size_t GetReservedBytes() const override; // Bytes reserved -- may be greater than committed.
-	std::size_t GetHighestBytes() const override; // The maximum number of bytes allocated or committed.	
+	MemoryInfo_t GetMemoryInfo() const; // Statistics reported to DumpMemoryInfoStats
 
 	byte *m_pBase;
 	bool m_bRegisteredAllocation;

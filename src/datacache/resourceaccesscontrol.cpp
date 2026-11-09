@@ -5,6 +5,7 @@ import std;
 import ks.tier1;
 #include "datacache/iresourceaccesscontrol.h"
 #include "tier2/tier2.h"
+#include "appframework/apptiers.h"
 
 //-----------------------------------------------------------------------------
 // NOTE: Necessary until we have all our resources wrangled.
@@ -15,21 +16,23 @@ static ConVar res_restrict_access( "res_restrict_access", "0" );
 //-----------------------------------------------------------------------------
 // Implementation class
 //-----------------------------------------------------------------------------
-class CResourceAccessControl : public CTier1AppSystem< IResourceAccessControl >
+class CResourceAccessControl : public IResourceAccessControl
 {
-	typedef CTier1AppSystem< IResourceAccessControl > BaseClass;
-
-	// Inherited from IAppSystem
+	// App system protocol (a tier 1 system)
 public:
-	virtual void Shutdown();
+	bool Connect( CreateInterfaceFn factory ) { return AppSystemTier1Connect( factory ); }
+	void Disconnect() { AppSystemTier1Disconnect(); }
+	void *QueryInterface( const char *pInterfaceName ) { return nullptr; }
+	InitReturnVal_t Init() { return AppSystemTier1Init(); }
+	void Shutdown();
 
 	// Inherited from IResourceAccessControl
 public:
-	virtual ResourceList_t CreateResourceList( const char *pDebugName );
-	virtual void DestroyAllResourceLists( );
-	virtual void AddResource( ResourceList_t hResourceList, ResourceTypeOld_t nType, const char *pResourceName );
-	virtual void LimitAccess( ResourceList_t hResourceList );
-	virtual bool IsAccessAllowed( ResourceTypeOld_t nType, const char *pResource );
+	ResourceList_t CreateResourceList( const char *pDebugName );
+	void DestroyAllResourceLists( );
+	void AddResource( ResourceList_t hResourceList, ResourceTypeOld_t nType, const char *pResourceName );
+	void LimitAccess( ResourceList_t hResourceList );
+	bool IsAccessAllowed( ResourceTypeOld_t nType, const char *pResource );
 
 	// Other public methods
 public:
@@ -98,7 +101,7 @@ void CResourceAccessControl::Shutdown()
 {
 	DestroyAllResourceLists();
 	std::memset( m_pLimitAccess, 0xFF, sizeof(m_pLimitAccess) );
-	BaseClass::Shutdown();
+	AppSystemTier1Shutdown();
 }
 
 
@@ -215,3 +218,8 @@ bool CResourceAccessControl::IsAccessAllowed( ResourceTypeOld_t nType, const cha
 
 	return false;
 }
+
+//-----------------------------------------------------------------------------
+// The IResourceAccessControl members forward to CResourceAccessControl
+//-----------------------------------------------------------------------------
+#include "facade/iresourceaccesscontrol.inl"

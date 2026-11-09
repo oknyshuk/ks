@@ -4,8 +4,6 @@
 // Purpose: Note: This code integrated then adapted from TF:
 //			//ValveGames/staging/src/game/server/tf/tf_pushentity.cpp
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"

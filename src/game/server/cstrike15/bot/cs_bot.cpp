@@ -3,8 +3,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -63,7 +61,7 @@ int GetBotFollowCount( CCSPlayer *leader )
  		if (!player->IsAlive())
  			continue;
 
-		CCSBot *bot = dynamic_cast<CCSBot *>( player );
+		CCSBot *bot = ToCSBot( player );
 		if (bot && bot->GetFollowLeader() == leader)
 			++count;
 	}
@@ -118,7 +116,7 @@ bool CCSBot::Jump( bool mustJump )
  * Invoked when injured by something
  * NOTE: We dont want to directly call Attack() here, or the bots will have super-human reaction times when injured
  */
-int CCSBot::OnTakeDamage( const CTakeDamageInfo &info )
+int CCSBot::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	m_bIsSleeping = false;
 
@@ -192,14 +190,14 @@ int CCSBot::OnTakeDamage( const CTakeDamageInfo &info )
 	}
 
 	// extend
-	return BaseClass::OnTakeDamage( info );
+	return BaseClass::OnTakeDamage_Impl( info );
 }
 
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Invoked when killed
  */
-void CCSBot::Event_Killed( const CTakeDamageInfo &info )
+void CCSBot::Event_Killed_Impl( const CTakeDamageInfo &info )
 { 
 //	PrintIfWatched( "Killed( attacker = %s )\n", STRING(pevAttacker->netname) );
 
@@ -214,7 +212,7 @@ void CCSBot::Event_Killed( const CTakeDamageInfo &info )
 	m_voiceEndTimestamp = 0.0f;
 
 	// extend
-	BaseClass::Event_Killed( info );
+	BaseClass::Event_Killed_Impl( info );
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -281,10 +279,10 @@ extern void UTIL_DrawBox( Extent *extent, int lifetime, int red, int green, int 
 /**
  * When bot is touched by another entity.
  */
-void CCSBot::Touch( CBaseEntity *other )
+void CCSBot::Touch_Impl( CBaseEntity *other )
 {
 	// EXTEND
-	BaseClass::Touch( other );
+	BaseClass::Touch_Impl( other );
 
 	// if we have touched a higher-priority player, make way
 	/// @todo Need to account for reaction time, etc.

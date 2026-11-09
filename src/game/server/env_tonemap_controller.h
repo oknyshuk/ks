@@ -15,9 +15,9 @@ public:
 	DECLARE_CLASS( CTonemapTrigger, CBaseTrigger );
 	DECLARE_DATADESC();
 
-	virtual void Spawn( void );
-	virtual void StartTouch( CBaseEntity *other );
-	virtual void EndTouch( CBaseEntity *other );
+	void Spawn_Impl( void );
+	void StartTouch_Impl( CBaseEntity *other );
+	void EndTouch_Impl( CBaseEntity *other );
 
 	CBaseEntity *GetTonemapController( void ) const;
 

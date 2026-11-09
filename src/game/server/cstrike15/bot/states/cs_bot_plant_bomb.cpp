@@ -3,8 +3,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.core;
 #include "cs_bot.h"
 #include "weapon_c4.h"
 
@@ -50,7 +48,7 @@ void PlantBombState::OnUpdate( CCSBot *me )
 	{
 		me->PrimaryAttack();
 
-		CC4 *pC4 = dynamic_cast< CC4 * >( gun );
+		CC4 *pC4 = static_cast< CC4 * >( gun );	// holdingC4 implies gun is the "weapon_c4" entity
 		if ( pC4 && !pC4->m_bStartedArming && gpGlobals->curtime - me->GetStateTimestamp() > 2.0f )
 		{
 			// can't plant here for some reason - try another spot

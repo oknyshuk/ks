@@ -25,43 +25,43 @@ struct JoltPhysicsInternalVehicleState
 	float LargestWheelRadius = 0.0f;
 };
 
-class JoltPhysicsVehicleController final : public IPhysicsVehicleController, public IJoltObjectListener, public IJoltPhysicsController
+class JoltPhysicsVehicleController final : public IPhysicsVehicleController
 {
 public:
 	static constexpr int MaxWheels = VEHICLE_MAX_WHEEL_COUNT;
 
 	JoltPhysicsVehicleController( JoltPhysicsEnvironment *pEnvironment, JPH::PhysicsSystem *pPhysicsSystem, JoltPhysicsObject *pVehicleBodyObject, const vehicleparams_t &params, unsigned int nVehicleType, IPhysicsGameTrace *pGameTrace );
-	~JoltPhysicsVehicleController() override;
+	~JoltPhysicsVehicleController();
 
-	void				Update( float dt, vehicle_controlparams_t &controls ) override;
-	const vehicle_operatingparams_t & GetOperatingParams() override;
-	const vehicleparams_t & GetVehicleParams() override;
-	vehicleparams_t &	GetVehicleParamsForChange() override;
-	float				UpdateBooster( float dt ) override;
-	int					GetWheelCount( void ) override;
-	IPhysicsObject *	GetWheel( int index ) override;
-	bool				GetWheelContactPoint( int index, Vector *pContactPoint, int *pSurfaceProps ) override;
-	void				SetSpringLength( int wheelIndex, float length ) override;
-	void				SetWheelFriction( int wheelIndex, float friction ) override;
+	void				Update( float dt, vehicle_controlparams_t &controls );
+	const vehicle_operatingparams_t & GetOperatingParams();
+	const vehicleparams_t & GetVehicleParams();
+	vehicleparams_t &	GetVehicleParamsForChange();
+	float				UpdateBooster( float dt );
+	int					GetWheelCount( void );
+	IPhysicsObject *	GetWheel( int index );
+	bool				GetWheelContactPoint( int index, Vector *pContactPoint, int *pSurfaceProps );
+	void				SetSpringLength( int wheelIndex, float length );
+	void				SetWheelFriction( int wheelIndex, float friction );
 
-	void				OnVehicleEnter( void ) override;
-	void				OnVehicleExit( void ) override;
+	void				OnVehicleEnter( void );
+	void				OnVehicleExit( void );
 
-	void				SetEngineDisabled( bool bDisable ) override;
-	bool				IsEngineDisabled( void ) override;
+	void				SetEngineDisabled( bool bDisable );
+	bool				IsEngineDisabled( void );
 
-	void				GetCarSystemDebugData( vehicle_debugcarsystem_t &debugCarSystem ) override;
-	void				VehicleDataReload() override;
+	void				GetCarSystemDebugData( vehicle_debugcarsystem_t &debugCarSystem );
+	void				VehicleDataReload();
 
 public:
 	// IJoltObjectListener
-	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject ) override;
+	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject );
 
 	float GetSpeed();
 
 	// IJoltPhysicsController
-	void OnPreSimulate( float flDeltaTime ) override;
-	void OnPostSimulate( float flDeltaTime ) override;
+	void OnPreSimulate( float flDeltaTime );
+	void OnPostSimulate( float flDeltaTime );
 
 private:
 

@@ -7,8 +7,6 @@
 // and trying to #ifdef it out does funky things like ignoring the #endif. Define our header file
 // separately and include it based on the switch
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -48,8 +46,6 @@ import ks.tier1;
 
 //#define DEBUG_STAT_TRANSMISSION 
 
-extern ConVar game_mode;
-extern ConVar game_type;
 extern ConVar mp_roundtime;
 
 float	g_flGameStatsUpdateTime = 0.0f;
@@ -114,7 +110,7 @@ struct
 };
 
 // [Forrest] Allow nemesis/revenge to be turned off for a server
-static void SvNoNemesisChangeCallback( IConVar *pConVar, const char *pOldValue, float flOldValue )
+static void SvNoNemesisChangeCallback( ConVar *pConVar, const char *pOldValue, float flOldValue )
 {
 	ConVarRef var( pConVar );
 	if ( var.IsValid() && var.GetBool() )
@@ -760,7 +756,7 @@ void CCSGameStats::Event_PlayerKilledOther( CBasePlayer *pAttacker, CBaseEntity 
 	pPlayerVictim->SetLastConcurrentKilled( std::min( nConsecutiveKills, 8 ) );
 
 	// check to see if a player killed another with a StatTrak weapon
-	if ( CBaseCombatWeapon *pWeapon = dynamic_cast<CBaseCombatWeapon *>( info.GetWeapon() ) )
+	if ( CBaseCombatWeapon *pWeapon = entity_cast<CBaseCombatWeapon>( info.GetWeapon() ) )
 	{
 		// Does the player own this item?
 		CPlayerId HolderPlayerID;

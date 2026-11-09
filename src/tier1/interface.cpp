@@ -8,14 +8,62 @@ import ks.tier1;
 // InterfaceReg.
 // ------------------------------------------------------------------------------------ //
 
-static InterfaceReg *s_pInterfaceRegs;
-
 InterfaceReg::InterfaceReg( InstantiateInterfaceFn fn, const char *pName ) :
 	m_pName(pName)
 {
+	ks::registry &registry = ks::current_registry();
 	m_CreateFn = fn;
-	m_pNext = s_pInterfaceRegs;
-	s_pInterfaceRegs = this;
+	m_pNext = registry.interfaces;
+	registry.interfaces = this;
+}
+
+// ------------------------------------------------------------------------------------ //
+// Registries.
+// ------------------------------------------------------------------------------------ //
+
+namespace ks
+{
+	namespace
+	{
+		constinit registry s_EngineRegistry;
+		constinit registry s_ServerRegistry;
+		constinit registry s_ClientRegistry;
+		constinit registry *s_pCurrentRegistry = &s_EngineRegistry;
+	}
+
+	registry &engine_registry() { return s_EngineRegistry; }
+	registry &server_registry() { return s_ServerRegistry; }
+	registry &client_registry() { return s_ClientRegistry; }
+	registry &current_registry() { return *s_pCurrentRegistry; }
+
+	bool enter_registry( registry &r )
+	{
+		s_pCurrentRegistry = &r;
+		return true;
+	}
+
+	bool leave_registry()
+	{
+		s_pCurrentRegistry = &s_EngineRegistry;
+		return true;
+	}
+
+	void *registry::create_interface( const char *pName, int *pReturnCode ) const
+	{
+		for ( const InterfaceReg *pCur = interfaces; pCur; pCur = pCur->m_pNext )
+		{
+			if ( std::strcmp( pCur->m_pName, pName ) == 0 )
+			{
+				if ( pReturnCode )
+					*pReturnCode = IFACE_OK;
+				return pCur->m_CreateFn();
+			}
+		}
+
+		if ( pReturnCode )
+			*pReturnCode = IFACE_FAILED;
+		return nullptr;
+	}
 }
 
 // ------------------------------------------------------------------------------------ //
@@ -32,30 +80,64 @@ InterfaceReg::InterfaceReg( InstantiateInterfaceFn fn, const char *pName ) :
 // ------------------------------------------------------------------------------------ //
 void* CreateInterfaceInternal( const char *pName, int *pReturnCode )
 {
-	InterfaceReg *pCur;
-	
-	for (pCur=s_pInterfaceRegs; pCur; pCur=pCur->m_pNext)
-	{
-		if (std::strcmp(pCur->m_pName, pName) == 0)
-		{
-			if (pReturnCode)
-			{
-				*pReturnCode = IFACE_OK;
-			}
-			return pCur->m_CreateFn();
-		}
-	}
-	
-	if (pReturnCode)
-	{
-		*pReturnCode = IFACE_FAILED;
-	}
-	return nullptr;	
+	return ks::engine_registry().create_interface( pName, pReturnCode );
 }
 
 void* CreateInterface( const char *pName, int *pReturnCode )
 {
     return CreateInterfaceInternal( pName, pReturnCode );
+}
+
+// ------------------------------------------------------------------------------------ //
+// Statically linked modules.
+//
+// The executable is its own "engine" module, so Sys_LoadModule( "engine" ) needs no loading.
+// The game sides are not modules: the engine takes their factories from the executable
+// (ServerGameFactory(), ClientGameFactory()). Anything else (plugins, ...) goes to the
+// dynamic loader.
+// ------------------------------------------------------------------------------------ //
+namespace
+{
+	struct StaticModule_t
+	{
+		const char *m_pName;			// as the engine asks for it, without directory, "lib" or ".so"
+		CreateInterfaceFn m_Factory;
+	};
+
+	// The handle Sys_LoadModule() hands out is the address of the entry, so it needs no unloading.
+	StaticModule_t s_StaticModules[] =
+	{
+		{ "engine", &CreateInterfaceInternal },		// the executable's own factory
+	};
+
+	// "/path/bin/libclient.so", "client.so", "client" -> the table entry for client
+	StaticModule_t *FindStaticModule( const char *pModuleName )
+	{
+		if ( !pModuleName )
+			return nullptr;
+
+		std::string_view name = pModuleName;
+		if ( const std::size_t nSlash = name.find_last_of( "/\\" ); nSlash != std::string_view::npos )
+			name.remove_prefix( nSlash + 1 );
+		if ( name.starts_with( "lib" ) )
+			name.remove_prefix( 3 );
+		if ( name.ends_with( DLL_EXT_STRING ) )
+			name.remove_suffix( std::strlen( DLL_EXT_STRING ) );
+
+		for ( StaticModule_t &module : s_StaticModules )
+		{
+			if ( name == module.m_pName && module.m_Factory )
+				return &module;
+		}
+		return nullptr;
+	}
+
+	bool IsStaticModule( const CSysModule *pModule )
+	{
+		const auto p = reinterpret_cast<std::uintptr_t>( pModule );
+		return p >= reinterpret_cast<std::uintptr_t>( std::begin( s_StaticModules ) ) &&
+			p < reinterpret_cast<std::uintptr_t>( std::end( s_StaticModules ) );
+	}
 }
 
 
@@ -171,6 +253,10 @@ CSysModule *Sys_LoadModule( const char *pModuleName )
 	// prior to the call to this routine.
 	HMODULE hDLL = nullptr;
 
+	// Modules that are linked into this executable need no loading.
+	if ( StaticModule_t *pStatic = FindStaticModule( pModuleName ) )
+		return reinterpret_cast<CSysModule *>( pStatic );
+
 	if ( !V_IsAbsolutePath( pModuleName ) )
 	{
 		// full path wasn't passed in, using the current working dir
@@ -223,6 +309,9 @@ void Sys_UnloadModule( CSysModule *pModule )
 	if ( !pModule )
 		return;
 
+	if ( IsStaticModule( pModule ) )
+		return;		// linked into the executable, nothing to unload
+
 	HMODULE	hDLL = reinterpret_cast<HMODULE>(pModule);
 
 //$$$$$$ mikesart: for testing with valgrind don't unload so...	dlclose((void *)hDLL);
@@ -238,6 +327,9 @@ CreateInterfaceFn Sys_GetFactory( CSysModule *pModule )
 {
 	if ( !pModule )
 		return nullptr;
+
+	if ( IsStaticModule( pModule ) )
+		return reinterpret_cast<const StaticModule_t *>( pModule )->m_Factory;
 
 	HMODULE	hDLL = reinterpret_cast<HMODULE>(pModule);
 	// Linux gives this error:
@@ -266,6 +358,9 @@ CreateInterfaceFn Sys_GetFactoryThis( void )
 //-----------------------------------------------------------------------------
 CreateInterfaceFn Sys_GetFactory( const char *pModuleName )
 {
+	if ( const StaticModule_t *pStatic = FindStaticModule( pModuleName ) )
+		return pStatic->m_Factory;
+
 	// see Sys_GetFactory( CSysModule *pModule ) for an explanation
 	return (CreateInterfaceFn)( Sys_GetProcAddress( pModuleName, CREATEINTERFACE_PROCNAME ) );
 }

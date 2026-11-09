@@ -4,8 +4,6 @@
 // Purpose: Sunlight shadow control entity.
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -102,6 +100,7 @@ bool C_SunlightShadowControl::ShouldDraw()
 	return false;
 }
 
+extern ConVar r_flashlightdepthres;
 void C_SunlightShadowControl::ClientThink()
 {
 	CVProfScope _( "C_SunlightShadowControl::ClientThink", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
@@ -183,7 +182,6 @@ void C_SunlightShadowControl::ClientThink()
 		state.m_pSpotlightTexture = m_SpotlightTexture;
 		state.m_pProjectedMaterial = nullptr;
 		state.m_nSpotlightTextureFrame = 0;
-		extern ConVar r_flashlightdepthres;
 		state.m_flShadowMapResolution = r_flashlightdepthres.GetFloat();
 
 		state.m_nShadowQuality = 1; // Allow entity to affect shadow quality

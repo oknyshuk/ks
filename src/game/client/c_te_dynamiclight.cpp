@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -85,28 +83,6 @@ void TE_DynamicLight( IRecipientFilter& filter, float delay,
 	dl->die		= gpGlobals->curtime + time;
 	dl->decay	= decay;
 
-	if ( ToolsEnabled() && clienttools->IsInRecordingMode() )
-	{
-		Color clr( r, g, b, 255 );
-
-		KeyValues *msg = new KeyValues( "TempEntity" );
-
- 		msg->SetInt( "te", TE_DYNAMIC_LIGHT );
- 		msg->SetString( "name", "TE_DynamicLight" );
-		msg->SetFloat( "time", gpGlobals->curtime );
-		msg->SetFloat( "duration", time );
-		msg->SetFloat( "originx", org->x );
-		msg->SetFloat( "originy", org->y );
-		msg->SetFloat( "originz", org->z );
-		msg->SetFloat( "radius", radius );
-		msg->SetFloat( "decay", decay );
-		msg->SetColor( "color", clr );
- 		msg->SetInt( "exponent", exponent );
- 		msg->SetInt( "lightindex", nLightIndex );
-
-		ToolFramework_PostToolMessage( HTOOLHANDLE_INVALID, msg );
-		msg->deleteThis();
-	}
 }
 
 

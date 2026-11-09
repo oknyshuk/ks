@@ -144,12 +144,12 @@ protected:
 			return;
 		}
 
-		inJob->AddRef();		// the queue holds this until the bridge below dies
-		CJobBridge *pBridge = new CJobBridge( inJob );
+		inJob->AddRef();		// held by the pool job until it is destroyed
+		CJob *pBridge = new CJob( [ref = CJobRef( inJob )]() { ref.m_pJob->Execute(); } );
 		g_pThreadPool->AddJob( pBridge );
 
 		// AddJob does not consume the caller's reference: queued leaves the queue's own, and an
-		// inline run (no idle workers) is freed by this. See CThreadPool::AddFunctorInternal.
+		// inline run (no idle workers) is freed by this.
 		pBridge->Release();
 	}
 
@@ -164,23 +164,20 @@ protected:
 	void FreeJob( Job *inJob ) override { m_Jobs.DestructObject( inJob ); }
 
 private:
-	// A physics job wrapped for the engine pool. Job::Execute is idempotent -- it CASes the
-	// dependency counter to an executing state -- so a job the waiting thread already ran through
-	// BarrierImpl::Wait() is a no-op if a worker reaches it first. That is what makes queueing to
-	// a second scheduler safe rather than a double execution.
-	class CJobBridge final : public CJob
+	// Reference to a physics job, owned by the engine pool job that wraps it (see QueueJob).
+	// Job::Execute is idempotent -- it CASes the dependency counter to an executing state -- so a
+	// job the waiting thread already ran through BarrierImpl::Wait() is a no-op if a worker reaches
+	// it first. That is what makes queueing to a second scheduler safe rather than a double execution.
+	//
+	// The reference is released when the pool job dies rather than when it has run: the pool can
+	// also discard a queued job without servicing it (AbortAll, queue flush at Stop), and the
+	// reference has to come back exactly once on every path.
+	struct CJobRef
 	{
-	public:
-		explicit CJobBridge( Job *inJob ) : m_pJob( inJob ) {}
+		explicit CJobRef( Job *inJob ) : m_pJob( inJob ) {}
+		CJobRef( CJobRef &&src ) noexcept : m_pJob( std::exchange( src.m_pJob, nullptr ) ) {}
+		~CJobRef() { if ( m_pJob ) m_pJob->Release(); }
 
-		// Releases on destruction rather than in DoExecute: the pool can also discard a queued job
-		// without servicing it (AbortAll, queue flush at Stop), and the reference has to come back
-		// exactly once on every path.
-		~CJobBridge() override { m_pJob->Release(); }
-
-		JobStatus_t DoExecute() override { m_pJob->Execute(); return JOB_OK; }
-
-	private:
 		Job *m_pJob;
 	};
 
@@ -192,7 +189,7 @@ private:
 
 InitReturnVal_t JoltPhysicsInterface::Init()
 {
-	const InitReturnVal_t nRetVal = BaseClass::Init();
+	const InitReturnVal_t nRetVal = AppSystemTier1Init();
 	if ( nRetVal != INIT_OK )
 	{
 		return nRetVal;
@@ -230,7 +227,7 @@ void JoltPhysicsInterface::Shutdown()
 	delete m_pTempAllocator;
 	delete JPH::Factory::sInstance;
 
-	BaseClass::Shutdown();
+	AppSystemTier1Shutdown();
 }
 
 void *JoltPhysicsInterface::QueryInterface( const char *pInterfaceName )
@@ -318,3 +315,7 @@ bool JoltPhysicsInterface::OnAssert( const char *inExpression, const char *inMes
 	contract_assert( false );
 	return false;
 }
+
+//-------------------------------------------------------------------------------------------------
+#include "facade/iphysics.inl"
+#include "facade/iphysicscollisionset.inl"

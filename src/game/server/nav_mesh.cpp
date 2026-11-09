@@ -5,8 +5,6 @@
 // Implementation of Navigation Mesh interface
 // Author: Michael S. Booth, 2003-2004
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -65,6 +63,7 @@ bool FindGroundForNode( Vector *pos, Vector *normal );
 //--------------------------------------------------------------------------------------------------------------
 CNavMesh::CNavMesh( void )
 {
+	m_desiredChickenCount = 0;
 	m_spawnName = nullptr;
 	m_gridCellSize = 300.0f;
 	m_editMode = NORMAL;
@@ -81,7 +80,7 @@ CNavMesh::CNavMesh( void )
 	ListenForGameEvent( "break_breakable" );
 	ListenForGameEvent( "teamplay_round_start" );
 		
-	Reset();
+	ResetBase();
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -102,7 +101,7 @@ CNavMesh::~CNavMesh()
 /**
  * Reset the Navigation Mesh to initial values
  */
-void CNavMesh::Reset( void )
+void CNavMesh::ResetBase( void )
 {
 	DestroyNavigationMesh();
 
@@ -256,6 +255,10 @@ void CNavMesh::DestroyNavigationMesh( bool incremental )
 void CNavMesh::Update( void )
 {
 	CVProfScope _( "CNavMesh::Update", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+
+	MaintainChickenPopulation();
+
+	MaintainDMSpawnPopulation();
 
 	if (IsGenerating())
 	{

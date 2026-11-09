@@ -3,8 +3,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.core;
 #include "cs_bot.h"
 #include "cs_shareddefs.h"
 
@@ -15,7 +13,7 @@ ConVar mp_coopmission_bot_difficulty_offset(
 	"The difficulty offset modifier for bots during coop missions." );
 
 //--------------------------------------------------------------------------------------------------------------
-static void PrefixChanged( IConVar *c, const char *oldPrefix, float flOldValue )
+static void PrefixChanged( ConVar *c, const char *oldPrefix, float flOldValue )
 {
 	if ( TheCSBots() && TheCSBots()->IsServerActive() )
 	{
@@ -29,7 +27,7 @@ static void PrefixChanged( IConVar *c, const char *oldPrefix, float flOldValue )
 			if ( !player->IsBot() || !IsEntityValid( player ) )
 				continue;
 
-			CCSBot *bot = dynamic_cast< CCSBot * >( player );
+			CCSBot *bot = ToCSBot( player );
 
 			if ( !bot )
 				continue;
@@ -477,13 +475,13 @@ void CCSBot::ResetValues( void )
  * Called when bot is placed in map, and when bots are reset after a round ends.
  * NOTE: For some reason, this can be called twice when a bot is added.
  */
-void CCSBot::Spawn( void )
+void CCSBot::Spawn_Impl( void )
 {
 	if ( CSGameRules() && CSGameRules()->IsPlayingCoopMission() && GetTeamNumber() == TEAM_TERRORIST )
 		SetLastCoopSpawnPoint( nullptr );
 
 	// do the normal player spawn process
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	ResetValues();
 

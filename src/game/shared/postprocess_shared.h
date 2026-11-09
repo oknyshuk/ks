@@ -4,7 +4,6 @@
 
 // Purpose: common definitions for post-processing effects
 
-import std;
 
 enum PostProcessParameterNames_t
 {

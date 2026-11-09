@@ -23,7 +23,7 @@ public:
 	virtual bool Compare( std::span< const std::byte > other ) = 0;
 };
 
-class IVisualsDataProcessor : public CRefCounted<>
+class IVisualsDataProcessor
 {
 public:
 	IVisualsDataProcessor() {}

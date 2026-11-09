@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "datamap.h"
 #include "ehandle.h"
 
@@ -73,6 +71,11 @@ struct optimized_datamap_t
 	// Optimized info for PC_NON_NETWORKED and PC_NETWORKED data
 	datamapinfo_t	m_Info[ PC_COPYTYPE_COUNT ];
 };
+
+inline optimized_datamap_t *OptimizedDataMap( const datamap_t *pMap )
+{
+	return static_cast<optimized_datamap_t *>( pMap->m_pOptimizedDataMap );
+}
 
 class CPredictionCopy
 {

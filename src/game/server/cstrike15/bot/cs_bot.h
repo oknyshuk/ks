@@ -46,10 +46,40 @@ enum InventorySlotType
 class BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot ) { }				///< when state is entered
-	virtual void OnUpdate( CCSBot *bot ) { }			///< state behavior
-	virtual void OnExit( CCSBot *bot ) { }				///< when state exited
-	virtual const char *GetName( void ) const = 0;		///< return state name
+	/// the behavior states (a CCSBot owns exactly one instance of each)
+	enum class Kind
+	{
+		Idle,
+		Hunt,
+		Attack,
+		InvestigateNoise,
+		Buy,
+		MoveTo,
+		FetchBomb,
+		PlantBomb,
+		DefuseBomb,
+		PickupHostage,
+		Hide,
+		EscapeFromBomb,
+		Follow,
+		UseEntity,
+		OpenDoor,
+		EscapeFromFlames,
+	};
+
+	Kind GetKind( void ) const						{ return m_kind; }
+
+	// forward to the concrete state according to the Kind (see cs_bot_statemachine.cpp)
+	void OnEnter( CCSBot *bot );						///< when state is entered
+	void OnUpdate( CCSBot *bot );						///< state behavior
+	void OnExit( CCSBot *bot );							///< when state exited
+	const char *GetName( void ) const;					///< return state name
+
+protected:
+	explicit BotState( Kind kind ) : m_kind( kind ) { }
+
+private:
+	Kind m_kind;
 };
 
 
@@ -61,9 +91,11 @@ public:
 class IdleState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual const char *GetName( void ) const		{ return "Idle"; }
+	IdleState( void ) : BotState( Kind::Idle ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	const char *GetName( void ) const		{ return "Idle"; }
 
 	void UpdateCoop( CCSBot *bot );
 };
@@ -76,10 +108,12 @@ public:
 class HuntState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual void OnExit( CCSBot *bot );
-	virtual const char *GetName( void ) const		{ return "Hunt"; }
+	HuntState( void ) : BotState( Kind::Hunt ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	void OnExit( CCSBot *bot );
+	const char *GetName( void ) const		{ return "Hunt"; }
 
 	void ClearHuntArea( void )						{ m_huntArea = nullptr; }
 
@@ -95,10 +129,12 @@ private:
 class AttackState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual void OnExit( CCSBot *bot );
-	virtual const char *GetName( void ) const		{ return "Attack"; }
+	AttackState( void ) : BotState( Kind::Attack ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	void OnExit( CCSBot *bot );
+	const char *GetName( void ) const		{ return "Attack"; }
 	
 	void SetCrouchAndHold( bool crouch )			{ m_crouchAndHold = crouch; }
 
@@ -146,10 +182,12 @@ protected:
 class InvestigateNoiseState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual void OnExit( CCSBot *bot );
-	virtual const char *GetName( void ) const		{ return "InvestigateNoise"; }
+	InvestigateNoiseState( void ) : BotState( Kind::InvestigateNoise ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	void OnExit( CCSBot *bot );
+	const char *GetName( void ) const		{ return "InvestigateNoise"; }
 
 private:
 	void AttendCurrentNoise( CCSBot *bot );						///< move towards currently heard noise
@@ -165,10 +203,12 @@ private:
 class BuyState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual void OnExit( CCSBot *bot );
-	virtual const char *GetName( void ) const		{ return "Buy"; }
+	BuyState( void ) : BotState( Kind::Buy ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	void OnExit( CCSBot *bot );
+	const char *GetName( void ) const		{ return "Buy"; }
 
 private:
 	bool m_isInitialDelay;
@@ -191,10 +231,12 @@ private:
 class MoveToState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual void OnExit( CCSBot *bot );
-	virtual const char *GetName( void ) const		{ return "MoveTo"; }
+	MoveToState( void ) : BotState( Kind::MoveTo ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	void OnExit( CCSBot *bot );
+	const char *GetName( void ) const		{ return "MoveTo"; }
 	void SetGoalPosition( const Vector &pos )		{ m_goalPosition = pos; }
 	void SetRouteType( RouteType route )			{ m_routeType = route; }
 
@@ -213,9 +255,11 @@ private:
 class FetchBombState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual const char *GetName( void ) const	{ return "FetchBomb"; }
+	FetchBombState( void ) : BotState( Kind::FetchBomb ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	const char *GetName( void ) const	{ return "FetchBomb"; }
 };
 
 
@@ -226,10 +270,12 @@ public:
 class PlantBombState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual void OnExit( CCSBot *bot );
-	virtual const char *GetName( void ) const	{ return "PlantBomb"; }
+	PlantBombState( void ) : BotState( Kind::PlantBomb ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	void OnExit( CCSBot *bot );
+	const char *GetName( void ) const	{ return "PlantBomb"; }
 };
 
 
@@ -240,10 +286,12 @@ public:
 class DefuseBombState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual void OnExit( CCSBot *bot );
-	virtual const char *GetName( void ) const	{ return "DefuseBomb"; }
+	DefuseBombState( void ) : BotState( Kind::DefuseBomb ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	void OnExit( CCSBot *bot );
+	const char *GetName( void ) const	{ return "DefuseBomb"; }
 };
 
 
@@ -254,10 +302,12 @@ public:
 class PickupHostageState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual void OnExit( CCSBot *bot );
-	virtual const char *GetName( void ) const	{ return "PickupHostage"; }
+	PickupHostageState( void ) : BotState( Kind::PickupHostage ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	void OnExit( CCSBot *bot );
+	const char *GetName( void ) const	{ return "PickupHostage"; }
 
 	void SetEntity( CBaseEntity *entity )				{ m_entity = entity; }
 
@@ -274,10 +324,12 @@ private:
 class HideState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual void OnExit( CCSBot *bot );
-	virtual const char *GetName( void ) const	{ return "Hide"; }
+	HideState( void ) : BotState( Kind::Hide ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	void OnExit( CCSBot *bot );
+	const char *GetName( void ) const	{ return "Hide"; }
 
 	void SetHidingSpot( const Vector &pos )		{ m_hidingSpot = pos; }
 	const Vector &GetHidingSpot( void ) const	{ return m_hidingSpot; }
@@ -331,10 +383,12 @@ private:
 class EscapeFromBombState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual void OnExit( CCSBot *bot );
-	virtual const char *GetName( void ) const		{ return "EscapeFromBomb"; }
+	EscapeFromBombState( void ) : BotState( Kind::EscapeFromBomb ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	void OnExit( CCSBot *bot );
+	const char *GetName( void ) const		{ return "EscapeFromBomb"; }
 };
 
 
@@ -345,10 +399,12 @@ public:
 class FollowState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual void OnExit( CCSBot *bot );
-	virtual const char *GetName( void ) const		{ return "Follow"; }
+	FollowState( void ) : BotState( Kind::Follow ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	void OnExit( CCSBot *bot );
+	const char *GetName( void ) const		{ return "Follow"; }
 
 	void SetLeader( CCSPlayer *player )				{ m_leader = player; }
 
@@ -389,10 +445,12 @@ private:
 class UseEntityState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual void OnExit( CCSBot *bot );
-	virtual const char *GetName( void ) const			{ return "UseEntity"; }
+	UseEntityState( void ) : BotState( Kind::UseEntity ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	void OnExit( CCSBot *bot );
+	const char *GetName( void ) const			{ return "UseEntity"; }
 
 	void SetEntity( CBaseEntity *entity )				{ m_entity = entity; }
 
@@ -408,10 +466,12 @@ private:
 class OpenDoorState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual void OnExit( CCSBot *bot );
-	virtual const char *GetName( void ) const		{ return "OpenDoor"; }
+	OpenDoorState( void ) : BotState( Kind::OpenDoor ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	void OnExit( CCSBot *bot );
+	const char *GetName( void ) const		{ return "OpenDoor"; }
 
 	void SetDoor( CBaseEntity *door );
 
@@ -432,10 +492,12 @@ private:
 class EscapeFromFlamesState : public BotState
 {
 public:
-	virtual void OnEnter( CCSBot *bot );
-	virtual void OnUpdate( CCSBot *bot );
-	virtual void OnExit( CCSBot *bot );
-	virtual const char *GetName( void ) const		{ return "EscapeFromFlames"; }
+	EscapeFromFlamesState( void ) : BotState( Kind::EscapeFromFlames ) { }
+
+	void OnEnter( CCSBot *bot );
+	void OnUpdate( CCSBot *bot );
+	void OnExit( CCSBot *bot );
+	const char *GetName( void ) const		{ return "EscapeFromFlames"; }
 
 private:
 	CNavArea *FindNearestNonDamagingArea( CCSBot *bot ) const;
@@ -455,21 +517,21 @@ public:
 	DECLARE_CLASS( CCSBot, CBot< CCSPlayer > );
 
 	CCSBot( void );												///< constructor initializes all values to zero
-	virtual ~CCSBot();
-	virtual bool Initialize( const BotProfile *profile, int team );		///< (EXTEND) prepare bot for action
-	virtual void CoopInitialize( void ); // initialize for Coop missions
+	~CCSBot();
+	bool Initialize( const BotProfile *profile, int team );		///< prepare bot for action
+	void CoopInitialize( void ); // initialize for Coop missions
 
-	virtual void Spawn( void );									///< (EXTEND) spawn the bot into the game
-	virtual void Touch( CBaseEntity *other );					///< (EXTEND) when touched by another entity
+	void Spawn_Impl( void );									///< (EXTEND) spawn the bot into the game
+	void Touch_Impl( CBaseEntity *other );					///< (EXTEND) when touched by another entity
 
-	virtual void Upkeep( void );								///< lightweight maintenance, invoked frequently
-	virtual void Update( void );								///< heavyweight algorithms, invoked less often
-	virtual void BuildUserCmd( CUserCmd& cmd, const QAngle& viewangles, float forwardmove, float sidemove, float upmove, int buttons, byte impulse );
-	virtual void AvoidPlayers( CUserCmd *pCmd );				///< some game types allow players to pass through each other, this method pushes them apart
-	virtual float GetMoveSpeed( void );							///< returns current movement speed (for walk/run)
+	void Upkeep( void );								///< lightweight maintenance, invoked frequently
+	void Update( void );								///< heavyweight algorithms, invoked less often
+	void BuildUserCmd( CUserCmd& cmd, const QAngle& viewangles, float forwardmove, float sidemove, float upmove, int buttons, byte impulse );
+	void AvoidPlayers( CUserCmd *pCmd );				///< some game types allow players to pass through each other, this method pushes them apart
+	float GetMoveSpeed( void );							///< returns current movement speed (for walk/run)
 
-	virtual void Walk( void );
-	virtual bool Jump( bool mustJump = false );					///< returns true if jump was started
+	void Walk( void );
+	bool Jump( bool mustJump = false );					///< returns true if jump was started
 
 	//- behavior properties ------------------------------------------------------------------------------------------
 	float GetCombatRange( void ) const;
@@ -616,8 +678,8 @@ public:
 	const char *GetTaskName( void ) const;						///< return string describing current task
 
 	// You probably never want to call these on CS bots. 
-	virtual CBaseEntity		*GetEnemy( void ) override { contract_assert( 0 ); return nullptr; }
-	virtual CBaseEntity		*GetEnemy( void ) const override { contract_assert( 0 ); return nullptr; }
+	CBaseEntity		*GetEnemy_Impl( void )  { contract_assert( 0 ); return nullptr; }
+	CBaseEntity		*GetEnemy_Impl( void ) const  { contract_assert( 0 ); return nullptr; }
 
 	//- behavior modifiers ------------------------------------------------------------------------------------------
 	enum DispositionType
@@ -871,7 +933,7 @@ public:
 
 	void GiveWeapon( const char *weaponAlias );						///< Debug command to give a named weapon
 
-	virtual void PrimaryAttack( void );								///< presses the fire button, unless we're holding a pistol that can't fire yet (so we can just always call PrimaryAttack())
+	void PrimaryAttack( void );								///< presses the fire button, unless we're holding a pistol that can't fire yet (so we can just always call PrimaryAttack())
 
 	enum ZoomType { NO_ZOOM, LOW_ZOOM, HIGH_ZOOM };
 	ZoomType GetZoomLevel( void );									///< return the current zoom level of our weapon
@@ -892,10 +954,10 @@ public:
 	//
 
 	/// invoked when injured by something (EXTEND) - returns the amount of damage inflicted
-	virtual int OnTakeDamage( const CTakeDamageInfo &info );
+	int OnTakeDamage_Impl( const CTakeDamageInfo &info );
 
 	/// invoked when killed (EXTEND)
-	virtual void Event_Killed( const CTakeDamageInfo &info );
+	void Event_Killed_Impl( const CTakeDamageInfo &info );
 
 	virtual bool BumpWeapon( CBaseCombatWeapon *pWeapon );		///< invoked when in contact with a CWeaponBox
 
@@ -1033,8 +1095,8 @@ private:
 	void MoveAwayFromPosition( const Vector &pos );					///< move away from position, independant of view angle
 	void StrafeAwayFromPosition( const Vector &pos );				///< strafe (sidestep) away from position, independant of view angle
 	void StuckCheck( void );										///< check if we have become stuck
-	CCSNavArea *m_currentArea;										///< the nav area we are standing on
-	CCSNavArea *m_lastKnownArea;										///< the last area we were in
+	CNavArea *m_currentArea;										///< the nav area we are standing on
+	CNavArea *m_lastKnownArea;										///< the last area we were in
 	EHANDLE m_avoid;												///< higher priority player we need to make way for
 	float m_avoidTimestamp;
 	bool m_isStopping;												///< true if we're trying to stop because we entered a 'stop' nav area
@@ -1335,7 +1397,8 @@ private:
 
 	BotChatterInterface *m_pChatter;									///< chatter mechanism
 
-	int ObjectCaps( void ) { return ( BaseClass::ObjectCaps() | FCAP_IMPULSE_USE ); } //allow +use
+	public: int ObjectCaps_Impl( void ) { return ( BaseClass::ObjectCaps_Impl() | FCAP_IMPULSE_USE ); }
+	private: //allow +use
 
 };
 
@@ -2111,11 +2174,15 @@ private:
 
 inline CCSBot *ToCSBot( CBaseEntity *pEntity )
 {
-	CCSPlayer* pPlayer = ToCSPlayer( pEntity );
-	if ( !pPlayer || !pPlayer->IsBot() )
+	// CCSBot is the only bot class: every fake client is a CCSBot, except the GOTV/replay proxies (plain CCSPlayers)
+	if ( !pEntity || !pEntity->IsPlayer() )
 		return nullptr;
 
-	return dynamic_cast<CCSBot*>( pPlayer );
+	CBasePlayer *pPlayer = static_cast<CBasePlayer*>( pEntity );
+	if ( !pPlayer->IsBot() || pPlayer->IsHLTV() || pPlayer->IsReplay() )
+		return nullptr;
+
+	return static_cast<CCSBot*>( pPlayer );
 }
 
 

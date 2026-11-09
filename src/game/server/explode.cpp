@@ -3,8 +3,6 @@
 
 // Purpose: Implements an explosion entity and a support spark shower entity.
 
-import std;
-import ks.vstdlib;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -50,16 +48,16 @@ class CShower : public CPointEntity
 public:
 	DECLARE_CLASS( CShower, CPointEntity );
 
-	void Spawn( void );
-	void Think( void );
-	void Touch( CBaseEntity *pOther );
-	int ObjectCaps( void ) { return FCAP_DONT_SAVE; }
+	void Spawn_Impl( void );
+	void Think_Impl( void );
+	void Touch_Impl( CBaseEntity *pOther );
+	int ObjectCaps_Impl( void ) { return FCAP_DONT_SAVE; }
 };
 
 LINK_ENTITY_TO_CLASS( spark_shower, CShower );
 
 
-void CShower::Spawn( void )
+void CShower::Spawn_Impl( void )
 {
 	Vector vecForward;
 	AngleVectors( GetLocalAngles(), &vecForward );
@@ -86,7 +84,7 @@ void CShower::Spawn( void )
 }
 
 
-void CShower::Think( void )
+void CShower::Think_Impl( void )
 {
 	g_pEffects->Sparks( GetAbsOrigin() );
 
@@ -99,7 +97,7 @@ void CShower::Think( void )
 }
 
 
-void CShower::Touch( CBaseEntity *pOther )
+void CShower::Touch_Impl( CBaseEntity *pOther )
 {
 	Vector vecNewVelocity = GetAbsVelocity();
 
@@ -126,13 +124,14 @@ public:
 		m_sFireballSprite = -1;
 	};
 
-	void Precache( void );
-	void Spawn( );
+	void Precache_Impl( void );
+	void Spawn_Impl( );
 	void Smoke ( void );
 	void SetCustomDamageType( int iType ) { m_iCustomDamageType = iType; }
-	bool KeyValue( const char *szKeyName, const char *szValue );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
 
-	int DrawDebugTextOverlays(void);
+	int DrawDebugTextOverlays_Impl(void);
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "Explode", .type = FIELD_VOID } ]] void InputExplode( inputdata_t &inputdata );
@@ -159,7 +158,7 @@ LINK_ENTITY_TO_CLASS( env_explosion, CEnvExplosion );
 IMPLEMENT_REFLECT_DATAMAP( CEnvExplosion )
 
 
-bool CEnvExplosion::KeyValue( const char *szKeyName, const char *szValue )
+bool CEnvExplosion::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "fireballsprite"))
 	{
@@ -167,13 +166,13 @@ bool CEnvExplosion::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
 }
 
-void CEnvExplosion::Precache( void )
+void CEnvExplosion::Precache_Impl( void )
 {
 	if ( m_iszFireballSprite != NULL_STRING )
 	{
@@ -184,7 +183,7 @@ void CEnvExplosion::Precache( void )
 	PrecacheScriptSound( "explode_3" );
 }
 
-void CEnvExplosion::Spawn( void )
+void CEnvExplosion::Spawn_Impl( void )
 { 
 	Precache();
 
@@ -492,9 +491,9 @@ void ExplosionCreate( const Vector &center, const QAngle &angles,
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CEnvExplosion::DrawDebugTextOverlays( void ) 
+int CEnvExplosion::DrawDebugTextOverlays_Impl( void ) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{

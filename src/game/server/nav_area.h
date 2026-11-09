@@ -6,9 +6,7 @@
 // Navigation areas
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
-import ks.tier1;
 #include "nav_ladder.h"
-import std;
 
 // BOTPORT: Clean up relationship between team index and danger storage in nav areas
 enum { MAX_NAV_TEAMS = 2 };
@@ -33,18 +31,6 @@ private:
 	static int m_nBytesCurrent;
 };
 
-
-
-//-------------------------------------------------------------------------------------------------------------------
-/**
- * Functor interface for iteration
- */
-class IForEachNavArea
-{
-public:
-	virtual bool Inspect( const CNavArea *area ) = 0;				// Invoked once on each area of the iterated set. Return false to stop iterating.
-	virtual void PostIteration( bool wasCompleteIteration ) { }		// Invoked after the iteration has ended. 'wasCompleteIteration' will be true if the entire set was iterated (ie: Inspect() never returned false)
-};
 
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -249,27 +235,31 @@ public:
 	DECLARE_CLASS_NOBASE( CNavArea )
 
 	CNavArea( void );
-	virtual ~CNavArea();
+	~CNavArea();
 	
-	virtual void OnServerActivate( void );						// (EXTEND) invoked when map is initially loaded
-	virtual void OnRoundRestart( void );						// (EXTEND) invoked for each area when the round restarts
-	virtual void OnRoundRestartPreEntity( void ) { }			// invoked for each area when the round restarts, but before entities are deleted and recreated
-	virtual void OnEnter( CBaseCombatCharacter *who, CNavArea *areaJustLeft ) { }	// invoked when player enters this area 
-	virtual void OnExit( CBaseCombatCharacter *who, CNavArea *areaJustEntered ) { }	// invoked when player exits this area 
+	void OnServerActivate( void );						// invoked when map is initially loaded
+	void OnRoundRestart( void );						// invoked for each area when the round restarts
+	void OnRoundRestartPreEntity( void ) { }			// invoked for each area when the round restarts, but before entities are deleted and recreated
+	void OnEnter( CBaseCombatCharacter *who, CNavArea *areaJustLeft ) { }	// invoked when player enters this area 
+	void OnExit( CBaseCombatCharacter *who, CNavArea *areaJustEntered ) { }	// invoked when player exits this area 
 
-	virtual void OnDestroyNotify( CNavArea *dead );				// invoked when given area is going away
-	virtual void OnDestroyNotify( CNavLadder *dead );			// invoked when given ladder is going away
+	void OnDestroyNotify( CNavArea *dead );				// invoked when given area is going away
+	void OnDestroyNotify( CNavLadder *dead );			// invoked when given ladder is going away
 
-	virtual void OnEditCreateNotify( CNavArea *newArea ) { }		// invoked when given area has just been added to the mesh in edit mode
-	virtual void OnEditDestroyNotify( CNavArea *deadArea ) { }		// invoked when given area has just been deleted from the mesh in edit mode
-	virtual void OnEditDestroyNotify( CNavLadder *deadLadder ) { }	// invoked when given ladder has just been deleted from the mesh in edit mode
+	void OnEditCreateNotify( CNavArea *newArea ) { }		// invoked when given area has just been added to the mesh in edit mode
+	void OnEditDestroyNotify( CNavArea *deadArea ) { }		// invoked when given area has just been deleted from the mesh in edit mode
+	void OnEditDestroyNotify( CNavLadder *deadLadder ) { }	// invoked when given ladder has just been deleted from the mesh in edit mode
 
-	virtual void Save( ks::byte_writer &fileBuffer, unsigned int version ) const;	// (EXTEND)
-	virtual NavErrorType Load( ks::byte_reader &fileBuffer, unsigned int version, unsigned int subVersion );		// (EXTEND)
-	virtual NavErrorType PostLoad( void );								// (EXTEND) invoked after all areas have been loaded - for pointer binding, etc
+	void Save( ks::byte_writer &fileBuffer, unsigned int version ) const;
+	NavErrorType Load( ks::byte_reader &fileBuffer, unsigned int version, unsigned int subVersion );
+	NavErrorType PostLoad( void );								// invoked after all areas have been loaded - for pointer binding, etc
 
-	virtual void SaveToSelectedSet( KeyValues *areaKey ) const;		// (EXTEND) saves attributes for the area to a KeyValues
-	virtual void RestoreFromSelectedSet( KeyValues *areaKey );		// (EXTEND) restores attributes from a KeyValues
+	void SaveBase( ks::byte_writer &fileBuffer, unsigned int version ) const;	// the base area data; Save()/Load()/PostLoad() add the Counter-Strike data
+	NavErrorType LoadBase( ks::byte_reader &fileBuffer, unsigned int version, unsigned int subVersion );
+	NavErrorType PostLoadBase( void );
+
+	void SaveToSelectedSet( KeyValues *areaKey ) const;		// saves attributes for the area to a KeyValues
+	void RestoreFromSelectedSet( KeyValues *areaKey );		// restores attributes from a KeyValues
 
 	// for interactively building or generating nav areas
 	void Build( CNavNode *nwNode, CNavNode *neNode, CNavNode *seNode, CNavNode *swNode );
@@ -296,8 +286,13 @@ public:
 
 	void MarkAsBlocked( int teamID, CBaseEntity *blocker, bool bGenerateEvent = true );	// An entity can force a nav area to be blocked
 	void MarkAsUnblocked( int teamID, bool bGenerateEvent = true );	// An entity can force a nav area to be blocked
-	virtual void UpdateBlocked( bool force = false, int teamID = TEAM_ANY );		// Updates the (un)blocked status of the nav area (throttled)
-	virtual bool IsBlocked( int teamID, bool ignoreNavBlockers = false ) const;
+	// Use nav blockers in coop mode. There is a bug with these functions causing bots to lose
+	// their path at the start of rounds that is undiagnosed at the time of this comment. Coop needs nav blockers
+	// and doesn't (seem) to have any issues with blocked nav so let's leave it on for them
+	void UpdateBlocked( bool force = false, int teamID = TEAM_ANY );		// Updates the (un)blocked status of the nav area (throttled)
+	bool IsBlocked( int teamID, bool ignoreNavBlockers = false ) const;
+	void UpdateBlockedBase( bool force, int teamID );
+	bool IsBlockedBase( int teamID, bool ignoreNavBlockers ) const;
 
 	void CheckFloor( CBaseEntity *ignore );						// Checks if there is a floor under the nav area, in case a breakable floor is gone
 
@@ -375,7 +370,7 @@ public:
 	//- "danger" ----------------------------------------------------------------------------------------
 	void IncreaseDanger( int teamID, float amount );			// increase the danger of this area for the given team
 	float GetDanger( int teamID );								// return the danger of this area (decays over time)
-	virtual float GetDangerDecayRate( void ) const;				// return danger decay rate per second
+	float GetDangerDecayRate( void ) const;				// return danger decay rate per second
 
 	//- extents -----------------------------------------------------------------------------------------
 	float GetSizeX( void ) const			{ return m_seCorner.x - m_nwCorner.x; }
@@ -400,7 +395,8 @@ public:
 	void RemoveOrthogonalConnections( NavDirType dir );
 
 	//- occupy time ------------------------------------------------------------------------------------
-	virtual float GetEarliestOccupyTime( int teamID ) const;			// returns the minimum time for someone of the given team to reach this spot from their spawn
+	float GetEarliestOccupyTimeBase( int teamID ) const;
+	float GetEarliestOccupyTime( int teamID ) const;			// returns the minimum time for someone of the given team to reach this spot from their spawn
 
 	//- player counting --------------------------------------------------------------------------------
 	void IncrementPlayerCount( int teamID, int entIndex );		// add one player to this area's count
@@ -445,9 +441,9 @@ public:
 	float GetPathLengthSoFar( void ) const	{ return m_pathLengthSoFar; }
 
 	//- editing -----------------------------------------------------------------------------------------
-	virtual void Draw( void ) const;							// draw area for debugging & editing
-	virtual void DrawFilled( int r, int g, int b, int a, float deltaT = 0.1f, bool noDepthTest = true, float margin = 5.0f ) const;	// draw area as a filled rect of the given color
-	virtual void DrawSelectedSet( const Vector &shift ) const;	// draw this area as part of a selected set
+	void Draw( void ) const;							// draw area for debugging & editing
+	void DrawFilled( int r, int g, int b, int a, float deltaT = 0.1f, bool noDepthTest = true, float margin = 5.0f ) const;	// draw area as a filled rect of the given color
+	void DrawSelectedSet( const Vector &shift ) const;	// draw this area as part of a selected set
 	void DrawDragSelectionSet( Color &dragSelectionSetColor ) const;
 	void DrawConnectedAreas( void ) const;
 	void DrawHidingSpots( void ) const;
@@ -465,16 +461,16 @@ public:
 	void AddLadderDown( CNavLadder *ladder );
 
 	//- generation and analysis -------------------------------------------------------------------------
-	virtual void ComputeHidingSpots( void );					// analyze local area neighborhood to find "hiding spots" in this area - for map learning
-	virtual void ComputeSniperSpots( void );					// analyze local area neighborhood to find "sniper spots" in this area - for map learning
-	virtual void ComputeSpotEncounters( void );					// compute spot encounter data - for map learning
-	virtual void ComputeEarliestOccupyTimes( void );
-	virtual void CustomAnalysis( bool isIncremental = false ) { }	// for game-specific analysis
-	virtual bool ComputeLighting( void );						// compute 0..1 light intensity at corners and center (requires client via listenserver)
+	void ComputeHidingSpots( void );					// analyze local area neighborhood to find "hiding spots" in this area - for map learning
+	void ComputeSniperSpots( void );					// analyze local area neighborhood to find "sniper spots" in this area - for map learning
+	void ComputeSpotEncounters( void );					// compute spot encounter data - for map learning
+	void ComputeEarliestOccupyTimes( void );
+	void CustomAnalysis( bool isIncremental = false );		// for game-specific analysis
+	bool ComputeLighting( void );						// compute 0..1 light intensity at corners and center (requires client via listenserver)
 	bool TestStairs( void );									// Test an area for being on stairs
-	virtual bool IsAbleToMergeWith( CNavArea *other ) const;
+	bool IsAbleToMergeWith( CNavArea *other ) const;
 
-	virtual void InheritAttributes( CNavArea *first, CNavArea *second = nullptr );
+	void InheritAttributes( CNavArea *first, CNavArea *second = nullptr );
 
 
 	//- visibility -------------------------------------------------------------------------------------
@@ -505,14 +501,14 @@ public:
 		}
 	};
 
-	virtual bool IsEntirelyVisible( const Vector &eye, CBaseEntity *ignore = nullptr ) const;				// return true if entire area is visible from given eyepoint (CPU intensive)
-	virtual bool IsPartiallyVisible( const Vector &eye, CBaseEntity *ignore = nullptr ) const;				// return true if any portion of the area is visible from given eyepoint (CPU intensive)
+	bool IsEntirelyVisible( const Vector &eye, CBaseEntity *ignore = nullptr ) const;				// return true if entire area is visible from given eyepoint (CPU intensive)
+	bool IsPartiallyVisible( const Vector &eye, CBaseEntity *ignore = nullptr ) const;				// return true if any portion of the area is visible from given eyepoint (CPU intensive)
 
-	virtual bool IsPotentiallyVisible( const CNavArea *area ) const;		// return true if given area is potentially visible from somewhere in this area (very fast)
-	virtual bool IsPotentiallyVisibleToTeam( int team ) const;				// return true if any portion of this area is visible to anyone on the given team (very fast)
+	bool IsPotentiallyVisible( const CNavArea *area ) const;		// return true if given area is potentially visible from somewhere in this area (very fast)
+	bool IsPotentiallyVisibleToTeam( int team ) const;				// return true if any portion of this area is visible to anyone on the given team (very fast)
 
-	virtual bool IsCompletelyVisible( const CNavArea *area ) const;			// return true if given area is completely visible from somewhere in this area (very fast)
-	virtual bool IsCompletelyVisibleToTeam( int team ) const;				// return true if given area is completely visible from somewhere in this area by someone on the team (very fast)
+	bool IsCompletelyVisible( const CNavArea *area ) const;			// return true if given area is completely visible from somewhere in this area (very fast)
+	bool IsCompletelyVisibleToTeam( int team ) const;				// return true if given area is completely visible from somewhere in this area by someone on the team (very fast)
 
 	//-------------------------------------------------------------------------------------
 	/**
@@ -629,13 +625,29 @@ public:
 	}
 
 
+	//- approach areas (Counter-Strike) -----------------------------------------------------------------
+	struct ApproachInfo
+	{
+		NavConnect here;										///< the approach area
+		NavConnect prev;										///< the area just before the approach area on the path
+		NavConnect next;										///< the area just after the approach area on the path
+		uint16 prevToHereHow;                                   // NavTraverseType
+		uint16 hereToNextHow;
+	};
+	const ApproachInfo *GetApproachInfo( int i ) const	{ return &m_approach[i]; }
+	int GetApproachInfoCount( void ) const				{ return m_approachCount; }
+	void ComputeApproachAreas( void );							///< determine the set of "approach areas" - for map learning
+
+	//- player counting (Counter-Strike) ----------------------------------------------------------------
+	void ClearPlayerCount( void );								///< set the player count to zero
+
 protected:
 	void UnblockArea( void );
+	NavErrorType LoadLegacy( ks::byte_reader &fileBuffer, unsigned int version, unsigned int subVersion );
 
 private:
 	friend class CNavMesh;
 	friend class CNavLadder;
-	friend class CCSNavArea;									// allow CS load code to complete replace our default load behavior
 
 	static bool m_isReset;										// if true, don't bother cleaning up in destructor since everything is going away
 
@@ -726,6 +738,11 @@ private:
 
 	uint32 m_nVisTestCounter;
 	static uint32 s_nCurrVisTestCounter;
+
+	//- approach areas ----------------------------------------------------------------------------------
+	enum { MAX_APPROACH_AREAS = 16 };
+	ApproachInfo m_approach[ MAX_APPROACH_AREAS ];
+	unsigned char m_approachCount;
 };
 
 typedef std::vector< CNavArea * > NavAreaVector;
@@ -739,10 +756,13 @@ extern NavAreaVector TheNavAreas;
 //
 
 //--------------------------------------------------------------------------------------------------------------
-inline float CNavArea::GetDangerDecayRate( void ) const
+//--------------------------------------------------------------------------------------------------------------
+inline void CNavArea::ClearPlayerCount( void )
 {
-	// one kill == 1.0, which we will forget about in two minutes
-	return 1.0f / 120.0f;
+	for( int i=0; i<MAX_NAV_TEAMS; ++i )
+	{
+		m_playerCount[ i ] = 0;
+	}
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -835,7 +855,7 @@ inline float CNavArea::GetClearedTimestamp( int teamID ) const
 }
 
 //--------------------------------------------------------------------------------------------------------------
-inline float CNavArea::GetEarliestOccupyTime( int teamID ) const
+inline float CNavArea::GetEarliestOccupyTimeBase( int teamID ) const
 {
 	return m_earliestOccupyTime[ teamID % MAX_NAV_TEAMS ];
 }

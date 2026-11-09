@@ -3,8 +3,6 @@
 
 // Purpose: Implements two types of doors: linear and rotating.
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -41,7 +39,6 @@ import ks.math;
 #include "physics_npc_solver.h"
 
 #ifdef CSTRIKE_DLL
-import ks.tier1;
 #endif
 
 inline constexpr const char *CLOSE_AREAPORTAL_THINK_CONTEXT = "CloseAreaportalThink";
@@ -54,7 +51,7 @@ LINK_ENTITY_TO_CLASS( func_door, CBaseDoor );
 //
 // func_water is implemented as a linear door so we can raise/lower the water level.
 //
-LINK_ENTITY_TO_CLASS( func_water, CBaseDoor );
+LINK_ENTITY_TO_CLASS_ALIAS( func_water, CBaseDoor );
 
 
 // SendTable stuff.
@@ -175,7 +172,7 @@ void PlayLockSounds(CBaseEntity *pEdict, locksound_t *pls, int flocked, int fbut
 //			szValue - 
 // Output : Returns true.
 //-----------------------------------------------------------------------------
-bool CBaseDoor::KeyValue( const char *szKeyName, const char *szValue )
+bool CBaseDoor::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "locked_sentence"))
 	{
@@ -186,7 +183,7 @@ bool CBaseDoor::KeyValue( const char *szKeyName, const char *szValue )
 		m_bUnlockedSentence = std::atof(szValue);
 	}
 	else
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 
 	return true;
 }
@@ -195,7 +192,7 @@ bool CBaseDoor::KeyValue( const char *szKeyName, const char *szValue )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseDoor::Spawn()
+void CBaseDoor::Spawn_Impl()
 {
 	Precache();
 
@@ -363,14 +360,14 @@ void CBaseDoor::StopMovingSound(void)
 }
  
 
-bool CBaseDoor::ShouldSavePhysics()
+bool CBaseDoor::ShouldSavePhysics_Impl()
 {
 	// don't save physics if you're func_water
 	return !FClassnameIs( this, "func_water" );
 }
 
 //-----------------------------------------------------------------------------
-bool CBaseDoor::CreateVPhysics( )
+bool CBaseDoor::CreateVPhysics_Impl( )
 {
 	if ( !FClassnameIs( this, "func_water" ) )
 	{
@@ -409,9 +406,9 @@ bool CBaseDoor::CreateVPhysics( )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseDoor::Activate( void )
+void CBaseDoor::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	CBaseDoor *pDoorList[64];
 	m_bDoorGroup = true;
@@ -473,7 +470,7 @@ void CBaseDoor::SetToggleState( int state )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseDoor::Precache( void )
+void CBaseDoor::Precache_Impl( void )
 {
 	//Fill in a default value if necessary
 	if ( IsRotatingDoor() )
@@ -623,7 +620,7 @@ void CBaseDoor::UpdateAreaPortals( bool isOpen )
 //			useType - 
 //			value - 
 //-----------------------------------------------------------------------------
-void CBaseDoor::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CBaseDoor::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	m_hActivator = pActivator;
 
@@ -1089,7 +1086,7 @@ int CBaseDoor::GetDoorMovementGroup( CBaseDoor *pDoorList[], int listMax )
 // Purpose: Called the first frame that the door is blocked while opening or closing.
 // Input  : pOther - The blocking entity.
 //-----------------------------------------------------------------------------
-void CBaseDoor::StartBlocked( CBaseEntity *pOther )
+void CBaseDoor::StartBlocked_Impl( CBaseEntity *pOther )
 {
 	//
 	// Fire whatever events we need to due to our blocked state.
@@ -1109,7 +1106,7 @@ void CBaseDoor::StartBlocked( CBaseEntity *pOther )
 // Purpose: Called every frame when the door is blocked while opening or closing.
 // Input  : pOther - The blocking entity.
 //-----------------------------------------------------------------------------
-void CBaseDoor::Blocked( CBaseEntity *pOther )
+void CBaseDoor::Blocked_Impl( CBaseEntity *pOther )
 {
 	// Hurt the blocker a little.
 	if ( m_flBlockDamage )
@@ -1190,7 +1187,7 @@ void CBaseDoor::Blocked( CBaseEntity *pOther )
 //-----------------------------------------------------------------------------
 // Purpose: Called the first frame that the door is unblocked while opening or closing.
 //-----------------------------------------------------------------------------
-void CBaseDoor::EndBlocked( void )
+void CBaseDoor::EndBlocked_Impl( void )
 {
 	//
 	// Fire whatever events we need to due to our unblocked state.
@@ -1245,8 +1242,8 @@ class CRotDoor : public CBaseDoor
 public:
 	DECLARE_CLASS( CRotDoor, CBaseDoor );
 
-	void Spawn( void );
-	bool CreateVPhysics();
+	void Spawn_Impl( void );
+	bool CreateVPhysics_Impl();
 	// This is ONLY used by the node graph to test movement through a door
 	virtual void SetToggleState( int state );
 	virtual bool IsRotatingDoor() { return true; }
@@ -1263,9 +1260,9 @@ IMPLEMENT_REFLECT_DATAMAP( CRotDoor )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CRotDoor::Spawn( void )
+void CRotDoor::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	// set the axis of rotation
 	CBaseToggle::AxisDir();
@@ -1320,7 +1317,7 @@ void CRotDoor::Spawn( void )
 
 //-----------------------------------------------------------------------------
 
-bool CRotDoor::CreateVPhysics()
+bool CRotDoor::CreateVPhysics_Impl()
 {
 	if ( !IsSolidFlagSet( FSOLID_NOT_SOLID ) )
 	{

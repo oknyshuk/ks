@@ -200,3 +200,6 @@ void JoltPhysicsShadowController::OnPreSimulate( float flDeltaTime )
 
 	m_secondsToArrival = Max( m_secondsToArrival - flDeltaTime, 0.0f );
 }
+
+//-------------------------------------------------------------------------------------------------
+#include "facade/iphysicsshadowcontroller.inl"

@@ -3,8 +3,6 @@
 
 // Purpose: Ambient light controller entity.
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -42,9 +40,9 @@ IMPLEMENT_REFLECT_DATAMAP( CEnvAmbientLight )
 IMPLEMENT_REFLECT_SERVERCLASS( CEnvAmbientLight, DT_EnvAmbientLight )
 
 
-void CEnvAmbientLight::Spawn( void )
+void CEnvAmbientLight::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	m_vecColor.SetX( static_cast<float>( m_Color.r ) / 255.0f );
 	m_vecColor.SetY( static_cast<float>( m_Color.g ) / 255.0f );

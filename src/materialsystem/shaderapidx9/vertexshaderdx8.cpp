@@ -316,32 +316,35 @@ struct ShaderFileCache_t
 //-----------------------------------------------------------------------------
 // Vertex + pixel shader manager
 //-----------------------------------------------------------------------------
-class CShaderManager : public IShaderManager
+class CShaderManager
 {
 public:
 	CShaderManager();
-	virtual ~CShaderManager();
+	~CShaderManager();
 
 	// Methods of IShaderManager
-	virtual void				Init();
-	virtual void				Shutdown();
-	virtual IShaderBuffer		*CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion );
-	virtual VertexShaderHandle_t CreateVertexShader( IShaderBuffer* pShaderBuffer );
-	virtual void				DestroyVertexShader( VertexShaderHandle_t hShader );
-	virtual PixelShaderHandle_t CreatePixelShader( IShaderBuffer* pShaderBuffer );
-	virtual void				DestroyPixelShader( PixelShaderHandle_t hShader );
-	virtual VertexShader_t		CreateVertexShader( const char *pVertexShaderFile, int nStaticVshIndex = 0, char *debugLabel = nullptr );
-	virtual PixelShader_t		CreatePixelShader( const char *pPixelShaderFile, int nStaticPshIndex = 0, char *debugLabel = nullptr );
-	virtual void				SetVertexShader( VertexShader_t shader );
-	virtual void				SetPixelShader( PixelShader_t shader );
-	virtual void				BindVertexShader( VertexShaderHandle_t shader );
-	virtual void				BindPixelShader( PixelShaderHandle_t shader );
-	virtual void				*GetCurrentVertexShader();
-	virtual void				*GetCurrentPixelShader();
-	virtual void				ResetShaderState();
-	virtual void				FlushShaders();
-	virtual void				ClearVertexAndPixelShaderRefCounts();
-	virtual void				PurgeUnusedVertexAndPixelShaders();
+	void				Init();
+	void				Shutdown();
+	// Sets which dynamic version of the vertex + pixel shader to use
+	void				SetVertexShaderIndex( int vshIndex ) { m_nVertexShaderIndex = vshIndex; }
+	void				SetPixelShaderIndex( int pshIndex ) { m_nPixelShaderIndex = pshIndex; }
+	IShaderBuffer		*CompileShader( const char *pProgram, std::size_t nBufLen, const char *pShaderVersion );
+	VertexShaderHandle_t CreateVertexShader( IShaderBuffer* pShaderBuffer );
+	void				DestroyVertexShader( VertexShaderHandle_t hShader );
+	PixelShaderHandle_t CreatePixelShader( IShaderBuffer* pShaderBuffer );
+	void				DestroyPixelShader( PixelShaderHandle_t hShader );
+	VertexShader_t		CreateVertexShader( const char *pVertexShaderFile, int nStaticVshIndex = 0, char *debugLabel = nullptr );
+	PixelShader_t		CreatePixelShader( const char *pPixelShaderFile, int nStaticPshIndex = 0, char *debugLabel = nullptr );
+	void				SetVertexShader( VertexShader_t shader );
+	void				SetPixelShader( PixelShader_t shader );
+	void				BindVertexShader( VertexShaderHandle_t shader );
+	void				BindPixelShader( PixelShaderHandle_t shader );
+	void				*GetCurrentVertexShader();
+	void				*GetCurrentPixelShader();
+	void				ResetShaderState();
+	void				FlushShaders();
+	void				ClearVertexAndPixelShaderRefCounts();
+	void				PurgeUnusedVertexAndPixelShaders();
 	void						SpewVertexAndPixelShaders();
 	const char					*GetActiveVertexShaderName();
 	const char					*GetActivePixelShaderName();
@@ -349,13 +352,16 @@ public:
 	bool						CreateDynamicCombos_Ver5( void *pContext, uint8 *pComboBuffer, char *debugLabel = nullptr );
 
 
-	virtual HardwareShader_t	GetVertexShader( VertexShader_t vs, int dynIdx );
-	virtual HardwareShader_t	GetPixelShader( PixelShader_t ps, int dynIdx );
+	HardwareShader_t	GetVertexShader( VertexShader_t vs, int dynIdx );
+	HardwareShader_t	GetPixelShader( PixelShader_t ps, int dynIdx );
 
 	// Destroys all shaders
 	void						DestroyAllShaders();
 
-	virtual void				AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics );
+	void				AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics );
+
+	void SetPixelShaderState_Internal( HardwareShader_t shader, DataCacheHandle_t hCachedShader  );
+	void SetVertexShaderState_Internal( HardwareShader_t shader, DataCacheHandle_t hCachedShader );
 
 
 private:
@@ -409,9 +415,6 @@ private:
 		}
 	};
 
-	virtual void SetPixelShaderState_Internal( HardwareShader_t shader, DataCacheHandle_t hCachedShader  );
-	virtual void SetVertexShaderState_Internal( HardwareShader_t shader, DataCacheHandle_t hCachedShader );
-
 private:
 	void					CreateStaticShaders();
 	void					DestroyStaticShaders();
@@ -456,6 +459,10 @@ private:
 	void					SaveShaderCache( char *cacheName );	// query GLM pair cache for all active shader pairs and write them to disk in named file
 	bool					LoadShaderCache( char *cacheName );	// read named file, establish compiled shader sets for each vertex+static and pixel+static, then link pairs as listed in table
 
+	// The current vertex and pixel shader index
+	int m_nVertexShaderIndex;
+	int m_nPixelShaderIndex;
+
 	// lists: handles point at the entries, which must not move
 	ShaderDict_t m_VertexShaderDict;
 	ShaderDict_t m_PixelShaderDict;
@@ -489,7 +496,12 @@ private:
 // Singleton accessor
 //-----------------------------------------------------------------------------
 static CShaderManager s_ShaderManager;
-IShaderManager *g_pShaderManager = &s_ShaderManager;
+
+// IShaderManager is a stateless facade that forwards to the one shader manager.
+static IShaderManager s_ShaderManagerFacade;
+IShaderManager *g_pShaderManager = &s_ShaderManagerFacade;
+static CShaderManager &ShaderManagerImpl() { return s_ShaderManager; }
+#include "ishadermanager_facade.inl"
 
 //-----------------------------------------------------------------------------
 // Constructor, destructor

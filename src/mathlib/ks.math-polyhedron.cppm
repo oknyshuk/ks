@@ -29,7 +29,7 @@ struct Polyhedron_IndexedPolygon_t
 	Vector polyNormal;
 };
 
-class CPolyhedron //made into a class because it's going virtual to support distinctions between temp and permanent versions
+class CPolyhedron
 {
 public:
 	Vector *pVertices;
@@ -42,15 +42,20 @@ public:
 	unsigned short iIndexCount;
 	unsigned short iPolygonCount;
 
-	virtual ~CPolyhedron( void ) {};
-	virtual void Release( void ) = 0;
+	// Frees a polyhedron from Allocate(); does nothing for the temporary one.
+	void Release( void );
 	Vector Center( void ) const;
+
+protected:
+	CPolyhedron( void ) : m_bTemporary( false ) {}
+	~CPolyhedron( void ) {}
+
+	bool m_bTemporary; // the polyhedron returned by GetTempPolyhedron()
 };
 
 class CPolyhedron_AllocByNew : public CPolyhedron
 {
 public:
-	virtual void Release( void );
 	static CPolyhedron_AllocByNew *Allocate( unsigned short iVertices, unsigned short iLines, unsigned short iIndices, unsigned short iPolygons ); //creates the polyhedron along with enough memory to hold all it's data in a single allocation
 
 private:

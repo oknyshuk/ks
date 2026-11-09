@@ -19,7 +19,7 @@ class CTeamSpawnPoint : public CPointEntity
 public:
 	DECLARE_CLASS( CTeamSpawnPoint, CPointEntity );
 
-	void	Activate( void );
+	void	Activate_Impl( void );
 	virtual bool	IsValid( CBasePlayer *pPlayer );
 
 	[[= ks::reflect::Key{ .name = "OnPlayerSpawn" } ]] COutputEvent m_OnPlayerSpawn;
@@ -41,7 +41,7 @@ class CTeamVehicleSpawnPoint : public CTeamSpawnPoint
 {
 	DECLARE_CLASS( CTeamVehicleSpawnPoint, CTeamSpawnPoint );
 public:
-	void	Activate( void );
+	void	Activate_Impl( void );
 	bool	IsValid( void );
 
 	[[= ks::reflect::Key{ .name = "OnVehicleSpawn" } ]] COutputEvent m_OnVehicleSpawn;

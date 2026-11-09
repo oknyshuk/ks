@@ -3,8 +3,6 @@
 
 // Author: Matthew D. Campbell (matt@turtlerockstudios.com), 2004
 
-import std;
-import ks.core;
 #include "buy_preset_debug.h"
 
 #ifdef _DEBUG

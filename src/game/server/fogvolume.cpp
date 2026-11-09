@@ -1,8 +1,6 @@
 //--------------------------------------------------------------------------------------------------------
 // Copyright (c) 2007 Turtle Rock Studios, Inc. - All Rights Reserved
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -106,9 +103,9 @@ CFogVolume::~CFogVolume()
 
 
 //--------------------------------------------------------------------------------------------------------
-void CFogVolume::Spawn( void )
+void CFogVolume::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	SetSolid( SOLID_BSP );
 	SetSolidFlags( FSOLID_NOT_SOLID );
@@ -157,9 +154,9 @@ void CFogVolume::InputDisable( inputdata_t &data )
 //----------------------------------------------------------------------------
 // Called when the level loads or is restored
 //----------------------------------------------------------------------------
-void CFogVolume::Activate()
+void CFogVolume::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	m_hFogController = dynamic_cast< CFogController* >( gEntList.FindEntityByName( nullptr, m_fogName ) );
 	m_hPostProcessController = dynamic_cast< CPostProcessController* >( gEntList.FindEntityByName( nullptr, m_postProcessName ) );

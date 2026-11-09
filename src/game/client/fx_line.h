@@ -3,10 +3,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 
-import std;
-import ks.math;
 
-class IMaterial;
 
 struct FXLineData_t
 {

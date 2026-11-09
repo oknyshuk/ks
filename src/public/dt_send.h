@@ -109,15 +109,23 @@ public:
 	void	SetRecipient( int iClient );		// Note: these are CLIENT indices, not entity indices (so the first player's index is 0).
 	void	ClearRecipient( int iClient );
 
-	// Clear all recipients and set only the specified one.
-	void	SetOnly( int iClient );
-	// Set all recipients, save for the specified on
-	void    ExcludeOnly( int iClient );
+	// Setting or excluding a player together with its split screen players needs the
+	// game's entities: see SendProxyRecipients_SetOnly() and _ExcludeOnly() (sendproxy.h).
 
 public:
 	// Make sure we have enough room for the max possible player count
 	CPlayerBitVec	m_Bits;
 };
+
+inline void CSendProxyRecipients::SetRecipient( int iClient )
+{
+	m_Bits.set( iClient );
+}
+
+inline void CSendProxyRecipients::ClearRecipient( int iClient )
+{
+	m_Bits.reset( iClient );
+}
 
 inline void CSendProxyRecipients::SetAllRecipients()
 {

@@ -19,7 +19,8 @@ public:
 	DECLARE_SERVERCLASS();
 
 	SmokeTrail();
-	virtual bool KeyValue( const char *szKeyName, const char *szValue ); 
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue ); 
 	void					SetEmit(bool bVal);
 	void					FollowEntity( CBaseEntity *pEntity, const char *pAttachmentName = nullptr);
 	static	SmokeTrail*		CreateSmokeTrail();
@@ -127,7 +128,7 @@ public:
 	DECLARE_SERVERCLASS();
 
 	SporeExplosion( void );
-	void Spawn( void );
+	void Spawn_Impl( void );
 
 	static SporeExplosion*		CreateSporeExplosion();
 
@@ -162,7 +163,7 @@ public:
 
 	static CFireTrail	*CreateFireTrail( void );
 	void				FollowEntity( CBaseEntity *pEntity, const char *pAttachmentName );
-	void				Precache( void );
+	void				Precache_Impl( void );
 
 	CNetworkVar( int, m_nAttachment, [[= ks::reflect::Net{ .bits = 32 } ]] );
 	CNetworkVar( float, m_flLifetime, [[= ks::reflect::Net{ .bits = 0, .flags = SPROP_NOSCALE } ]] );
@@ -181,7 +182,8 @@ public:
 	DECLARE_SERVERCLASS();
 
 	DustTrail();
-	virtual bool KeyValue( const char *szKeyName, const char *szValue ); 
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue ); 
 	void					SetEmit(bool bVal);
 	static	DustTrail*		CreateDustTrail();
 

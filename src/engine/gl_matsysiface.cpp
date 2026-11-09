@@ -26,8 +26,6 @@ import std;
 #include "cmd.h"
 #include "modelloader.h"
 #include "materialsystem/imaterial.h"
-#include "toolframework/itoolframework.h"
-#include "toolframework/itoolsystem.h"
 #include "paint.h"
 
 
@@ -70,47 +68,6 @@ void WorldStaticMeshDestroy( void );
 
 bool TangentSpaceSurfaceSetup( SurfaceHandle_t surfID, Vector &tVect );
 void TangentSpaceComputeBasis( Vector& tangent, Vector& binormal, const Vector& normal, const Vector& tVect, bool negateTangent );
-
-
-//-----------------------------------------------------------------------------
-// A console command edit a particular material
-//-----------------------------------------------------------------------------
-static void mat_edit( const CCommand &args );
-static ConCommand mat_edit_command( "mat_edit", mat_edit, "Bring up the material under the crosshair in the editor", FCVAR_CHEAT );
-static void mat_edit( const CCommand &args )
-{
-	if ( !toolframework->InToolMode() )
-		return;
-
-	IMaterial* pMaterial = nullptr;
-	if ( args.ArgC() < 2 )
-	{
-		pMaterial = GetMaterialAtCrossHair();
-	}
-	else
-	{
-		const char *pMaterialName = args[ 1 ];
-		pMaterial = materials->FindMaterial( pMaterialName, "edited materials", false );
-	}
-
-	if ( !pMaterial )
-	{
-		ConMsg( "no/bad material\n" );
-	}
-	else
-	{
-		IToolSystem *pToolSystem = toolframework->SwitchToTool( "Material Editor" );
-		if ( pToolSystem )
-		{
-			ConMsg( "editing material \"%s\"\n", pMaterial->GetName() );
-
-			KeyValues *pKeyValues = new KeyValues( "EditMaterial" );
-			pKeyValues->SetString( "material", pMaterial->GetName() );
-			pToolSystem->PostToolMessage( 0, pKeyValues );
-			pKeyValues->deleteThis();
-		}
-	}
-}
 
 
 //-----------------------------------------------------------------------------

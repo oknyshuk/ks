@@ -23,7 +23,6 @@ struct physfollower_t
 	CHandle<CBoneFollower> hFollower;
 };
 
-struct vcollide_t;
 
 // create a manager and a list of followers directly from a ragdoll
 void CreateBoneFollowersFromRagdoll( CBaseAnimating *pEntity, class CBoneFollowerManager *pManager, vcollide_t *pCollide );
@@ -68,21 +67,21 @@ class [[= ks::reflect::NetTable{ .name = "DT_BoneFollower" } ]]
 	DECLARE_SERVERCLASS();
 public:
 	// CBaseEntity
-	void VPhysicsUpdate( IPhysicsObject *pPhysics );
-	int  UpdateTransmitState(void);
+	void VPhysicsUpdate_Impl( IPhysicsObject *pPhysics );
+	int  UpdateTransmitState_Impl(void);
 
 	// NOTE: These are forwarded to the parent object!
-	void VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
-	void VPhysicsFriction( IPhysicsObject *pObject, float energy, int surfaceProps, int surfacePropsHit );
-	void VPhysicsShadowCollision( int index, gamevcollisionevent_t *pEvent );
+	void VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent );
+	void VPhysicsFriction_Impl( IPhysicsObject *pObject, float energy, int surfaceProps, int surfacePropsHit );
+	void VPhysicsShadowCollision_Impl( int index, gamevcollisionevent_t *pEvent );
 
-	bool TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace );
-	int	 ObjectCaps( void );
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	bool TestCollision_Impl( const Ray_t &ray, unsigned int mask, trace_t& trace );
+	int	 ObjectCaps_Impl( void );
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	
-	void Touch( CBaseEntity *pOther );
+	void Touch_Impl( CBaseEntity *pOther );
 
-	void TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
+	void TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
 
 	// locals
 	bool Init( CBaseEntity *pOwner, const char *pModelName, solid_t &solid, const Vector &position, const QAngle &orientation );

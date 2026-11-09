@@ -30,6 +30,7 @@ import std;
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "materialsystem/ivballoctracker.h"
 #include "shaderdevicedx8.h"
+#include "../cmatqueuedmesh.h"
 
 
 static constexpr auto kTextureGroupDynamicIndexBufferGlobal = ks::Concat( "TexGroup_global_", TEXTURE_GROUP_DYNAMIC_INDEX_BUFFER );
@@ -84,23 +85,24 @@ enum
 //-----------------------------------------------------------------------------
 class CVertexBufferDx8 : public CVertexBufferBase
 {
+	friend class IVertexBuffer;
 	typedef CVertexBufferBase BaseClass;
 
 	// Methods of IVertexBuffer
 public:
-	virtual int VertexCount() const;
-	virtual VertexFormat_t GetVertexFormat() const;
-	virtual bool IsDynamic() const;
-	virtual void BeginCastBuffer( VertexFormat_t format );
-	virtual void EndCastBuffer( );
-	virtual int GetRoomRemaining() const;
-	virtual bool Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc );
-	virtual void Unlock( int nVertexCount, VertexDesc_t &desc );
+	int VertexCount() const;
+	VertexFormat_t GetVertexFormat() const;
+	bool IsDynamic() const;
+	void BeginCastBuffer( VertexFormat_t format );
+	void EndCastBuffer( );
+	int GetRoomRemaining() const;
+	bool Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc );
+	void Unlock( int nVertexCount, VertexDesc_t &desc );
 
 public:
 	// constructor
 	CVertexBufferDx8( ShaderBufferType_t type, VertexFormat_t fmt, int nVertexCount, const char *pBudgetGroupName );
-	virtual ~CVertexBufferDx8();
+	~CVertexBufferDx8();
 
 	// Allocates, deallocates the index buffer
 	bool Allocate( );
@@ -147,25 +149,26 @@ protected:
 //-----------------------------------------------------------------------------
 class CIndexBufferDx8 : public CIndexBufferBase
 {
+	friend class IIndexBuffer;
 	typedef CIndexBufferBase BaseClass;
 
 	// Methods of IIndexBuffer
 public:
-	virtual int IndexCount( ) const;
-	virtual MaterialIndexFormat_t IndexFormat() const;
-	virtual int GetRoomRemaining() const;
-	virtual bool Lock( int nIndexCount, bool bAppend, IndexDesc_t &desc );
-	virtual void Unlock( int nIndexCount, IndexDesc_t &desc );
-	virtual void BeginCastBuffer( MaterialIndexFormat_t format );
-	virtual void EndCastBuffer( );
-	virtual bool IsDynamic() const;
-	virtual void ModifyBegin( bool bReadOnly, int nFirstIndex, int nIndexCount, IndexDesc_t& desc ) { contract_assert( 0 ); }
-	virtual void ModifyEnd( IndexDesc_t& desc ) { contract_assert( 0 ); }
+	int IndexCount( ) const;
+	MaterialIndexFormat_t IndexFormat() const;
+	int GetRoomRemaining() const;
+	bool Lock( int nIndexCount, bool bAppend, IndexDesc_t &desc );
+	void Unlock( int nIndexCount, IndexDesc_t &desc );
+	void BeginCastBuffer( MaterialIndexFormat_t format );
+	void EndCastBuffer( );
+	bool IsDynamic() const;
+	void ModifyBegin( bool bReadOnly, int nFirstIndex, int nIndexCount, IndexDesc_t& desc ) { contract_assert( 0 ); }
+	void ModifyEnd( IndexDesc_t& desc ) { contract_assert( 0 ); }
 
 public:
 	// constructor
 	CIndexBufferDx8( ShaderBufferType_t bufferType, MaterialIndexFormat_t fmt, int nIndexCount, const char *pBudgetGroupName );
-	virtual ~CIndexBufferDx8();
+	~CIndexBufferDx8();
 
 	// Allocates, deallocates the index buffer
 	bool Allocate( );
@@ -185,7 +188,7 @@ public:
 
 	void SetIndexStreamState( int nFirstVertexIdx );
 
-	virtual bool IsExternal() const { return false; }
+	bool IsExternal() const { return false; }
 
 #ifdef CHECK_INDICES
 	unsigned short GetShadowIndex( int i ) const;
@@ -229,22 +232,26 @@ private:
 //-----------------------------------------------------------------------------
 class CBaseMeshDX8 : public CMeshBase
 {
+	friend class IVertexBuffer;
+	friend class IIndexBuffer;
+	friend class IMesh;
+	friend class CMeshBase;
 public:
 	// constructor, destructor
-	CBaseMeshDX8();
-	virtual ~CBaseMeshDX8();
+	explicit CBaseMeshDX8( MeshKind kind );
+	~CBaseMeshDX8();
 
 	// FIXME: Make this work! Unsupported methods of IIndexBuffer + IVertexBuffer
-	virtual bool Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t& desc ) { contract_assert( 0 ); return false; }
-	virtual void Unlock( int nWrittenIndexCount, IndexDesc_t& desc ) { contract_assert( 0 ); }
-	virtual void ModifyBegin( bool bReadOnly, int nFirstIndex, int nIndexCount, IndexDesc_t& desc ) { contract_assert( 0 ); }
-	virtual void ModifyEnd( IndexDesc_t& desc ) { contract_assert( 0 ); }
-	virtual void Spew( int nIndexCount, const IndexDesc_t & desc ) { contract_assert( 0 ); }
-	virtual void ValidateData( int nIndexCount, const IndexDesc_t &desc ) { contract_assert( 0 ); }
-	virtual bool Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc ) { contract_assert( 0 ); return false; }
-	virtual void Unlock( int nVertexCount, VertexDesc_t &desc ) { contract_assert( 0 ); }
-	virtual void Spew( int nVertexCount, const VertexDesc_t &desc ) { contract_assert( 0 ); }
-	virtual void ValidateData( int nVertexCount, const VertexDesc_t & desc ) { contract_assert( 0 ); }
+	bool Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t& desc ) { contract_assert( 0 ); return false; }
+	void Unlock( int nWrittenIndexCount, IndexDesc_t& desc ) { contract_assert( 0 ); }
+	void ModifyBegin( bool bReadOnly, int nFirstIndex, int nIndexCount, IndexDesc_t& desc ) { contract_assert( 0 ); }
+	void ModifyEnd( IndexDesc_t& desc ) { contract_assert( 0 ); }
+	void Spew( int nIndexCount, const IndexDesc_t & desc ) { contract_assert( 0 ); }
+	void ValidateData( int nIndexCount, const IndexDesc_t &desc ) { contract_assert( 0 ); }
+	bool Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc ) { contract_assert( 0 ); return false; }
+	void Unlock( int nVertexCount, VertexDesc_t &desc ) { contract_assert( 0 ); }
+	void Spew( int nVertexCount, const VertexDesc_t &desc ) { contract_assert( 0 ); }
+	void ValidateData( int nVertexCount, const VertexDesc_t & desc ) { contract_assert( 0 ); }
 
 	// Locks mesh for modifying
 	void ModifyBeginEx( bool bReadOnly, int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t& desc );
@@ -252,8 +259,11 @@ public:
 	void ModifyEnd( MeshDesc_t& desc );
 
 	// Sets/gets the vertex format
-	virtual void SetVertexFormat( VertexFormat_t format, bool bHasVertexOverride, bool bHasIndexOverride );
-	virtual VertexFormat_t GetVertexFormat() const;
+	// Dispatch on the kind of mesh (below the classes); SetVertexFormat_Base is what a mesh that does not
+	// override it, and the ones that extend it, do
+	void SetVertexFormat( VertexFormat_t format, bool bHasVertexOverride, bool bHasIndexOverride );
+	void SetVertexFormat_Base( VertexFormat_t format, bool bHasVertexOverride, bool bHasIndexOverride );
+	VertexFormat_t GetVertexFormat() const;
 
 	// Sets/gets the morph format
 	// Am I using morph data?
@@ -262,10 +272,10 @@ public:
 		return ShaderAPI()->GetBoundMaterial()->IsUsingVertexID();
 	}
 
-	virtual bool IsExternal() const { return false; }
+	bool IsExternal() const { return false; }
 
 	// Sets the material
-	virtual void SetMaterial( IMaterial* pMaterial );
+	void SetMaterial( IMaterial* pMaterial );
 
 	// returns the # of vertices (static meshes only)
 	int VertexCount() const { return 0; }
@@ -275,10 +285,7 @@ public:
 		contract_assert( 0 );
 	}
 
-	virtual void GetColorMesh( const IVertexBuffer** pMesh, int *pMeshVertexOffsetInBytes ) const
-	{
-		*pMesh = 0; *pMeshVertexOffsetInBytes = 0;
-	}
+	void GetColorMesh( const IVertexBuffer** pMesh, int *pMeshVertexOffsetInBytes ) const;
 
 	void SetFlexMesh( IMesh *pMesh, int nVertexOffsetInBytes )
 	{
@@ -303,17 +310,17 @@ public:
 	void BeginPass( );
 
 	// Spews the mesh data
-	virtual void Spew( int nVertexCount, int nIndexCount, const MeshDesc_t & desc );
+	void Spew( int nVertexCount, int nIndexCount, const MeshDesc_t & desc );
 
 	// Call this in debug mode to make sure our data is good.
-	virtual void ValidateData( int nVertexCount, int nIndexCount, const MeshDesc_t & desc );
+	void ValidateData( int nVertexCount, int nIndexCount, const MeshDesc_t & desc );
 
-	virtual void HandleLateCreation( ) = 0;
+	void HandleLateCreation( );
 
 	void Draw( CPrimList *pLists, int nLists );
 
 	// Copy verts and/or indices to a mesh builder. This only works for temp meshes!
-	virtual void CopyToMeshBuilder( 
+	void CopyToMeshBuilder( 
 		int iStartVert,		// Which vertices to copy.
 		int nVerts, 
 		int iStartIndex,	// Which indices to copy.
@@ -322,35 +329,35 @@ public:
 		CMeshBuilder &builder );
 
 	// returns the primitive type
-	virtual MaterialPrimitiveType_t GetPrimitiveType() const = 0;
+	MaterialPrimitiveType_t GetPrimitiveType() const;
 
 	// Returns the number of indices in a mesh..
-	virtual int IndexCount( ) const = 0;
+	int IndexCount( ) const;
 
 	// FIXME: Make this work!
-	virtual MaterialIndexFormat_t IndexFormat() const { return MATERIAL_INDEX_FORMAT_16BIT; }
+	MaterialIndexFormat_t IndexFormat() const { return MATERIAL_INDEX_FORMAT_16BIT; }
 
 	// NOTE: For dynamic index buffers only!
 	// Casts the memory of the dynamic index buffer to the appropriate type
-	virtual void BeginCastBuffer( MaterialIndexFormat_t format ) { contract_assert( 0 ); }
-	virtual void BeginCastBuffer( VertexFormat_t format ) { contract_assert( 0 ); }
-	virtual void EndCastBuffer( ) { contract_assert( 0 ); }
-	virtual int GetRoomRemaining() const { contract_assert( 0 ); return 0; }
+	void BeginCastBuffer( MaterialIndexFormat_t format ) { contract_assert( 0 ); }
+	void BeginCastBuffer( VertexFormat_t format ) { contract_assert( 0 ); }
+	void EndCastBuffer( ) { contract_assert( 0 ); }
+	int GetRoomRemaining() const { contract_assert( 0 ); return 0; }
 
 	// returns a static vertex buffer...
-	virtual CVertexBuffer *GetVertexBuffer() { return 0; }
-	virtual CIndexBuffer *GetIndexBuffer() { return 0; }
+	CVertexBuffer *GetVertexBuffer();
+	CIndexBuffer *GetIndexBuffer();
 
 	// Do I need to reset the vertex format?
-	virtual bool NeedsVertexFormatReset( VertexFormat_t fmt ) const;
+	bool NeedsVertexFormatReset( VertexFormat_t fmt ) const;
 
 	// Do I have enough room?
-	virtual bool HasEnoughRoom( int nVertexCount, int nIndexCount ) const;
+	bool HasEnoughRoom( int nVertexCount, int nIndexCount ) const;
 
 	// Operation to do pre-lock
-	virtual void PreLock() {}
+	void PreLock() {}
 
-	virtual unsigned int ComputeMemoryUsed();
+	unsigned int ComputeMemoryUsed();
 
 	bool m_bMeshLocked;
 
@@ -367,10 +374,19 @@ protected:
 //-----------------------------------------------------------------------------
 class CMeshDX8 : public CBaseMeshDX8
 {
+	friend class IVertexBuffer;
+	friend class IIndexBuffer;
+	friend class IMesh;
+	friend class CMeshBase;
 public:
+	// The index buffer versions of these are the ones of CBaseMeshDX8
+	using CBaseMeshDX8::Lock;
+	using CBaseMeshDX8::Unlock;
+	using CBaseMeshDX8::ModifyBegin;
+	using CBaseMeshDX8::ModifyEnd;
 	// constructor
-	CMeshDX8( const char *pTextureGroupName );
-	virtual ~CMeshDX8();
+	CMeshDX8( const char *pTextureGroupName, MeshKind kind = MeshKind::StaticMesh );
+	~CMeshDX8();
 
 	// Locks/unlocks the mesh
 	void LockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& desc, MeshBuffersAllocationSettings_t *pSettings = 0 );
@@ -385,7 +401,7 @@ public:
 	int VertexCount() const;
 
 	// returns the # of indices 
-	virtual int IndexCount( ) const;
+	int IndexCount( ) const;
 
 	// Sets up the vertex and index buffers
 	void UseIndexBuffer( CIndexBuffer* pBuffer );
@@ -396,11 +412,11 @@ public:
 	CIndexBuffer *GetIndexBuffer() { return m_pIndexBuffer; }
 
 	void SetColorMesh( IMesh *pColorMesh, int nVertexOffsetInBytes );
-	virtual void GetColorMesh( const IVertexBuffer** pMesh, int *pMeshVertexOffsetInBytes ) const;
+	void GetColorMesh( const IVertexBuffer** pMesh, int *pMeshVertexOffsetInBytes ) const;
 	void SetFlexMesh( IMesh *pMesh, int nVertexOffsetInBytes );
 	void DisableFlexMesh();
 
-	virtual void HandleLateCreation( );
+	void HandleLateCreation( );
 
 	bool HasColorMesh( ) const;
 	bool HasFlexMesh( ) const;
@@ -408,11 +424,11 @@ public:
 	VertexStreamSpec_t *GetVertexStreamSpec() const;
 	void SetVertexStreamSpec( VertexStreamSpec_t *pStreamSpec );
 
-	virtual void * AccessRawHardwareDataStream( uint8 nRawStreamIndex, uint32 numBytes, uint32 uiFlags, void *pvContext );
+	void * AccessRawHardwareDataStream( uint8 nRawStreamIndex, uint32 numBytes, uint32 uiFlags, void *pvContext );
 
 	// Draws the mesh
 	void Draw( int nFirstIndex, int nIndexCount );
-	virtual void DrawModulated( const Vector4D &diffuseModulation, int nFirstIndex, int nIndexCount );
+	void DrawModulated( const Vector4D &diffuseModulation, int nFirstIndex, int nIndexCount );
 	void Draw( CPrimList *pLists, int nLists );
 	void DrawInternal( const Vector4D *pDiffuseModulation, CPrimList *pLists, int nLists );
 
@@ -525,16 +541,21 @@ protected:
 //-----------------------------------------------------------------------------
 class CDynamicMeshDX8 : public CMeshDX8
 {
+	friend class IVertexBuffer;
+	friend class IIndexBuffer;
+	friend class IMesh;
+	friend class CMeshBase;
 public:
+	using CMeshDX8::Draw;
 	// constructor, destructor
 	CDynamicMeshDX8();
-	virtual ~CDynamicMeshDX8();
+	~CDynamicMeshDX8();
 
 	// Initializes the dynamic mesh
 	void Init( int nBufferId );
 
 	// Sets the vertex format
-	virtual void SetVertexFormat( VertexFormat_t format, bool bHasVertexOverride, bool bHasIndexOverride );
+	void SetVertexFormat( VertexFormat_t format, bool bHasVertexOverride, bool bHasIndexOverride );
 
 	// Resets the state in case of a task switch
 	void Reset();
@@ -560,7 +581,7 @@ public:
 
 	// Draws it						   
 	void Draw( int nFirstIndex, int nIndexCount );
-	virtual void DrawModulated( const Vector4D &diffuseModulation, int nFirstIndex, int nIndexCount );
+	void DrawModulated( const Vector4D &diffuseModulation, int nFirstIndex, int nIndexCount );
 	void MarkAsDrawn() { m_HasDrawn = true; }
 	// Simply draws what's been buffered up immediately, without state change 
 	void DrawSinglePassImmediately();
@@ -601,27 +622,34 @@ private:
 //-----------------------------------------------------------------------------
 class CTempMeshDX8 : public CBaseMeshDX8
 {
+	friend class IVertexBuffer;
+	friend class IIndexBuffer;
+	friend class IMesh;
+	friend class CMeshBase;
 public:
+	using CBaseMeshDX8::Draw;
+	using CBaseMeshDX8::ModifyBegin;
+	using CBaseMeshDX8::ModifyEnd;
 	// constructor, destructor
 	CTempMeshDX8( bool isDynamic );
-	virtual ~CTempMeshDX8();
+	~CTempMeshDX8();
 
 	// Sets the material
-	virtual void SetVertexFormat( VertexFormat_t format, bool bHasVertexOverride, bool bHasIndexOverride );
+	void SetVertexFormat( VertexFormat_t format, bool bHasVertexOverride, bool bHasIndexOverride );
 
 	// Locks/unlocks the mesh
 	void LockMesh( int nVertexCount, int nIndexCount, MeshDesc_t &desc, MeshBuffersAllocationSettings_t *pSettings = 0 );
 	void UnlockMesh( int nVertexCount, int nIndexCount, MeshDesc_t &desc );
 
 	// Locks mesh for modifying
-	virtual void ModifyBeginEx( bool bReadOnly, int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t& desc );
-	virtual void ModifyBegin( int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t& desc );
-	virtual void ModifyEnd( MeshDesc_t& desc );
+	void ModifyBeginEx( bool bReadOnly, int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t& desc );
+	void ModifyBegin( int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t& desc );
+	void ModifyEnd( MeshDesc_t& desc );
 
 	// Number of indices + vertices
 	int VertexCount() const;
-	virtual int IndexCount() const;
-	virtual bool IsDynamic() const;
+	int IndexCount() const;
+	bool IsDynamic() const;
 
 	// Sets the primitive type
 	void SetPrimitiveType( MaterialPrimitiveType_t type );
@@ -633,21 +661,21 @@ public:
 	// Begins a pass
 	void BeginPass( );
 
-	virtual void DrawPrims( const unsigned char *pInstanceCommandBuffer ) {}
+	void DrawPrims( const unsigned char *pInstanceCommandBuffer ) {}
 
 	// Draws a single pass
 	void RenderPass( const unsigned char *pInstanceCommandBuffer );
 
-	virtual void HandleLateCreation() 
+	void HandleLateCreation() 
 	{ 
 		contract_assert( !"TBD - CTempMeshDX8::HandleLateCreation()" ); 
 	}
 
 	// Draws the entire beast
 	void Draw( int nFirstIndex, int nIndexCount );
-	virtual void DrawModulated( const Vector4D &diffuseModulation, int nFirstIndex, int nIndexCount );
+	void DrawModulated( const Vector4D &diffuseModulation, int nFirstIndex, int nIndexCount );
 
-	virtual void CopyToMeshBuilder( 
+	void CopyToMeshBuilder( 
 		int iStartVert,		// Which vertices to copy.
 		int nVerts, 
 		int iStartIndex,	// Which indices to copy.
@@ -679,14 +707,69 @@ private:
 
 
 //-----------------------------------------------------------------------------
+// The kind of mesh decides who implements what: the functions of CMeshBase and the ones of
+// CBaseMeshDX8 that the meshes below it override are called on the mesh implementation.
+//-----------------------------------------------------------------------------
+void CBaseMeshDX8::SetVertexFormat( VertexFormat_t format, bool bHasVertexOverride, bool bHasIndexOverride )
+{
+	switch ( Kind() )
+	{
+	case MeshKind::StaticMesh:	SetVertexFormat_Base( format, bHasVertexOverride, bHasIndexOverride ); return;
+	case MeshKind::DynamicMesh:	static_cast<CDynamicMeshDX8 *>( this )->SetVertexFormat( format, bHasVertexOverride, bHasIndexOverride ); return;
+	case MeshKind::TempMesh:	static_cast<CTempMeshDX8 *>( this )->SetVertexFormat( format, bHasVertexOverride, bHasIndexOverride ); return;
+	default: break;
+	}
+	std::unreachable();
+}
+
+CVertexBuffer *CBaseMeshDX8::GetVertexBuffer()
+{
+	switch ( Kind() )
+	{
+	case MeshKind::StaticMesh:
+	case MeshKind::DynamicMesh:	return static_cast<CMeshDX8 *>( this )->GetVertexBuffer();
+	case MeshKind::TempMesh:	return nullptr;
+	default: break;
+	}
+	std::unreachable();
+}
+
+CIndexBuffer *CBaseMeshDX8::GetIndexBuffer()
+{
+	switch ( Kind() )
+	{
+	case MeshKind::StaticMesh:
+	case MeshKind::DynamicMesh:	return static_cast<CMeshDX8 *>( this )->GetIndexBuffer();
+	case MeshKind::TempMesh:	return nullptr;
+	default: break;
+	}
+	std::unreachable();
+}
+
+void CBaseMeshDX8::GetColorMesh( const IVertexBuffer** pMesh, int *pMeshVertexOffsetInBytes ) const
+{
+	switch ( Kind() )
+	{
+	case MeshKind::StaticMesh:
+	case MeshKind::DynamicMesh:	static_cast<const CMeshDX8 *>( this )->GetColorMesh( pMesh, pMeshVertexOffsetInBytes ); return;
+	case MeshKind::TempMesh:	*pMesh = 0; *pMeshVertexOffsetInBytes = 0; return;
+	default: break;
+	}
+	std::unreachable();
+}
+
+#include "meshdispatch.inl"
+#include "meshbase_dispatch.inl"
+
+//-----------------------------------------------------------------------------
 // Implementation of the mesh manager
 //-----------------------------------------------------------------------------
-class CMeshMgr : public IMeshMgr
+class CMeshMgr
 {
 public:
 	// constructor, destructor
 	CMeshMgr();
-	virtual ~CMeshMgr();
+	~CMeshMgr();
 
 	// Initialize, shutdown
 	void Init();
@@ -739,12 +822,12 @@ public:
 				int userDataSize ) const;
 
 	// Use fat vertices (for tools)
-	virtual void UseFatVertices( bool bUseFat );
+	void UseFatVertices( bool bUseFat );
 
 	// Returns the number of vertices we can render using the dynamic mesh
-	virtual void GetMaxToRender( IMesh *pMesh, bool bMaxUntilFlush, int *pMaxVerts, int *pMaxIndices );
-	virtual int GetMaxVerticesToRender( IMaterial *pMaterial );
-	virtual int GetMaxIndicesToRender( );
+	void GetMaxToRender( IMesh *pMesh, bool bMaxUntilFlush, int *pMaxVerts, int *pMaxIndices );
+	int GetMaxVerticesToRender( IMaterial *pMaterial );
+	int GetMaxIndicesToRender( );
 
 	// Returns a vertex buffer appropriate for the flags
 	CVertexBuffer *FindOrCreateVertexBuffer( int nDynamicBufferId, VertexFormat_t fmt );
@@ -789,8 +872,8 @@ public:
 	static int GetNumIndicesForSubdivisionLevel( int iSubdivLevel );
 
 	IVertexBuffer *GetDynamicVertexBuffer( IMaterial *pMaterial, bool buffered = true );
-	virtual void MarkUnusedVertexFields( unsigned int nFlags, int nTexCoordCount, bool *pUnusedTexCoords );
-	virtual void DrawInstances( int nInstanceCount, const MeshInstanceData_t *pInstances );
+	void MarkUnusedVertexFields( unsigned int nFlags, int nTexCoordCount, bool *pUnusedTexCoords );
+	void DrawInstances( int nInstanceCount, const MeshInstanceData_t *pInstances );
 
 
 	int UnusedVertexFields() const { return m_nUnusedVertexFields; }
@@ -913,9 +996,15 @@ private:
 // Singleton...
 //-----------------------------------------------------------------------------
 static CMeshMgr g_MeshMgr;
+
+// IMeshMgr is a stateless facade that forwards to the one mesh manager.
+static IMeshMgr s_MeshMgrFacade;
+static CMeshMgr &MeshMgrImpl() { return g_MeshMgr; }
+#include "imeshdx8_facade.inl"
+
 IMeshMgr* MeshMgr()
 {
-	return &g_MeshMgr;
+	return &s_MeshMgrFacade;
 }
 
 //-----------------------------------------------------------------------------
@@ -1874,7 +1963,7 @@ inline D3DXVECTOR3 &TangentT( MeshDesc_t const &desc, int vert )
 // constructor, destructor
 //-----------------------------------------------------------------------------
 
-CBaseMeshDX8::CBaseMeshDX8() : m_VertexFormat(0)
+CBaseMeshDX8::CBaseMeshDX8( MeshKind kind ) : CMeshBase( kind ), m_VertexFormat(0)
 {
 	m_bMeshLocked = false;
 }
@@ -1901,7 +1990,7 @@ void CBaseMeshDX8::SetMaterial( IMaterial *pMaterial )
 //-----------------------------------------------------------------------------
 // Sets, gets the vertex format
 //-----------------------------------------------------------------------------
-void CBaseMeshDX8::SetVertexFormat( VertexFormat_t format, bool bHasVertexOverride, bool bHasIndexOverride )
+void CBaseMeshDX8::SetVertexFormat_Base( VertexFormat_t format, bool bHasVertexOverride, bool bHasIndexOverride )
 {
 	m_VertexFormat = format;
 }
@@ -2213,7 +2302,7 @@ inline D3DPRIMITIVETYPE ComputeMode( MaterialPrimitiveType_t type )
 //-----------------------------------------------------------------------------
 // constructor
 //-----------------------------------------------------------------------------
-CMeshDX8::CMeshDX8( const char *pTextureGroupName ) : m_NumVertices(0), m_NumIndices(0), m_pVertexBuffer(0),
+CMeshDX8::CMeshDX8( const char *pTextureGroupName, MeshKind kind ) : CBaseMeshDX8( kind ), m_NumVertices(0), m_NumIndices(0), m_pVertexBuffer(0),
 	m_pColorMesh( 0 ), m_nColorMeshVertOffsetInBytes( 0 ),
 	m_fmtStreamSpec( 0 ), m_pVbTexCoord1( 0 ),
 	m_pIndexBuffer(0), m_Type(MATERIAL_TRIANGLES), m_IsVBLocked(false),
@@ -3213,7 +3302,7 @@ void CMeshDX8::DrawModulated( const Vector4D &diffuseModulation, int nFirstIndex
 {
 	if ( !ShaderUtil()->OnDrawMeshModulated( this, diffuseModulation, nFirstIndex, nIndexCount ) )
 	{
-		MarkAsDrawn();
+		IMesh::MarkAsDrawn();
 		return;
 	}
 
@@ -3235,7 +3324,7 @@ void CMeshDX8::Draw( int nFirstIndex, int nIndexCount )
 {
 	if ( !ShaderUtil()->OnDrawMesh( this, nFirstIndex, nIndexCount ) )
 	{
-		MarkAsDrawn();
+		IMesh::MarkAsDrawn();
 		return;
 	}
 
@@ -3257,7 +3346,7 @@ void CMeshDX8::Draw( CPrimList *pLists, int nLists )
 {
 	if ( !ShaderUtil()->OnDrawMesh( this, pLists, nLists ) )
 	{
-		MarkAsDrawn();
+		IMesh::MarkAsDrawn();
 		return;
 	}
 
@@ -3491,7 +3580,7 @@ void CMeshDX8::RenderPass( const unsigned char *pInstanceCommandBuffer )
 //-----------------------------------------------------------------------------
 // constructor, destructor
 //-----------------------------------------------------------------------------
-CDynamicMeshDX8::CDynamicMeshDX8() : CMeshDX8( "CDynamicMeshDX8" )
+CDynamicMeshDX8::CDynamicMeshDX8() : CMeshDX8( "CDynamicMeshDX8", MeshKind::DynamicMesh )
 {
 	m_nBufferId = 0;
 	ResetVertexAndIndexCounts();
@@ -3860,7 +3949,7 @@ unsigned int CTempMeshDX8::s_FirstIndex;
 //-----------------------------------------------------------------------------
 // constructor, destructor
 //-----------------------------------------------------------------------------
-CTempMeshDX8::CTempMeshDX8( bool isDynamic ) : m_VertexSize(0xFFFF), m_IsDynamic(isDynamic)
+CTempMeshDX8::CTempMeshDX8( bool isDynamic ) : CBaseMeshDX8( MeshKind::TempMesh ), m_VertexSize(0xFFFF), m_IsDynamic(isDynamic)
 {
 }
 
@@ -3882,7 +3971,7 @@ bool CTempMeshDX8::IsDynamic() const
 //-----------------------------------------------------------------------------
 void CTempMeshDX8::SetVertexFormat( VertexFormat_t format, bool bHasVertexOverride, bool bHasIndexOverride )
 {
-	CBaseMeshDX8::SetVertexFormat(format, bHasVertexOverride, bHasIndexOverride);
+	CBaseMeshDX8::SetVertexFormat_Base(format, bHasVertexOverride, bHasIndexOverride);
 	m_VertexSize = g_MeshMgr.VertexFormatSize( format );
 }
 
@@ -5061,14 +5150,26 @@ IMesh* CMeshMgr::CreateStaticMesh( VertexFormat_t format, const char *pTextureBu
 	return pNewMesh;
 }
 
+// Meshes are destroyed as what they were created as
+static void DeleteMesh( IMesh *pMesh )
+{
+	switch ( pMesh->Kind() )
+	{
+	case MeshKind::StaticMesh:	delete static_cast<CMeshDX8 *>( pMesh ); return;
+	case MeshKind::DynamicMesh:	delete static_cast<CDynamicMeshDX8 *>( pMesh ); return;
+	case MeshKind::TempMesh:	delete static_cast<CTempMeshDX8 *>( pMesh ); return;
+	default: break;
+	}
+	std::unreachable();
+}
+
 void CMeshMgr::DestroyStaticMesh( IMesh* pMesh )
 {
 	// Don't destroy the dynamic mesh!
 	contract_assert( !IsDynamicMesh( pMesh ) );
-	CBaseMeshDX8* pMeshImp = static_cast<CBaseMeshDX8*>(pMesh);
-	if (pMeshImp)
+	if ( pMesh )
 	{
-		delete pMeshImp;
+		DeleteMesh( pMesh );
 	}
 }
 
@@ -5464,7 +5565,10 @@ void CMeshMgr::DestroyVertexBuffer( IVertexBuffer *pVertexBuffer )
 {
 	if ( pVertexBuffer && !IsDynamicVertexBuffer( pVertexBuffer ) )
 	{
-		delete pVertexBuffer;
+		if ( pVertexBuffer->Kind() == MeshKind::VertexBuffer )
+			delete static_cast<CVertexBufferDx8 *>( pVertexBuffer );
+		else
+			DeleteMesh( static_cast<IMesh *>( pVertexBuffer ) );
 	}
 }
 
@@ -5472,7 +5576,10 @@ void CMeshMgr::DestroyIndexBuffer( IIndexBuffer *pIndexBuffer )
 {
 	if ( pIndexBuffer && !IsDynamicIndexBuffer( pIndexBuffer ) )
 	{
-		delete pIndexBuffer;
+		if ( pIndexBuffer->Kind() == MeshKind::IndexBuffer )
+			delete static_cast<CIndexBufferDx8 *>( pIndexBuffer );
+		else
+			DeleteMesh( pIndexBuffer->GetMesh() );
 	}
 }
 

@@ -4,8 +4,6 @@
 
 // Purpose: An NPC's memory of potential enemies
 
-import std;
-import ks.math;
 #include "entitylist.h"
 
 class CAI_Network;

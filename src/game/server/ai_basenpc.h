@@ -4,8 +4,6 @@
 
 // Purpose: Base NPC character with AI
 
-import std;
-import ks.tier1;
 #include "reflect_annotations.h"
 #include "shareddefs.h"
 
@@ -45,7 +43,6 @@ class CAI_Senses;
 class CAI_Enemies;
 class CAI_Squad;
 class CAI_Expresser;
-class CAI_BehaviorBase;
 class CAI_GoalEntity;
 class CAI_Motor;
 class CAI_MoveProbe;
@@ -472,60 +469,6 @@ private:
 extern CAI_Manager g_AI_Manager;
 
 //=============================================================================
-// Purpose: Some bridges a little more complicated to allow behavior to see 
-//			what base class would do or control order in which it's done
-//=============================================================================
-
-class IAI_BehaviorBridge
-{
-public:
-	// Bridge interface implemented by CAI_BehaviorBase
-	virtual void BehaviorBridge_PrescheduleThink() {}
-	virtual void BehaviorBridge_OnScheduleChange() {}
-	virtual bool BehaviorBridge_IsCrouching() { return (bool)0; }
-	virtual bool BehaviorBridge_IsValidEnemy( CBaseEntity * a1 ) { return (bool)0; }
-	virtual CBaseEntity * BehaviorBridge_BestEnemy() { return (CBaseEntity *)0; }
-	virtual bool BehaviorBridge_IsCoverPosition( const Vector & a1, const Vector & a2 ) { return (bool)0; }
-	virtual bool BehaviorBridge_IsValidCover( const Vector & a1, CAI_Hint const * a2 ) { return (bool)0; }
-	virtual bool BehaviorBridge_IsValidShootPosition( const Vector & a1, CAI_Node * a2, CAI_Hint const * a3 ) { return (bool)0; }
-	virtual bool BehaviorBridge_WeaponLOSCondition( const Vector & a1, const Vector & a2, bool a3 ) { return (bool)0; }
-	virtual float BehaviorBridge_GetMaxTacticalLateralMovement() { return (float)0; }
-	virtual bool BehaviorBridge_ShouldIgnoreSound( CSound * a1 ) { return (bool)0; }
-	virtual void BehaviorBridge_OnSeeEntity( CBaseEntity * a1 ) {}
-	virtual void BehaviorBridge_OnFriendDamaged( CBaseCombatCharacter * a1, CBaseEntity * a2 ) {}
-	virtual bool BehaviorBridge_IsInterruptable() { return (bool)0; }
-	virtual bool BehaviorBridge_IsNavigationUrgent() { return (bool)0; }
-	virtual bool BehaviorBridge_ShouldPlayerAvoid() { return (bool)0; }
-	virtual int BehaviorBridge_OnTakeDamage_Alive( const CTakeDamageInfo & a1 ) { return (int)0; }
-	virtual float BehaviorBridge_GetDefaultNavGoalTolerance() { return (float)0; }
-	virtual float BehaviorBridge_GetReasonableFacingDist() { return (float)0; }
-	virtual bool BehaviorBridge_CanFlinch() { return (bool)0; }
-	virtual bool BehaviorBridge_IsCrouchedActivity( Activity a1 ) { return (bool)0; }
-	virtual bool BehaviorBridge_QueryHearSound( CSound * a1 ) { return (bool)0; }
-	virtual bool BehaviorBridge_CanRunAScriptedNPCInteraction( bool a1 ) { return (bool)0; }
-	virtual Activity BehaviorBridge_GetFlinchActivity( bool a1, bool a2 ) { return (Activity)0; }
-	virtual bool BehaviorBridge_OnCalcBaseMove( AILocalMoveGoal_t * a1, float a2, AIMoveResult_t * a3 ) { return (bool)0; }
-	virtual void BehaviorBridge_ModifyOrAppendCriteria( AI_CriteriaSet& a1 ) {}
-	virtual void BehaviorBridge_Teleport( const Vector * a1, const QAngle * a2, const Vector * a3, bool a4 ) {}
-	virtual void BehaviorBridge_HandleAnimEvent( animevent_t * a1 ) {}
-	virtual bool BehaviorBridge_FValidateHintType( CAI_Hint * a1 ) { return (bool)0; }
-	virtual bool BehaviorBridge_ShouldAlwaysThink() { return (bool)0; }
-	virtual bool BehaviorBridge_IsCurTaskContinuousMove() { return (bool)0; }
-	virtual void BehaviorBridge_AimGun() {}
-	virtual Activity BehaviorBridge_NPC_TranslateActivity( Activity a1 ) { return (Activity)0; }
-	virtual void BehaviorBridge_OnMovementFailed() {}
-	virtual void BehaviorBridge_OnMovementComplete() {}
-
-	// Non-standard bridge methods
-	virtual void 		 BehaviorBridge_GatherConditions() {}
-	virtual int 		 BehaviorBridge_SelectSchedule()  { return 0; }
-	virtual int 		 BehaviorBridge_TranslateSchedule( int scheduleType )  { return 0; }
-	virtual float		 BehaviorBridge_GetJumpGravity() const  { return 0; }
-	virtual bool		 BehaviorBridge_IsJumpLegal( const Vector &startPos, const Vector &apex, const Vector &endPos, float maxUp, float maxDown, float maxDist ) const  { return 0; }
-	virtual bool		 BehaviorBridge_MovementCost( int moveType, const Vector &vecStart, const Vector &vecEnd, float *pCost )  { return 0; }
-};
-
-//=============================================================================
 //
 //	class CAI_BaseNPC
 //
@@ -534,8 +477,7 @@ public:
 class [[= ks::reflect::NetTable{ .name = "DT_AI_BaseNPC" } ]]
       [[= ks::reflect::From<"m_lifeState", ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED }>{} ]]
       CAI_BaseNPC : public CBaseCombatCharacter, 
-					public CAI_DefMovementSink,
-					public IAI_BehaviorBridge
+					public CAI_DefMovementSink
 {
 	DECLARE_CLASS( CAI_BaseNPC, CBaseCombatCharacter );
 
@@ -553,29 +495,30 @@ public:
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 
-	virtual void		OnRestore();
+	void		OnRestore_Impl();
 
-	bool				ShouldSavePhysics()	{ return false; }
-	virtual unsigned int	PhysicsSolidMaskForEntity( void ) const;
+	bool				ShouldSavePhysics_Impl()	{ return false; }
+	unsigned int	PhysicsSolidMaskForEntity_Impl( void ) const;
 
-	virtual bool KeyValue( const char *szKeyName, const char *szValue );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
 
 	//---------------------------------
 	
-	virtual void		PostConstructor( const char *szClassname );
-	virtual void		Activate( void );
-	virtual void		Precache( void ); // derived calls at start of Spawn()
-	virtual bool 		CreateVPhysics();
+	void		PostConstructor_Impl( const char *szClassname );
+	void		Activate_Impl( void );
+	void		Precache_Impl( void ); // derived calls at start of Spawn()
+	bool 		CreateVPhysics_Impl();
 	virtual void		NPCInit( void ); // derived calls after Spawn()
 	void				NPCInitThink( void );
 	virtual void		PostNPCInit() {};// called after NPC_InitThink
 	virtual void		StartNPC( void );
-	virtual bool		IsTemplate( void );
+	bool		IsTemplate_Impl( void );
 
 	virtual void		CleanupOnDeath( CBaseEntity *pCulprit = nullptr, bool bFireDeathOutput = true );
-	virtual void		UpdateOnRemove( void );
+	void		UpdateOnRemove_Impl( void );
 
-	virtual int			UpdateTransmitState();
+	int			UpdateTransmitState_Impl();
 
 	//---------------------------------
 	// Component creation factories
@@ -595,7 +538,7 @@ public:
 
 	//---------------------------------
 
-	virtual bool			IsNPC( void ) const { return true; }
+	bool			IsNPC_Impl( void ) const { return true; }
 
 	//---------------------------------
 
@@ -663,9 +606,9 @@ public:
 
 	virtual float		LineOfSightDist( const Vector &vecDir = vec3_invalid, float zEye = std::numeric_limits<float>::max() );
 
-	virtual void		MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );
-	virtual const char	*GetTracerType( void );
-	virtual void		DoImpactEffect( trace_t &tr, int nDamageType );
+	void		MakeTracer_Impl( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );
+	const char	*GetTracerType_Impl( void );
+	void		DoImpactEffect_Impl( trace_t &tr, int nDamageType );
 		
 	enum
 	{
@@ -845,64 +788,6 @@ public:
 	// Return the stored pose parameter for "move_yaw"
 	inline int			LookupPoseMoveYaw()		{ return m_poseMove_Yaw; }
  
-
-	//-----------------------------------------------------
-	//
-	// Hooks for CAI_Behaviors
-	//
-	//-----------------------------------------------------
-	void			AddBehavior( CAI_BehaviorBase *pBehavior );
-	void			RemoveAndDestroyBehavior( CAI_BehaviorBase *pBehavior );
-
-	template <class BEHAVIOR_TYPE>
-	bool GetBehavior( BEHAVIOR_TYPE **ppBehavior )
-	{
-		CAI_BehaviorBase **ppBehaviors = AccessBehaviors();
-		
-		*ppBehavior = nullptr;
-		for ( int i = 0; i < NumBehaviors(); i++ )
-		{
-			*ppBehavior = dynamic_cast<BEHAVIOR_TYPE *>(ppBehaviors[i]);
-			if ( *ppBehavior )
-				return true;
-		}
-		return false;
-	}
-
-	virtual bool	ShouldBehaviorSelectSchedule( CAI_BehaviorBase *pBehavior ) { return true; }
-	bool			BehaviorSelectSchedule();
-	bool 			IsRunningBehavior() const;
-	CAI_BehaviorBase *GetPrimaryBehavior();
-	CAI_BehaviorBase *DeferSchedulingToBehavior( CAI_BehaviorBase *pNewBehavior );
-	void			SetPrimaryBehavior( CAI_BehaviorBase *pNewBehavior );
-
-	virtual bool ShouldAcceptGoal( CAI_BehaviorBase *pBehavior, CAI_GoalEntity *pGoal )	{ return true; }
-	virtual void OnClearGoal( CAI_BehaviorBase *pBehavior, CAI_GoalEntity *pGoal )		{}
-
-	// Notification that the status behavior ability to select schedules has changed.
-	// Return "true" to signal a schedule interrupt is desired
-	virtual bool OnBehaviorChangeStatus(  CAI_BehaviorBase *pBehavior, bool fCanFinishSchedule );
-	virtual void	OnChangeRunningBehavior( CAI_BehaviorBase *pOldBehavior,  CAI_BehaviorBase *pNewBehavior ) {}
-
-	virtual CAI_BehaviorBase **	AccessBehaviors() 	
-	{ 
-		if ( !m_Behaviors.empty() )
-			return m_Behaviors.data();
-		return nullptr;
-	}
-
-	virtual int	NumBehaviors()		
-	{ 
-		return std::ssize( m_Behaviors );
-
-	}
-
-	// Automatically called during entity construction, derived class calls AddBehavior()
-	virtual bool 	CreateBehaviors()	{ return true; }
-
-protected:
-	CAI_BehaviorBase *			   m_pPrimaryBehavior;
-	std::vector< CAI_BehaviorBase * > m_Behaviors;
 
 public:
 	//-----------------------------------------------------
@@ -1103,10 +988,10 @@ public:
 	//
 	//-----------------------------------------------------
 
-	Vector GetSmoothedVelocity( void );
+	Vector GetSmoothedVelocity_Impl( void );
 
-	CBaseEntity*		GetEnemy()							{ return m_hEnemy.Get(); }
-	CBaseEntity*		GetEnemy() const					{ return m_hEnemy.Get(); }
+	CBaseEntity*		GetEnemy_Impl()							{ return m_hEnemy.Get(); }
+	CBaseEntity*		GetEnemy_Impl() const					{ return m_hEnemy.Get(); }
 	float				GetTimeEnemyAcquired()				{ return m_flTimeEnemyAcquired; }
 	void				SetEnemy( CBaseEntity *pEnemy, bool bSetCondNewEnemy = true );
 	virtual void		OnEnemyChanged( CBaseEntity *pOldEnemy, CBaseEntity *pNewEnemy ) { }
@@ -1300,7 +1185,7 @@ public:
 
 	virtual void		PlayerHasIlluminatedNPC( CBasePlayer *pPlayer, float flDot );
 
-	virtual void		ModifyOrAppendCriteria( AI_CriteriaSet& set );
+	void		ModifyOrAppendCriteria_Impl( AI_CriteriaSet& set );
 
 protected:
 	float		SoundWaitTime() const { return m_flSoundWaitTime; }
@@ -1359,7 +1244,7 @@ public:
 	
 	CBaseEntity *		GetNavTargetEntity(void);
 
-	bool				IsMoving( void );
+	bool				IsMoving_Impl( void );
 	virtual float 		GetTimeToNavGoal();
 	
 	// NPCs can override this to tweak with how costly particular movements are
@@ -1383,7 +1268,8 @@ public:
 	// ------------
 	// Methods used by motor to query properties/preferences/move-related state
 	// ------------
-	virtual bool		CanStandOn( CBaseEntity *pSurface ) const;
+	using BaseClass::CanStandOn_Impl;
+	bool		CanStandOn_Impl( CBaseEntity *pSurface ) const;
 
 	virtual bool		IsJumpLegal( const Vector &startPos, const Vector &apex, const Vector &endPos ) const; // Override for specific creature types
 	virtual bool		IsJumpLegal( const Vector &startPos, const Vector &apex, const Vector &endPos, float maxUp, float maxDown, float maxDist ) const;
@@ -1496,7 +1382,7 @@ public:
 	virtual Vector		GetNodeViewOffset()					{ return GetViewOffset();		}
 
 	virtual Vector		EyeOffset( Activity nActivity );
-	virtual Vector		EyePosition( void );
+	Vector		EyePosition_Impl( void );
 
 	//---------------------------------
 	
@@ -1588,7 +1474,7 @@ public:
 	bool				ExitScriptedSequence();
 	bool				CineCleanup();
 
-	virtual void		Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts = true );
+	void		Teleport_Impl( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts = true );
 
 	// forces movement and sets a new schedule
 	virtual bool		ScheduledMoveToGoalEntity( int scheduleType, CBaseEntity *pGoalEntity, Activity movementActivity );
@@ -1838,15 +1724,15 @@ public:
 	//---------------------------------
 
 	virtual void		Ignite( float flFlameLifetime, bool bNPCOnly = true, float flSize = 0.0f, bool bCalledByLevelDesigner = false );
-	virtual bool		PassesDamageFilter( const CTakeDamageInfo &info );
+	bool		PassesDamageFilter_Impl( const CTakeDamageInfo &info );
 
 	//---------------------------------
 
 	void				MakeDamageBloodDecal( int cCount, float flNoise, trace_t *ptr, Vector vecDir );
 	virtual float		GetHitgroupDamageMultiplier( int iHitGroup, const CTakeDamageInfo &info );
-	void				TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
-	void				DecalTrace( trace_t *pTrace, char const *decalName );
-	void				ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName );
+	void				TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
+	void				DecalTrace_Impl( trace_t *pTrace, char const *decalName );
+	void				ImpactTrace_Impl( trace_t *pTrace, int iDamageType, const char *pCustomImpactName );
 	virtual	bool		PlayerInSpread( const Vector &sourcePos, const Vector &targetPos, float flSpread, float maxDistOffCenter, bool ignoreHatedPlayers = true );
 	CBaseEntity *		PlayerInRange( const Vector &vecLocation, float flDist );
 	bool				PointInSpread( CBaseCombatCharacter *pCheckEntity, const Vector &sourcePos, const Vector &targetPos, const Vector &testPoint, float flSpread, float maxDistOffCenter );
@@ -1861,7 +1747,7 @@ public:
 	
 	virtual bool		ShouldGib( const CTakeDamageInfo &info ) { return false; }	// Always ragdoll, unless specified by the leaf class
 	virtual bool		Event_Gibbed( const CTakeDamageInfo &info );
-	virtual void		Event_Killed( const CTakeDamageInfo &info );
+	void		Event_Killed_Impl( const CTakeDamageInfo &info );
 
 	virtual Vector		GetShootEnemyDir( const Vector &shootOrigin, bool bNoisy = true );
 	virtual Vector		GetActualShootPosition( const Vector &shootOrigin );
@@ -1869,11 +1755,12 @@ public:
 	virtual	Vector		GetAttackSpread( CBaseCombatWeapon *pWeapon, CBaseEntity *pTarget = nullptr );
 	virtual	float		GetSpreadBias( CBaseCombatWeapon *pWeapon, CBaseEntity *pTarget );
 	virtual void		CollectShotStats( const Vector &vecShootOrigin, const Vector &vecShootDir );
-	virtual Vector		BodyTarget( const Vector &posSrc, bool bNoisy = true );
-	virtual Vector		GetAutoAimCenter() { return BodyTarget(vec3_origin, false); }
-	virtual void		FireBullets( const FireBulletsInfo_t &info );
+	Vector		BodyTarget_Impl( const Vector &posSrc, bool bNoisy = true );
+	Vector		GetAutoAimCenter_Impl() { return BodyTarget(vec3_origin, false); }
+	void		FireBullets_Impl( const FireBulletsInfo_t &info );
 
 	// OLD VERSION! Use the struct version
+	using BaseClass::FireBullets;
 	void FireBullets( int cShots, const Vector &vecSrc, const Vector &vecDirShooting, 
 		const Vector &vecSpread, float flDistance, int iAmmoType, int iTracerFreq = 4, 
 		int firingEntID = -1, int attachmentID = -1, float flDamage = 0, 
@@ -1915,7 +1802,6 @@ public:
 	[[= ks::reflect::Input{ .name = "ForgetEntity", .type = FIELD_STRING } ]] void InputForgetEntity( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "IgnoreDangerSounds", .type = FIELD_FLOAT } ]] void InputIgnoreDangerSounds( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "UpdateEnemyMemory", .type = FIELD_STRING } ]] void InputUpdateEnemyMemory( inputdata_t &inputdata );
-	[[= ks::reflect::Input{ .name = "CreateAddon", .type = FIELD_STRING } ]] void InputCreateAddon( inputdata_t &inputdata );
 
 	//---------------------------------
 	
@@ -2014,7 +1900,7 @@ public:
 	unsigned int		GetHullTraceMask() const	{ return NAI_Hull::TraceMask(GetHullType()); }
 
 	void				SetupVPhysicsHull();
-	virtual void		StartTouch( CBaseEntity *pOther );
+	void		StartTouch_Impl( CBaseEntity *pOther );
 	void				CheckPhysicsContacts();
 	virtual bool		ShouldCheckPhysicsContacts( void ) { return ( GetMoveType() == MOVETYPE_STEP && VPhysicsGetObject() ); }
 
@@ -2047,7 +1933,7 @@ public:
 		return baseCaps;
 	}
 
-	virtual int	ObjectCaps()	{ return (BaseClass::ObjectCaps() | FCAP_NOTIFY_ON_TRANSITION); }
+	int	ObjectCaps_Impl()	{ return (BaseClass::ObjectCaps_Impl() | FCAP_NOTIFY_ON_TRANSITION); }
 
 	//-----------------------------------------------------
 	//
@@ -2161,8 +2047,8 @@ public:
 	virtual void		ReportAIState( void );
 	virtual void		ReportOverThinkLimit( float time );
 	void 				DumpTaskTimings();
-	void				DrawDebugGeometryOverlays(void);
-	virtual int			DrawDebugTextOverlays(void);
+	void				DrawDebugGeometryOverlays_Impl(void);
+	int			DrawDebugTextOverlays_Impl(void);
 
 	void				ToggleFreeze(void);
 	virtual void		Freeze( float flFreezeAmount = -1.0f, CBaseEntity *pFreezer = nullptr, Ray_t *pFreezeRay = nullptr );
@@ -2244,18 +2130,6 @@ public:
 
 
 //-------------------------------------
-
-inline bool CAI_BaseNPC::IsRunningBehavior() const
-{
-	return ( m_pPrimaryBehavior != nullptr );
-}
-
-//-------------------------------------
-
-inline CAI_BehaviorBase *CAI_BaseNPC::GetPrimaryBehavior()
-{
-	return m_pPrimaryBehavior;
-}
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns whether our ideal activity has started. If not, we are in
@@ -3242,10 +3116,10 @@ public:
 	bool IsGameFrameRunning( void ) { return m_bGameFrameRunning; }
 	void SetGrameFrameRunning( bool bState ) { m_bGameFrameRunning = bState; }
 	
-	void EnqueueEntityNavigationQuery( CAI_BaseNPC *pNPC, CFunctor *functor );
+	void EnqueueEntityNavigationQuery( CAI_BaseNPC *pNPC, CFunctor functor );
 
 private:
-	std::vector< CFunctor * >	m_Functors;
+	std::vector< CFunctor >	m_Functors;
 	bool					m_bGameFrameRunning;
 };
 

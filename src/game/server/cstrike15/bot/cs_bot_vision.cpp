@@ -3,8 +3,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "predictable_entity.h"
 #include "igameevents.h"
@@ -1518,7 +1516,7 @@ CCSPlayer *CCSBot::FindMostDangerousThreat( void )
 		{
 			// find the area the player/bot is standing on
 			CNavArea *area;
-			CCSBot *bot = dynamic_cast<CCSBot *>(threat[i].enemy);
+			CCSBot *bot = ToCSBot( threat[i].enemy );
 			if (bot && bot->IsBot())
 			{
 				area = bot->GetLastKnownArea();

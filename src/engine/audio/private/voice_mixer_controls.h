@@ -6,7 +6,6 @@ class IMixerControls
 {
 
 public:
-	virtual			~IMixerControls() {}
 	enum Control
 	{
 		// Microphone boost is a boolean switch that sound cards support which boosts the input signal by about +20dB.
@@ -22,12 +21,13 @@ public:
 		NumControls
 	};
 
-	virtual bool	GetValue_Float(Control iControl, float &value) = 0;
-	virtual bool	SetValue_Float(Control iControl, float value) = 0;
+	// The SDL build has no mixer to control: nothing can be read or set.
+	bool	GetValue_Float(Control iControl, float &value) {return false;}
+	bool	SetValue_Float(Control iControl, float value) {return false;}
 	
 	// Apps like RealJukebox will switch the waveIn input to use CD audio 
 	// rather than the microphone. This should be called at startup to set it back.
-	virtual bool	SelectMicrophoneForWaveInput() = 0;
+	bool	SelectMicrophoneForWaveInput() {return false;}
 };
 
 extern IMixerControls *g_pMixerControls;

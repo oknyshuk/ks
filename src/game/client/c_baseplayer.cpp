@@ -5,8 +5,6 @@
 //			- Manages the player's flashlight effect.
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "const.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"
@@ -51,7 +49,6 @@ import std;
 #include "hltvcamera.h"
 #include "hltvreplaysystem.h"
 #include "netmessages.h"
-#include "toolframework/itoolframework.h"
 #include "toolframework_client.h"
 #include "view_scene.h"
 #include "datacache/imdlcache.h"
@@ -179,8 +176,6 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 	m_StuckLast = 0;
 	m_bWasFrozen = false;
 
-	m_bResampleWaterSurface = true;
-	
 	ResetObserverMode();
 
 	m_bActiveCameraMan = false;
@@ -248,11 +243,11 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+extern void UntouchAllTriggerSoundOperator( C_BaseEntity *pEntity );
 C_BasePlayer::~C_BasePlayer()
 {
 	if ( this == s_pLocalPlayer[ 0 ] )
 	{
-		extern void UntouchAllTriggerSoundOperator( C_BaseEntity *pEntity );
 		UntouchAllTriggerSoundOperator( this );
 	}
 
@@ -1004,6 +999,7 @@ void C_BasePlayer::OnRestore()
 //-----------------------------------------------------------------------------
 // Purpose: Process incoming data
 //-----------------------------------------------------------------------------
+extern bool g_bSpectatingForceCLPredictOff;
 void C_BasePlayer::OnDataChanged( DataUpdateType_t updateType )
 {
 	bool isLocalPlayer = IsLocalPlayer( this );
@@ -1127,7 +1123,6 @@ void C_BasePlayer::OnDataChanged( DataUpdateType_t updateType )
 		// This is most noticable while playing on a dedicated server and the specated player ducks (causing changes to viewOffset).
 		int observationMode = GetObserverMode();
 		bool isSpectating = GetObserverTarget() != nullptr && ( observationMode == OBS_MODE_IN_EYE || observationMode == OBS_MODE_CHASE );
-		extern bool g_bSpectatingForceCLPredictOff;
 		g_bSpectatingForceCLPredictOff = isSpectating;
 	}
 
@@ -1336,85 +1331,6 @@ void C_BasePlayer::TurnOffFlashlight( void )
 	{
 		FlashlightEffectManager().TurnOffFlashlight();
 		m_bFlashlightEnabled[ nSlot ] = false;
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void C_BasePlayer::CreateWaterEffects( void )
-{
-	// Must be completely submerged to bother
-	if ( GetWaterLevel() < WL_Eyes )
-	{
-		m_bResampleWaterSurface = true;
-		return;
-	}
-
-	// Do special setup if this is our first time back underwater
-	if ( m_bResampleWaterSurface )
-	{
-		// Reset our particle timer
-		m_tWaterParticleTimer.Init( 32 );
-		
-		// Find the surface of the water to clip against
-		m_flWaterSurfaceZ = UTIL_WaterLevel( WorldSpaceCenter(), WorldSpaceCenter().z, WorldSpaceCenter().z + 256 );
-		m_bResampleWaterSurface = false;
-	}
-
-	// Make sure the emitter is setup
-	if ( m_pWaterEmitter == nullptr )
-	{
-		if ( ( m_pWaterEmitter = WaterDebrisEffect::Create( "splish" ) ) == nullptr )
-			return;
-	}
-
-	Vector vecVelocity;
-	GetVectors( &vecVelocity, nullptr, nullptr );
-
-	Vector offset = WorldSpaceCenter();
-
-	m_pWaterEmitter->SetSortOrigin( offset );
-
-	SimpleParticle	*pParticle;
-
-	float curTime = gpGlobals->frametime;
-
-	// Add as many particles as we need
-	while ( m_tWaterParticleTimer.NextEvent( curTime ) )
-	{
-		offset = WorldSpaceCenter() + ( vecVelocity * 128.0f ) + RandomVector( -128, 128 );
-
-		// Make sure we don't start out of the water!
-		if ( offset.z > m_flWaterSurfaceZ )
-		{
-			offset.z = ( m_flWaterSurfaceZ - 8.0f );
-		}
-
-		pParticle = (SimpleParticle *) m_pWaterEmitter->AddParticle( sizeof(SimpleParticle), g_Mat_Fleck_Cement[random->RandomInt(0,1)], offset );
-
-		if (pParticle == nullptr)
-			continue;
-
-		pParticle->m_flLifetime	= 0.0f;
-		pParticle->m_flDieTime	= random->RandomFloat( 2.0f, 4.0f );
-
-		pParticle->m_vecVelocity = RandomVector( -2.0f, 2.0f );
-
-		//FIXME: We should tint these based on the water's fog value!
-		float color = random->RandomInt( 32, 128 );
-		pParticle->m_uchColor[0] = color;
-		pParticle->m_uchColor[1] = color;
-		pParticle->m_uchColor[2] = color;
-
-		pParticle->m_uchStartSize	= 1;
-		pParticle->m_uchEndSize		= 1;
-		
-		pParticle->m_uchStartAlpha	= 255;
-		pParticle->m_uchEndAlpha	= 0;
-		
-		pParticle->m_flRoll			= random->RandomInt( 0, 360 );
-		pParticle->m_flRollDelta	= random->RandomFloat( -0.5f, 0.5f );
 	}
 }
 
@@ -2435,13 +2351,13 @@ void C_BasePlayer::PhysicsSimulate( void )
 	MoveHelper()->SetHost( nullptr );
 }
 
+extern void TouchTriggerSoundOperator( C_BaseEntity *pEntity );
 void C_BasePlayer::PhysicsTouchTriggers( const Vector *pPrevAbsOrigin )
 {
 	C_BaseCombatCharacter::PhysicsTouchTriggers( pPrevAbsOrigin );
 
 	if ( this == GetLocalPlayer() )
 	{
-		extern void TouchTriggerSoundOperator( C_BaseEntity *pEntity );
 		TouchTriggerSoundOperator( this );
 	}
 }

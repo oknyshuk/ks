@@ -70,7 +70,7 @@ public:
 	DECLARE_DATADESC();
 #endif
 
-	virtual void		Precache( void );
+	KS_VIRTUAL void		Precache_Impl( void );
 
 	virtual void		Explode( trace_t *pTrace, int bitsDamageType );
 	void				Smoke( void );
@@ -87,8 +87,8 @@ public:
 	virtual Vector		GetBlastForce() { return vec3_origin; }
 
 	virtual void		BounceSound( void );
-	virtual int			BloodColor( void ) { return DONT_BLEED; }
-	virtual void		Event_Killed( const CTakeDamageInfo &info );
+	KS_VIRTUAL int			BloodColor_Impl( void ) { return DONT_BLEED; }
+	KS_VIRTUAL void		Event_Killed_Impl( const CTakeDamageInfo &info );
 
 	virtual float		GetShakeAmplitude( void ) { return 25.0; }
 	virtual float		GetShakeRadius( void ) { return 750.0; }
@@ -98,7 +98,7 @@ public:
 	virtual GrenadeType_t GetGrenadeType( void ) { return GRENADE_TYPE_EXPLOSIVE; }
 
 	// Damage accessors.
-	virtual float GetDamage()
+	KS_VIRTUAL float GetDamage_Impl()
 	{
 		return m_flDamage;
 	}
@@ -107,7 +107,7 @@ public:
 		return m_DmgRadius;
 	}
 
-	virtual void SetDamage(float flDamage)
+	KS_VIRTUAL void SetDamage_Impl(float flDamage)
 	{
 		m_flDamage = flDamage;
 	}
@@ -129,12 +129,12 @@ public:
 
 #if !defined( CLIENT_DLL )
 	// Allow +USE pickup
-	int ObjectCaps() 
+	int ObjectCaps_Impl() 
 	{ 
-		return (BaseClass::ObjectCaps() | FCAP_IMPULSE_USE | FCAP_USE_IN_RADIUS);
+		return (BaseClass::ObjectCaps_Impl() | FCAP_IMPULSE_USE | FCAP_USE_IN_RADIUS);
 	}
 
-	void				Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void				Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 #endif
 
 public:

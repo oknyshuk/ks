@@ -3,8 +3,6 @@
 
 // Purpose: No defuse area
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -37,7 +35,7 @@ import ks.tier1;
 LINK_ENTITY_TO_CLASS( func_no_defuse, CNoDefuseArea );
 
 
-void CNoDefuseArea::Spawn()
+void CNoDefuseArea::Spawn_Impl()
 {
 	InitTrigger();
 	SetTouch( &CNoDefuseArea::NoDefuseAreaTouch );

@@ -17,8 +17,6 @@
 #include "c_cs_playerresource.h"
 #include <shareddefs.h>
 #include <cs_shareddefs.h>
-import ks.vstdlib;
-import std;
 #include "localize/ilocalize.h"
 #include "cs_gamerules.h"
 #include "c_cs_player.h"

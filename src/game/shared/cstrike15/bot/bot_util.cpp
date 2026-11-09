@@ -3,8 +3,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "ndebugoverlay.h"
 #include "cs_shareddefs.h"
 #include "engine/IEngineSound.h"
@@ -55,7 +52,7 @@ bool UTIL_IsNameTaken( const char *name, bool ignoreHumans )
 		{
 			// bots can have prefixes so we need to check the name
 			// against the profile name instead.
-			CCSBot *bot = dynamic_cast<CCSBot *>(player);
+			CCSBot *bot = ToCSBot( player );
 			if ( bot && bot->GetProfile()->GetName() && FStrEq(name, bot->GetProfile()->GetName()))
 			{
 				return true;
@@ -377,7 +374,7 @@ void UTIL_ConstructBotNetName( char *name, int nameLength, const BotProfile *pro
 		WEAPON_FILE_INFO_HANDLE	hWpnInfo = LookupWeaponInfoSlot( wpnName );
 		if ( hWpnInfo != GetInvalidWeaponInfoHandle() )
 		{
-			CCSWeaponInfo *pWeaponInfo = dynamic_cast< CCSWeaponInfo* >( GetFileWeaponInfoFromHandle( hWpnInfo ) );
+			CCSWeaponInfo *pWeaponInfo = static_cast< CCSWeaponInfo* >( GetFileWeaponInfoFromHandle( hWpnInfo ) );
 			if ( pWeaponInfo )
 			{
 				CSWeaponType weaponType = pWeaponInfo->GetWeaponType();

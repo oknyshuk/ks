@@ -7,10 +7,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -22,7 +19,6 @@ import ks.tier1;
 #include "cdll_client_int.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -40,7 +36,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -107,7 +102,7 @@ ConVar mapcycledisabled(
 				   "repeats the same map after each match instead of using the map cycle");
 
 #ifdef GAME_DLL
-void MPTimeLimitCallback( IConVar *var, const char *pOldString, float flOldValue )
+void MPTimeLimitCallback( ConVar *var, const char *pOldString, float flOldValue )
 {
 	if ( mp_timelimit.GetInt() < 0 )
 	{
@@ -1634,38 +1629,3 @@ CMultiplayRules::CMultiplayRules()
 	}
 
 #endif
-
-//-----------------------------------------------------------------------------
-// Purpose: Sort function for sorting players by time spent connected ( user ID )
-//-----------------------------------------------------------------------------
-bool CSameTeamGroup::Less( const CSameTeamGroup &p1, const CSameTeamGroup &p2 )
-{
-	// sort by score
-	return ( p1.Score() > p2.Score() );
-}
-
-CSameTeamGroup::CSameTeamGroup() : 
-	m_nScore( std::numeric_limits<int>::min() )
-{
-}
-
-CSameTeamGroup::CSameTeamGroup( const CSameTeamGroup &src )
-{
-	m_nScore = src.m_nScore;
-	m_Players = src.m_Players;
-}
-
-int CSameTeamGroup::Score() const 
-{ 
-	return m_nScore; 
-}
-
-CBasePlayer *CSameTeamGroup::GetPlayer( int idx )
-{
-	return m_Players[ idx ];
-}
-
-int CSameTeamGroup::Count() const
-{
-	return std::ssize( m_Players );
-}

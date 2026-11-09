@@ -11,7 +11,6 @@ public:
 };
 
 namespace ks { class byte_writer; }
-import std;
 
 class ISceneImage
 {

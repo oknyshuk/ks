@@ -12,23 +12,23 @@ import std;
 class JoltPhysicsFrictionSnapshot final : public IPhysicsFrictionSnapshot
 {
 public:
-	bool IsValid() override;
+	bool IsValid();
 
-	IPhysicsObject *GetObject( int index ) override;
-	int GetMaterial( int index ) override;
+	IPhysicsObject *GetObject( int index );
+	int GetMaterial( int index );
 
-	void GetContactPoint( Vector &out ) override;
+	void GetContactPoint( Vector &out );
 
-	void GetSurfaceNormal( Vector &out ) override;
-	float GetNormalForce() override;
-	float GetEnergyAbsorbed() override;
+	void GetSurfaceNormal( Vector &out );
+	float GetNormalForce();
+	float GetEnergyAbsorbed();
 
-	void RecomputeFriction() override;
-	void ClearFrictionForce() override;
+	void RecomputeFriction();
+	void ClearFrictionForce();
 
-	void MarkContactForDelete() override;
-	void DeleteAllMarkedContacts( bool wakeObjects ) override;
+	void MarkContactForDelete();
+	void DeleteAllMarkedContacts( bool wakeObjects );
 
-	void NextFrictionData() override;
-	float GetFrictionCoefficient() override;
+	void NextFrictionData();
+	float GetFrictionCoefficient();
 };

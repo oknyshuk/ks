@@ -10,13 +10,18 @@ import ks.tier1;
 class IMaterial;
 class ICompositeTexture;
 
-class ICustomMaterial : public CRefCounted<>
+// Non-virtual facade: the only implementation is the material system's
+// CCustomMaterial, which is reference counted (CRefCounted<CCustomMaterial>).
+class ICustomMaterial
 {
 public:
-	virtual IMaterial *GetMaterial() = 0;
-	virtual void AddTexture( ICompositeTexture *pTexture ) = 0;
-	virtual ICompositeTexture *GetTexture( int nIndex ) = 0;
-	virtual bool IsValid() const = 0;
-	virtual bool CheckRegenerate( int nSize ) = 0;
-	virtual const char* GetBaseMaterialName( void ) = 0;
+	int AddRef();
+	int Release();
+
+	IMaterial *GetMaterial();
+	void AddTexture( ICompositeTexture *pTexture );
+	ICompositeTexture *GetTexture( int nIndex );
+	bool IsValid() const;
+	bool CheckRegenerate( int nSize );
+	const char* GetBaseMaterialName( void );
 };

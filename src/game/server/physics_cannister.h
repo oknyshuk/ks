@@ -43,13 +43,13 @@ class CPhysicsCannister : public CBaseCombatCharacter, public CDefaultPlayerPick
 public:
 	~CPhysicsCannister( void );
 
-	void Spawn( void );
-	void Precache( void );
-	virtual void OnRestore();
-	bool CreateVPhysics();
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	void OnRestore_Impl();
+	bool CreateVPhysics_Impl();
 
 	DECLARE_DATADESC();
-	virtual void VPhysicsUpdate( IPhysicsObject *pPhysics );
+	void VPhysicsUpdate_Impl( IPhysicsObject *pPhysics );
 
 	virtual QAngle PreferredCarryAngles( void ) { return QAngle( -90, 0, 0 ); }
 	virtual bool HasPreferredCarryAnglesForPlayer( CBasePlayer *pPlayer ) { return true; }
@@ -62,15 +62,15 @@ public:
 	[[= ks::reflect::Input{ .name = "Explode", .type = FIELD_VOID } ]] void InputExplode(inputdata_t &data);
 	[[= ks::reflect::Input{ .name = "Wake", .type = FIELD_VOID } ]] void InputWake( inputdata_t &data );
 
-	bool TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace );
+	bool TestCollision_Impl( const Ray_t &ray, unsigned int mask, trace_t& trace );
 
-	virtual int OnTakeDamage( const CTakeDamageInfo &info );
+	int OnTakeDamage_Impl( const CTakeDamageInfo &info );
 
-	int ObjectCaps() 
+	int ObjectCaps_Impl() 
 	{ 
-		return (BaseClass::ObjectCaps() | FCAP_IMPULSE_USE);
+		return (BaseClass::ObjectCaps_Impl() | FCAP_IMPULSE_USE);
 	}
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 	{
 		CBasePlayer *pPlayer = ToBasePlayer( pActivator );
 		if ( pPlayer )
@@ -84,12 +84,12 @@ public:
 	void Deactivate( void );
 	void Explode( CBaseEntity *pAttacker );
 	void ExplodeTouch( CBaseEntity *pOther );
-	void VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
+	void VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent );
 
 	// Don't treat as a live target
 	virtual bool IsAlive( void ) { return false; }
 
-	virtual void TraceAttack( const CTakeDamageInfo &info, const Vector &dir, trace_t *ptr );
+	void TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &dir, trace_t *ptr );
 
 	void	ShutdownJet( void );
 	void	BeginShutdownThink( void );
@@ -98,7 +98,7 @@ public:
 	virtual bool OnAttemptPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunPickup_t reason ) { return true; }
 	virtual void OnPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunPickup_t reason );
 	virtual void OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t reason );
-	virtual	CBasePlayer *HasPhysicsAttacker( float dt );
+	CBasePlayer *HasPhysicsAttacker_Impl( float dt );
 	virtual bool ShouldPuntUseLaunchForces( PhysGunForce_t reason ) 
 	{ 
 		if ( reason == PHYSGUN_FORCE_LAUNCHED ) 

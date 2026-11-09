@@ -17,9 +17,9 @@ class [[= ks::reflect::NetTable{ .name = "DT_WaterBullet" } ]]
 	DECLARE_CLASS( CWaterBullet, CBaseAnimating );
 
 public:
-	void Precache();
+	void Precache_Impl();
 	void Spawn( const Vector &vecOrigin, const Vector &vecDir );
-	void Touch( CBaseEntity *pOther );
+	void Touch_Impl( CBaseEntity *pOther );
 	void BulletThink();
 
 	DECLARE_SERVERCLASS();

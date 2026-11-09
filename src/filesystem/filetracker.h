@@ -321,7 +321,7 @@ public:
 };
 
 class CFileTracker2
-	: IThreadedFileMD5Processor
+	: public IThreadedFileMD5Processor
 {
 public:
 	CFileTracker2( CBaseFileSystem *pFileSystem );
@@ -334,9 +334,9 @@ public:
 	EFileCRCStatus CheckCachedFileHash( const char *pPathID, const char *pRelativeFilename, int nFileFraction, FileHash_t *pFileHash );
 
 	unsigned ThreadedProcessMD5Requests();
-	virtual int SubmitThreadedMD5Request( uint8 *pubBuffer, int cubBuffer, int PackFileID, int nPackFileNumber, int nPackFileFraction );
-	virtual bool			BlockUntilMD5RequestComplete( int iRequest, MD5Value_t *pMd5ValueOut );
-	virtual bool			IsMD5RequestComplete( int iRequest, MD5Value_t *pMd5ValueOut );
+	int SubmitThreadedMD5Request( uint8 *pubBuffer, int cubBuffer, int PackFileID, int nPackFileNumber, int nPackFileFraction );
+	bool			BlockUntilMD5RequestComplete( int iRequest, MD5Value_t *pMd5ValueOut );
+	bool			IsMD5RequestComplete( int iRequest, MD5Value_t *pMd5ValueOut );
 
 	int NotePackFileOpened( const char *pRawFileName, const char *pFilename, const char *pPathID, int64 nLength );
 	void NotePackFileAccess( const char *pFilename, const char *pPathID, CPackedStoreFileHandle &VPKHandle );

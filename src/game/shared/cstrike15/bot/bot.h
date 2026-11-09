@@ -9,8 +9,6 @@
 // auto-generate documentation.  Visit www.doxygen.org to download the system for free.
 //
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "shareddefs.h"
 #include "ehandle.h"
@@ -123,7 +121,8 @@ template < class T > T * CreateBot( const BotProfile *profile, int team )
 
 
 	// create an instance of the bot's class and bind it to the edict
-	T *bot = dynamic_cast< T * >( CBaseEntity::Instance( botEdict ) );
+	// the entity is created by ClientPutInServerOverride_Bot() -> CCSBotManager::AllocateBotEntity(), which only makes "cs_bot" entities
+	T *bot = static_cast< T * >( CBaseEntity::Instance( botEdict ) );
 
 	if ( bot == nullptr )
 	{
@@ -145,6 +144,8 @@ template < class T > T * CreateBot( const BotProfile *profile, int team )
  * A template is needed here because the CBot class must be derived from CBasePlayer, 
  * but also may need to be derived from a more specific player class, such as CCSPlayer
  */
+class CCSBot;	// the only class derived from CBot
+
 template < class PlayerType >
 class CBot : public PlayerType
 {
@@ -152,42 +153,41 @@ public:
 	DECLARE_CLASS( CBot, PlayerType );
 
 	CBot( void );												///< constructor initializes all values to zero
-	virtual ~CBot();
-	virtual bool Initialize( const BotProfile *profile, int team );		///< (EXTEND) prepare bot for action
+	~CBot();
+	bool Initialize( const BotProfile *profile, int team );		///< prepare bot for action
 
 	unsigned int GetID( void ) const		{ return m_id; }	///< return bot's unique ID
 
 	virtual bool IsBot( void ) const { return true; }	
-	virtual bool IsNetClient( void ) const { return false; }	// Bots should return false for this, they can't receive NET messages
+	KS_VIRTUAL bool IsNetClient_Impl( void ) const { return false; }	// Bots should return false for this, they can't receive NET messages
 
-	virtual void Spawn( void );									///< (EXTEND) spawn the bot into the game
+	KS_VIRTUAL void Spawn_Impl( void );									///< (EXTEND) spawn the bot into the game
 
-	virtual void Upkeep( void ) = 0;							///< lightweight maintenance, invoked frequently
-	virtual void Update( void ) = 0;							///< heavyweight algorithms, invoked less often
+	// Upkeep() and Update() are provided by CCSBot
 
 
-	virtual void Run( void );
-	virtual void Walk( void );
+	void Run( void );
+	void Walk( void );
 	virtual bool IsRunning( void ) const		{ return m_isRunning; }
 	
-	virtual void Crouch( void );
-	virtual void StandUp( void );
+	void Crouch( void );
+	void StandUp( void );
 	bool IsCrouching( void ) const	{ return m_isCrouching; }
 
 	void PushPostureContext( void );							///< push the current posture context onto the top of the stack
 	void PopPostureContext( void );								///< restore the posture context to the next context on the stack
 
-	virtual void MoveForward( void );
-	virtual void MoveBackward( void );
-	virtual void StrafeLeft( void );
-	virtual void StrafeRight( void );
+	void MoveForward( void );
+	void MoveBackward( void );
+	void StrafeLeft( void );
+	void StrafeRight( void );
 
 	#define MUST_JUMP true
-	virtual bool Jump( bool mustJump = false );					///< returns true if jump was started
+	bool Jump( bool mustJump = false );					///< returns true if jump was started
 	bool IsJumping( void );										///< returns true if we are in the midst of a jump
 	float GetJumpTimestamp( void ) const	{ return m_jumpTimestamp; }	///< return time last jump began
 
-	virtual void ClearMovement( void );						///< zero any MoveForward(), Jump(), etc
+	void ClearMovement( void );						///< zero any MoveForward(), Jump(), etc
 
 	const Vector &GetViewVector( void );						///< return the actual view direction
 
@@ -195,12 +195,12 @@ public:
 	//------------------------------------------------------------------------------------
 	// Weapon interface
 	//
-	virtual void UseEnvironment( void );
-	virtual void PrimaryAttack( void );
-	virtual void ClearPrimaryAttack( void );
-	virtual void TogglePrimaryAttack( void );
-	virtual void SecondaryAttack( void );
-	virtual void Reload( void );
+	void UseEnvironment( void );
+	void PrimaryAttack( void );
+	void ClearPrimaryAttack( void );
+	void TogglePrimaryAttack( void );
+	void SecondaryAttack( void );
+	void Reload( void );
 
 	float GetActiveWeaponAmmoRatio( void ) const;				///< returns ratio of ammo left to max ammo (1 = full clip, 0 = empty)
 	bool IsActiveWeaponClipEmpty( void ) const;					///< return true if active weapon has any empty clip
@@ -214,15 +214,15 @@ public:
 	//
 
 	/// invoked when injured by something (EXTEND) - returns the amount of damage inflicted
-	virtual int OnTakeDamage( const CTakeDamageInfo &info )
+	KS_VIRTUAL int OnTakeDamage_Impl( const CTakeDamageInfo &info )
 	{
-		return PlayerType::OnTakeDamage( info );
+		return PlayerType::OnTakeDamage_Impl( info );
 	}
 
 	/// invoked when killed (EXTEND)
-	virtual void Event_Killed( const CTakeDamageInfo &info )
+	KS_VIRTUAL void Event_Killed_Impl( const CTakeDamageInfo &info )
 	{ 
-		PlayerType::Event_Killed( info );
+		PlayerType::Event_Killed_Impl( info );
 	}
 
 	bool IsEnemy( CBaseEntity *ent ) const;						///< returns true if given entity is our enemy
@@ -237,18 +237,18 @@ public:
 
 	void PrintIfWatched( const char *format, ... ) const;				///< output message to console if we are being watched by the local player
 
-	virtual void UpdatePlayer( void );							///< update player physics, movement, weapon firing commands, etc
-	virtual void BuildUserCmd( CUserCmd& cmd, const QAngle& viewangles, float forwardmove, float sidemove, float upmove, int buttons, byte impulse );
-	virtual void AvoidPlayers( CUserCmd *pCmd ) { }				///< some game types allow players to pass through each other, this method pushes them apart
-	virtual void SetModel( const char *modelName );
+	void UpdatePlayer( void );							///< update player physics, movement, weapon firing commands, etc
+	void BuildUserCmd( CUserCmd& cmd, const QAngle& viewangles, float forwardmove, float sidemove, float upmove, int buttons, byte impulse );
+	void AvoidPlayers( CUserCmd *pCmd ) { }				///< some game types allow players to pass through each other, this method pushes them apart
+	KS_VIRTUAL void SetModel_Impl( const char *modelName );
 
-	virtual void Think( void ) { }
+	KS_VIRTUAL void Think_Impl( void ) { }
 
 	const BotProfile *GetProfile( void ) const		{ return m_profile; }	///< return our personality profile
 
 	virtual bool ClientCommand( const CCommand &args );			///< Do a "client command" - useful for invoking menu choices, etc.
-	virtual int Cmd_Argc( void );								///< Returns the number of tokens in the command string
-	virtual char *Cmd_Argv( int argc );							///< Retrieves a specified token
+	int Cmd_Argc( void );								///< Returns the number of tokens in the command string
+	char *Cmd_Argv( int argc );							///< Retrieves a specified token
 
 private:
 	std::vector< char * > m_args;
@@ -288,7 +288,7 @@ private:
 	//byte ThrottledMsec( void ) const;
 
 protected:
-	virtual float GetMoveSpeed( void );									///< returns current movement speed (for walk/run)
+	float GetMoveSpeed( void );									///< returns current movement speed (for walk/run)
 };
 
 
@@ -300,9 +300,9 @@ protected:
 
 //--------------------------------------------------------------------------------------------------------------
 template < class T >
-inline void CBot<T>::SetModel( const char *modelName )
+inline void CBot<T>::SetModel_Impl( const char *modelName )
 {
-	BaseClass::SetModel( modelName );
+	BaseClass::SetModel_Impl( modelName );
 }
 
 //-----------------------------------------------------------------------------------------------------------
@@ -482,14 +482,14 @@ inline bool CBot< PlayerType >::Initialize( const BotProfile *profile, int team 
 
 //--------------------------------------------------------------------------------------------------------------
 template < class PlayerType >
-inline void CBot< PlayerType >::Spawn( void )
+inline void CBot< PlayerType >::Spawn_Impl( void )
 {
 	// initialize the bot (thus setting its profile)
 	if (m_profile == nullptr)
-		Initialize( g_botInitProfile, g_botInitTeam );
+		static_cast< CCSBot * >( this )->Initialize( g_botInitProfile, g_botInitTeam );
 
 	// let the base class set some things up
-	PlayerType::Spawn();
+	PlayerType::Spawn_Impl();
 
 	// Make sure everyone knows we are a bot
 	// dgoodenough - Fix GCC / MSVC difference
@@ -540,7 +540,7 @@ float g_flBotFullThinkInterval	= 1.0 / 15.0;	// full AI at lower frequency (was 
 template < class PlayerType >
 inline void CBot< PlayerType >::MoveForward( void )
 {
-	m_forwardSpeed = GetMoveSpeed();
+	m_forwardSpeed = static_cast< CCSBot * >( this )->GetMoveSpeed();
 	SETBITS( m_buttonFlags, IN_FORWARD );
 
 	// make mutually exclusive
@@ -552,7 +552,7 @@ inline void CBot< PlayerType >::MoveForward( void )
 template < class PlayerType >
 inline void CBot< PlayerType >::MoveBackward( void )
 {
-	m_forwardSpeed = -GetMoveSpeed();
+	m_forwardSpeed = -static_cast< CCSBot * >( this )->GetMoveSpeed();
 	SETBITS( m_buttonFlags, IN_BACK );
 
 	// make mutually exclusive
@@ -563,7 +563,7 @@ inline void CBot< PlayerType >::MoveBackward( void )
 template < class PlayerType >
 inline void CBot< PlayerType >::StrafeLeft( void )
 {
-	m_strafeSpeed = -GetMoveSpeed();
+	m_strafeSpeed = -static_cast< CCSBot * >( this )->GetMoveSpeed();
 	SETBITS( m_buttonFlags, IN_MOVELEFT );
 
 	// make mutually exclusive
@@ -574,7 +574,7 @@ inline void CBot< PlayerType >::StrafeLeft( void )
 template < class PlayerType >
 inline void CBot< PlayerType >::StrafeRight( void )
 {
-	m_strafeSpeed = GetMoveSpeed();
+	m_strafeSpeed = static_cast< CCSBot * >( this )->GetMoveSpeed();
 	SETBITS( m_buttonFlags, IN_MOVERIGHT );
 
 	// make mutually exclusive
@@ -834,9 +834,9 @@ inline void CBot< PlayerType >::UpdatePlayer( void )
 	// dgoodenough - Fix GCC / MSVC difference
 	// PS3_BUILDFIX
 	// For reasons unknown, GCC requires an explicit this-> to be able to find this function, while MSVC doesn't.
-	BuildUserCmd( m_userCmd, this->EyeAngles(), m_forwardSpeed, m_strafeSpeed, m_verticalSpeed, m_buttonFlags, 0 );
+	static_cast< CCSBot * >( this )->BuildUserCmd( m_userCmd, this->EyeAngles(), m_forwardSpeed, m_strafeSpeed, m_verticalSpeed, m_buttonFlags, 0 );
 
-	AvoidPlayers( &m_userCmd );
+	static_cast< CCSBot * >( this )->AvoidPlayers( &m_userCmd );
 
 	// Save off the CUserCmd to execute later
 	// dgoodenough - Fix GCC / MSVC difference

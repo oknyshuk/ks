@@ -105,9 +105,16 @@ target_link_libraries(ks_shared PRIVATE ks_common)
 add_library(public_common STATIC
     public/filesystem_helpers.cpp public/collisionutils.cpp public/filesystem_init.cpp
     public/imagepacker.cpp public/networkvar.cpp public/registry.cpp
-    public/scratchpad3d.cpp public/dt_utlvector_common.cpp public/XZip.cpp public/XUnzip.cpp
+    public/dt_utlvector_common.cpp public/XZip.cpp public/XUnzip.cpp
     common/playerid.cpp common/platforminputdevice.cpp common/randoverride.cpp)
 target_link_libraries(public_common PRIVATE ks_common)
+
+# Code of public/ that both game sides use unchanged; one copy, shared like public_common.
+add_library(game_public STATIC
+    public/closedcaptions.cpp public/interpolatortypes.cpp public/keyframe/keyframe.cpp
+    public/rope_physics.cpp public/server_class.cpp public/simple_physics.cpp
+    public/stringregistry.cpp public/tools/bonelist.cpp)
+target_link_libraries(game_public PRIVATE ks_common)
 
 add_subdirectory(appframework)
 add_subdirectory(bitmap)
@@ -159,7 +166,63 @@ add_subdirectory(engine)
 add_subdirectory(game/client)
 add_subdirectory(game/server)
 
-install(TARGETS srceng srcds engine client server RmlCore d3d9
+# ---------------------------------------------------------------------------------------
+# Executables
+#
+# srceng = engine + server + client, srcds = engine + server, all ordinary objects linked once.
+# Nothing is renamed, hidden or post-processed, and the link suppresses nothing: what the engine,
+# the libraries and the two game sides share is the global namespace (tier1, tier2, tier3,
+# mathlib, particles, the engine-owned headers in the sides' preludes, ...), and what is per side
+# lives in the inline namespace ks_server or ks_client (see game/ks_side.cmake), so the two sides
+# can define the same names without clashing.  The few places where a library has per-side state
+# are explicit: ks::registry (tier1/ks.tier1-registry.cppm).
+#
+# The engine reaches a side through the factory the executable's main defines
+# (game_entry.h); the server never sees the client.
+#
+# The objects of an executable are those of its OBJECT libraries plus those of the OBJECT
+# libraries they link directly (CMake takes no objects from OBJECT libraries that are linked
+# deeper, nor from a static library's); the static libraries and their dependencies come from
+# the normal link closure.
+# ---------------------------------------------------------------------------------------
+function(ks_link_game exe)
+    set(_objlibs)
+    foreach(_lib IN LISTS ARGN)
+        get_target_property(_deps ${_lib} LINK_LIBRARIES)
+        foreach(_dep IN LISTS _deps)
+            if(TARGET ${_dep})
+                get_target_property(_type ${_dep} TYPE)
+                if(_type STREQUAL "OBJECT_LIBRARY")
+                    list(APPEND _objlibs ${_dep})
+                endif()
+            endif()
+        endforeach()
+    endforeach()
+    list(REMOVE_DUPLICATES _objlibs)
+    list(REMOVE_ITEM _objlibs ${ARGN})
+    target_link_libraries(${exe} PRIVATE ${ARGN})
+    foreach(_obj IN LISTS _objlibs)
+        target_sources(${exe} PRIVATE $<TARGET_OBJECTS:${_obj}>)
+    endforeach()
+endfunction()
+
+ks_link_game(srcds engine server)
+ks_link_game(srceng engine server client)
+foreach(_exe srceng srcds)
+    target_link_libraries(${_exe} PRIVATE RmlCore d3d9 ks_jpeg PkgConfig::SDL3)
+endforeach()
+
+# The shader API is selected here, at build time: srceng renders through shaderapidx9, srcds (which
+# never draws) uses the empty implementation.  Neither is part of the engine; both define the same
+# classes (IShaderAPI, IShaderDevice, ... see materialsystem/shaderapi_facade), which the engine
+# calls as ordinary undefined symbols.
+target_link_libraries(srceng PRIVATE shaderapidx9)
+target_link_libraries(srcds PRIVATE shaderapiempty)
+
+enable_testing()
+add_subdirectory(tools/no_vtables)
+
+install(TARGETS srceng srcds RmlCore d3d9
     RUNTIME DESTINATION . LIBRARY DESTINATION bin)
 set_target_properties(srceng srcds PROPERTIES INSTALL_RPATH "$ORIGIN/bin")
-set_target_properties(engine client server RmlCore d3d9 PROPERTIES INSTALL_RPATH "$ORIGIN")
+set_target_properties(RmlCore d3d9 PROPERTIES INSTALL_RPATH "$ORIGIN")

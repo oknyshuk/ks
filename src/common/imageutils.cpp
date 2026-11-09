@@ -6,16 +6,13 @@
 
 // @note Tom Bui: we need to use fopen below in the jpeg code, so we can't have this on...
 
-#include "rocketui/rmlui.h"
+import std;
+import ks.core;
+import ks.math;
+import ks.tier1;
 import ks.vstdlib;
 import ks.jpeg;
-import std;
 #include "const.h"
-#include "predictable_entity.h"
-#include "cdll_util.h"
-#include "util_shared.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
 
 #include "imageutils.h"
 #include "filesystem.h"

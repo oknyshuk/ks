@@ -10,8 +10,6 @@
 // state
 //
 
-class IMaterial;
-class CMeshBuilder;
 class CParticleSubTexture;
 
 

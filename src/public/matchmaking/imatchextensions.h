@@ -6,11 +6,11 @@ class IMatchExtensions
 {
 public:
 	// Registers an extension interface
-	virtual void RegisterExtensionInterface( char const *szInterfaceString, void *pvInterface ) = 0;
+	void RegisterExtensionInterface( char const *szInterfaceString, void *pvInterface );
 
 	// Unregisters an extension interface
-	virtual void UnregisterExtensionInterface( char const *szInterfaceString, void *pvInterface ) = 0;
+	void UnregisterExtensionInterface( char const *szInterfaceString, void *pvInterface );
 
 	// Gets a pointer to a registered extension interface
-	virtual void * GetRegisteredExtensionInterface( char const *szInterfaceString ) = 0;
+	void * GetRegisteredExtensionInterface( char const *szInterfaceString );
 };

@@ -18,7 +18,7 @@ IFileSystem *g_pFileSystem = nullptr;
 // This comes is in filesystem_init.cpp
 extern KeyValues* ReadKeyValuesFile( const char *pFilename );
 
-void fs_whitelist_spew_flags_changefn( IConVar *pConVar, const char *pOldValue, float flOldValue )
+void fs_whitelist_spew_flags_changefn( ConVar *pConVar, const char *pOldValue, float flOldValue )
 {
 	if ( g_pFileSystem )
 	{

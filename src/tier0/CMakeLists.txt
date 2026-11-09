@@ -49,7 +49,6 @@ target_sources(ks_core PUBLIC
           ks.core-logging.cppm
           ks.core-mem.cppm
           ks.core-memalloc.cppm
-          ks.core-memvirt.cppm
           ks.core-microprofiler.cppm
           ks.core-minidump.cppm
           ks.core-numeric.cppm

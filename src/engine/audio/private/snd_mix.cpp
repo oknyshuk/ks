@@ -35,7 +35,6 @@ import std;
 #include "icliententitylist.h"
 #include "icliententity.h"
 #include "../../sys_dll.h"
-#include "avi/iavi.h"
 #include "snd_op_sys/sos_system.h"
 
 // we don't suport the ASM in this file right now under GCC, fallback to C libs
@@ -362,13 +361,10 @@ void S_FreeChannel(channel_t *ch)
 
 	SND_CloseMouth(ch);
 
-	char nameBuf[MAX_PATH];
-	g_pSoundServices->OnSoundStopped( ch->guid, ch->soundsource, ch->entchannel, ch->sfx->getname(nameBuf, sizeof(nameBuf)) );
-
 	ch->flags.isSentence = false;
 //	Msg("End sound %s\n", ch->sfx->getname() );
 	
-	delete ch->pMixer;
+	CAudioMixer::Delete( ch->pMixer );
 	ch->pMixer = nullptr;
 	ch->sfx = nullptr;
 
@@ -4945,11 +4941,6 @@ void SND_RecordBuffer( void )
 	if ( cl_movieinfo.DoWav() )
 	{
 		WaveAppendTmpFile( cl_movieinfo.moviename, tmp, 16, snd_linear_count );
-	}
-
-	if ( cl_movieinfo.DoAVISound() )
-	{
-		g_pAVI->AppendMovieSound( g_hCurrentAVI, tmp, bufferSize );
 	}
 
 	g_nMovieSamples += ( snd_linear_count >> 1 );

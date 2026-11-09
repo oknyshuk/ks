@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -50,9 +47,9 @@ public:
 	DECLARE_DATADESC();
 
 	CProp_Hallucination( void );
-	virtual void Precache( void );
-	virtual void Spawn( void );
-	virtual int DrawDebugTextOverlays( void );
+	void Precache_Impl( void );
+	void Spawn_Impl( void );
+	int DrawDebugTextOverlays_Impl( void );
 	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "Disable", .type = FIELD_VOID } ]] void InputDisable( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "SetVisibleTime", .type = FIELD_FLOAT } ]] void InputSetVisibleTime( inputdata_t &inputdata );
@@ -75,16 +72,16 @@ CProp_Hallucination::CProp_Hallucination( void )
 {
 }
 
-void CProp_Hallucination::Precache( void )
+void CProp_Hallucination::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 	PrecacheModel( m_ModelName.ToCStr() );
 }
 
-void CProp_Hallucination::Spawn( void )
+void CProp_Hallucination::Spawn_Impl( void )
 {
 	Precache();
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	SetModel( m_ModelName.ToCStr() );
 
 	if( m_fStartEnabledChance > 0.0f )
@@ -117,9 +114,9 @@ void CProp_Hallucination::InputSetRechargeTime( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 // Draw debug overlays
 //-----------------------------------------------------------------------------
-int CProp_Hallucination::DrawDebugTextOverlays()
+int CProp_Hallucination::DrawDebugTextOverlays_Impl()
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{

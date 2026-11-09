@@ -107,3 +107,7 @@ void ResponseRulePartition::GetDictsForCriteria( std::inplace_vector< ResponseRu
 	pResult->push_back( &m_RuleParts[ GetBucketForSpeakerAndConcept(pszSpeaker, pszConcept, nullptr) ] );
 
 }
+
+// The datamaps of these types are filled in by the game that uses the response system.
+datamap_t ResponseRules::ParserResponse::m_DataMap = { .dataClassName = "ParserResponse" };
+datamap_t ResponseRules::ResponseGroup::m_DataMap = { .dataClassName = "ResponseGroup" };

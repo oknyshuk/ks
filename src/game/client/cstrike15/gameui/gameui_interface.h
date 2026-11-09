@@ -9,15 +9,11 @@
 
 #include "GameUI/IGameUI.h"
 
-import std;
-import ks.tier1;
 
 	inline constexpr const char *BACKGROUND_MUSIC_FILENAME = "mainmenu.mp3";
 
 inline constexpr auto MAX_BACKGROUND_MUSIC = 3;
 
-class IGameClientExports;
-class CCommand;
 
 //-----------------------------------------------------------------------------
 // Purpose: Implementation of GameUI's exposed interface 

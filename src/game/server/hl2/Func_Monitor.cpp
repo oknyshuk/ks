@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -19,7 +17,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -49,8 +46,8 @@ class [[= ks::reflect::NetTable{ .name = "DT_FuncMonitor" } ]]
 	DECLARE_SERVERCLASS();
 
 public:
-	virtual void Activate();
-	virtual void UpdateOnRemove();
+	void Activate_Impl();
+	void UpdateOnRemove_Impl();
 
 private:
 	[[= ks::reflect::Input{ .name = "SetCamera", .type = FIELD_STRING } ]] void InputSetCamera(inputdata_t &inputdata);
@@ -73,16 +70,16 @@ IMPLEMENT_REFLECT_SERVERCLASS( CFuncMonitor, DT_FuncMonitor )
 //-----------------------------------------------------------------------------
 // Purpose: Called after all entities have spawned and after a load game.
 //-----------------------------------------------------------------------------
-void CFuncMonitor::Activate()
+void CFuncMonitor::Activate_Impl()
 {
- 	BaseClass::Activate();
+ 	BaseClass::Activate_Impl();
 	SetCameraByName(STRING(m_target));
 }
 
-void CFuncMonitor::UpdateOnRemove()
+void CFuncMonitor::UpdateOnRemove_Impl()
 {
 	ReleaseCameraLink();
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 

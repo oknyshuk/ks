@@ -203,7 +203,7 @@ protected:
 		m_nLength = nPrevLen + result;
 	}
 
-	virtual void InitQuietTruncation()
+	void InitQuietTruncation()
 	{
 		m_bQuietTruncation = QUIET_TRUNCATION; 
 	}

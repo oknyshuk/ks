@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -95,7 +92,7 @@ LINK_ENTITY_TO_CLASS( te_tester, CTempEntTester );
 //-----------------------------------------------------------------------------
 // Purpose: Called when object is being created
 //-----------------------------------------------------------------------------
-void CTempEntTester::Spawn( void )
+void CTempEntTester::Spawn_Impl( void )
 {
 	// Not a physical thing...
 	AddEffects( EF_NODRAW );
@@ -128,7 +125,7 @@ void CTempEntTester::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: Called when object should fire itself and move on
 //-----------------------------------------------------------------------------
-void CTempEntTester::Think( void )
+void CTempEntTester::Think_Impl( void )
 {
 	// Should never happen
 	if ( !m_pCurrent )

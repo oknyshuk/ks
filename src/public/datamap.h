@@ -6,10 +6,6 @@ import std;
 
 import ks.tier1;
 
-// SINGLE_INHERITANCE restricts the size of CBaseEntity pointers-to-member-functions to 4 bytes
-class CBaseEntity;
-struct inputdata_t;
-
 inline constexpr auto INVALID_TIME = (std::numeric_limits<float>::max() * -1.0); // Special value not rebased on save/load
 
 typedef enum _fieldtypes
@@ -125,7 +121,6 @@ DECLARE_FIELD_SIZE( FIELD_MATERIALINDEX,	sizeof(int) )
 // the variable 'name' MUST BE derived from CBaseOutput
 // we know the output type from the variable itself, so it doesn't need to be specified here
 class ISaveRestoreOps;
-extern ISaveRestoreOps *eventFuncs;
 
 
 inline constexpr auto FTYPEDESC_GLOBAL = 0x0001; // This field is masked for global entity save/restore
@@ -159,10 +154,12 @@ struct typedescription_t;
 
 class ISaveRestoreOps;
 
-//
-// Function prototype for all input handlers.
-//
-typedef void (CBaseEntity::*inputfunc_t)(inputdata_t &data);
+// Storage for an entity input handler. The game owns the handler type (a pointer to member
+// of its entity class), this header only reserves room for it.
+struct inputfunc_storage_t
+{
+	alignas( void * ) unsigned char bytes[ 2 * sizeof( void * ) ];
+};
 
 struct datamap_t;
 struct typedescription_t;
@@ -197,7 +194,7 @@ struct typedescription_t
 	// pointer to the function set for save/restoring of custom data types
 	ISaveRestoreOps		*pSaveRestoreOps; 
 	// for associating function with string names
-	inputfunc_t			inputFunc; 
+	inputfunc_storage_t	inputFunc; 
 	// For embedding additional datatables inside this one
 	datamap_t			*td;
 
@@ -218,9 +215,6 @@ struct typedescription_t
 	unsigned short		flatGroup;
 };
 
-// See predictioncopy.h for implementation and notes
-struct optimized_datamap_t;
-
 //-----------------------------------------------------------------------------
 // Purpose: stores the list of objects in the hierarchy
 //			used to iterate through an object's data descriptions
@@ -233,7 +227,7 @@ struct datamap_t
 	datamap_t			*baseMap;
 
 	int					m_nPackedSize;
-	optimized_datamap_t	*m_pOptimizedDataMap;
+	void				*m_pOptimizedDataMap;	// the client's optimized_datamap_t (predictioncopy.h)
 	
 #if defined( _DEBUG )
 	bool				bValidityChecked;

@@ -68,12 +68,12 @@ class CAI_ScriptedSequence : public CBaseEntity
 {
 	DECLARE_CLASS( CAI_ScriptedSequence, CBaseEntity );
 public:
-	void Spawn( void );
-	virtual void Blocked( CBaseEntity *pOther );
-	virtual void Touch( CBaseEntity *pOther );
-	virtual int	 ObjectCaps( void ) { return (BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION); }
-	virtual void Activate( void );
-	virtual void UpdateOnRemove( void );
+	void Spawn_Impl( void );
+	void Blocked_Impl( CBaseEntity *pOther );
+	void Touch_Impl( CBaseEntity *pOther );
+	int	 ObjectCaps_Impl( void ) { return (BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION); }
+	void Activate_Impl( void );
+	void UpdateOnRemove_Impl( void );
 	void StartThink();
 	void ScriptThink( void );
 	void StopThink();
@@ -133,8 +133,8 @@ public:
 	bool IsTeleportingDueToMoveTo( void ) { return m_bIsTeleportingDueToMoveTo; }
 
 	// Debug
-	virtual int DrawDebugTextOverlays( void );
-	virtual void DrawDebugGeometryOverlays( void );
+	int DrawDebugTextOverlays_Impl( void );
+	void DrawDebugGeometryOverlays_Impl( void );
 
 	[[= ks::reflect::Input{ .name = "ScriptPlayerDeath", .type = FIELD_VOID } ]] void InputScriptPlayerDeath( inputdata_t &inputdata );
 

@@ -2,16 +2,11 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
 #include "reflect_annotations.h"
 
 #include "BaseAnimatingOverlay.h"
-import std;
 #include "sceneentity_shared.h"
 
-struct flexsettinghdr_t;
-struct flexsetting_t;
-namespace ResponseRules {class CRR_Response;};
 typedef ResponseRules::CRR_Response		AI_Response;
 
 //-----------------------------------------------------------------------------
@@ -47,8 +42,8 @@ public:
 						CBaseFlex( void );
 						~CBaseFlex( void );
 
-	virtual void		SetModel( const char *szModelName );
-	virtual CStudioHdr *OnNewModel();
+	void		SetModel_Impl( const char *szModelName );
+	CStudioHdr *OnNewModel_Impl();
 
 	void Blink( );
 
@@ -198,7 +193,7 @@ private:
 public:
 	void DoBodyLean( void );
 
-	virtual void Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts = true );
+	void Teleport_Impl( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts = true );
 
 };
 

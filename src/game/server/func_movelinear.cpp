@@ -4,8 +4,6 @@
 // Purpose: Implements a brush model entity that moves along a linear path.
 //			Water whose level can be changed is implemented using the same entity.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -48,12 +46,12 @@ import ks.tier1;
 constexpr auto SF_MOVELINEAR_NOTSOLID = 8;
 
 LINK_ENTITY_TO_CLASS( func_movelinear, CFuncMoveLinear );
-LINK_ENTITY_TO_CLASS( momentary_door, CFuncMoveLinear );	// For backward compatibility
+LINK_ENTITY_TO_CLASS_ALIAS( momentary_door, CFuncMoveLinear );	// For backward compatibility
 
 //
 // func_water_analog is implemented as a linear mover so we can raise/lower the water level.
 //
-LINK_ENTITY_TO_CLASS( func_water_analog, CFuncMoveLinear );
+LINK_ENTITY_TO_CLASS_ALIAS( func_water_analog, CFuncMoveLinear );
 
 
 IMPLEMENT_REFLECT_DATAMAP( CFuncMoveLinear )
@@ -71,7 +69,7 @@ IMPLEMENT_REFLECT_SERVERCLASS( CFuncMoveLinear, DT_FuncMoveLinear )
 //------------------------------------------------------------------------------
 // Purpose: Called before spawning, after keyvalues have been parsed.
 //------------------------------------------------------------------------------
-void CFuncMoveLinear::Spawn( void )
+void CFuncMoveLinear::Spawn_Impl( void )
 {
 	// Convert movedir from angles to a vector
 	QAngle angMoveDir = QAngle( m_vecMoveDir.x, m_vecMoveDir.y, m_vecMoveDir.z );
@@ -123,7 +121,7 @@ void CFuncMoveLinear::Spawn( void )
 }
 
 
-bool CFuncMoveLinear::ShouldSavePhysics( void )
+bool CFuncMoveLinear::ShouldSavePhysics_Impl( void )
 {
 	// don't save physics for func_water_analog, regen
 	return !FClassnameIs( this, "func_water_analog" );
@@ -133,7 +131,7 @@ bool CFuncMoveLinear::ShouldSavePhysics( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CFuncMoveLinear::CreateVPhysics( void )
+bool CFuncMoveLinear::CreateVPhysics_Impl( void )
 {
 	if ( !FClassnameIs( this, "func_water_analog" ) )
 	{
@@ -176,7 +174,7 @@ bool CFuncMoveLinear::CreateVPhysics( void )
 //------------------------------------------------------------------------------
 // Purpose:
 //------------------------------------------------------------------------------
-void CFuncMoveLinear::Precache( void )
+void CFuncMoveLinear::Precache_Impl( void )
 {
 	if (m_soundStart != NULL_STRING)
 	{
@@ -262,13 +260,13 @@ void CFuncMoveLinear::StopMoveSound( void )
 //------------------------------------------------------------------------------
 // Purpose:
 //------------------------------------------------------------------------------
-void CFuncMoveLinear::MoveDone( void )
+void CFuncMoveLinear::MoveDone_Impl( void )
 {
 	// Stop sounds at the next think, rather than here as another
 	// SetPosition call might immediately follow the end of this move
 	SetThink(&CFuncMoveLinear::StopMoveSound);
 	SetNextThink( gpGlobals->curtime + 0.1f );
-	BaseClass::MoveDone();
+	BaseClass::MoveDone_Impl();
 
 	if ( GetLocalOrigin() == m_vecPosition2 )
 	{
@@ -284,7 +282,7 @@ void CFuncMoveLinear::MoveDone( void )
 //------------------------------------------------------------------------------
 // Purpose:
 //------------------------------------------------------------------------------
-void CFuncMoveLinear::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CFuncMoveLinear::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	if ( useType != USE_SET )		// Momentary buttons will pass down a float in here
 		return;
@@ -351,7 +349,7 @@ void CFuncMoveLinear::InputSetPosition( inputdata_t &inputdata )
 // Purpose: Called every frame when the bruch is blocked while moving
 // Input  : pOther - The blocking entity.
 //-----------------------------------------------------------------------------
-void CFuncMoveLinear::Blocked( CBaseEntity *pOther )
+void CFuncMoveLinear::Blocked_Impl( CBaseEntity *pOther )
 {
 	// Hurt the blocker 
 	if ( m_flBlockDamage )
@@ -397,9 +395,9 @@ void CFuncMoveLinear::InputSetSpeed( inputdata_t &inputdata )
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CFuncMoveLinear::DrawDebugTextOverlays(void) 
+int CFuncMoveLinear::DrawDebugTextOverlays_Impl(void) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{

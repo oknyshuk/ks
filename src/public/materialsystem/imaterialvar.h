@@ -64,62 +64,62 @@ public:
 	static bool SymbolMatches( char const* pName, MaterialVarSym_t symbol );
 	static void DeleteUnreferencedTextures( bool enable );
 
-	virtual ITexture		*GetTextureValue( void ) = 0;
-	virtual bool			IsTextureValueInternalEnvCubemap( void ) const = 0;
+	ITexture		*GetTextureValue( void );
+	bool			IsTextureValueInternalEnvCubemap( void ) const;
 
-	virtual char const *	GetName( void ) const = 0;
-	virtual MaterialVarSym_t	GetNameAsSymbol() const = 0;
+	char const *	GetName( void ) const;
+	MaterialVarSym_t	GetNameAsSymbol() const;
 
-	virtual void			SetFloatValue( float val ) = 0;
+	void			SetFloatValue( float val );
 	
-	virtual void			SetIntValue( int val ) = 0;
+	void			SetIntValue( int val );
 	
-	virtual void			SetStringValue( char const *val ) = 0;
-	virtual char const *	GetStringValue( void ) const = 0;
+	void			SetStringValue( char const *val );
+	char const *	GetStringValue( void ) const;
 
 	// Use FourCC values to pass app-defined data structures between
 	// the proxy and the shader. The shader should ignore the data if
 	// its FourCC type not correct.	
-	virtual void			SetFourCCValue( FourCC type, void *pData ) = 0;
-	virtual void			GetFourCCValue( FourCC *type, void **ppData ) = 0;
+	void			SetFourCCValue( FourCC type, void *pData );
+	void			GetFourCCValue( FourCC *type, void **ppData );
 
 	// Vec (dim 2-4)
-	virtual void			SetVecValue( float const* val, int numcomps ) = 0;
-	virtual void			SetVecValue( float x, float y ) = 0;
-	virtual void			SetVecValue( float x, float y, float z ) = 0;
-	virtual void			SetVecValue( float x, float y, float z, float w ) = 0;
-	virtual void			GetLinearVecValue( float *val, int numcomps ) const = 0;
+	void			SetVecValue( float const* val, int numcomps );
+	void			SetVecValue( float x, float y );
+	void			SetVecValue( float x, float y, float z );
+	void			SetVecValue( float x, float y, float z, float w );
+	void			GetLinearVecValue( float *val, int numcomps ) const;
 
 	// revisit: is this a good interface for textures?
-	virtual void			SetTextureValue( ITexture * ) = 0;
+	void			SetTextureValue( ITexture * );
 
-	virtual IMaterial *		GetMaterialValue( void ) = 0;
-	virtual void			SetMaterialValue( IMaterial * ) = 0;
+	IMaterial *		GetMaterialValue( void );
+	void			SetMaterialValue( IMaterial * );
 
-	virtual bool			IsDefined() const = 0;
-	virtual void			SetUndefined() = 0;
+	bool			IsDefined() const;
+	void			SetUndefined();
 
 	// Matrix
-	virtual void			SetMatrixValue( VMatrix const& matrix ) = 0;
-	virtual const VMatrix  &GetMatrixValue( ) = 0;
-	virtual bool			MatrixIsIdentity() const = 0;
+	void			SetMatrixValue( VMatrix const& matrix );
+	const VMatrix  &GetMatrixValue( );
+	bool			MatrixIsIdentity() const;
 
 	// Copy....
-	virtual void			CopyFrom( IMaterialVar *pMaterialVar ) = 0;
+	void			CopyFrom( IMaterialVar *pMaterialVar );
 
-	virtual void			SetValueAutodetectType( char const *val ) = 0;
+	void			SetValueAutodetectType( char const *val );
 
-	virtual IMaterial *		GetOwningMaterial() = 0;
+	IMaterial *		GetOwningMaterial();
 
 	//set just 1 component
-	virtual void			SetVecComponentValue( float fVal, int nComponent ) = 0;
+	void			SetVecComponentValue( float fVal, int nComponent );
 
 protected:
-	virtual int				GetIntValueInternal( void ) const = 0;
-	virtual float			GetFloatValueInternal( void ) const = 0;
-	virtual float const*	GetVecValueInternal( ) const = 0;
-	virtual void			GetVecValueInternal( float *val, int numcomps ) const = 0;
-	virtual int				VectorSizeInternal() const = 0;
+	int				GetIntValueInternal( void ) const;
+	float			GetFloatValueInternal( void ) const;
+	float const*	GetVecValueInternal( ) const;
+	void			GetVecValueInternal( float *val, int numcomps ) const;
+	int				VectorSizeInternal() const;
 
 public:
 	[[gnu::always_inline]] inline MaterialVarType_t GetType( void ) const

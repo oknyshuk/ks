@@ -9,7 +9,6 @@
 #include "networkvar.h"
 #include "weapon_parse.h"
 #include "cs_shareddefs.h"
-import std;
 
 class CWeaponCSBase;
 

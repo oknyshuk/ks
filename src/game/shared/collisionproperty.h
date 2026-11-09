@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 #include "collisionproperty.h"
@@ -10,7 +9,6 @@ import ks.math;
 
 #include "networkvar.h"
 #include "engine/ICollideable.h"
-import std;
 #include "ispatialpartition.h"
 #include "predictable_entity.h"
 
@@ -38,9 +36,6 @@ void RecvProxy_Solid( const CRecvProxyData *pData, void *pStruct, void *pOut );
 void RecvProxy_SolidFlags( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
 class CBaseEntity;
-class IHandleEntity;
-struct Ray_t;
-class IPhysicsObject;
 
 
 //-----------------------------------------------------------------------------

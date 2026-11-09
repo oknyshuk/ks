@@ -51,6 +51,11 @@ import ks.tier1;
 #include "vjolt_environment.h"
 #include "vjolt_layers.h"
 #include "vjolt_controller_shadow.h"
+#include "vjolt_controller_fluid.h"
+#include "vjolt_controller_motion.h"
+#include "vjolt_controller_player.h"
+#include "vjolt_controller_vehicle.h"
+#include "vjolt_constraints.h"
 
 #include "vjolt_object.h"
 
@@ -102,7 +107,7 @@ JoltPhysicsObject::~JoltPhysicsObject()
 	// Josh:
 	// Iterate over this in reverse as we could remove a listener from inside this callback
 	for ( int i = std::ssize( m_Listeners ) - 1; i >= 0; i-- )
-		m_Listeners[ i ]->OnJoltPhysicsObjectDestroyed( this );
+		std::visit( [this]( auto *pListener ) { pListener->OnJoltPhysicsObjectDestroyed( this ); }, m_Listeners[ i ] );
 
 	m_pEnvironment->RemoveDirtyStaticBody( GetBodyID() );
 
@@ -1028,7 +1033,7 @@ IPhysicsFrictionSnapshot *JoltPhysicsObject::CreateFrictionSnapshot()
 
 void JoltPhysicsObject::DestroyFrictionSnapshot( IPhysicsFrictionSnapshot *pSnapshot )
 {
-	delete pSnapshot;
+	delete static_cast< JoltPhysicsFrictionSnapshot * >( pSnapshot );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1084,14 +1089,14 @@ void JoltPhysicsObject::UpdateEnvironment( JoltPhysicsEnvironment *pEnvironment 
 	m_pPhysicsSystem = pEnvironment->GetPhysicsSystem();
 }
 
-void JoltPhysicsObject::AddListener( IJoltObjectListener *pListener )
+void JoltPhysicsObject::AddListener( JoltObjectListener listener )
 {
-	m_Listeners.push_back( pListener );
+	m_Listeners.push_back( listener );
 }
 
-void JoltPhysicsObject::RemoveListener( IJoltObjectListener *pListener )
+void JoltPhysicsObject::RemoveListener( JoltObjectListener listener )
 {
-	ks::erase_first( m_Listeners, pListener );
+	ks::erase_first( m_Listeners, listener );
 }
 
 // Source hands us an isTeleport flag on the interface and we have always ignored it. It marks
@@ -1100,8 +1105,14 @@ void JoltPhysicsObject::RemoveListener( IJoltObjectListener *pListener )
 // nothing much changed leaves constraints soft, so this fires on teleports only.
 void JoltPhysicsObject::NotifyTeleported()
 {
-	for ( IJoltObjectListener *pListener : m_Listeners )
-		pListener->OnJoltPhysicsObjectTeleported( this );
+	for ( const JoltObjectListener &listener : m_Listeners )
+	{
+		std::visit( [this]( auto *pListener )
+		{
+			if constexpr ( requires { pListener->OnJoltPhysicsObjectTeleported( this ); } )
+				pListener->OnJoltPhysicsObjectTeleported( this );
+		}, listener );
+	}
 }
 
 void JoltPhysicsObject::AddToPosition( JPH::Vec3Arg addPos )
@@ -1287,3 +1298,7 @@ void JoltPhysicsObject::UpdateLayer()
 
 	bodyInterface.SetObjectLayer( m_pBody->GetID(), layer );
 }
+
+//-------------------------------------------------------------------------------------------------
+#include "facade/iphysicsobject.inl"
+#include "facade/ipredictedphysicsobject.inl"

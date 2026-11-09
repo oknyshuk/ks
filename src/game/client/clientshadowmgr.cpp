@@ -56,8 +56,6 @@
 // c_baseanimating rendering code, and L4D-specific entity classes.
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -111,11 +109,11 @@ static ConVar r_shadow_shortenfactor( "r_shadow_shortenfactor", "2" , 0, "Makes 
 // Flashlight culling code isn't Portal-aware, so they pop on/off when viewed through portals.		
 ConVar r_flashlightenableculling( "r_flashlightenableculling", "1", 0, "Enable frustum culling of flashlights");
 
-static void HalfUpdateRateCallback( IConVar *var, const char *pOldValue, float flOldValue );
+static void HalfUpdateRateCallback( ConVar *var, const char *pOldValue, float flOldValue );
 static ConVar r_shadow_half_update_rate( "r_shadow_half_update_rate", "0", 0, "Updates shadows at half the framerate", HalfUpdateRateCallback );
 
-static void DeferredShadowToggleCallback( IConVar *var, const char *pOldValue, float flOldValue );
-static void DeferredShadowDownsampleToggleCallback( IConVar *var, const char *pOldValue, float flOldValue );
+static void DeferredShadowToggleCallback( ConVar *var, const char *pOldValue, float flOldValue );
+static void DeferredShadowDownsampleToggleCallback( ConVar *var, const char *pOldValue, float flOldValue );
 ConVar r_shadow_deferred( "r_shadow_deferred", "0", FCVAR_CHEAT, "Toggle deferred shadow rendering", DeferredShadowToggleCallback );
 static ConVar r_shadow_deferred_downsample( "r_shadow_deferred_downsample", "0", 0, "Toggle low-res deferred shadow rendering", DeferredShadowDownsampleToggleCallback );
 static ConVar r_shadow_deferred_simd( "r_shadow_deferred_simd", "0" );
@@ -857,9 +855,9 @@ private:
 	};
 
 private:
-	friend void DeferredShadowToggleCallback( IConVar *var, const char *pOldValue, float flOldValue );
-	friend void DeferredShadowDownsampleToggleCallback( IConVar *var, const char *pOldValue, float flOldValue );
-	friend void HalfUpdateRateCallback( IConVar *var, const char *pOldValue, float flOldValue );
+	friend void DeferredShadowToggleCallback( ConVar *var, const char *pOldValue, float flOldValue );
+	friend void DeferredShadowDownsampleToggleCallback( ConVar *var, const char *pOldValue, float flOldValue );
+	friend void HalfUpdateRateCallback( ConVar *var, const char *pOldValue, float flOldValue );
 
 	// Shadow update functions
 	void UpdateStudioShadow( IClientRenderable *pRenderable, ClientShadowHandle_t handle );
@@ -1428,9 +1426,9 @@ static void r_shadowblobbycutoff( const CCommand &args )
 	}
 }
 
-void OnShadowFromWorldLights( IConVar *var, const char *pOldValue, float flOldValue );
+void OnShadowFromWorldLights( ConVar *var, const char *pOldValue, float flOldValue );
 static ConVar r_shadowfromworldlights( "r_shadowfromworldlights", "1", FCVAR_NONE, "Enable shadowing from world lights", OnShadowFromWorldLights );
-void OnShadowFromWorldLights( IConVar *var, const char *pOldValue, float flOldValue )
+void OnShadowFromWorldLights( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	s_ClientShadowMgr.SuppressShadowFromWorldLights( !r_shadowfromworldlights.GetBool() );
 }
@@ -3070,7 +3068,7 @@ void CClientShadowMgr::DrawRenderToTextureDebugInfo( IClientRenderable* pRendera
 	VectorMA( start, -vecSize.y, vec[1], end );
 	debugoverlay->AddLineOverlay( start, end, 255, 0, 0, true, 0.01 ); 
 
-	C_BaseEntity *pEnt = pRenderable->GetIClientUnknown()->GetBaseEntity();
+	C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( pRenderable->GetIClientUnknown()->GetBaseEntity() );
 	if ( pEnt )
 	{
 		debugoverlay->AddTextOverlay( vecOrigin, 0, "%d", pEnt->entindex() );
@@ -4294,7 +4292,7 @@ void CClientShadowMgr::UpdateDirtyShadow( ClientShadowHandle_t handle )
 //-----------------------------------------------------------------------------
 // Convar callback
 //-----------------------------------------------------------------------------
-void HalfUpdateRateCallback( IConVar *var, const char *pOldValue, float flOldValue )
+void HalfUpdateRateCallback( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	s_ClientShadowMgr.FlushLeftOverDirtyShadows();
 }
@@ -4878,7 +4876,7 @@ void CClientShadowMgr::AddShadowToReceiver( ClientShadowHandle_t handle,
 			{
 				// Also don't add them unless an NPC or player casts them..
 				// They are wickedly expensive!!!
-				C_BaseEntity *pEnt = pSourceRenderable->GetIClientUnknown()->GetBaseEntity();
+				C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( pSourceRenderable->GetIClientUnknown()->GetBaseEntity() );
 				if ( pEnt && ( pEnt->GetFlags() & (FL_NPC | FL_CLIENT)) )
 				{
 					staticpropmgr->AddShadowToStaticProp( shadow.m_ShadowHandle, pRenderable );
@@ -5021,7 +5019,7 @@ bool CClientShadowMgr::BuildSetupShadowHierarchy( IClientRenderable *pRenderable
 
 		if ( bDrawModelShadow )
 		{
-			C_BaseEntity *pEntity = pRenderable->GetIClientUnknown()->GetBaseEntity();
+			C_BaseEntity *pEntity = EntityCast<C_BaseEntity>( pRenderable->GetIClientUnknown()->GetBaseEntity() );
 			if ( pEntity )
 			{
 				if ( pEntity->IsNPC() )
@@ -6229,7 +6227,7 @@ void CClientShadowMgr::DrawDeferredShadows( const CViewSetup &view, int leafCoun
 	return;
 }
 
-void DeferredShadowToggleCallback( IConVar*, const char *, float )
+void DeferredShadowToggleCallback( ConVar*, const char *, float )
 {
 	DevMsg( "Deferred shadow rendering only supported on the 360.\n" );
 	return;
@@ -6238,7 +6236,7 @@ void DeferredShadowToggleCallback( IConVar*, const char *, float )
 	s_ClientShadowMgr.RemoveAllShadowDecals();
 }
 
-void DeferredShadowDownsampleToggleCallback( IConVar *var, const char *pOldValue, float flOldValue )
+void DeferredShadowDownsampleToggleCallback( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	s_ClientShadowMgr.ShutdownDeferredShadows();
 	s_ClientShadowMgr.InitDeferredShadows();

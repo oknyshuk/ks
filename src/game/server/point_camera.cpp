@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -76,9 +74,9 @@ CPointCamera::CPointCamera()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CPointCamera::Spawn( void )
+void CPointCamera::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	if ( m_spawnflags & SF_CAMERA_START_OFF )
 	{
@@ -94,7 +92,7 @@ void CPointCamera::Spawn( void )
 // Purpose: Override ShouldTransmit since we want to be sent even though we don't have a model, etc.
 //			All that matters is if we are in the pvs.
 //-----------------------------------------------------------------------------
-int CPointCamera::UpdateTransmitState()
+int CPointCamera::UpdateTransmitState_Impl()
 {
 	if ( m_bActive )
 	{

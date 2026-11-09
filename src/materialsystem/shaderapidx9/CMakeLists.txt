@@ -9,7 +9,6 @@ add_library(shaderapidx9 OBJECT
     meshdx8.cpp
     shaderapidx8.cpp
     shaderdevicebase.cpp
-    shaderapibase.cpp
     shaderdevicedx8.cpp
     shadershadowdx8.cpp
     texturedx8.cpp

@@ -1,44 +1,21 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-// Purpose: A redirection tool that allows the DLLs to reside elsewhere.
+// Purpose: Entry point of srceng. The engine, game server and game client are linked into
+// this executable, so there is nothing to locate or load: call straight into the launcher.
 
-import std;
+import ks.tier1;
+#include "game_entry.h"
 
-import ks.core;
+// Both game sides are linked into this executable.
+static void *ServerFactory( const char *pName, int *pReturnCode ) { return ks::server_registry().create_interface( pName, pReturnCode ); }
+static void *ClientFactory( const char *pName, int *pReturnCode ) { return ks::client_registry().create_interface( pName, pReturnCode ); }
+CreateInterfaceFn ServerGameFactory() { return &ServerFactory; }
+CreateInterfaceFn ClientGameFactory() { return &ClientFactory; }
 
-typedef int (*LauncherMain_t)( int argc, char **argv );
-
-
-
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Return the directory where this .exe is running from
-// Output : char
-//-----------------------------------------------------------------------------
-
+extern "C" int LauncherMain( int argc, char **argv );
 
 int main( int argc, char *argv[] )
 {
-	const char *pLauncherPath = "bin/libengine.so";
-
-	ks::platform::library *launcher = ks::platform::load_library( pLauncherPath, nullptr );
-	
-	if ( !launcher )
-	{
-		std::printf( "Failed to load the launcher (%s)\n", ks::platform::library_error() );
-		while(1);
-		return 0;
-	}
-	
-	LauncherMain_t main = (LauncherMain_t)ks::platform::library_symbol( launcher, "LauncherMain" );
-	if ( !main )
-	{
-		std::printf( "Failed to load the launcher entry proc\n" );
-		while(1);
-		return 0;
-	}
-
-	return main( argc, argv );
+	return LauncherMain( argc, argv );
 }

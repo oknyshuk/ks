@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -25,7 +23,7 @@ import ks.tier1;
 #include "player.h"
 #include "game.h"
 
-void MapCycleFileChangedCallback( IConVar *var, const char *pOldString, float flOldValue )
+void MapCycleFileChangedCallback( ConVar *var, const char *pOldString, float flOldValue )
 {
 	if ( V_stricmp( pOldString, mapcyclefile.GetString() ) != 0 )
 	{
@@ -63,49 +61,43 @@ const ConVar	*g_pDeveloper = nullptr;
 
 ConVar suitvolume( "suitvolume", "0.25", FCVAR_ARCHIVE );
 
-class CGameDLL_ConVarAccessor : public IConCommandBaseAccessor
+static bool GameDLL_ConVarAccessor( ConCommandBase *pCommand )
 {
-public:
-	virtual bool	RegisterConCommandBase( ConCommandBase *pCommand )
+	// Remember "unlinked" default value for replicated cvars
+	bool replicated = pCommand->IsFlagSet( FCVAR_REPLICATED );
+	const char *defvalue = nullptr;
+	if ( replicated && !pCommand->IsCommand() )
 	{
-		// Remember "unlinked" default value for replicated cvars
-		bool replicated = pCommand->IsFlagSet( FCVAR_REPLICATED );
-		const char *defvalue = nullptr;
-		if ( replicated && !pCommand->IsCommand() )
-		{
-			defvalue = ( ( ConVar * )pCommand)->GetDefault();
-		}
-
-		// Link to engine's list instead
-		cvar->RegisterConCommand( pCommand );
-
-		if ( !cvar->GetCommandLineValue( pCommand->GetName() ) )
-		{
-			// NOTE:  If not overridden at the command line, then if it's a replicated cvar, make sure that it's
-			//  value is the server's value.  This solves a problem where think_limit is defined in shared
-			//  code but the value is inside and #if defined( _DEBUG ) block and if you have a debug game .dll
-			//  and a release client, then the limiit was coming from the client even though the server value 
-			//  was the one that was important during debugging.  Now the server trumps the client value for
-			//  replicated ConVars by setting the value here after the ConVar has been linked.
-			if ( replicated && defvalue && !pCommand->IsCommand() )
-			{
-				ConVar *var = ( ConVar * )pCommand;
-				var->SetValue( defvalue );
-			}
-		}
-
-		return true;
+		defvalue = ( ( ConVar * )pCommand)->GetDefault();
 	}
-};
 
-static CGameDLL_ConVarAccessor g_ConVarAccessor;
+	// Link to engine's list instead
+	cvar->RegisterConCommand( pCommand );
+
+	if ( !cvar->GetCommandLineValue( pCommand->GetName() ) )
+	{
+		// NOTE:  If not overridden at the command line, then if it's a replicated cvar, make sure that it's
+		//  value is the server's value.  This solves a problem where think_limit is defined in shared
+		//  code but the value is inside and #if defined( _DEBUG ) block and if you have a debug game .dll
+		//  and a release client, then the limiit was coming from the client even though the server value 
+		//  was the one that was important during debugging.  Now the server trumps the client value for
+		//  replicated ConVars by setting the value here after the ConVar has been linked.
+		if ( replicated && defvalue && !pCommand->IsCommand() )
+		{
+			ConVar *var = ( ConVar * )pCommand;
+			var->SetValue( defvalue );
+		}
+	}
+
+	return true;
+}
 
 // Register your console variables here
 // This gets called one time when the game is initialied
 void InitializeCvars( void )
 {
 	// Register cvars here:
-	ConVar_Register( FCVAR_GAMEDLL, &g_ConVarAccessor ); 
+	ConVar_Register( ks::server_registry().convars, FCVAR_GAMEDLL, &GameDLL_ConVarAccessor ); 
 
 	g_pDeveloper	= cvar->FindVar( "developer" );
 }

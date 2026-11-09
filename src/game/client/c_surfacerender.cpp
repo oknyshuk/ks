@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2007 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "const.h"
 #include "string_t.h"
 #include "predictableid.h"

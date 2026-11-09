@@ -25,8 +25,6 @@
 #include "filesystem.h"
 
 #include <rocketui/rmlui.h>
-import ks.tier1;
-import std;
 #include "rkhud_pausemenu.h"
 #include "rkmenu_main.h"
 

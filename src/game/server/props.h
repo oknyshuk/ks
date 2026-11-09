@@ -25,14 +25,15 @@ class CBaseProp : public CBaseAnimating
 	DECLARE_CLASS( CBaseProp, CBaseAnimating );
 public:
 
-	void Spawn( void );
-	void Precache( void );
-	void Activate( void );
-	bool KeyValue( const char *szKeyName, const char *szValue );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	void Activate_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
 	void CalculateBlockLOS( void );
 	int  ParsePropData( void );
 	
-	void DrawDebugGeometryOverlays( void );
+	void DrawDebugGeometryOverlays_Impl( void );
 
 	// Don't treat as a live target
 	virtual bool IsAlive( void ) { return false; }
@@ -53,15 +54,15 @@ public:
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
 
-	virtual void Spawn();
-	virtual void Precache();
-	virtual float GetAutoAimRadius() { return 24.0f; }
-	virtual void UpdateOnRemove();
+	void Spawn_Impl();
+	void Precache_Impl();
+	float GetAutoAimRadius_Impl() { return 24.0f; }
+	void UpdateOnRemove_Impl();
 
 	void BreakablePropTouch( CBaseEntity *pOther );
 
-	virtual int OnTakeDamage( const CTakeDamageInfo &info );
-	void Event_Killed( const CTakeDamageInfo &info );
+	int OnTakeDamage_Impl( const CTakeDamageInfo &info );
+	void Event_Killed_Impl( const CTakeDamageInfo &info );
 	void Break( CBaseEntity *pBreaker, const CTakeDamageInfo &info );
 	void BreakThink( void );
 	void AnimateThink( void );
@@ -199,7 +200,7 @@ public:
 	virtual void OnPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunPickup_t reason );
 	virtual void OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t reason );
 	virtual AngularImpulse	PhysGunLaunchAngularImpulse();
-	virtual	CBasePlayer *HasPhysicsAttacker( float dt );
+	CBasePlayer *HasPhysicsAttacker_Impl( float dt );
 	void SetPhysicsAttacker( CBasePlayer *pEntity, float flTime );
 
 
@@ -275,20 +276,20 @@ public:
 
 	CDynamicProp();
 
-	void	Spawn( void );
-	bool	CreateVPhysics( void );
+	void	Spawn_Impl( void );
+	bool	CreateVPhysics_Impl( void );
 	void	CreateBoneFollowers();
-	void	UpdateOnRemove( void );
+	void	UpdateOnRemove_Impl( void );
 	void	AnimThink( void );
 	void	PropSetSequence( int nSequence );
-	void	OnRestore( void );
+	void	OnRestore_Impl( void );
 	bool	OverridePropdata( void );
 	virtual void	HandleAnimEvent( animevent_t *pEvent );
-	virtual int		ShouldTransmit( const CCheckTransmitInfo *pInfo );
+	int		ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo );
 
 	// baseentity - watch dynamic hierarchy updates
-	virtual void	SetParent( CBaseEntity* pNewParent, int iAttachment = -1 );
-	bool			TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace );
+	void	SetParent_Impl( CBaseEntity* pNewParent, int iAttachment = -1 );
+	bool			TestCollision_Impl( const Ray_t &ray, unsigned int mask, trace_t& trace );
 
 	// breakable prop
 	virtual IPhysicsObject *GetRootPhysicsObjectForBreak();
@@ -378,13 +379,13 @@ public:
 	~CPhysicsProp();
 	CPhysicsProp( void );
 
-	void Spawn( void );
-	void Precache();
-	bool CreateVPhysics( void );
+	void Spawn_Impl( void );
+	void Precache_Impl();
+	bool CreateVPhysics_Impl( void );
 	bool OverridePropdata( void );
 
-	virtual void VPhysicsUpdate( IPhysicsObject *pPhysics );
-	virtual void VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
+	void VPhysicsUpdate_Impl( IPhysicsObject *pPhysics );
+	void VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent );
 
 	[[= ks::reflect::Input{ .name = "Wake", .type = FIELD_VOID } ]] void InputWake( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "Sleep", .type = FIELD_VOID } ]] void InputSleep( inputdata_t &inputdata );
@@ -400,8 +401,8 @@ public:
 	bool GetPropDataAngles( const char *pKeyName, QAngle &vecAngles );
 	float GetCarryDistanceOffset( void );
 
-	int ObjectCaps();
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	int ObjectCaps_Impl();
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	bool ShouldDisableMotionOnFreeze( void );
 
 	void GetMassCenter( Vector *pMassCenter );
@@ -411,15 +412,15 @@ public:
 
 	void ClearFlagsThink( void );
 
-	virtual bool IsPotentiallyAbleToObstructNavAreas( void ) const;	// could we at some future time obstruct nav?
-	virtual float GetNavObstructionHeight( void ) const;			// height at which to obstruct nav areas
-	virtual bool CanObstructNavAreas( void ) const;					// can we obstruct nav right this instant?
-	virtual CBaseEntity *GetObstructingEntity( void ) { return this; }
-	virtual void OnNavMeshLoaded( void );
+	bool IsPotentiallyAbleToObstructNavAreas( void ) const;	// could we at some future time obstruct nav?
+	float GetNavObstructionHeight( void ) const;			// height at which to obstruct nav areas
+	bool CanObstructNavAreas( void ) const;					// can we obstruct nav right this instant?
+	CBaseEntity *GetObstructingEntity( void ) { return this; }
+	void OnNavMeshLoaded( void );
 	void NavThink( void );
 
-	virtual int OnTakeDamage( const CTakeDamageInfo &info );
-	int DrawDebugTextOverlays(void);
+	int OnTakeDamage_Impl( const CTakeDamageInfo &info );
+	int DrawDebugTextOverlays_Impl(void);
 	bool IsGib();
 	DECLARE_DATADESC();
 
@@ -466,13 +467,13 @@ class CCSPropExplodingBarrel : public CPhysicsProp
 public:
 
 
-	virtual void Spawn( void );
-	virtual void Precache( void );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
 	void FadeOut( void );
 	void StopParticle( void );
-	virtual int OnTakeDamage( const CTakeDamageInfo &info );
-	virtual void Event_Killed( const CTakeDamageInfo &info );
-	virtual int DrawDebugTextOverlays( void );
+	int OnTakeDamage_Impl( const CTakeDamageInfo &info );
+	void Event_Killed_Impl( const CTakeDamageInfo &info );
+	int DrawDebugTextOverlays_Impl( void );
 	bool IsBreakable( void ) { return true; }
 
 	EHANDLE m_hBarrelTop;

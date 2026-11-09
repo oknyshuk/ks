@@ -22,6 +22,12 @@ ConVar mat_verbose_texture_gen( "mat_verbose_texture_gen", "0" );
 	
 int CCompositeTexture::m_nTextureCount = 0;
 
+// ICompositeTexture: non-virtual facade over CCompositeTexture
+bool ICompositeTexture::IsReady() const { return static_cast< const CCompositeTexture * >( this )->IsReady(); }
+bool ICompositeTexture::GenerationComplete() const { return static_cast< const CCompositeTexture * >( this )->GenerationComplete(); }
+IVTFTexture *ICompositeTexture::GetResultVTF() { return static_cast< CCompositeTexture * >( this )->GetResultVTF(); }
+const char *ICompositeTexture::GetName() { return static_cast< CCompositeTexture * >( this )->GetName(); }
+
 int s_nCompositeMaterialIndex = 0;
 
 static ConVar *s_mat_picmip = nullptr;
@@ -543,7 +549,7 @@ void CCompositeTexture::Finalize()
 		m_ResultTexture.m_pTexture = materials->CreateProceduralTexture( m_szTextureName, TEXTURE_GROUP_COMPOSITE, ( 1 << Size() ), ( 1 << Size() ), 
 																		 ( Format() == COMPOSITE_TEXTURE_FORMAT_DXT5 ) ? IMAGE_FORMAT_DXT5_RUNTIME : IMAGE_FORMAT_DXT1_RUNTIME, 
 																		 TEXTUREFLAGS_PROCEDURAL | TEXTUREFLAGS_SINGLECOPY | TEXTUREFLAGS_ANISOTROPIC | ( ( m_bSRGB ) ? TEXTUREFLAGS_SRGB : 0 ) | TEXTUREFLAGS_SKIP_INITIAL_DOWNLOAD );
-		m_ResultTexture.m_pTexture->SetTextureRegenerator( &m_ResultTexture );
+		m_ResultTexture.m_pTexture->SetTextureRegenerator( &m_ResultRegenerator );
 	}
 
 	m_ResultTexture.m_pTexture->Download();
@@ -853,7 +859,7 @@ ICompositeTexture *CCompositeTextureGenerator::GetCompositeTexture( IVisualsData
 
 bool CCompositeTextureGenerator::ForceRegenerate( ICompositeTexture *pTextureInterface )
 {
-	CCompositeTexture *pTexture = dynamic_cast< CCompositeTexture * >( pTextureInterface );
+	CCompositeTexture *pTexture = static_cast< CCompositeTexture * >( pTextureInterface );
 	if ( !pTexture )
 	{
 		return false;

@@ -4,8 +4,6 @@
 
 // Purpose: System to generate events as specified entities become visible to players.
 
-import std;
-import ks.math;
 #include "shareddefs.h"
 #include "util.h"
 

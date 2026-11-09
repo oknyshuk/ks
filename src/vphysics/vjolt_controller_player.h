@@ -8,40 +8,40 @@
 #include "vjolt_environment.h"
 #include "vphysics/player_controller.h"
 
-class JoltPhysicsPlayerController : public IPhysicsPlayerController, public IJoltObjectListener, public IJoltPhysicsController
+class JoltPhysicsPlayerController : public IPhysicsPlayerController
 {
 public:
 	JoltPhysicsPlayerController( JoltPhysicsObject *pObject );
-	~JoltPhysicsPlayerController() override;
+	~JoltPhysicsPlayerController();
 
-	void Update( const Vector &position, const Vector &velocity, float secondsToArrival, bool onground, IPhysicsObject *ground ) override;
-	void SetEventHandler( IPhysicsPlayerControllerEvent *handler ) override;
-	bool IsInContact( void ) override;
-	void MaxSpeed( const Vector &maxVelocity ) override;
+	void Update( const Vector &position, const Vector &velocity, float secondsToArrival, bool onground, IPhysicsObject *ground );
+	void SetEventHandler( IPhysicsPlayerControllerEvent *handler );
+	bool IsInContact( void );
+	void MaxSpeed( const Vector &maxVelocity );
 
-	void SetObject( IPhysicsObject *pObject ) override;
+	void SetObject( IPhysicsObject *pObject );
 
-	int GetShadowPosition( Vector *position, QAngle *angles ) override;
-	void StepUp( float height ) override;
-	void Jump() override;
-	void GetShadowVelocity( Vector *velocity ) override;
-	IPhysicsObject *GetObject() override;
-	void GetLastImpulse( Vector *pOut ) override;
+	int GetShadowPosition( Vector *position, QAngle *angles );
+	void StepUp( float height );
+	void Jump();
+	void GetShadowVelocity( Vector *velocity );
+	IPhysicsObject *GetObject();
+	void GetLastImpulse( Vector *pOut );
 
-	void SetPushMassLimit( float maxPushMass ) override;
-	void SetPushSpeedLimit( float maxPushSpeed ) override;
+	void SetPushMassLimit( float maxPushMass );
+	void SetPushSpeedLimit( float maxPushSpeed );
 
-	float GetPushMassLimit() override;
-	float GetPushSpeedLimit() override;
+	float GetPushMassLimit();
+	float GetPushSpeedLimit();
 
-	bool WasFrozen() override;
+	bool WasFrozen();
 
 	uint32 GetContactState( uint16 nGameFlags ) ;
 
 	// IJoltObjectListener
-	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject ) override;
+	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject );
 	// IJoltPhysicsController
-	void OnPreSimulate( float flDeltaTime ) override;
+	void OnPreSimulate( float flDeltaTime );
 
 private:
 	void SetObjectInternal( JoltPhysicsObject *pObject );

@@ -4,9 +4,7 @@
 
 // Purpose: Namespace for functions having to do with WC Edit mode
 
-import ks.math;
 #include "reflect_annotations.h"
-import std;
 class CBasePlayer;
 
 class CBaseEntity;

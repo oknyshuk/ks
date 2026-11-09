@@ -5,8 +5,6 @@
 // Purpose: Declares basic entity communications classes, for input/output of data
 //			between entities
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "datamap.h"
 #include "variant_t.h"

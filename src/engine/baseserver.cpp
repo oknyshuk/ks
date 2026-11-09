@@ -127,7 +127,7 @@ static void ServerTagsCleanUp( void )
 	}
 }
 
-static void SvTagsChangeCallback( IConVar *pConVar, const char *pOldValue, float flOldValue )
+static void SvTagsChangeCallback( ConVar *pConVar, const char *pOldValue, float flOldValue )
 {
 	sv.UpdateGameData();
 	ServerTagsCleanUp();
@@ -144,7 +144,7 @@ static ConVar	sv_enableoldqueries( "sv_enableoldqueries", "0", 0, "Enable suppor
 
 static ConVar	sv_reservation_tickrate_adjustment( "sv_reservation_tickrate_adjustment", "0", FCVAR_RELEASE, "Adjust server tickrate upon reservation" );
 
-static void SvPasswordChangeCallback( IConVar *pConVar, const char *pOldValue, float flOldValue )
+static void SvPasswordChangeCallback( ConVar *pConVar, const char *pOldValue, float flOldValue )
 {
 	ConVarRef cvref( pConVar );
 	bool bOldPassword = ( pOldValue && pOldValue[0] && V_stricmp( pOldValue, "none" ) );
@@ -182,7 +182,7 @@ int g_CurGameServerID = 1;
 
 static KeyValues *g_pKVrulesConvars = nullptr;
 
-static void ServerNotifyVarChangeCallback( IConVar *pConVar, const char *pOldValue, float flOldValue )
+static void ServerNotifyVarChangeCallback( ConVar *pConVar, const char *pOldValue, float flOldValue )
 {
 	if ( !pConVar->IsFlagSet( FCVAR_NOTIFY ) )
 		return;
@@ -198,7 +198,8 @@ static void ServerNotifyVarChangeCallback( IConVar *pConVar, const char *pOldVal
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CBaseServer::CBaseServer()
+CBaseServer::CBaseServer( server_kind_t kind )
+	: m_server_kind( kind )
 {
 	m_bRestartOnLevelChange = false;
 	
@@ -316,7 +317,7 @@ bool CBaseServer::CanAcceptChallengesFrom( const ns_address &adrFrom ) const
 }
 
 
-const char *CBaseServer::GetPassword() const
+const char *CBaseServer::GetPasswordBase() const
 {
 	const char *password = sv_password.GetString();
 
@@ -390,7 +391,7 @@ Initializes a CSVClient for a new net connection.  This will only be called
 once for a player each game, not once for each level change.
 ================
 */
-IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int challenge, int authProtocol, 
+IClient *CBaseServer::ConnectClientBase ( const ns_address &adr, int protocol, int challenge, int authProtocol, 
 							    const char *name, const char *password, const char *hashedCDkey, int cdKeyLen,
 								const SplitPlayerConnects_t &splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
 								const byte *pbEncryptionKey, int nEncryptionKeyIndex )
@@ -1106,7 +1107,7 @@ bool CBaseServer::GetPlayerInfo( int nClientIndex, player_info_t *pinfo )
 }
 
 
-void CBaseServer::UserInfoChanged( int nClientIndex )
+void CBaseServer::UserInfoChangedBase( int nClientIndex )
 {
 	if ( !m_pUserInfoTable )
 		return;
@@ -1128,7 +1129,7 @@ void CBaseServer::UserInfoChanged( int nClientIndex )
 	
 }
 
-void CBaseServer::FillServerInfo(ks::net::CSVCMsg_ServerInfo &serverinfo)
+void CBaseServer::FillServerInfoBase(ks::net::CSVCMsg_ServerInfo &serverinfo)
 {
 	char gamedir[MAX_OSPATH];
 	V_FileBase( com_gamedir, gamedir, sizeof( gamedir ) );
@@ -1721,7 +1722,7 @@ void CBaseServer::SendReservationStatus( EReservationStatus_t kEReservationStatu
 		ClearReservationStatus();
 }
 
-const char *CBaseServer::GetName( void ) const
+const char *CBaseServer::GetNameBase( void ) const
 {
 	return host_name.GetString();
 }
@@ -1731,7 +1732,7 @@ bool UseCDKeyAuth()
 	return true;
 }
 
-int CBaseServer::GetChallengeType( const ns_address &adr)
+int CBaseServer::GetChallengeTypeBase( const ns_address &adr)
 {	
 	return PROTOCOL_HASHEDCDKEY;
 }
@@ -1772,7 +1773,7 @@ int CBaseServer::GetChallengeNr ( const ns_address &adr)
 	return m_ServerQueryChallenges[newEntry].challenge;
 }
 
-void CBaseServer::GetNetStats( float &avgIn, float &avgOut )
+void CBaseServer::GetNetStatsBase( float &avgIn, float &avgOut )
 {
 	avgIn = avgOut = 0.0f;
 
@@ -1891,8 +1892,9 @@ void CBaseServer::CheckTimeouts (void)
 		{
 			if ( this == &sv )
 			{
-				if ( CGameClient *pGameClient = dynamic_cast< CGameClient * >( cl ) )
+				if ( static_cast< CBaseClient * >( cl )->m_client_kind == CBaseClient::client_kind_t::game )
 				{
+					CGameClient *pGameClient = static_cast< CGameClient * >( cl );
 					serverGameDLL->OnEngineClientNetworkEvent( pGameClient->edict, pGameClient->m_PlayerUID.ConvertToUint64(), INetChannelInfo::k_ENetworkEventType_TimedOut, nullptr );
 				}
 			}
@@ -2090,7 +2092,7 @@ void CBaseServer::ClearBaselineHandles( void )
 }
 
 
-void CBaseServer::Clear( void )
+void CBaseServer::ClearBase( void )
 {
 	if ( m_StringTables )
 	{
@@ -2190,7 +2192,7 @@ void CBaseServer::SetTimescale( float flTimescale )
 //-----------------------------------------------------------------------------
 // Purpose: General initialization of the server
 //-----------------------------------------------------------------------------
-void CBaseServer::Init( bool bIsDedicated )
+void CBaseServer::InitBase( bool bIsDedicated )
 {
 	m_nMaxclients = 0;
 	m_nSpawnCount = 0;
@@ -2254,7 +2256,7 @@ INetworkStringTable *CBaseServer::GetUserInfoTable( void )
 	return m_pUserInfoTable;
 }
 
-bool CBaseServer::GetClassBaseline( ServerClass *pClass, SerializedEntityHandle_t *pHandle )
+bool CBaseServer::GetClassBaselineBase( ServerClass *pClass, SerializedEntityHandle_t *pHandle )
 {
 	if ( sv_instancebaselines.GetInt() )
 	{
@@ -2302,7 +2304,7 @@ void CBaseServer::RunFrame( void )
 {
 	CVProfScope _( "CBaseServer::RunFrame", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 
-	NET_ProcessSocket( m_Socket, this );	
+	NET_ProcessSocket( m_Socket, [this]( netpacket_t *packet ) { return ProcessConnectionlessPacket( packet ); } );	
 
 	CheckTimeouts();	// drop clients that timeed out
 
@@ -2425,7 +2427,7 @@ CBaseClient * CBaseServer::GetFreeClientInternal( const ns_address &adr )
 	return freeclient;
 }
 
-void CBaseServer::SendClientMessages ( bool bSendSnapshots )
+void CBaseServer::SendClientMessagesBase ( bool bSendSnapshots )
 {
 	CVProfScope _( "SendClientMessages", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
 	
@@ -2501,7 +2503,7 @@ CBaseClient *CBaseServer::CreateFakeClient(const char *name)
 	return fakeclient;
 }
 
-void CBaseServer::Shutdown( void )
+void CBaseServer::ShutdownBase( void )
 {
 	g_pCVar->RemoveGlobalChangeCallback( ServerNotifyVarChangeCallback );
 
@@ -2562,7 +2564,7 @@ void CBaseServer::Shutdown( void )
 
 	for ( int i = 0; i < std::ssize( vecDelete ); ++i )
 	{
-		delete vecDelete[ i ];
+		vecDelete[ i ]->DeleteThis();
 	}
 
 	// clear everthing
@@ -2790,7 +2792,7 @@ void CBaseServer::WriteTempEntities( CBaseClient *client, CFrameSnapshot *pCurre
 	msg.num_entries = nNumEntitiesWritten;
 }
 
-void CBaseServer::SetMaxClients( int number )
+void CBaseServer::SetMaxClientsBase( int number )
 {
 	m_nMaxclients = clamp( number, 1, ABSOLUTE_PLAYER_LIMIT );
 }

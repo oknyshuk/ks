@@ -15,12 +15,12 @@ class CMessage : public CPointEntity
 public:
 	DECLARE_CLASS( CMessage, CPointEntity );
 
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 
 	inline void SetMessage( string_t iszMessage ) { m_iszMessage = iszMessage; }
 
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 private:
 

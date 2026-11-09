@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
-#include "dt_send.h"
 import std;
+import ks.core;
+import ks.math;
+import ks.tier1;
+#include "dt_send.h"
 #include "networkvar.h"
 
 static CNonModifiedPointerProxy *s_pNonModifiedPointerProxyHead = nullptr;

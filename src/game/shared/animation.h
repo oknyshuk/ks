@@ -2,15 +2,10 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 
 #define ACTIVITY_NOT_AVAILABLE		-1
 
 struct animevent_t;
-struct studiohdr_t;
-class CStudioHdr;
-struct mstudioseqdesc_t;
 
 int ExtractBbox( CStudioHdr *pstudiohdr, int sequence, Vector& mins, Vector& maxs );
 
@@ -18,6 +13,9 @@ void IndexModelSequences( CStudioHdr *pstudiohdr );
 void ResetActivityIndexes( CStudioHdr *pstudiohdr );
 void VerifySequenceIndex( CStudioHdr *pstudiohdr );
 int SelectWeightedSequence( CStudioHdr *pstudiohdr, int activity, int curSequence = -1 );
+
+// Picks the sequence with the most matching modifiers.
+int SelectWeightedSequenceFromModifiers( CStudioHdr *pstudiohdr, int activity, const ActivityModifierSym_t *pActivityModifiers, int iModifierCount );
 int SelectHeaviestSequence( CStudioHdr *pstudiohdr, int activity );
 void SetEventIndexForSequence( mstudioseqdesc_t &seqdesc );
 void BuildAllAnimationEventIndexes( CStudioHdr *pstudiohdr );

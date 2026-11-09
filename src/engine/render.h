@@ -143,60 +143,60 @@ void R_LoadWorldGeometry( bool bDXChange = false );
 class IRender
 {
 public:
-	virtual void	FrameBegin( void ) = 0;
-	virtual void	FrameEnd( void ) = 0;
+	void	FrameBegin( void );
+	void	FrameEnd( void );
 	
-	virtual void	ViewSetupVis( bool novis, int numorigins, const Vector origin[] ) = 0;
+	void	ViewSetupVis( bool novis, int numorigins, const Vector origin[] );
 
-	virtual void	ViewDrawFade( byte *color, IMaterial* pFadeMaterial, bool mapFullTextureToScreen = true ) = 0;
+	void	ViewDrawFade( byte *color, IMaterial* pFadeMaterial, bool mapFullTextureToScreen = true );
 
-	virtual void	DrawSceneBegin( void ) = 0;
-	virtual void	DrawSceneEnd( void ) = 0;
+	void	DrawSceneBegin( void );
+	void	DrawSceneEnd( void );
 
-	virtual IWorldRenderList * CreateWorldList() = 0;
-	virtual void	BuildWorldLists_Epilogue( IWorldRenderList *pList, WorldListInfo_t* pInfo, bool bShadowDepth ) = 0;
-	virtual void	BuildWorldLists( IWorldRenderList *pList, WorldListInfo_t* pInfo, int iForceViewLeaf, const VisOverrideData_t* pVisData, bool bShadowDepth, float *pReflectionWaterHeight ) = 0;
-	virtual void	DrawWorldLists( IMatRenderContext *pRenderContext, IWorldRenderList *pList, unsigned long flags, float waterZAdjust ) = 0;
+	IWorldRenderList * CreateWorldList();
+	void	BuildWorldLists_Epilogue( IWorldRenderList *pList, WorldListInfo_t* pInfo, bool bShadowDepth );
+	void	BuildWorldLists( IWorldRenderList *pList, WorldListInfo_t* pInfo, int iForceViewLeaf, const VisOverrideData_t* pVisData, bool bShadowDepth, float *pReflectionWaterHeight );
+	void	DrawWorldLists( IMatRenderContext *pRenderContext, IWorldRenderList *pList, unsigned long flags, float waterZAdjust );
 
 	// UNDONE: these are temporary functions that will end up on the other
 	// side of this interface
 	// accessors
 //	virtual const Vector& UnreflectedViewOrigin() = 0;
-	virtual const Vector& ViewOrigin( void ) = 0;
-	virtual const QAngle& ViewAngles( void ) = 0;
-	virtual CViewSetup const &ViewGetCurrent( void ) = 0;
-	virtual const VMatrix& ViewMatrix( void ) = 0;
-	virtual const VMatrix& WorldToScreenMatrix( void ) = 0;
-	virtual float	GetFramerate( void ) = 0;
-	virtual float	GetZNear( void ) = 0;
-	virtual float	GetZFar( void ) = 0;
+	const Vector& ViewOrigin( void );
+	const QAngle& ViewAngles( void );
+	CViewSetup const &ViewGetCurrent( void );
+	const VMatrix& ViewMatrix( void );
+	const VMatrix& WorldToScreenMatrix( void );
+	float	GetFramerate( void );
+	float	GetZNear( void );
+	float	GetZFar( void );
 
 	// Query current fov and view model fov
-	virtual float	GetFov( void ) = 0;
-	virtual float	GetFovY( void ) = 0;
-	virtual float	GetFovViewmodel( void ) = 0;
+	float	GetFov( void );
+	float	GetFovY( void );
+	float	GetFovViewmodel( void );
 
 	// Compute the clip-space coordinates of a point in 3D
 	// Clip-space is normalized screen coordinates (-1 to 1 in x and y)
 	// Returns true if the point is behind the camera
-	virtual bool	ClipTransform( Vector const& point, Vector* pClip ) = 0;
+	bool	ClipTransform( Vector const& point, Vector* pClip );
 
 	// Compute the screen-space coordinates of a point in 3D
 	// This returns actual pixels
 	// Returns true if the point is behind the camera
-	virtual bool ScreenTransform( Vector const& point, Vector* pScreen ) = 0;
+	bool ScreenTransform( Vector const& point, Vector* pScreen );
 
-	virtual void Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes ) = 0;
-	virtual void Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes, ITexture* pDepthTexture ) = 0;
-	virtual void Push2DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes ) = 0;
-	virtual void PopView( IMatRenderContext *pRenderContext, Frustum frustumPlanes ) = 0;
-	virtual void SetMainView( const Vector &vecOrigin, const QAngle &angles ) = 0;
-	virtual void ViewSetupVisEx( bool novis, int numorigins, const Vector origin[], unsigned int &returnFlags ) = 0;
-	virtual void OverrideViewFrustum( Frustum custom ) = 0;
-	virtual void UpdateBrushModelLightmap( model_t *model, IClientRenderable *Renderable ) = 0;
-	virtual void BeginUpdateLightmaps( void ) = 0;
-	virtual void EndUpdateLightmaps() = 0;
-	virtual bool InLightmapUpdate( void ) const = 0;
+	void Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes );
+	void Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes, ITexture* pDepthTexture );
+	void Push2DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes );
+	void PopView( IMatRenderContext *pRenderContext, Frustum frustumPlanes );
+	void SetMainView( const Vector &vecOrigin, const QAngle &angles );
+	void ViewSetupVisEx( bool novis, int numorigins, const Vector origin[], unsigned int &returnFlags );
+	void OverrideViewFrustum( Frustum custom );
+	void UpdateBrushModelLightmap( model_t *model, IClientRenderable *Renderable );
+	void BeginUpdateLightmaps( void );
+	void EndUpdateLightmaps();
+	bool InLightmapUpdate( void ) const;
 };
 
 void R_PushDlights (void);

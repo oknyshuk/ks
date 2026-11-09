@@ -23,7 +23,7 @@ extern ConVar mat_ambient_light_r;
 extern ConVar mat_ambient_light_g;
 extern ConVar mat_ambient_light_b;
 
-static void mat_phong_lightmappedgeneric_changed( IConVar *var, const char *pOldValue, float flOldValue )
+static void mat_phong_lightmappedgeneric_changed( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	g_pMaterialSystem->ReloadMaterials( nullptr );
 }

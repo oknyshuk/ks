@@ -4,8 +4,6 @@
 // Purpose: Client side implementation of CBaseCombatWeapon.
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "sharedvar.h"
@@ -21,7 +19,6 @@ import std;
 #include "iinput.h"
 #include "weapon_selection.h"
 #include "engine/ivmodelinfo.h"
-#include "toolframework/itoolframework.h"
 #include "toolframework_client.h"
 #include "c_cs_player.h"
 

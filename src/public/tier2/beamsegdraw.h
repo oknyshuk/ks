@@ -11,7 +11,6 @@ import ks.math;
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-struct BeamTrail_t;
 class IMaterial;
 
 
@@ -110,7 +109,7 @@ public:
 	void			Start( IMatRenderContext *pRenderContext, int nSegs, IMaterial *pMaterial=0, CMeshBuilder *pMeshBuilder = nullptr, int nMeshVertCount = 0 );
 
 	void			ComputeRenderInfo( BeamSegRenderInfo_t *pRenderInfo, const Vector &vecCameraPos, int nSegCount, const BeamSeg_t *pSegs ) __restrict__;
-	virtual void	NextSeg( BeamSeg_t *pSeg );
+	void			NextSeg( BeamSeg_t *pSeg );
 	void			End();
 
 protected:
@@ -132,20 +131,6 @@ protected:
 	Vector			m_vecCameraPos;
 };
 
-class CBeamSegDrawArbitrary : public CBeamSegDraw
-{
-public:
-	void			SetNormal( const Vector &normal );
-	void			NextSeg( BeamSeg_t *pSeg );
-
-protected:
-	void			SpecifySeg( const Vector &vNextPos );
-
-	BeamSeg_t		m_PrevSeg;
-};
-
-
 //-----------------------------------------------------------------------------
 // Assumes the material has already been bound
 //-----------------------------------------------------------------------------
-void DrawSprite( const Vector &vecOrigin, float flWidth, float flHeight, color32 color );

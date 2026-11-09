@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -62,9 +60,6 @@ void CAI_BaseNPC::ForceSelectedGo(CBaseEntity *pPlayer, const Vector &targetPos,
 		if ( ( npc->m_debugOverlays & OVERLAY_NPC_SELECTED_BIT ) == 0 )
 			continue;
 
-		// If a behavior is active, we need to stop running it
-		npc->SetPrimaryBehavior( nullptr );
-
 		Vector chasePosition = targetPos;
 		npc->TranslateNavGoal( pPlayer, chasePosition );
 		// It it legal to drop me here
@@ -105,8 +100,6 @@ void CAI_BaseNPC::ForceSelectedGoRandom(void)
 	{
 		if (npc->m_debugOverlays & OVERLAY_NPC_SELECTED_BIT) 
 		{
-			// If a behavior is active, we need to stop running it
-			npc->SetPrimaryBehavior( nullptr );
 			npc->SetSchedule( SCHED_RUN_RANDOM );
 			npc->GetNavigator()->SetMovementActivity(ACT_RUN);
 		}
@@ -118,9 +111,6 @@ void CAI_BaseNPC::ForceSelectedGoRandom(void)
 //-----------------------------------------------------------------------------
 bool CAI_BaseNPC::ScheduledMoveToGoalEntity( int scheduleType, CBaseEntity *pGoalEntity, Activity movementActivity )
 {
-	// If a behavior is active, we need to stop running it
-	SetPrimaryBehavior( nullptr );
-
 	if ( m_NPCState == NPC_STATE_NONE )
 	{
 		// More than likely being grabbed before first think. Set ideal state to prevent schedule stomp
@@ -145,9 +135,6 @@ bool CAI_BaseNPC::ScheduledMoveToGoalEntity( int scheduleType, CBaseEntity *pGoa
 //-----------------------------------------------------------------------------
 bool CAI_BaseNPC::ScheduledFollowPath( int scheduleType, CBaseEntity *pPathStart, Activity movementActivity )
 {
-	// If a behavior is active, we need to stop running it
-	SetPrimaryBehavior( nullptr );
-
 	if ( m_NPCState == NPC_STATE_NONE )
 	{
 		// More than likely being grabbed before first think. Set ideal state to prevent schedule stomp
@@ -171,7 +158,7 @@ bool CAI_BaseNPC::ScheduledFollowPath( int scheduleType, CBaseEntity *pPathStart
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-bool CAI_BaseNPC::IsMoving( void ) 
+bool CAI_BaseNPC::IsMoving_Impl( void ) 
 { 
 	return GetNavigator()->IsGoalSet(); 
 }
@@ -304,7 +291,7 @@ float CAI_BaseNPC::OpenDoorAndWait( CBaseEntity *pDoor )
 
 //-----------------------------------------------------------------------------
 
-bool CAI_BaseNPC::CanStandOn( CBaseEntity *pSurface ) const
+bool CAI_BaseNPC::CanStandOn_Impl( CBaseEntity *pSurface ) const
 {
 	if ( !pSurface->IsAIWalkable() )
 	{
@@ -317,7 +304,7 @@ bool CAI_BaseNPC::CanStandOn( CBaseEntity *pSurface ) const
 		 pSurface == pNavigator->GetGoalTarget() )
 		return false;
 
-	return BaseClass::CanStandOn( pSurface );
+	return BaseClass::CanStandOn_Impl( pSurface );
 }
 
 //-----------------------------------------------------------------------------

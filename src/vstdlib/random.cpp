@@ -22,17 +22,12 @@ constexpr auto RNMX = (1.0-EPS);
 //-----------------------------------------------------------------------------
 // globals
 //-----------------------------------------------------------------------------
-static CUniformRandomStream s_UniformStream;
 static CGaussianRandomStream s_GaussianStream;
-static IUniformRandomStream *s_pUniformStream = &s_UniformStream;
 
-
-//-----------------------------------------------------------------------------
-// Installs a global random number generator, which will affect the Random functions above
-//-----------------------------------------------------------------------------
-void InstallUniformRandomStream( IUniformRandomStream *pStream )
+CUniformRandomStream &GlobalUniformRandomStream()
 {
-	s_pUniformStream = pStream ? pStream : &s_UniformStream;
+	static CUniformRandomStream s_UniformStream;
+	return s_UniformStream;
 }
 
 
@@ -41,22 +36,22 @@ void InstallUniformRandomStream( IUniformRandomStream *pStream )
 //-----------------------------------------------------------------------------
 void RandomSeed( int iSeed )
 {
-	s_pUniformStream->SetSeed( iSeed );
+	GlobalUniformRandomStream().SetSeed( iSeed );
 }
 
 float RandomFloat( float flMinVal, float flMaxVal )
 {
-	return s_pUniformStream->RandomFloat( flMinVal, flMaxVal );
+	return GlobalUniformRandomStream().RandomFloat( flMinVal, flMaxVal );
 }
 
 float RandomFloatExp( float flMinVal, float flMaxVal, float flExponent )
 {
-	return s_pUniformStream->RandomFloatExp( flMinVal, flMaxVal, flExponent );
+	return GlobalUniformRandomStream().RandomFloatExp( flMinVal, flMaxVal, flExponent );
 }
 
 int RandomInt( int iMinVal, int iMaxVal )
 {
-	return s_pUniformStream->RandomInt( iMinVal, iMaxVal );
+	return GlobalUniformRandomStream().RandomInt( iMinVal, iMaxVal );
 }
 
 float RandomGaussianFloat( float flMean, float flStdDev )
@@ -193,7 +188,7 @@ int CUniformRandomStream::RandomInt( int iLow, int iHigh )
 // gaussian-distributed numbers at once)
 //
 //-----------------------------------------------------------------------------
-CGaussianRandomStream::CGaussianRandomStream( IUniformRandomStream *pUniformStream )
+CGaussianRandomStream::CGaussianRandomStream( CUniformRandomStream *pUniformStream )
 {
 	AttachToStream( pUniformStream );
 }
@@ -202,7 +197,7 @@ CGaussianRandomStream::CGaussianRandomStream( IUniformRandomStream *pUniformStre
 //-----------------------------------------------------------------------------
 // Attaches to a random uniform stream
 //-----------------------------------------------------------------------------
-void CGaussianRandomStream::AttachToStream( IUniformRandomStream *pUniformStream )
+void CGaussianRandomStream::AttachToStream( CUniformRandomStream *pUniformStream )
 {
 	std::scoped_lock lock( m_mutex );
 	m_pUniformStream = pUniformStream;
@@ -216,7 +211,7 @@ void CGaussianRandomStream::AttachToStream( IUniformRandomStream *pUniformStream
 float CGaussianRandomStream::RandomFloat( float flMean, float flStdDev )
 {
 	std::scoped_lock lock( m_mutex );
-	IUniformRandomStream *pUniformStream = m_pUniformStream ? m_pUniformStream : s_pUniformStream;
+	CUniformRandomStream *pUniformStream = m_pUniformStream ? m_pUniformStream : &GlobalUniformRandomStream();
 	float fac,rsq,v1,v2;
 
 	if (!m_bHaveValue)

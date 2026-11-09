@@ -23,7 +23,7 @@ public:
 	CCSPlayerResource();
 
 	virtual void UpdatePlayerData( void );
-	virtual void Spawn( void );
+	void Spawn_Impl( void );
 
 	const Vector	GetBombsiteAPosition();
 	const Vector	GetBombsiteBPosition();

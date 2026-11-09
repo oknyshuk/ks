@@ -5,8 +5,6 @@
 // Encapsulation of a path through space
 // Author: Michael S. Booth (mike@turtlerockstudios.com), November 2003
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"

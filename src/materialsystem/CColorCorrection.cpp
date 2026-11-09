@@ -16,14 +16,14 @@ class ITextureInternal;
 //-----------------------------------------------------------------------------
 // Color correction textures are procedural. Handle the download
 //-----------------------------------------------------------------------------
-class CColorCorrectionRegen : public ITextureRegenerator
+class CColorCorrectionRegen
 {
 public:
 	CColorCorrectionRegen( ColorCorrectionHandle_t handle ) : m_ColorCorrectionHandle( handle )
 	{
 	}
 
-	virtual void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect )
+	void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pSubRect )
 	{
 		int nWidth = pVTFTexture->Width();
 		int nHeight = pVTFTexture->Height();
@@ -135,7 +135,7 @@ void ColorCorrectionLookup_t::AllocTexture()
 		TEXTUREFLAGS_CLAMPT | TEXTUREFLAGS_CLAMPU | TEXTUREFLAGS_NODEBUGOVERRIDE );
 
 	// color correction textures are procedural, provide the download interface
-	ITextureRegenerator *pRegen = new CColorCorrectionRegen( m_Handle );
+	ITextureRegenerator *pRegen = ITextureRegenerator::Owned( CColorCorrectionRegen( m_Handle ) );
 	m_pColorCorrectionTexture->SetTextureRegenerator( pRegen );
 
 	// xbox needs to defer the real download (only once) to when the volume data is pushed in
@@ -160,54 +160,54 @@ void ColorCorrectionLookup_t::RestoreTexture()
 //-----------------------------------------------------------------------------
 //  IColorCorrectionSystem interface implementation
 //-----------------------------------------------------------------------------
-class CColorCorrectionSystem : public IColorCorrectionSystem
+class CColorCorrectionSystem
 {
 public:
-	virtual void Init();
-	virtual void Shutdown();
+	void Init();
+	void Shutdown();
 
-	virtual void LockLookup();
-	virtual void SetLookup( RGBX5551_t inColor, color24 outColor );
-	virtual void UnlockLookup();
-	virtual color24 GetLookup( RGBX5551_t inColor );
+	void LockLookup();
+	void SetLookup( RGBX5551_t inColor, color24 outColor );
+	void UnlockLookup();
+	color24 GetLookup( RGBX5551_t inColor );
 
-	virtual void LoadLookup( const char *pLookupName );
-	virtual void CopyLookup( const color24 *pSrcColorCorrection );
-	virtual void ResetLookup();
+	void LoadLookup( const char *pLookupName );
+	void CopyLookup( const color24 *pSrcColorCorrection );
+	void ResetLookup();
 
-	virtual ColorCorrectionHandle_t AddLookup( const char *pName );
-	virtual bool RemoveLookup( ColorCorrectionHandle_t handle );
+	ColorCorrectionHandle_t AddLookup( const char *pName );
+	bool RemoveLookup( ColorCorrectionHandle_t handle );
 
-	virtual void  SetLookupWeight( ColorCorrectionHandle_t handle, float flWeight );
-	virtual float GetLookupWeight( ColorCorrectionHandle_t handle );
-	virtual float GetLookupWeight( int i );
+	void  SetLookupWeight( ColorCorrectionHandle_t handle, float flWeight );
+	float GetLookupWeight( ColorCorrectionHandle_t handle );
+	float GetLookupWeight( int i );
 
-	virtual void LockLookup( ColorCorrectionHandle_t handle );
-	virtual void SetLookup( ColorCorrectionHandle_t handle, RGBX5551_t inColor, color24 outColor );
-	virtual color24 GetLookup( ColorCorrectionHandle_t handle, RGBX5551_t inColor );
-	virtual void UnlockLookup( ColorCorrectionHandle_t handle, bool bDownload );
+	void LockLookup( ColorCorrectionHandle_t handle );
+	void SetLookup( ColorCorrectionHandle_t handle, RGBX5551_t inColor, color24 outColor );
+	color24 GetLookup( ColorCorrectionHandle_t handle, RGBX5551_t inColor );
+	void UnlockLookup( ColorCorrectionHandle_t handle, bool bDownload );
 
-	virtual void LoadLookup( ColorCorrectionHandle_t handle, const char *pLookupName );
-	virtual void CopyLookup( ColorCorrectionHandle_t handle, const color24 *pSrcColorCorrection );
-	virtual void ResetLookup( ColorCorrectionHandle_t handle );
+	void LoadLookup( ColorCorrectionHandle_t handle, const char *pLookupName );
+	void CopyLookup( ColorCorrectionHandle_t handle, const color24 *pSrcColorCorrection );
+	void ResetLookup( ColorCorrectionHandle_t handle );
 
-	virtual void ResetLookupWeights();
+	void ResetLookupWeights();
 
-	virtual void ReleaseTextures();
-	virtual void RestoreTextures();
+	void ReleaseTextures();
+	void RestoreTextures();
 
-	virtual color24 ConvertToColor24( RGBX5551_t inColor );
+	color24 ConvertToColor24( RGBX5551_t inColor );
 
-	virtual int GetNumLookups();
+	int GetNumLookups();
 
-	virtual void SetResetable( ColorCorrectionHandle_t handle, bool bResetable );
-	virtual void GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* pInfo );
-	virtual void EnableColorCorrection( bool bEnable );
+	void SetResetable( ColorCorrectionHandle_t handle, bool bResetable );
+	void GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* pInfo );
+	void EnableColorCorrection( bool bEnable );
 
-	virtual void OnProceduralRegenComplete( ColorCorrectionHandle_t handle );
+	void OnProceduralRegenComplete( ColorCorrectionHandle_t handle );
 
 	// returns NULL if not found
-	virtual ColorCorrectionHandle_t FindLookup( const char *pName );
+	ColorCorrectionHandle_t FindLookup( const char *pName );
 
 protected:
 	std::vector< ColorCorrectionLookup_t * > m_ColorCorrectionList;
@@ -224,10 +224,15 @@ protected:
 };
 
 CColorCorrectionSystem g_ColorCorrectionSystem;
-IColorCorrectionSystem *g_pColorCorrectionSystem = &g_ColorCorrectionSystem;
+
+// IColorCorrectionSystem is a stateless facade; its members, defined below, forward to g_ColorCorrectionSystem.
+static IColorCorrectionSystem s_ColorCorrectionSystemFacade;
+IColorCorrectionSystem *g_pColorCorrectionSystem = &s_ColorCorrectionSystemFacade;
+static CColorCorrectionSystem &ColorCorrectionSystemImpl() { return g_ColorCorrectionSystem; }
+#include "facade/icolorcorrectionsystem.inl"
 
 // Don't allow this on the 360.. it doesn't work in mat_queued_mode
-static InterfaceReg s_Reg_CColorCorrectionSystem_IColorCorrectionSystem( []() -> void * { return static_cast<IColorCorrectionSystem *>( &g_ColorCorrectionSystem ); }, COLORCORRECTION_INTERFACE_VERSION );;
+static InterfaceReg s_Reg_CColorCorrectionSystem_IColorCorrectionSystem( []() -> void * { return static_cast<IColorCorrectionSystem *>( &s_ColorCorrectionSystemFacade ); }, COLORCORRECTION_INTERFACE_VERSION );;
 
 
 //-----------------------------------------------------------------------------

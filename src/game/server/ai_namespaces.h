@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-class CStringRegistry;
 
 
 inline constexpr auto MAX_STRING_INDEX = 9999;

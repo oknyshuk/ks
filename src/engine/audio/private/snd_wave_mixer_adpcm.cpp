@@ -26,44 +26,7 @@ import std;
 // max size of ADPCM block in bytes
 #define MAX_BLOCK_SIZE	4096
 
-//-----------------------------------------------------------------------------
-// Purpose: Mixer for ADPCM encoded audio
-//-----------------------------------------------------------------------------
-class CAudioMixerWaveADPCM : public CAudioMixerWave
-{
-public:
-	CAudioMixerWaveADPCM( IWaveData *data );
-	~CAudioMixerWaveADPCM( void );
-	
-	virtual void Mix( channel_t *pChannel, void *pData, int outputOffset, int inputOffset, fixedint fracRate, int outCount, int timecompress );
-	virtual int	 GetOutputData( void **pData, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] );
-
-	// need to override this to fixup blocks
-	virtual bool IsSetSampleStartSupported() const;
-	virtual void SetSampleStart( int newPosition );
-	virtual int GetMixSampleSize() { return CalcSampleSize( 16, NumChannels() ); }
-
-private:
-	bool					DecodeBlock( void );
-	int						NumChannels( void );
-	void					DecompressBlockMono( short *pOut, const char *pIn, int count );
-	void					DecompressBlockStereo( short *pOut, const char *pIn, int count );
-
-	const ADPCMWAVEFORMAT	*m_pFormat;
-	const ADPCMCOEFSET		*m_pCoefficients;
-
-	short					*m_pSamples;
-	int						m_sampleCount;
-	int						m_samplePosition;
-
-	int						m_blockSize;
-	int						m_offset;
-
-	int						m_totalBytes;
-};
-
-
-CAudioMixerWaveADPCM::CAudioMixerWaveADPCM( IWaveData *data ) : CAudioMixerWave( data ) 
+CAudioMixerWaveADPCM::CAudioMixerWaveADPCM( IWaveData *data ) : CAudioMixerWave( AudioMixerKind::WaveADPCM, data ) 
 {
 	m_pSamples = nullptr;
 	m_sampleCount = 0;
@@ -71,12 +34,6 @@ CAudioMixerWaveADPCM::CAudioMixerWaveADPCM( IWaveData *data ) : CAudioMixerWave(
 	m_offset = 0;
 
 	CAudioSourceWave &source = reinterpret_cast<CAudioSourceWave &>(m_pData->Source());
-
-#ifdef _DEBUG
-	CAudioSource *pSource = nullptr;
-	pSource = &m_pData->Source();
-	contract_assert( dynamic_cast<CAudioSourceWave *>(pSource) != nullptr );
-#endif
 
 	m_pFormat = (const ADPCMWAVEFORMAT *)source.GetHeader();
 	if ( m_pFormat )
@@ -433,10 +390,10 @@ int CAudioMixerWaveADPCM::GetOutputData( void **pData, int sampleCount, char cop
 		m_samplePosition += available;
 
 		// update count of max samples loaded in CAudioMixerWave
-		CAudioMixerWave::m_sample_max_loaded += available;
+		m_sample_max_loaded += available;
 	
 		// update index of last sample loaded
-		CAudioMixerWave::m_sample_loaded_index += available;
+		m_sample_loaded_index += available;
 
 		return available;
 	}

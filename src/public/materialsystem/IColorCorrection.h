@@ -12,54 +12,54 @@ struct ShaderColorCorrectionInfo_t;
 class IColorCorrectionSystem
 {
 public:
-	virtual void Init() = 0;
-	virtual void Shutdown() = 0;
+	void Init();
+	void Shutdown();
 
-	virtual ColorCorrectionHandle_t AddLookup( const char *pName ) = 0;
-	virtual bool RemoveLookup( ColorCorrectionHandle_t handle ) = 0;
+	ColorCorrectionHandle_t AddLookup( const char *pName );
+	bool RemoveLookup( ColorCorrectionHandle_t handle );
 
-	virtual void  SetLookupWeight( ColorCorrectionHandle_t handle, float flWeight ) = 0;
-	virtual float GetLookupWeight( ColorCorrectionHandle_t handle ) = 0;
-	virtual float GetLookupWeight( int i ) = 0;
+	void  SetLookupWeight( ColorCorrectionHandle_t handle, float flWeight );
+	float GetLookupWeight( ColorCorrectionHandle_t handle );
+	float GetLookupWeight( int i );
 
-	virtual void LockLookup() = 0;
-	virtual void LockLookup( ColorCorrectionHandle_t handle ) = 0;
+	void LockLookup();
+	void LockLookup( ColorCorrectionHandle_t handle );
 
-	virtual void UnlockLookup() = 0;
-	virtual void UnlockLookup( ColorCorrectionHandle_t handle, bool bDownload = true ) = 0;
+	void UnlockLookup();
+	void UnlockLookup( ColorCorrectionHandle_t handle, bool bDownload = true );
 
-	virtual void SetLookup( RGBX5551_t inColor, color24 outColor ) = 0;
-	virtual void SetLookup( ColorCorrectionHandle_t handle, RGBX5551_t inColor, color24 outColor ) = 0;
+	void SetLookup( RGBX5551_t inColor, color24 outColor );
+	void SetLookup( ColorCorrectionHandle_t handle, RGBX5551_t inColor, color24 outColor );
 
-	virtual color24 GetLookup( RGBX5551_t inColor ) = 0;
-	virtual color24 GetLookup( ColorCorrectionHandle_t handle, RGBX5551_t inColor ) = 0;
+	color24 GetLookup( RGBX5551_t inColor );
+	color24 GetLookup( ColorCorrectionHandle_t handle, RGBX5551_t inColor );
 
-	virtual void LoadLookup( const char *pLookupName ) = 0;
-	virtual void LoadLookup( ColorCorrectionHandle_t handle, const char *pLookupName ) = 0;
+	void LoadLookup( const char *pLookupName );
+	void LoadLookup( ColorCorrectionHandle_t handle, const char *pLookupName );
 
-	virtual void CopyLookup( const color24 *pSrcColorCorrection ) = 0;
-	virtual void CopyLookup( ColorCorrectionHandle_t handle, const color24 *pSrcColorCorrection ) = 0;
+	void CopyLookup( const color24 *pSrcColorCorrection );
+	void CopyLookup( ColorCorrectionHandle_t handle, const color24 *pSrcColorCorrection );
 
-	virtual void ResetLookup( ColorCorrectionHandle_t handle ) = 0;
-	virtual void ResetLookup( ) = 0;
+	void ResetLookup( ColorCorrectionHandle_t handle );
+	void ResetLookup( );
 
-	virtual void ReleaseTextures( ) = 0;
-	virtual void RestoreTextures( ) = 0;
+	void ReleaseTextures( );
+	void RestoreTextures( );
 
-	virtual void ResetLookupWeights( ) = 0;
+	void ResetLookupWeights( );
 
-	virtual int GetNumLookups( ) = 0;
+	int GetNumLookups( );
 
-	virtual color24 ConvertToColor24( RGBX5551_t inColor ) = 0;
+	color24 ConvertToColor24( RGBX5551_t inColor );
 
-	virtual void SetResetable( ColorCorrectionHandle_t handle, bool bResetable ) = 0;
+	void SetResetable( ColorCorrectionHandle_t handle, bool bResetable );
 
-	virtual void EnableColorCorrection( bool bEnable ) = 0;
+	void EnableColorCorrection( bool bEnable );
 
 	// FIXME: Move this to a private interface only the material system can see?
-	virtual void GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* pInfo ) = 0;
+	void GetCurrentColorCorrection( ShaderColorCorrectionInfo_t* pInfo );
 
-	virtual void OnProceduralRegenComplete( ColorCorrectionHandle_t handle ) = 0;
+	void OnProceduralRegenComplete( ColorCorrectionHandle_t handle );
 
-	virtual ColorCorrectionHandle_t FindLookup( const char *pName ) = 0;
+	ColorCorrectionHandle_t FindLookup( const char *pName );
 };

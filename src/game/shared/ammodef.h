@@ -6,7 +6,6 @@
 
 #include "shared_classnames.h"
 
-class ConVar;
 class CBaseCombatCharacter;
 
 struct Ammo_t 

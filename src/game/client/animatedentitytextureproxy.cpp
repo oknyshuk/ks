@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.core;
-import std;
 #include "predictable_entity.h"
 #include "util_shared.h"
 #include "baseentity_shared.h"
@@ -31,7 +29,7 @@ float CAnimatedEntityTextureProxy::GetAnimationStartTime( void* pArg )
 	if (!pRend)
 		return 0.0f;
 
-	C_BaseEntity* pEntity = pRend->GetIClientUnknown()->GetBaseEntity();
+	C_BaseEntity* pEntity = EntityCast<C_BaseEntity>( pRend->GetIClientUnknown()->GetBaseEntity() );
 	if (pEntity)
 	{
 		return pEntity->GetTextureAnimationStartTime();
@@ -45,7 +43,7 @@ void CAnimatedEntityTextureProxy::AnimationWrapped( void* pArg )
 	if (!pRend)
 		return;
 
-	C_BaseEntity* pEntity = pRend->GetIClientUnknown()->GetBaseEntity();
+	C_BaseEntity* pEntity = EntityCast<C_BaseEntity>( pRend->GetIClientUnknown()->GetBaseEntity() );
 	if (pEntity)
 	{
 		pEntity->TextureAnimationWrapped();

@@ -27,7 +27,7 @@ public:
 	virtual IHandleEntity  *GetEntityHandle( );
 	virtual edict_t			*GetEdict() const;
 	virtual CBaseNetworkable* GetBaseNetworkable();
-	virtual CBaseEntity*	GetBaseEntity();
+	virtual IServerUnknown*	GetBaseEntity();
 	virtual ServerClass*	GetServerClass();
 	virtual const char*		GetClassName() const;
 	virtual void			Release();
@@ -130,9 +130,9 @@ inline CBaseNetworkable* CServerNetworkProperty::GetBaseNetworkable()
 	return nullptr;
 }
 
-inline CBaseEntity* CServerNetworkProperty::GetBaseEntity()
+inline IServerUnknown* CServerNetworkProperty::GetBaseEntity()
 {
-	return m_pOuter;
+	return EntityCast<IServerUnknown>( m_pOuter );
 }
 
 inline CBaseEntity *CServerNetworkProperty::GetOuter()

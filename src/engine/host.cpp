@@ -33,7 +33,6 @@ import ks.vstdlib;
 #if !defined DEDICATED
 #include "voice.h"
 #include "sound.h"
-#include "vaudio/ivaudio.h"
 #endif
 
 
@@ -86,8 +85,6 @@ import ks.vstdlib;
 #include "MapReslistGenerator.h"
 #include "DevShotGenerator.h"
 #include "sv_plugin.h"
-#include "toolframework/itoolframework.h"
-#include "ienginetoolinternal.h"
 #include "inputsystem/iinputsystem.h"
 #include "cvar.h"
 #include "soundservice.h"
@@ -110,11 +107,6 @@ import ks.vstdlib;
 #include "status.h"
 #include "matchmaking/mm_helpers.h"
 #include "rocketui/rocketui.h"
-
-#ifndef DEDICATED
-extern IVAudio *vaudio;
-void *g_pMilesAudioEngineRef;
-#endif
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -292,7 +284,7 @@ void Snd_Restart_f()
 
 	// Flush soundscapes so they don't stop. We don't insert text in the buffer here because
 	// cl_soundscape_flush is normally cheat-protected.
-	ConCommand *pCommand = (ConCommand*)dynamic_cast< const ConCommand* >( g_pCVar->FindCommand( "cl_soundscape_flush" ) );
+	ConCommand *pCommand = g_pCVar->FindCommand( "cl_soundscape_flush" );
 	if ( pCommand )
 	{
 		char const *argv[ 1 ] = { "cl_soundscape_flush" };
@@ -470,7 +462,7 @@ void ReserveThreads( int nToReserve )
 	Msg( "%d threads being reserved\n", (int)g_NumReservedThreads );
 }
 
-void OnChangeThreadReserve( IConVar *var, const char *pOldValue, float flOldValue )
+void OnChangeThreadReserve( ConVar *var, const char *pOldValue, float flOldValue )
 {
 	ReserveThreads( threadpool_reserve.GetInt() );
 }
@@ -794,14 +786,14 @@ void Host_Error (const char *error, ...)
 }
 
 #ifndef DEDICATED
-class CHostSubscribeForProfileEvents : public IMatchEventsSink
+class CHostSubscribeForProfileEvents
 {
 public:
 	CHostSubscribeForProfileEvents() : m_bSubscribed( false ) {}
 
 public:
 	void Subscribe( bool bSubscribe );
-	virtual void OnEvent( KeyValues *pEvent );
+	void OnEvent( KeyValues *pEvent );
 
 public:
 	bool m_bSubscribed;
@@ -815,7 +807,7 @@ void CHostSubscribeForProfileEvents::Subscribe( bool bSubscribe )
 		return;
 
 	if ( bSubscribe )
-		g_pMatchFramework->GetEventsSubscription()->Subscribe( this );
+		g_pMatchFramework->GetEventsSubscription()->Subscribe( this, [this]( KeyValues *pEvent ) { OnEvent( pEvent ); } );
 	else
 		g_pMatchFramework->GetEventsSubscription()->Unsubscribe( this );
 
@@ -1373,8 +1365,6 @@ void Host_AccumulateTime( float dt )
 		host_frametime	= host_state.interval_per_tick;
 	}
 
-	extern bool g_bReplayLoadedTools;
-
 	float flHostTimescale = 1.0f;
 	float flGameTimescale = 1.0f;
 
@@ -1433,7 +1423,7 @@ void Host_AccumulateTime( float dt )
 
 		host_frametime_unbounded = host_frametime;
 
-		if ( CommandLine()->CheckParm( "-tools" ) == nullptr && !g_bReplayLoadedTools )
+		if ( CommandLine()->CheckParm( "-tools" ) == nullptr )
 		{
 			host_frametime = std::min<std::common_type_t<float, double>>( host_frametime, MAX_FRAMETIME * fullscale);
 			host_frametime_unscaled = std::min<std::common_type_t<float, double>>( host_frametime_unscaled, MAX_FRAMETIME );
@@ -1447,7 +1437,7 @@ void Host_AccumulateTime( float dt )
 		}
 	}
 	else
-		if ( CommandLine()->CheckParm( "-tools" ) != nullptr && !g_bReplayLoadedTools )
+		if ( CommandLine()->CheckParm( "-tools" ) != nullptr )
 		{
 			host_frametime_unbounded = host_frametime;
 			host_frametime = std::min<std::common_type_t<float, double>>( host_frametime, MAX_TOOLS_FRAMETIME );
@@ -2523,7 +2513,7 @@ void Host_BeginThreadedSound()
 		return;
 	}
 
-	g_pSoundJob = new CFunctorJob( CreateFunctor( Host_UpdateSounds ) );
+	g_pSoundJob = new CJob( CreateFunctor( Host_UpdateSounds ) );
 
 	IThreadPool *pSoundThreadPool;
 	pSoundThreadPool = g_pThreadPool;
@@ -2924,13 +2914,6 @@ static void _Host_RunFrame_Impl (float time)
 		host_frameticks = numticks;
 		host_currentframetick = 0;
 
-#if !defined( DEDICATED )
-		// This is to make the tool do both sim + rendering on the initial frame
-		// cl.IsActive changes in the loop below, as does scr_nextdrawtick
-		// We're just caching off the state here so that we have a consistent return value
-		// for enginetool->IsInGame the entire frame
-		g_pEngineToolInternal->SetIsInGame( cl.IsActive() && ( scr_nextdrawtick == 0 ) );
-#endif
 		CJob *pGameJob = nullptr;
 
 // threaded path only supported in listen server
@@ -3027,8 +3010,6 @@ static void _Host_RunFrame_Impl (float time)
 				{
 					_Host_RunFrame_Client( bFinalTick );
 				}
-
-				toolframework->Think( bFinalTick );
 #endif
 
 				host_idealtime += host_state.interval_per_tick;
@@ -3140,7 +3121,6 @@ static void _Host_RunFrame_Impl (float time)
 				{
 					_Host_RunFrame_Client( bFinalTick );
 				}
-				toolframework->Think( bFinalTick );
 			}
 
 #if defined( VOICE_OVER_IP )
@@ -3214,7 +3194,7 @@ static void _Host_RunFrame_Impl (float time)
 			// set net_time once before running the server
 			NET_SetTime( Plat_FloatTime() );
 
-			pGameJob = new CFunctorJob( CreateFunctor( _Host_RunFrame_Server_Async, serverticks ) );
+			pGameJob = new CJob( CreateFunctor( _Host_RunFrame_Server_Async, serverticks ) );
 			g_pThreadPool->AddJob( pGameJob );
 		}
 #endif	// DEDICATED
@@ -3603,17 +3583,10 @@ void Host_PostInit()
 		g_ClientDLL->PostInit();
 	}
 
-	toolframework->PostInit();
-
 	if ( !sv.IsDedicated() )
 	{
 		// vgui needs other systems to finalize
 		EngineUI()->PostInit();
-	}
-
-	if ( serverGameDLL )
-	{
-		serverGameDLL->PostToolsInit();
 	}
 #endif
 }
@@ -3853,12 +3826,6 @@ void Host_Init( bool bDedicated )
 	g_pMatchFramework->GetMatchExtensions()->RegisterExtensionInterface(
 		IENGINEVOICE_INTERFACE_VERSION, pIEngineVoice );
 
-	if (vaudio)
-	{
-		//Pin miles sound system as loaded until Host_Shutdown() is caused. This prevents any
-		//possible path where MSS could unload and then somehow be reloaded.
-		g_pMilesAudioEngineRef = vaudio->CreateMilesAudioEngine();
-	}
 #endif
 
 	// Execute valve.rc
@@ -4382,13 +4349,6 @@ void Host_Shutdown(void)
 #if !defined DEDICATED
 	if ( !sv.IsDedicated() )
 	{
-		if (vaudio && g_pMilesAudioEngineRef)
-		{
-			//let miles sound system exit here.
-			vaudio->DestroyMilesAudioEngine(g_pMilesAudioEngineRef);
-			g_pMilesAudioEngineRef = nullptr;
-		}
-
 		TRACESHUTDOWN( Decal_Shutdown() );
 
 		TRACESHUTDOWN( R_Shutdown() );

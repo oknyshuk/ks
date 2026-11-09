@@ -3,8 +3,6 @@
 #define CS_PLAYER_SHARED_H
 
 #include "shared_classnames.h"
-import std;
-import ks.math;
 
 class CBaseEntity;
 #if defined( CLIENT_DLL )

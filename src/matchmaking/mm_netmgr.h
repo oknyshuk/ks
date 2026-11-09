@@ -6,13 +6,13 @@ class CConnectionlessLanMgr;
 
 #include "mm_framework.h"
 
-class CConnectionlessLanMgr : public IConnectionlessPacketHandler
+class CConnectionlessLanMgr
 {
 	//
 	// IConnectionlessPacketHandler
 	//
 public:
-	virtual bool ProcessConnectionlessPacket( netpacket_t *packet );
+	bool ProcessConnectionlessPacket( netpacket_t *packet );
 
 public:
 	void Update();

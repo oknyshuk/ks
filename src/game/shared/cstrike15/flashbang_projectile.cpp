@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -391,7 +389,7 @@ CFlashbangProjectile::CFlashbangProjectile()
 	m_numOpponentsHit = m_numTeammatesHit = 0;
 }
 
-void CFlashbangProjectile::Spawn()
+void CFlashbangProjectile::Spawn_Impl()
 {
 	SetModel( GRENADE_MODEL );
 
@@ -408,19 +406,19 @@ void CFlashbangProjectile::Spawn()
 
 	m_pWeaponInfo = GetWeaponInfo( WEAPON_FLASHBANG );
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	SetBodygroupPreset( "thrown" );
 }
 
-void CFlashbangProjectile::Precache()
+void CFlashbangProjectile::Precache_Impl()
 {
 	PrecacheModel( GRENADE_MODEL );
 
 	PrecacheScriptSound( "Flashbang.Explode" );
 	PrecacheScriptSound( "Flashbang.Bounce" );
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 ConVar sv_flashbang_strength( "sv_flashbang_strength", "3.55", FCVAR_REPLICATED, "Flashbang strength", true, 2.0, true, 8.0 );

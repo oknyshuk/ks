@@ -67,7 +67,7 @@ extern	netadr_t	net_local_adr;
 extern	double		net_time;
 
 class INetChannelHandler;
-class IConnectionlessPacketHandler;
+#include "inetmsghandler.h"
 
 // Start up networking
 void		NET_Init( bool bDedicated );
@@ -80,7 +80,7 @@ void NET_InitPostFork( void );
 // Shut down networking
 void		NET_Shutdown (void);
 // Read any incoming packets, dispatch to known netchannels and call handler for connectionless packets
-void		NET_ProcessSocket( int sock, IConnectionlessPacketHandler * handler );
+void		NET_ProcessSocket( int sock, ConnectionlessPacketHandler_t handler );
 // Set a port to listen mode
 void		NET_ListenSocket( int sock, bool listen );
 // Send connectionsless string over the wire

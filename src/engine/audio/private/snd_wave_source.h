@@ -10,33 +10,33 @@ class IterateRIFF;
 //=============================================================================
 // Functions to create audio sources from wave files or from wave data.
 //=============================================================================
-extern CAudioSource* Audio_CreateMemoryWave( CSfxTable *pSfx );
-extern CAudioSource* Audio_CreateStreamedWave( CSfxTable *pSfx );
+extern CAudioSource* Audio_CreateMemoryWave( CSfxTable *pSfx, SoundError &soundError );
+extern CAudioSource* Audio_CreateStreamedWave( CSfxTable *pSfx, SoundError &soundError );
 
 class CAudioSourceWave : public CAudioSource
 {
 public:
-	CAudioSourceWave( CSfxTable *pSfx );
-	CAudioSourceWave( CSfxTable *pSfx, CAudioSourceCachedInfo *info );
-	virtual ~CAudioSourceWave( void );
+	CAudioSourceWave( AudioSourceKind kind, CSfxTable *pSfx );
+	CAudioSourceWave( AudioSourceKind kind, CSfxTable *pSfx, CAudioSourceCachedInfo *info );
+	~CAudioSourceWave( void );
 
-	virtual int				GetType( void );
-	virtual void			GetCacheData( CAudioSourceCachedInfo *info );
+	int				GetType( void );
+	void			GetCacheData( CAudioSourceCachedInfo *info );
 
 	void					Setup( const char *pFormat, int formatSize, IterateRIFF &walk );
-	virtual int				SampleRate( void );
-	virtual int				SampleSize( void );
-	virtual int				SampleCount( void );
+	int				SampleRate( void );
+	int				SampleSize( void );
+	int				SampleCount( void );
 
-	virtual int				Format( void );
-	virtual int				DataSize( void );
+	int				Format( void );
+	int				DataSize( void );
 
 	void					*GetHeader( void );
-	virtual bool			IsVoiceSource();
-	virtual bool			IsPlayerVoice() { return false; }
+	bool			IsVoiceSource();
+	bool			IsPlayerVoice() { return false; }
 
-	virtual	void			ParseChunk( IterateRIFF &walk, int chunkName );
-	virtual void			ParseSentence( IterateRIFF &walk );
+	void			ParseChunk( IterateRIFF &walk, int chunkName );
+	void			ParseSentence( IterateRIFF &walk );
 
 	void					ConvertSamples( char *pData, int sampleCount );
 	bool					IsLooped( void );
@@ -46,37 +46,43 @@ public:
 	int64					ConvertLoopedPosition( int64 samplePosition );
 	void					CacheLoad( void );
 	void					CacheUnload( void );
-	virtual int				ZeroCrossingBefore( int sample );
-	virtual int				ZeroCrossingAfter( int sample );
-	virtual void			ReferenceAdd( CAudioMixer *pMixer );
-	virtual void			ReferenceRemove( CAudioMixer *pMixer );
-	virtual bool			CanDelete( void );
-	virtual CSentence		*GetSentence( void );
+	int				ZeroCrossingBefore( int sample );
+	int				ZeroCrossingAfter( int sample );
+	void			ReferenceAdd( CAudioMixer *pMixer );
+	void			ReferenceRemove( CAudioMixer *pMixer );
+	bool			CanDelete( void );
+	CSentence		*GetSentence( void );
 	const char				*GetName(char *pBuf, std::size_t bufLen );
-	virtual int				GetQuality( void );
+	int				GetQuality( void );
 
-	virtual bool			IsAsyncLoad();
+	bool			IsAsyncLoad();
 
-	virtual void			CheckAudioSourceCache();
+	void			CheckAudioSourceCache();
 
-	virtual char const		*GetFileName( char *pOutBuffer, std::size_t bufLen );
+	char const		*GetFileName( char *pOutBuffer, std::size_t bufLen );
 
 	// 360 uses alternate play once semantics
-	virtual void			SetPlayOnce( bool bIsPlayOnce ) { m_bIsPlayOnce = true ? bIsPlayOnce : false; }
-	virtual bool			IsPlayOnce() { return true ? m_bIsPlayOnce : false; }
+	void			SetPlayOnce( bool bIsPlayOnce ) { m_bIsPlayOnce = true ? bIsPlayOnce : false; }
+	bool			IsPlayOnce() { return true ? m_bIsPlayOnce : false; }
 
-	virtual void			SetSentenceWord( bool bIsWord ) { m_bIsSentenceWord = bIsWord; }
-	virtual bool			IsSentenceWord() { return m_bIsSentenceWord; }
+	void			SetSentenceWord( bool bIsWord ) { m_bIsSentenceWord = bIsWord; }
+	bool			IsSentenceWord() { return m_bIsSentenceWord; }
 
 	int						GetLoopingInfo( int *pLoopBlock, int *pNumLeadingSamples, int *pNumTrailingSamples );
 
-	virtual int				SampleToStreamPosition( int samplePosition ) { return 0; }
-	virtual int				StreamToSamplePosition( int streamPosition ) { return 0; }
+	int				SampleToStreamPosition( int samplePosition ) { return 0; }
+	int				StreamToSamplePosition( int streamPosition ) { return 0; }
 
 	// TERROR: limit data read while rebuilding cache
 	void					SetRebuildingCache( void ) { m_bIsRebuildingCache = true; }
 
 protected:
+	// the source as the interface sees it: calls through it reach the member of the source's own class
+	CAudioSource			&Source() { return *this; }
+
+	// calls the ParseChunk of the source's class
+	void					DispatchParseChunk( IterateRIFF &walk, int chunkName );
+
 	void					ParseCueChunk( IterateRIFF &walk );
 	void					ParseSamplerChunk( IterateRIFF &walk );
 
@@ -148,5 +154,169 @@ private:
 	const char		*m_pDebugName;
 #endif
 };
+
+// CAudioSourceMemWave is a bunch of wave data that is all in memory.
+// To use it:
+// - derive from CAudioSourceMemWave
+// - call CAudioSourceWave::Init with a WAVEFORMATEX
+// - set m_sampleCount.
+// - implement GetDataPointer
+class CAudioSourceMemWave : public CAudioSourceWave
+{
+public:
+							CAudioSourceMemWave();
+							CAudioSourceMemWave( CSfxTable *pSfx );
+							CAudioSourceMemWave( CSfxTable *pSfx, CAudioSourceCachedInfo *info );
+	~CAudioSourceMemWave();
+
+	// These are all implemented by CAudioSourceMemWave.
+	CAudioMixer*	CreateMixer( int initialStreamPosition, int skipInitialSamples, bool bUpdateDelayForChoreo, SoundError &soundError );
+	int				GetOutputData( void **pData, int64 samplePosition, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] );
+	int				ZeroCrossingBefore( int sample );
+	int				ZeroCrossingAfter( int sample );
+
+	int				GetCacheStatus( void );
+	void			CacheLoad( void );
+	void			CacheUnload( void );
+
+	// by definition, should already be in memory
+	void			Prefetch() {}
+
+	void			ParseChunk( IterateRIFF &walk, int chunkName );
+	void					ParseDataChunk( IterateRIFF &walk );
+
+protected:								   
+
+	// Whoeover derives must implement this.
+	char			*GetDataPointer( void );
+
+	WaveCacheHandle_t		m_hCache;
+	StreamHandle_t			m_hStream;
+
+private:
+	CAudioSourceMemWave( const CAudioSourceMemWave & ); // not implemented, not accessible
+};
+
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Wave source for streaming wave files
+// UNDONE: Handle looping
+//-----------------------------------------------------------------------------
+class CAudioSourceStreamWave : public CAudioSourceWave
+{
+public:
+	CAudioSourceStreamWave( CSfxTable *pSfx );
+	CAudioSourceStreamWave( CSfxTable *pSfx, CAudioSourceCachedInfo *info );
+	~CAudioSourceStreamWave();
+
+	CAudioMixer		*CreateMixer( int initialStreamPosition, int skipInitialSamples, bool bUpdateDelayForChoreo, SoundError &soundError );
+	int				GetOutputData( void **pData, int64 samplePosition, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] );
+	void			ParseChunk( IterateRIFF &walk, int chunkName );
+	bool			IsStreaming( void ) { return true; }
+
+	int		GetCacheStatus( void );
+
+	// the streaming data source (see CAudioSource::UpdateLoopingSamplePosition)
+	int64 UpdateLoopingSamplePosition( int64 samplePosition )
+	{
+		return ConvertLoopedPosition( samplePosition );
+	}
+	void UpdateSamples( char *pData, int sampleCount )
+	{
+		ConvertSamples( pData, sampleCount );
+	}
+	int GetLoopingInfo( int *pLoopBlock, int *pNumLeadingSamples, int *pNumTrailingSamples )
+	{
+		return CAudioSourceWave::GetLoopingInfo( pLoopBlock, pNumLeadingSamples, pNumTrailingSamples );
+	}
+
+	void Prefetch();
+
+	int	SampleToStreamPosition( int samplePosition );
+	int	StreamToSamplePosition( int streamPosition );
+
+private:
+	CAudioSourceStreamWave( const CAudioSourceStreamWave & ); // not implemented, not accessible
+
+	// We need this for -tools mode to get access to the raw samples
+	FileHandle_t		m_hWaveFileAccess;
+};
+
+
+// ------------------------------------------------------------------------- //
+// CAudioSourceVoice.
+// This feeds the data from an incoming voice channel (a guy on the server
+// who is speaking) into the sound engine.
+// ------------------------------------------------------------------------- //
+
+class CAudioSourceVoice : public CAudioSourceWave
+{
+public:
+								CAudioSourceVoice(CSfxTable *pSfx, int iEntity);
+								~CAudioSourceVoice();
+	
+	int					GetType( void )
+	{
+		return AUDIO_SOURCE_VOICE;
+	}
+	void				GetCacheData( CAudioSourceCachedInfo *info )
+	{
+		contract_assert( 0 );
+	}
+
+
+	CAudioMixer			*CreateMixer( int initialStreamPosition, int skipInitialSamples, bool bUpdateDelayForChoreo, SoundError &soundError );
+	int					GetOutputData( void **pData, int64 samplePosition, int sampleCount, char copyBuf[AUDIOSOURCE_COPYBUF_SIZE] );
+	int					SampleRate( void );
+	
+	// Sample size is in bytes.  It will not be accurate for compressed audio.  This is a best estimate.
+	// The compressed audio mixers understand this, but in general do not assume that SampleSize() * SampleCount() = filesize
+	// or even that SampleSize() is 100% accurate due to compression.
+	int					SampleSize( void );
+
+	// Total number of samples in this source.  NOTE: Some sources are infinite (mic input), they should return
+	// a count equal to one second of audio at their current rate.
+	int					SampleCount( void );
+
+	bool				IsVoiceSource()				{return true;}
+	bool				IsPlayerVoice()				{return true;}
+
+	bool				IsLooped()					{return false;}
+	bool				IsStreaming()				{return true;}
+	bool				IsStereoWav()				{return false;}
+	int					GetCacheStatus()			{return AUDIO_IS_LOADED;}
+	void				CacheLoad()					{}
+	void				CacheUnload()				{}
+	CSentence			*GetSentence()				{return nullptr;}
+	int					GetQuality()				{ return 0; }
+
+	int					ZeroCrossingBefore( int sample )	{return sample;}
+	int					ZeroCrossingAfter( int sample )		{return sample;}
+	
+	// mixer's references
+	void				ReferenceAdd( CAudioMixer *pMixer );
+	void				ReferenceRemove( CAudioMixer *pMixer );
+
+	// check reference count, return true if nothing is referencing this
+	bool				CanDelete();
+
+	void				Prefetch() {}
+
+	// Nothing, not a cache object...
+	void				CheckAudioSourceCache() {} 
+
+private:
+	CAudioSourceVoice( const CAudioSourceVoice & );
+
+	// Which entity's voice this is for.
+	int							m_iChannel;
+	
+	// How many mixers are referencing us.
+	int							m_refCount;
+};
+
+
+
 
 PathTypeFilter_t GetAudioPathFilter();

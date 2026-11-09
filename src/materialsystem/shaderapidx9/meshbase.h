@@ -15,13 +15,13 @@ class CVertexBufferBase : public IVertexBuffer
 {
 	// Methods of IVertexBuffer
 public:
-	virtual void Spew( int nVertexCount, const VertexDesc_t &desc );
-	virtual void ValidateData( int nVertexCount, const VertexDesc_t& desc );
+	void Spew( int nVertexCount, const VertexDesc_t &desc );
+	void ValidateData( int nVertexCount, const VertexDesc_t& desc );
 
 public:
 	// constructor, destructor
 	CVertexBufferBase( const char *pBudgetGroupName );
-	virtual ~CVertexBufferBase();
+	~CVertexBufferBase();
 
 	// Displays the vertex format
 	static void PrintVertexFormat( VertexFormat_t vertexFormat );
@@ -44,15 +44,15 @@ class CIndexBufferBase : public IIndexBuffer
 {
 	// Methods of IIndexBuffer
 public:
-	virtual void Spew( int nIndexCount, const IndexDesc_t &desc );
-	virtual void ValidateData( int nIndexCount, const IndexDesc_t& desc );
-	virtual IMesh* GetMesh() { return nullptr; }
+	void Spew( int nIndexCount, const IndexDesc_t &desc );
+	void ValidateData( int nIndexCount, const IndexDesc_t& desc );
+	IMesh* GetMesh() { return nullptr; }
 
 	// Other public methods
 public:
 	// constructor, destructor
 	CIndexBufferBase( const char *pBudgetGroupName );
-	virtual ~CIndexBufferBase() {}
+	~CIndexBufferBase() {}
 
 protected:
 	const char *m_pBudgetGroupName;
@@ -67,42 +67,42 @@ class CMeshBase : public IMesh
 	// Methods of IMesh
 public:
 
-	// Other public methods that need to be overridden
+	// Other public methods, called on whichever mesh implementation this is (meshdx8.cpp)
 public:
 	// Begins a pass
-	virtual void BeginPass( ) = 0;
+	void BeginPass( );
 
 	// Draws a single pass of the mesh
-	virtual void RenderPass( const unsigned char *pInstanceCommandBuffer ) = 0;
+	void RenderPass( const unsigned char *pInstanceCommandBuffer );
 
 	// DrawPrims
-	virtual void DrawPrims( const unsigned char *pInstanceCommandBuffer ) = 0;
+	void DrawPrims( const unsigned char *pInstanceCommandBuffer );
 
 	// Does it have a color mesh?
-	virtual bool HasColorMesh() const = 0;
+	bool HasColorMesh() const;
 
 	// Does it have a flex mesh?
-	virtual bool HasFlexMesh() const = 0;
+	bool HasFlexMesh() const;
 
 	// Is it using a vertex ID?
-	virtual bool IsUsingVertexID() const = 0;
+	bool IsUsingVertexID() const;
 
 	// Is it using tessellation for higher-order surfaces?
 	TessellationMode_t GetTessellationType() const { return TESSELLATION_MODE_DISABLED; }
 
 	// Are vertex data streams specified in a custom manner?
-	virtual VertexStreamSpec_t *GetVertexStreamSpec() const = 0;
+	VertexStreamSpec_t *GetVertexStreamSpec() const;
 
-	virtual IMesh *GetMesh() { return this; }
+	IMesh *GetMesh() { return this; }
 
-	virtual void * AccessRawHardwareDataStream( uint8 nRawStreamIndex, uint32 numBytes, uint32 uiFlags, void *pvContext ) { return nullptr; }
+	void * AccessRawHardwareDataStream( uint8 nRawStreamIndex, uint32 numBytes, uint32 uiFlags, void *pvContext ) { return nullptr; }
 
-	virtual ICachedPerFrameMeshData *GetCachedPerFrameMeshData() { return nullptr; }
-	virtual void ReconstructFromCachedPerFrameMeshData( ICachedPerFrameMeshData *pData ) {}
+	ICachedPerFrameMeshData *GetCachedPerFrameMeshData() { return nullptr; }
+	void ReconstructFromCachedPerFrameMeshData( ICachedPerFrameMeshData *pData ) {}
 public:
 	// constructor, destructor
-	CMeshBase();
-	virtual ~CMeshBase();
+	explicit CMeshBase( MeshKind kind );
+	~CMeshBase();
 
 };
 

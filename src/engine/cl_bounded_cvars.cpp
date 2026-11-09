@@ -24,42 +24,33 @@ extern ConVar  sv_client_predict;
 // rate
 // ------------------------------------------------------------------------------------------ //
 
-void CL_RateCvarChanged( IConVar *pConVar, const char *pOldValue, float flOldValue )
+void CL_RateCvarChanged( ConVar *pConVar, const char *pOldValue, float flOldValue )
 {
 }
 
-class CBoundedCvar_Rate : public ConVar_ServerBounded
+static float CBoundedCvar_Rate_GetFloat( const ConVar_ServerBounded &bounded )
 {
-public:
-	CBoundedCvar_Rate() :
-	  ConVar_ServerBounded( 
-		  "rate", 
+#ifdef DEDICATED
+	return bounded.GetBaseFloatValue();
+#else
+	if ( GetBaseLocalClient().m_nSignonState >= SIGNONSTATE_FULL )
+	{
+		int nRate = (int)bounded.GetBaseFloatValue();
+		return (float)ClampClientRate( nRate );
+	}
+	else
+	{
+		return bounded.GetBaseFloatValue();
+	}
+#endif
+}
+
+static ConVar_ServerBounded cl_rate_var( CBoundedCvar_Rate_GetFloat,
+	"rate", 
 		  "DEFAULT_RATE",
 		  FCVAR_ARCHIVE | FCVAR_USERINFO,
 		  "Max bytes/sec the host can receive data", 
-		  CL_RateCvarChanged )
-	  {
-	  }
-
-	virtual float GetFloat() const
-	{
-#ifdef DEDICATED
-		return GetBaseFloatValue();
-#else
-		if ( GetBaseLocalClient().m_nSignonState >= SIGNONSTATE_FULL )
-		{
-			int nRate = (int)GetBaseFloatValue();
-			return (float)ClampClientRate( nRate );
-		}
-		else
-		{
-			return GetBaseFloatValue();
-		}
-#endif
-	}
-};
-
-static CBoundedCvar_Rate cl_rate_var;
+		  CL_RateCvarChanged );
 ConVar_ServerBounded *cl_rate = &cl_rate_var;
 
 
@@ -67,52 +58,43 @@ ConVar_ServerBounded *cl_rate = &cl_rate_var;
 // cl_cmdrate
 // ------------------------------------------------------------------------------------------ //
 
-class CBoundedCvar_CmdRate : public ConVar_ServerBounded
+static float CBoundedCvar_CmdRate_GetFloat( const ConVar_ServerBounded &bounded )
 {
-public:
-	CBoundedCvar_CmdRate() :
-	  ConVar_ServerBounded( 
-		  "cl_cmdrate", 
-		  "64", 
-		  FCVAR_ARCHIVE | FCVAR_USERINFO, 
-		  "Max number of command packets sent to server per second", true, MIN_CMD_RATE, true, MAX_CMD_RATE )
-	{
-	}
-
-	virtual float GetFloat() const
-	{
-		float flCmdRate = GetBaseFloatValue();
+	float flCmdRate = bounded.GetBaseFloatValue();
 
 #ifndef DEDICATED
-		if ( GetBaseLocalClient().ishltv )
-		{
-			extern ConVar tv_snapshotrate;
-			return tv_snapshotrate.GetFloat();
-		}
-		else if ( sv_mincmdrate.GetInt() != 0 && GetBaseLocalClient().m_nSignonState >= SIGNONSTATE_FULL )
-		{
-			// First, we make it stay within range of cl_updaterate.
-			float diff = flCmdRate - cl_updaterate->GetFloat();
-			if ( fabs( diff ) > sv_client_cmdrate_difference.GetFloat() )
-			{
-				if ( diff > 0 )
-					flCmdRate = cl_updaterate->GetFloat() + sv_client_cmdrate_difference.GetFloat();
-				else
-					flCmdRate = cl_updaterate->GetFloat() - sv_client_cmdrate_difference.GetFloat();
-			}
-
-			// Then we clamp to the min/max values the server has set.
-			return clamp( flCmdRate, sv_mincmdrate.GetFloat(), sv_maxcmdrate.GetFloat() );
-		}
-		else
-#endif
-		{
-			return flCmdRate;
-		}
+	if ( GetBaseLocalClient().ishltv )
+	{
+		extern ConVar tv_snapshotrate;
+		return tv_snapshotrate.GetFloat();
 	}
-};
+	else if ( sv_mincmdrate.GetInt() != 0 && GetBaseLocalClient().m_nSignonState >= SIGNONSTATE_FULL )
+	{
+		// First, we make it stay within range of cl_updaterate.
+		float diff = flCmdRate - cl_updaterate->GetFloat();
+		if ( fabs( diff ) > sv_client_cmdrate_difference.GetFloat() )
+		{
+			if ( diff > 0 )
+				flCmdRate = cl_updaterate->GetFloat() + sv_client_cmdrate_difference.GetFloat();
+			else
+				flCmdRate = cl_updaterate->GetFloat() - sv_client_cmdrate_difference.GetFloat();
+		}
 
-static CBoundedCvar_CmdRate cl_cmdrate_var;
+		// Then we clamp to the min/max values the server has set.
+		return clamp( flCmdRate, sv_mincmdrate.GetFloat(), sv_maxcmdrate.GetFloat() );
+	}
+	else
+#endif
+	{
+		return flCmdRate;
+	}
+}
+
+static ConVar_ServerBounded cl_cmdrate_var( CBoundedCvar_CmdRate_GetFloat,
+	"cl_cmdrate", 
+		  "64", 
+		  FCVAR_ARCHIVE | FCVAR_USERINFO, 
+		  "Max number of command packets sent to server per second", true, MIN_CMD_RATE, true, MAX_CMD_RATE );
 ConVar_ServerBounded *cl_cmdrate = &cl_cmdrate_var;
 
 
@@ -121,36 +103,27 @@ ConVar_ServerBounded *cl_cmdrate = &cl_cmdrate_var;
 // cl_updaterate
 // ------------------------------------------------------------------------------------------ //
 
-class CBoundedCvar_UpdateRate : public ConVar_ServerBounded
+static float CBoundedCvar_UpdateRate_GetFloat( const ConVar_ServerBounded &bounded )
 {
-public:
-	CBoundedCvar_UpdateRate() :
-	  ConVar_ServerBounded( 
-		  "cl_updaterate",
+	// Clamp to the min/max values the server has set.
+	//
+	// This cvar only takes effect on the server anyway, and this is done there too,
+	// but we have this here so they'll get the **note thing telling them the value 
+	// isn't functioning the way they set it.
+	float flValue = bounded.GetBaseFloatValue();
+#ifndef DEDICATED
+	if ( GetBaseLocalClient().ishltv )
+	{
+		extern ConVar tv_snapshotrate;
+		return tv_snapshotrate.GetFloat();
+	}
+#endif
+	return clamp( flValue, sv_minupdaterate.GetFloat(), sv_maxupdaterate.GetFloat() );
+}
+
+static ConVar_ServerBounded cl_updaterate_var( CBoundedCvar_UpdateRate_GetFloat,
+	"cl_updaterate",
 		  "64", 
 		  FCVAR_ARCHIVE | FCVAR_USERINFO | FCVAR_NOT_CONNECTED, 
-		  "Number of packets per second of updates you are requesting from the server" )
-	{
-	}
-
-	virtual float GetFloat() const
-	{
-		// Clamp to the min/max values the server has set.
-		//
-		// This cvar only takes effect on the server anyway, and this is done there too,
-		// but we have this here so they'll get the **note thing telling them the value 
-		// isn't functioning the way they set it.
-		float flValue = GetBaseFloatValue();
-#ifndef DEDICATED
-		if ( GetBaseLocalClient().ishltv )
-		{
-			extern ConVar tv_snapshotrate;
-			return tv_snapshotrate.GetFloat();
-		}
-#endif
-		return clamp( flValue, sv_minupdaterate.GetFloat(), sv_maxupdaterate.GetFloat() );
-	}
-};
-
-static CBoundedCvar_UpdateRate cl_updaterate_var;
+		  "Number of packets per second of updates you are requesting from the server" );
 ConVar_ServerBounded *cl_updaterate = &cl_updaterate_var;

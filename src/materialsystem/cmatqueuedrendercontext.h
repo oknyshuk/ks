@@ -4,6 +4,7 @@
 
 import ks.vstdlib;
 #include "imatrendercontextinternal.h"
+#include "cmatqueuedmesh.h"
 #include "cmatrendercontext.h"
 import std;
 
@@ -20,14 +21,6 @@ class CPrimList;
 
 //-----------------------------------------------------------------------------
 
-#define Unsupported( funcName ) ExecuteOnce( [&]{ Msg( "CMatQueuedRenderContext: %s is unsupported\n", #funcName ); } )
-#define FATAL_QUEUE 1
-
-#ifdef FATAL_QUEUE
-#define CannotSupport() ExecuteOnce( [&]{ Msg( "Called function that cannot be supported\n" ); } ); ExecuteOnce( [&]{ DebuggerBreakIfDebugging(); } )
-#else
-#define CannotSupport() ExecuteOnce( [&]{ Msg( "Called function that cannot be supported\n" ); } )
-#endif
 
 //-----------------------------------------------------------------------------
 //
@@ -35,10 +28,13 @@ class CPrimList;
 
 class CMatQueuedRenderContext : public CMatRenderContextBase
 {
+	friend class IMatRenderContext;
+	friend class IMatRenderContextInternal;
 	typedef CMatRenderContextBase BaseClass;
 public:
 	CMatQueuedRenderContext()
-	 :	m_pHardwareContext( nullptr ), 
+	 :	CMatRenderContextBase( MatRenderContextKind::Queued ),
+		m_pHardwareContext( nullptr ), 
 		m_iRenderDepth( 0 ), 
 		m_pQueuedMesh( nullptr ),
 		m_WidthBackBuffer( 0 ), 
@@ -54,14 +50,14 @@ public:
 
 	void									CycleDynamicBuffers( ); // For use in mat_queue_mode 1 only
 
-	void									Init( CMaterialSystem *pMaterialSystem, CMatRenderContextBase *pHardwareContext );
+	void									Init( CMaterialSystem *pMaterialSystem, IMatRenderContextInternal *pHardwareContext );
 	void									Shutdown();
 
 	void									CompactMemory();
 
 	bool									IsInitialized() const { return ( m_pHardwareContext != nullptr ); }
 
-	void									BeginQueue( CMatRenderContextBase *pInitialState = nullptr );
+	void									BeginQueue( IMatRenderContextInternal *pInitialState = nullptr );
 	void									EndQueue( bool bCallQueued = false );
 
 	void									BeginRender();
@@ -289,7 +285,7 @@ public:
 		return Vector(0,0,0);
 	}
 
-	virtual void SetStencilState( const ShaderStencilState_t &state )
+	void SetStencilState( const ShaderStencilState_t &state )
 	{
 		m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::SetStencilState, RefToVal( state ) );
 	}
@@ -305,9 +301,9 @@ public:
 
 	void PopCustomClipPlane()	{ (*(const_cast<CMatCallQueue *>(&m_queue))).QueueCall( m_pHardwareContext, (void (IMatRenderContext::*)())&IMatRenderContext::PopCustomClipPlane); };
 
-	virtual void GetMaxToRender( IMesh *pMesh, bool bMaxUntilFlush, int *pMaxVerts, int *pMaxIndices );
-	virtual int GetMaxVerticesToRender( IMaterial *pMaterial );
-	virtual int GetMaxIndicesToRender( );
+	void GetMaxToRender( IMesh *pMesh, bool bMaxUntilFlush, int *pMaxVerts, int *pMaxIndices );
+	int GetMaxVerticesToRender( IMaterial *pMaterial );
+	int GetMaxIndicesToRender( );
 
 	void DisableAllLocalLights()	{ (*(const_cast<CMatCallQueue *>(&m_queue))).QueueCall( m_pHardwareContext, (void (IMatRenderContext::*)())&IMatRenderContext::DisableAllLocalLights); };
 
@@ -334,9 +330,9 @@ public:
 		m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::PopScissorRect );
 	}
 
-	virtual void DrawInstances( int nInstanceCount, const MeshInstanceData_t *pInstance );
+	void DrawInstances( int nInstanceCount, const MeshInstanceData_t *pInstance );
 
-	virtual void PushDeformation( const DeformationBase_t *pDef )
+	void PushDeformation( const DeformationBase_t *pDef )
 	{
 		CannotSupport();
 	}
@@ -379,35 +375,35 @@ public:
 		return false;
 	}
 
-	virtual void SetFlashlightMode( bool bEnable )
+	void SetFlashlightMode( bool bEnable )
 	{
 		m_bFlashlightEnable = bEnable;
 		m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::SetFlashlightMode, bEnable );
 	}
 
-	virtual bool GetFlashlightMode( void ) const { return m_bFlashlightEnable; }
+	bool GetFlashlightMode( void ) const { return m_bFlashlightEnable; }
 
-	virtual bool IsCullingEnabledForSinglePassFlashlight( void ) const { return m_bCullingEnabledForSinglePassFlashlight; }
+	bool IsCullingEnabledForSinglePassFlashlight( void ) const { return m_bCullingEnabledForSinglePassFlashlight; }
 
-	virtual void EnableCullingForSinglePassFlashlight( bool bEnable ) 
+	void EnableCullingForSinglePassFlashlight( bool bEnable ) 
 	{ 
 		m_bCullingEnabledForSinglePassFlashlight = bEnable; 
 		m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::EnableCullingForSinglePassFlashlight, bEnable );
 	}
 
-	virtual bool IsCascadedShadowMapping() const
+	bool IsCascadedShadowMapping() const
 	{
 		CannotSupport();
 		return false;
 	}
 
-	virtual void SetCascadedShadowMapping( bool bEnable )
+	void SetCascadedShadowMapping( bool bEnable )
 	{
 		m_bCascadedShadowMappingEnabled = bEnable;
 		m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::SetCascadedShadowMapping, bEnable );
 	}
 
-	virtual void SetCascadedShadowMappingState( const CascadedShadowMappingState_t &state, ITexture *pDepthTextureAtlas )
+	void SetCascadedShadowMappingState( const CascadedShadowMappingState_t &state, ITexture *pDepthTextureAtlas )
 	{
 		state, pDepthTextureAtlas;
 		
@@ -435,12 +431,12 @@ public:
 
 	void BeginMorphAccumulation()	{ (*(const_cast<CMatCallQueue *>(&m_queue))).QueueCall( m_pHardwareContext, (void (IMatRenderContextInternal::*)())&IMatRenderContextInternal::BeginMorphAccumulation); };
 	void EndMorphAccumulation()	{ (*(const_cast<CMatCallQueue *>(&m_queue))).QueueCall( m_pHardwareContext, (void (IMatRenderContextInternal::*)())&IMatRenderContextInternal::EndMorphAccumulation); };
-	virtual void AccumulateMorph( IMorph* pMorph, int nMorphCount, const MorphWeight_t* pWeights )
+	void AccumulateMorph( IMorph* pMorph, int nMorphCount, const MorphWeight_t* pWeights )
 	{
 		// FIXME: Must copy off the morph weights here. Not sure the pattern for this.
 		contract_assert( 0 );
 	}
-	virtual bool GetMorphAccumulatorTexCoord( Vector2D *pTexCoord, IMorph *pIMorph, int nVertex )
+	bool GetMorphAccumulatorTexCoord( Vector2D *pTexCoord, IMorph *pIMorph, int nVertex )
 	{
 		// FIXME: We must assign morph ids in the queued mode 
 		// and pass the ids down to the morph mgr to get the texcoord
@@ -449,25 +445,25 @@ public:
 		return false;
 	}
 
-	virtual void SetFlexWeights( int nFirstWeight, int nCount, const MorphWeight_t* pWeights )
+	void SetFlexWeights( int nFirstWeight, int nCount, const MorphWeight_t* pWeights )
 	{
 		contract_assert( 0 );
 	}
 
 	// Subdivision surface interface
-	virtual int GetSubDBufferWidth()
+	int GetSubDBufferWidth()
 	{
 		contract_assert( 0 );
 		return 0;
 	}
 
-	virtual float* LockSubDBuffer( int nNumRows )
+	float* LockSubDBuffer( int nNumRows )
 	{
 		contract_assert( 0 );
 		return nullptr;
 	}
 
-	virtual void UnlockSubDBuffer()
+	void UnlockSubDBuffer()
 	{
 		contract_assert( 0 );
 	}
@@ -521,11 +517,11 @@ public:
 	// Color correction related methods..
 	// Client cannot call IColorCorrectionSystem directly because it is not thread-safe
 	// FIXME: Make IColorCorrectionSystem threadsafe?
-	virtual ColorCorrectionHandle_t AddLookup( const char *pName );
-	virtual void LockLookup( ColorCorrectionHandle_t handle );
-	virtual void LoadLookup( ColorCorrectionHandle_t handle, const char *pLookupName );
-	virtual void UnlockLookup( ColorCorrectionHandle_t handle );
-	virtual bool RemoveLookup( ColorCorrectionHandle_t handle );
+	ColorCorrectionHandle_t AddLookup( const char *pName );
+	void LockLookup( ColorCorrectionHandle_t handle );
+	void LoadLookup( ColorCorrectionHandle_t handle, const char *pLookupName );
+	void UnlockLookup( ColorCorrectionHandle_t handle );
+	bool RemoveLookup( ColorCorrectionHandle_t handle );
 
 	void EnableColorCorrection( bool a1 )	{ (*(const_cast<CMatCallQueue *>(&m_queue))).QueueCall( g_pColorCorrectionSystem, (void (IColorCorrectionSystem::*)(bool))&IColorCorrectionSystem::EnableColorCorrection, a1 ); };
 	void ResetLookupWeights()	{ (*(const_cast<CMatCallQueue *>(&m_queue))).QueueCall( g_pColorCorrectionSystem, (void (IColorCorrectionSystem::*)())&IColorCorrectionSystem::ResetLookupWeights); };
@@ -565,13 +561,13 @@ public:
 
 //	DEFINE_QUEUED_CALL_1(					EnableSinglePassFlashlightMode, bool, IMatRenderContext, m_pHardwareContext );
 
-	virtual void EnableSinglePassFlashlightMode( bool bEnable ) 
+	void EnableSinglePassFlashlightMode( bool bEnable ) 
 	{ 
 		m_bSinglePassFlashlightMode = bEnable;
 		m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::EnableSinglePassFlashlightMode, bEnable );
 	}
 
-	virtual bool SinglePassFlashlightModeEnabled( void ) const { return m_bSinglePassFlashlightMode; }
+	bool SinglePassFlashlightModeEnabled( void ) const { return m_bSinglePassFlashlightMode; }
 
 	//--------------------------------------------------------
 	// Memory allocation calls for queued mesh, et. al.
@@ -586,9 +582,9 @@ public:
 	//--------------------------------------------------------
 	// debug logging - no-op in queued context
 	//--------------------------------------------------------
-	virtual void							Printf( char *fmt, ... ) {};
-	virtual void							PrintfVA( char *fmt, std::va_list vargs ){};
-	virtual float							Knob( char *knobname, float *setvalue=nullptr ) { return 0.0f; };	
+	void							Printf( char *fmt, ... ) {};
+	void							PrintfVA( char *fmt, std::va_list vargs ){};
+	float							Knob( char *knobname, float *setvalue=nullptr ) { return 0.0f; };	
 
 
 
@@ -598,7 +594,7 @@ public:
 	void RenderRocketHUD( void * a1 )	{ (*(const_cast<CMatCallQueue *>(&m_queue))).QueueCall( m_pHardwareContext, (void (IMatRenderContext::*)(void *))&IMatRenderContext::RenderRocketHUD, a1 ); };
 	void RenderRocketMenu( void * a1 )	{ (*(const_cast<CMatCallQueue *>(&m_queue))).QueueCall( m_pHardwareContext, (void (IMatRenderContext::*)(void *))&IMatRenderContext::RenderRocketMenu, a1 ); };
 
-	virtual ColorCorrectionHandle_t			FindLookup( const char *pName );
+	ColorCorrectionHandle_t			FindLookup( const char *pName );
 
 private:
 	void QueueMatrixSync();
@@ -614,14 +610,12 @@ private:
 	}
 
 	//friend class CMatQueuedMesh;
-	friend class CCallQueueExternal;
-
 	CMatCallQueue m_queue;
 	CMatQueuedMesh *m_pQueuedMesh;
 	CMatQueuedMesh *m_pQueuedFlexMesh;
 	CMatQueuedIndexBuffer *m_pQueuedIndexBuffer;
 
-	CMatRenderContextBase *m_pHardwareContext;
+	IMatRenderContextInternal *m_pHardwareContext;
 
 	int m_iRenderDepth;
 	int m_WidthBackBuffer, m_HeightBackBuffer;
@@ -635,21 +629,6 @@ private:
 
 	CMemoryStack m_Vertices;
 	CMemoryStack m_Indices;
-
-	class CCallQueueExternal : public ICallQueue
-	{
-		void QueueFunctorInternal( CFunctor *pFunctor )
-		{
-			// m_CallQueueExternal is a member of the enclosing context; recover the outer object
-			// from the address of this member.
-			CMatQueuedRenderContext *pOuter = reinterpret_cast<CMatQueuedRenderContext *>(
-				reinterpret_cast<uint8 *>( this ) - __builtin_offsetof( CMatQueuedRenderContext, m_CallQueueExternal ) );
-			pOuter->m_queue.QueueFunctor( pFunctor );
-			pFunctor->Release();
-		}
-	};
-
-	CCallQueueExternal m_CallQueueExternal;
 };
 
 //-----------------------------------------------------------------------------

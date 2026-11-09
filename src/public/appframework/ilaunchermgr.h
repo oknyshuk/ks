@@ -19,47 +19,49 @@ inline constexpr const char *SDLMGR_INTERFACE_VERSION = "SDLMgrInterface002";
 
 class GLMDisplayDB;
 
-class ILauncherMgr : public IAppSystem
+class ILauncherMgr
 {
 public:
-	virtual bool Connect( CreateInterfaceFn factory ) = 0;
-	virtual void Disconnect() = 0;
-	
-	virtual void *QueryInterface( const char *pInterfaceName ) = 0;
-	
-	// Init, shutdown
-	virtual InitReturnVal_t Init() = 0;
-	virtual void Shutdown() = 0;
-	
+	// The one implementation is CSDLMgr (appframework/sdlmgr.cpp); these forward to it.
+
+	// App system protocol. Not an IAppSystem: CAppSystemGroup drives it by kind (see AppSystemRef).
+	bool Connect( CreateInterfaceFn factory );
+	void Disconnect();
+	void *QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t Init();
+	void Shutdown();
+	const AppSystemInfo_t *GetDependencies() { return nullptr; }
+	void Reconnect( CreateInterfaceFn factory, const char *pInterfaceName ) {}
+
 	// Create the window.
-	virtual bool CreateGameWindow( const char *pTitle, bool bWindowed, int width, int height, bool bDesktopFriendlyFullscreen ) = 0;
+	bool CreateGameWindow( const char *pTitle, bool bWindowed, int width, int height, bool bDesktopFriendlyFullscreen );
 	
 	// Get the next N buffered window-system events. Returns how many were written.
 	// The events are the backend's own records, passed through untouched: only the
 	// input system, which shares that backend, looks inside them.
-	virtual int GetEvents( ks::desktop::event *pEvents, int nMaxEventsToReturn ) = 0;
+	int GetEvents( ks::desktop::event *pEvents, int nMaxEventsToReturn );
 
 	// Map SDL window coordinates into engine screen space (the backbuffer).
-	virtual void WindowToEngineCoords( float wx, float wy, int &ex, int &ey ) = 0;
+	void WindowToEngineCoords( float wx, float wy, int &ex, int &ey );
 
 	// Set the mouse cursor position.
-	virtual void SetCursorPosition( int x, int y ) = 0;
+	void SetCursorPosition( int x, int y );
 
-	virtual void SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight, bool bDesktopFriendlyFullscreen ) = 0;
-	virtual void PumpWindowsMessageLoop() = 0;
+	void SetWindowFullScreen( bool bFullScreen, int nWidth, int nHeight, bool bDesktopFriendlyFullscreen );
+	void PumpWindowsMessageLoop();
 		
-	virtual void DestroyGameWindow() = 0;
-	virtual void SetApplicationIcon( const char *pchAppIconFile ) = 0;
+	void DestroyGameWindow();
+	void SetApplicationIcon( const char *pchAppIconFile );
 	
-	virtual void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta = false ) = 0;
+	void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta = false );
 
-	virtual void SetMouseVisible( bool bState ) = 0;
-	virtual void SetMouseCursor( ks::desktop::cursor *hCursor ) = 0;
-	virtual void SetForbidMouseGrab( bool bForbidMouseGrab ) = 0;
-	virtual void OnFrameRendered() = 0;
+	void SetMouseVisible( bool bState );
+	void SetMouseCursor( ks::desktop::cursor *hCursor );
+	void SetForbidMouseGrab( bool bForbidMouseGrab );
+	void OnFrameRendered();
 
-	virtual void ForceSystemCursorVisible() = 0;
-	virtual void UnforceSystemCursorVisible() = 0;
+	void ForceSystemCursorVisible();
+	void UnforceSystemCursorVisible();
 };
 
 extern ILauncherMgr *g_pLauncherMgr;

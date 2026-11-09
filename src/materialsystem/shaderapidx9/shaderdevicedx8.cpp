@@ -39,9 +39,85 @@ extern LoggingChannelID_t LOG_EngineInitialization;;
 static CShaderDeviceMgrDx8 g_ShaderDeviceMgrDx8;
 CShaderDeviceMgrDx8* g_pShaderDeviceMgrDx8 = &g_ShaderDeviceMgrDx8;
 
-// In the shaderapidx10.dll, we use its version of IShaderDeviceMgr. 
-static InterfaceReg s_Reg_CShaderDeviceMgrDx8_IShaderDeviceMgr( []() -> void * { return static_cast<IShaderDeviceMgr *>( &g_ShaderDeviceMgrDx8 ); }, SHADER_DEVICE_MGR_INTERFACE_VERSION );;
+// The IShaderDeviceMgr facade forwards to the one device manager.
+static IShaderDeviceMgr s_ShaderDeviceMgrFacade;
+static CShaderDeviceMgrDx8 &ShaderDeviceMgrImpl() { return g_ShaderDeviceMgrDx8; }
+#include "../shaderapi_facade/ishaderdevicemgr.inl"
 
+static InterfaceReg s_Reg_CShaderDeviceMgrDx8_IShaderDeviceMgr( []() -> void * { return &s_ShaderDeviceMgrFacade; }, SHADER_DEVICE_MGR_INTERFACE_VERSION );;
+
+//-----------------------------------------------------------------------------
+// Members of the base classes that are implemented by the Dx8 classes
+//-----------------------------------------------------------------------------
+void CShaderDeviceMgrBase::GetCurrentModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter ) const
+{
+	g_ShaderDeviceMgrDx8.GetCurrentModeInfo( pInfo, nAdapter );
+}
+
+int CShaderDeviceMgrBase::GetAdapterCount() const
+{
+	return g_ShaderDeviceMgrDx8.GetAdapterCount();
+}
+
+void CShaderDeviceMgrBase::GetAdapterInfo( int nAdapter, MaterialAdapterInfo_t& info ) const
+{
+	g_ShaderDeviceMgrDx8.GetAdapterInfo( nAdapter, info );
+}
+
+int CShaderDeviceMgrBase::GetModeCount( int nAdapter ) const
+{
+	return g_ShaderDeviceMgrDx8.GetModeCount( nAdapter );
+}
+
+void CShaderDeviceMgrBase::GetModeInfo( ShaderDisplayMode_t* pInfo, int nAdapter, int nMode ) const
+{
+	g_ShaderDeviceMgrDx8.GetModeInfo( pInfo, nAdapter, nMode );
+}
+
+int CShaderDeviceMgrBase::GetVidMemBytes( int nAdapter ) const
+{
+	return g_ShaderDeviceMgrDx8.GetVidMemBytes( nAdapter );
+}
+
+void CShaderDeviceMgrBase::GetDesktopResolution( int *pWidth, int *pHeight, int nAdapter ) const
+{
+	g_ShaderDeviceMgrDx8.GetDesktopResolution( pWidth, pHeight, nAdapter );
+}
+
+ImageFormat CShaderDeviceBase::GetBackBufferFormat() const
+{
+	return g_pShaderDeviceDx8->GetBackBufferFormat();
+}
+
+void CShaderDeviceBase::ReleaseResources( bool bReleaseManagedResources )
+{
+	g_pShaderDeviceDx8->ReleaseResources( bReleaseManagedResources );
+}
+
+void CShaderDeviceBase::ReacquireResources()
+{
+	g_pShaderDeviceDx8->ReacquireResources();
+}
+
+bool CShaderDeviceBase::InitDevice( void *hWnd, int nAdapter, const ShaderDeviceInfo_t &mode )
+{
+	return g_pShaderDeviceDx8->InitDevice( hWnd, nAdapter, mode );
+}
+
+void CShaderDeviceBase::ShutdownDevice()
+{
+	g_pShaderDeviceDx8->ShutdownDevice();
+}
+
+bool CShaderDeviceBase::IsDeactivated() const
+{
+	return g_pShaderDeviceDx8->IsDeactivated();
+}
+
+void CShaderDeviceBase::OtherAppInitializing( bool initializing )
+{
+	g_pShaderDeviceDx8->OtherAppInitializing( initializing );
+}
 
 
 // hook into mat_forcedynamic from the engine.

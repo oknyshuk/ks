@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
 #include "reflect_annotations.h"
 
 #include "ai_basenpc.h"
-import std;
 
 //-----------------------------------------------------------------------------
 //
@@ -33,7 +31,7 @@ public:
 	{
 	}
 
-	virtual int	ObjectCaps()	{ return ((BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | FCAP_NOTIFY_ON_TRANSITION); }
+	virtual int	ObjectCaps()	{ return ((BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION) | FCAP_NOTIFY_ON_TRANSITION); }
 	
 	virtual void	Spawn();
 	virtual void	OnRestore();

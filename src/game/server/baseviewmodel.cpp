@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "iserverentity.h"
@@ -14,7 +12,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "baseentity_shared.h"
 #include "basetoggle.h"
@@ -29,7 +26,6 @@ import ks.tier1;
 #include "player.h"
 #include "studio.h"
 #include "hltvdirector.h"
-#include "replaydirector.h"
 
 void SendProxy_AnimTime( const void *pStruct, const void *pVarData, DVariant *pOut, int iElement, int objectID );
 void SendProxy_SequenceChanged( const void *pStruct, const void *pVarData, DVariant *pOut, int iElement, int objectID );
@@ -38,7 +34,7 @@ void SendProxy_SequenceChanged( const void *pStruct, const void *pVarData, DVari
 // Purpose: Save Data for Base Weapon object
 //-----------------------------------------------------------------------------// 
 
-int CBaseViewModel::UpdateTransmitState()
+int CBaseViewModel::UpdateTransmitState_Impl()
 {
 	if ( IsEffectActive( EF_NODRAW ) )
 	{
@@ -48,7 +44,7 @@ int CBaseViewModel::UpdateTransmitState()
 	return SetTransmitState( FL_EDICT_FULLCHECK );
 }
 
-int CBaseViewModel::ShouldTransmit( const CCheckTransmitInfo *pInfo )
+int CBaseViewModel::ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo )
 {
 	// Check if recipient owns this weapon viewmodel
 	CBasePlayer *pOwner = ToBasePlayer( m_hOwner );
@@ -103,11 +99,11 @@ int CBaseViewModel::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 	return FL_EDICT_DONTSEND;
 }
 
-void CBaseViewModel::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
+void CBaseViewModel::SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways )
 {
 	// Are we already marked for transmission?
 	if ( (*pInfo->m_pTransmitEdict)[ entindex() ] )
 		return;
 
-	BaseClass::SetTransmit( pInfo, bAlways );
+	BaseClass::SetTransmit_Impl( pInfo, bAlways );
 }

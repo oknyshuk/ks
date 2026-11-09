@@ -79,18 +79,18 @@ public:
 	unsigned int GetVehicleType( void )							{ return m_nVehicleType; }
 
 	// CBaseEntity
-	virtual void	Precache();
-	void			Spawn( void );
-	void			VPhysicsUpdate( IPhysicsObject *pPhysics );
-	void			DrawDebugGeometryOverlays();
-	int				DrawDebugTextOverlays();
-	void			Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts );
-	virtual void	Think( void );
+	void	Precache_Impl();
+	void			Spawn_Impl( void );
+	void			VPhysicsUpdate_Impl( IPhysicsObject *pPhysics );
+	void			DrawDebugGeometryOverlays_Impl();
+	int				DrawDebugTextOverlays_Impl();
+	void			Teleport_Impl( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts );
+	void	Think_Impl( void );
 	CFourWheelVehiclePhysics *GetPhysics( void ) { return &m_VehiclePhysics; }
-	CBasePlayer		*HasPhysicsAttacker( float dt );
+	CBasePlayer		*HasPhysicsAttacker_Impl( float dt );
 	void			OnPhysGunPickup( CBasePlayer *pPhysGunUser, PhysGunPickup_t reason );
 
-	Vector GetSmoothedVelocity( void );	//Save and update our smoothed velocity for prediction
+	Vector GetSmoothedVelocity_Impl( void );	//Save and update our smoothed velocity for prediction
 
 	virtual void DampenEyePosition( Vector &vecVehicleEyePos, QAngle &vecVehicleEyeAngles ) {}
 
@@ -157,21 +157,21 @@ public:
 	CPropVehicleDriveable( void );
 	~CPropVehicleDriveable( void );
 
-	virtual void	Precache( void );
-	virtual void	Spawn( void );
-	virtual void	OnRestore();
+	void	Precache_Impl( void );
+	void	Spawn_Impl( void );
+	void	OnRestore_Impl();
 	virtual void	CreateServerVehicle( void );
-	virtual int		ObjectCaps( void ) { return BaseClass::ObjectCaps() | FCAP_IMPULSE_USE; };
-	virtual void	GetVectors(Vector* pForward, Vector* pRight, Vector* pUp) const;
+	int		ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() | FCAP_IMPULSE_USE; };
+	void	GetVectors_Impl(Vector* pForward, Vector* pRight, Vector* pUp) const;
 	virtual void	VehicleAngleVectors( const QAngle &angles, Vector *pForward, Vector *pRight, Vector *pUp );
-	virtual void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	virtual void	Think( void );
-	virtual void	TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
-	virtual void	Event_KilledOther( CBaseEntity *pVictim, const CTakeDamageInfo &info );
+	void	Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void	Think_Impl( void );
+	void	TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
+	void	Event_KilledOther_Impl( CBaseEntity *pVictim, const CTakeDamageInfo &info );
 
 	// Vehicle handling
-	virtual void	VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
-	virtual int		VPhysicsGetObjectList( IPhysicsObject **pList, int listMax );
+	void	VPhysicsCollision_Impl( int index, gamevcollisionevent_t *pEvent );
+	int		VPhysicsGetObjectList_Impl( IPhysicsObject **pList, int listMax );
 
 	// Inputs
 	[[= ks::reflect::Input{ .name = "Lock", .type = FIELD_VOID } ]] void	InputLock( inputdata_t &inputdata );
@@ -216,7 +216,7 @@ public:
 	virtual bool		PassengerShouldReceiveDamage( CTakeDamageInfo &info ) { return true; }
 
 	// If this is a vehicle, returns the vehicle interface
-	virtual IServerVehicle *GetServerVehicle() { return m_pServerVehicle; }
+	IServerVehicle *GetServerVehicle_Impl() { return m_pServerVehicle; }
 
 protected:
 

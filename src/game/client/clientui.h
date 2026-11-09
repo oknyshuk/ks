@@ -3,8 +3,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-import std;
-import ks.tier1;
 
 
 bool UI_Startup( CreateInterfaceFn appSystemFactory );

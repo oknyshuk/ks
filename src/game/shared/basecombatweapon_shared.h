@@ -1,7 +1,6 @@
 #pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
-import ks.core;
 
 #include "reflect_annotations.h"
 #ifdef CLIENT_DLL
@@ -61,7 +60,6 @@ void RecvProxy_State( const CRecvProxyData *pData, void *pStruct, void *pOut );
 
 class CBasePlayer;
 class CBaseCombatCharacter;
-class IPhysicsConstraint;
 class CUserCmd;
 
 // How many times to display altfire hud hints (per weapon)
@@ -206,8 +204,8 @@ public:
 
 #else
 	virtual void HandleAnimEvent( animevent_t *pEvent );
-	virtual int  ShouldTransmit( const CCheckTransmitInfo *pInfo ) override;
-	virtual int	UpdateTransmitState() override;
+	KS_VIRTUAL int  ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo ) KS_OVERRIDE;
+	KS_VIRTUAL int	UpdateTransmitState_Impl() KS_OVERRIDE;
 #endif
 
 	virtual bool	IsWeaponWorldModel( void ) const { return true; };
@@ -283,17 +281,17 @@ public:
 	virtual uint64 GetOriginalOwnerXuid() const { return 0; }
 	virtual void SetOriginalOwnerXuid( uint32, uint32 ) {}
 
-	virtual bool			IsBaseCombatWeapon( void ) const { return true; }
-	virtual CBaseCombatWeapon *MyCombatWeaponPointer( void ) { return this; }
+	KS_VIRTUAL bool			IsBaseCombatWeapon_Impl( void ) const { return true; }
+	KS_VIRTUAL CBaseCombatWeapon *MyCombatWeaponPointer_Impl( void ) { return this; }
 
 	// A derived weapon class should return true here so that weapon sounds, etc, can
 	//  apply the proper filter
 	virtual bool			IsPredicted( void ) const { return false; }
 
-	virtual void			Spawn( void );
-	virtual void			Precache( void );
+	KS_VIRTUAL void			Spawn_Impl( void );
+	KS_VIRTUAL void			Precache_Impl( void );
 
-	void					MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );
+	void					MakeTracer_Impl( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );
 
 	// Subtypes are used to manage multiple weapons of the same type on the player.
 	virtual int				GetSubType( void ) { return m_iSubType; }
@@ -511,7 +509,7 @@ public:
 	virtual	acttable_t*		ActivityList( void ) { return nullptr; }
 	virtual	int				ActivityListCount( void ) { return 0; }
 
-	virtual void			Activate( void );
+	KS_VIRTUAL void			Activate_Impl( void );
 
 public:
 
@@ -532,7 +530,7 @@ public:
 	virtual void			Materialize( void );					// make a weapon visible and tangible
 	void					AttemptToMaterialize( void );			// see if the game rules will let the weapon become visible and tangible
 	virtual void			CheckRespawn( void );					// see if this weapon should respawn after being picked up
-	CBaseEntity				*Respawn ( void );						// copy a weapon
+	CBaseEntity				*Respawn_Impl ( void );						// copy a weapon
 
 	static int				GetAvailableWeaponsInBox( CBaseCombatWeapon **pList, int listMax, const Vector &mins, const Vector &maxs );
 
@@ -542,7 +540,7 @@ public:
 	virtual void			Kill( void );
 
 	virtual int				CapabilitiesGet( void ) { return 0; }
-	virtual	int				ObjectCaps( void );
+	KS_VIRTUAL int				ObjectCaps_Impl( void );
 
 	bool					IsRemoveable() { return m_bRemoveable; }
 	void					SetRemoveable( bool bRemoveable ) { m_bRemoveable = bRemoveable; }
@@ -561,10 +559,10 @@ public:
 	// routed through the character, and then back into CharacterAnimEvent() 
 	void					HandleAnimEvent( animevent_t *pEvent );
 
-	virtual int				UpdateTransmitState( void );
+	KS_VIRTUAL int				UpdateTransmitState_Impl( void );
 
 	[[= ks::reflect::Input{ .name = "HideWeapon", .type = FIELD_VOID } ]] void					InputHideWeapon( inputdata_t &inputdata );
-	void					Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void					Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	virtual void			MakeWeaponNameFromEntity( CBaseEntity *pOther );
 
@@ -704,7 +702,7 @@ public:
 
 #ifndef CLIENT_DLL
 	float					m_flLastTimeInAir;
-	virtual void			PhysicsSimulate( void );
+	KS_VIRTUAL void			PhysicsSimulate_Impl( void );
 #endif
 
 // Non-networked prediction fields
@@ -767,7 +765,7 @@ public:
 
 	IPhysicsConstraint		*GetConstraint() { return m_pConstraint; }
 
-	virtual CStudioHdr			*OnNewModel() override;
+	KS_VIRTUAL CStudioHdr			*OnNewModel_Impl() KS_OVERRIDE;
 	void						ClassifyWeaponModel( void );
 	WeaponModelClassification_t	GetWeaponModelClassification( void );
 	void						VerifyAndSetContextSensitiveWeaponModel( void );

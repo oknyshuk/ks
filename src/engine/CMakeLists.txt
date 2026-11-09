@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 oknyshuk
 
-add_library(engine SHARED
+add_library(engine OBJECT
     clientframe.cpp
     decal_clip.cpp
     demofile.cpp
@@ -46,7 +46,6 @@ add_library(engine SHARED
     bitbuf_errorhandler.cpp
     blackbox.cpp
     ../public/blockingudpsocket.cpp
-    ../public/bsptreedata.cpp
     ../public/builddisp.cpp
     buildnum.cpp
     changeframelist.cpp
@@ -82,7 +81,6 @@ add_library(engine SHARED
     enginestats.cpp
     enginetrace.cpp
     filesystem_engine.cpp
-    filetransfermgr.cpp
     GameEventManager.cpp
     gameeventtransmitter.cpp
     hltvclient.cpp
@@ -121,11 +119,6 @@ add_library(engine SHARED
     precache.cpp
     quakedef.cpp
     randomstream.cpp
-    replay.cpp
-    replayclient.cpp
-    replayhistorymanager.cpp
-    replaydemo.cpp
-    replayserver.cpp
     ../public/sentence.cpp
     singleplayersharedmemory.cpp
     sound_shared.cpp
@@ -154,6 +147,8 @@ add_library(engine SHARED
     ../engine/paint.cpp
     ../public/phonemeconverter.cpp
     snd_io.cpp
+    EngineSound.cpp
+    netdispatch.cpp
     EngineSoundServer.cpp
     audio/private/voice_wavefile.cpp
     audio/private/vox.cpp
@@ -214,6 +209,7 @@ add_library(engine SHARED
     audio/private/snd_op_sys/sos_system.cpp
     audio/private/snd_op_sys/sos_entry_match_system.cpp
     audio/private/snd_op_sys/sos_op.cpp
+    audio/private/snd_op_sys/sos_op_dispatch.cpp
     audio/private/snd_op_sys/sos_op_block_entry.cpp
     audio/private/snd_op_sys/sos_op_convar.cpp
     audio/private/snd_op_sys/sos_op_dashboard.cpp
@@ -253,18 +249,10 @@ add_library(engine SHARED
     audio/private/voice.cpp
     audio/private/voice_sound_engine_interface.cpp
     engineui.cpp
-    enginetool.cpp
-    toolframework.cpp
-    sys_linuxwind.cpp
     audio/private/snd_posix.cpp
-    audio/private/snd_mp3_source.cpp
-    audio/private/snd_wave_mixer_mp3.cpp
     audio/private/voice_mixer_controls_sdl.cpp
     audio/private/voice_record_sdl.cpp
 )
-target_link_libraries(engine PRIVATE ks_common ks_shared ks_jpeg ks_desktop tier0 memoverride public_common appframework bitmap dmxloader soundsystem_lowlevel tier1 tier2 tier3 interfaces vstdlib mathlib vtf videocfg scenefilecache localize vscript studiorender soundemittersystem datacache vphysics inputsystem materialsystem rocketui_client vaudio_celt shaderapidx9 stdshader_dx9 launcher dedicated filesystem_stdio matchmaking RmlDebugger shaderapiempty bzip2 mojoAL)
+target_link_libraries(engine PRIVATE ks_common ks_shared ks_jpeg ks_desktop tier0 memoverride public_common appframework bitmap dmxloader soundsystem_lowlevel tier1 tier2 tier3 interfaces vstdlib mathlib vtf videocfg scenefilecache localize vscript studiorender soundemittersystem datacache vphysics inputsystem materialsystem rocketui_client vaudio_celt stdshader_dx9 launcher dedicated filesystem_stdio matchmaking RmlDebugger bzip2 mojoAL)
 target_include_directories(engine PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/." "${CMAKE_CURRENT_SOURCE_DIR}/audio" "${CMAKE_CURRENT_SOURCE_DIR}/audio/private" "${CMAKE_CURRENT_SOURCE_DIR}/audio/private/snd_op_sys" "${CMAKE_CURRENT_SOURCE_DIR}/audio/public" "${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty/quickhull")
 target_compile_definitions(engine PRIVATE USE_CONVARS=1 VOICE_OVER_IP=1 ENGINE_DLL=1 USE_BREAKPAD_HANDLER=1)
-set_target_properties(engine PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
-target_link_options(engine PRIVATE LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/engine.map)
-set_property(TARGET engine APPEND PROPERTY LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/engine.map")

@@ -4,7 +4,6 @@
 
 // Purpose: Singleton manager for color correction on the client
 
-import std;
 #include "igamesystem.h"
 
 class C_BasePlayer;

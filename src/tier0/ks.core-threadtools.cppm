@@ -386,8 +386,11 @@ private:
 class CThread
 {
 public:
-	CThread();
-	virtual ~CThread();
+	// fnRun is the thread's body: it runs on the new thread once Start() has been called and its
+	// return value is the thread's result.  Classes that own a thread and want the body to be a
+	// member pass a lambda that forwards to it.
+	explicit CThread( std::move_only_function< int() > fnRun );
+	~CThread();
 
 	//-----------------------------------------------------
 
@@ -401,7 +404,7 @@ public:
 	//-----------------------------------------------------
 
 	// Start thread running  - error if already running
-	virtual bool Start( unsigned nBytesStack = 0, ThreadPriorityEnum_t nPriority = TP_PRIORITY_DEFAULT );
+	bool Start( unsigned nBytesStack = 0, ThreadPriorityEnum_t nPriority = TP_PRIORITY_DEFAULT );
 
 	// Returns true if thread has been created and hasn't yet exited
 	bool IsAlive();
@@ -461,27 +464,13 @@ public:
 
 protected:
 
-	// Optional pre-run call, with ability to fail-create. Note Init()
-	// is forced synchronous with Start()
-	virtual bool Init();
-
-	// Thread will run this function on startup, must be supplied by
-	// derived class, performs the intended action of the thread.
-	virtual int Run() = 0;
-
-	// Called when the thread exits
-	virtual void OnExit();
-
-	// Allow for custom start waiting
-	virtual bool WaitForCreateComplete( CThreadEvent *pEvent );
 	const ThreadId_t GetThreadID() const { return (ThreadId_t)ks::platform::thread_id( m_threadId ); }
 
 	static void* ThreadProc( void * pv );
 	typedef void* (*ThreadProc_t)( void * pv );
 	static void ThreadProcRunWithMinidumpHandler( void *pv );
 
-	virtual ThreadProc_t GetThreadProc();
-	virtual bool IsThreadRunning();
+	bool IsThreadRunning();
 
 	std::recursive_mutex m_Lock;
 	CThreadEvent m_ExitEvent;	// Set right before the thread's function exits.
@@ -504,6 +493,8 @@ private:
 	// make copy constructor and assignment operator inaccessible
 	CThread( const CThread & );
 	CThread &operator=( const CThread & );
+
+	std::move_only_function< int() > m_fnRun;
 
 	ks::platform::thread *m_threadId = nullptr;
 	volatile uint64 m_threadZombieId = 0;
@@ -533,7 +524,7 @@ enum WTCallResult_t
 class CWorkerThread : public CThread
 {
 public:
-	CWorkerThread();
+	explicit CWorkerThread( std::move_only_function< int() > fnRun );
 
 	//-----------------------------------------------------
 	//

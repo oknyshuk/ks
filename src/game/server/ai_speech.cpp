@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-#include <string.h>
 
-import std;
-import ks.tier1;
+// POSIX, not part of the standard library module.
+extern "C" char *strtok_r( char *, const char *, char ** ) noexcept;
+
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -55,7 +55,6 @@ inline void SpeechMsg( ... ) {}
 #endif
 
 
-extern ConVar rr_debugresponses;
 
 //-----------------------------------------------------------------------------
 

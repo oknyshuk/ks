@@ -28,11 +28,8 @@
 #include "materialsystem/materialsystem_config.h"
 
 extern IGameUIFuncs *gameuifuncs;
-extern IMaterialSystem *materials;
 
 #include <rocketui/rmlui.h>
-import ks.tier1;
-import std;
 #include "rkhud_pausemenu.h"
 #include "rkmenu_main.h"
 

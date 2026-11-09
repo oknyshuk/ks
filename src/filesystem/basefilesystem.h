@@ -94,7 +94,7 @@ class CFileHandle
 {
 public:
 	CFileHandle( CBaseFileSystem* fs );
-	virtual ~CFileHandle();
+	~CFileHandle();
 
 	void	Init( CBaseFileSystem* fs );
 
@@ -174,34 +174,47 @@ protected:
 
 //-----------------------------------------------------------------------------
 
-class CPackFile : public CRefCounted<CRefCountServiceMT>
+class CPackFile
 {		
 public:
 
-	inline CPackFile();
-	inline virtual ~CPackFile();
+	CPackFile( CBaseFileSystem* fs, void *pSection = nullptr );
+	~CPackFile();
+
+	// Reference counting: a pack file is shared by the search paths and handles that use it. Starts at one.
+	int AddRef() { return m_iRefs.fetch_add( 1 ) + 1; }
+	int Release()
+	{
+		int result = m_iRefs.fetch_sub( 1 ) - 1;
+		if ( !result )
+			delete this;
+		return result;
+	}
 
 	// The means by which you open files:
-	virtual CFileHandle *OpenFile( const char *pFileName, const char *pOptions = "rb" );
+	CFileHandle *OpenFile( const char *pFileName, const char *pOptions = "rb" );
 
-	// The two functions a pack file must provide
-	virtual bool Prepare( int64 fileLen = -1, int64 nFileOfs = 0 ) = 0;
-	virtual bool FindFile( const char *pFilename,  int &nIndex, int64 &nPosition, int &nLength ) = 0;
+	// Loads the pack file
+	bool Prepare( int64 fileLen = -1, int64 nFileOfs = 0 );
+	bool FindFile( const char *pFilename, int &nIndex, int64 &nOffset, int &nLength );
 
 	// This is the core IO routine for reading anything from a pack file, everything should go through here at some point
-	virtual int ReadFromPack( int nIndex, void* buffer, int nDestBytes, int nBytes, int64 nOffset );
+	int ReadFromPack( int nIndex, void* buffer, int nDestBytes, int nBytes, int64 nOffset );
+	
+	// Reads from the underlying file or VPK, without the preload data
+	int ReadFromPackDirect( int nIndex, void* buffer, int nDestBytes, int nBytes, int64 nOffset );
 	
 	// Returns the filename for a given file in the pack. Returns true if a filename is found, otherwise buffer is filled with "unknown"
-	virtual bool IndexToFilename( int nIndex, char* buffer, int nBufferSize ) = 0;
+	bool IndexToFilename( int nIndex, char *pBuffer, int nBufferSize );
 
 	inline int GetSectorSize();
 
-	virtual void SetupPreloadData() {}
-	virtual void DiscardPreloadData() {}
-	virtual int64 GetPackFileBaseOffset() = 0;
+	void SetupPreloadData();
+	void DiscardPreloadData();
+	int64 GetPackFileBaseOffset() { return m_nBaseOffset; }
 
-	virtual CRC32_t GetKVPoolKey() { return 0; }
-	virtual bool GetStringFromKVPool( unsigned int key, char *pOutBuff, int buflen ) { return false; }
+	CRC32_t GetKVPoolKey();
+	bool GetStringFromKVPool( unsigned int key, char *pOutBuff, int buflen );
 
 	// Note: threading model for pack files assumes that data
 	// is segmented into pack files that aggregate files
@@ -231,29 +244,11 @@ public:
 
 	int					m_PackFileID;
 protected:
+	std::atomic<int>	m_iRefs;
 	int64				m_FileLength;
 	CBaseFileSystem		*m_fs;
 
 	friend class		CPackFileHandle;
-};
-
-class CZipPackFile : public CPackFile
-{
-public:
-	CZipPackFile( CBaseFileSystem* fs, void *pSection = nullptr );
-	~CZipPackFile();
-
-	// Loads the pack file
-	virtual bool Prepare( int64 fileLen = -1, int64 nFileOfs = 0 );
-	virtual bool FindFile( const char *pFilename, int &nIndex, int64 &nOffset, int &nLength );
-	virtual int  ReadFromPack( int nIndex, void* buffer, int nDestBytes, int nBytes, int64 nOffset  );
-
-	int64 GetPackFileBaseOffset() { return m_nBaseOffset; }
-
-	bool	IndexToFilename( int nIndex, char *pBuffer, int nBufferSize );
-
-	virtual CRC32_t GetKVPoolKey();
-	virtual bool GetStringFromKVPool( unsigned int key, char *pOutBuff, int buflen );
 
 protected:
 	#pragma pack(1)
@@ -303,8 +298,6 @@ protected:
 	bool						GetOffsetAndLength( const char *FileName, int &nBaseIndex, int64 &nFileOffset, int &nLength );
 
 	// Preload Support
-	void						SetupPreloadData();	
-	void						DiscardPreloadData();	
 	ZIP_PreloadDirectoryEntry*	GetPreloadEntry( int nEntryIndex );
 
 	int64						m_nPreloadSectionOffset;
@@ -336,7 +329,7 @@ public:
 
 //-----------------------------------------------------------------------------
 
-class CBaseFileSystem : public CTier2AppSystem< IFileSystem >
+class CBaseFileSystem : public IFileSystem
 {
 	friend class CPackFileHandle;
 	friend class CPackFile;
@@ -346,16 +339,16 @@ class CBaseFileSystem : public CTier2AppSystem< IFileSystem >
 	friend class CFileTracker2;
 	friend class CFileOpenInfo;
 
-	typedef CTier2AppSystem< IFileSystem > BaseClass;
-
 public:
 	CBaseFileSystem();
 	~CBaseFileSystem();
 
-	// Methods of IAppSystem
-	virtual void				*QueryInterface( const char *pInterfaceName );
-	virtual InitReturnVal_t		Init();
-	virtual void				Shutdown();
+	// App system protocol (see IFileSystem)
+	bool						Connect( CreateInterfaceFn factory );
+	void						Disconnect();
+	void						*QueryInterface( const char *pInterfaceName );
+	InitReturnVal_t				Init();
+	void						Shutdown();
 
 	void						InitAsync();
 	void						ShutdownAsync();
@@ -363,148 +356,155 @@ public:
 	void						ParsePathID( const char* &pFilename, const char* &pPathID, char tempPathID[MAX_PATH] );
 
 	// file handling
-	virtual FileHandle_t		Open( const char *pFileName, const char *pOptions, const char *pathID );
-	virtual FileHandle_t		OpenEx( const char *pFileName, const char *pOptions, unsigned flags = 0, const char *pathID = 0, char **ppszResolvedFilename = nullptr );
-	virtual void				Close( FileHandle_t );
-	virtual void				Seek( FileHandle_t file, int pos, FileSystemSeek_t method );
-	virtual unsigned int		Tell( FileHandle_t file );
-	virtual unsigned int		Size( FileHandle_t file );
-	virtual unsigned int		Size( const char *pFileName, const char *pPathID );
+	FileHandle_t		Open( const char *pFileName, const char *pOptions, const char *pathID );
+	FileHandle_t		OpenEx( const char *pFileName, const char *pOptions, unsigned flags = 0, const char *pathID = 0, char **ppszResolvedFilename = nullptr );
+	void				Close( FileHandle_t );
+	void				Seek( FileHandle_t file, int pos, FileSystemSeek_t method );
+	unsigned int		Tell( FileHandle_t file );
+	unsigned int		Size( FileHandle_t file );
+	unsigned int		Size( const char *pFileName, const char *pPathID );
 
-	virtual void				SetBufferSize( FileHandle_t file, unsigned nBytes );
-	virtual bool				IsOk( FileHandle_t file );
-	virtual void				Flush( FileHandle_t file );
-	virtual bool				Precache( const char *pFileName, const char *pPathID );
-	virtual bool				EndOfFile( FileHandle_t file );
+	void				SetBufferSize( FileHandle_t file, unsigned nBytes );
+	bool				IsOk( FileHandle_t file );
+	void				Flush( FileHandle_t file );
+	bool				Precache( const char *pFileName, const char *pPathID );
+	bool				EndOfFile( FileHandle_t file );
  
-	virtual int					Read( void *pOutput, int size, FileHandle_t file );
-	virtual int					ReadEx( void* pOutput, int sizeDest, int size, FileHandle_t file );
-	virtual int					Write( void const* pInput, int size, FileHandle_t file );
-	virtual char				*ReadLine( char *pOutput, int maxChars, FileHandle_t file );
-	[[gnu::format(printf, 3, 4)]] virtual int					FPrintf( FileHandle_t file, const char *pFormat, ... );
+	int					Read( void *pOutput, int size, FileHandle_t file );
+	int					ReadEx( void* pOutput, int sizeDest, int size, FileHandle_t file );
+	int					Write( void const* pInput, int size, FileHandle_t file );
+	char				*ReadLine( char *pOutput, int maxChars, FileHandle_t file );
+	int							FVPrintf( FileHandle_t file, const char *pFormat, std::va_list args );
 
 	// Reads/writes whole files
-	virtual std::optional< std::vector< std::byte > >	ReadFile( const char *pFileName, const char *pPath, int nMaxBytes = 0, int nStartingByte = 0 );
-	virtual bool				WriteFile( const char *pFileName, const char *pPath, std::span< const std::byte > data );
-	virtual bool				UnzipFile( const char *pFileName, const char *pPath, const char *pDestination );
-	virtual int					ReadFileEx( const char *pFileName, const char *pPath, void **ppBuf, bool bNullTerminate, bool bOptimalAlloc, int nMaxBytes = 0, int nStartingByte = 0, FSAllocFunc_t pfnAlloc = nullptr );
-	virtual std::optional< std::vector< std::byte > >	ReadToVector( FileHandle_t hFile, int nMaxBytes = 0 );
+	std::optional< std::vector< std::byte > >	ReadFile( const char *pFileName, const char *pPath, int nMaxBytes = 0, int nStartingByte = 0 );
+	bool				WriteFile( const char *pFileName, const char *pPath, std::span< const std::byte > data );
+	bool				UnzipFile( const char *pFileName, const char *pPath, const char *pDestination );
+	int					ReadFileEx( const char *pFileName, const char *pPath, void **ppBuf, bool bNullTerminate, bool bOptimalAlloc, int nMaxBytes = 0, int nStartingByte = 0, FSAllocFunc_t pfnAlloc = nullptr );
+	std::optional< std::vector< std::byte > >	ReadToVector( FileHandle_t hFile, int nMaxBytes = 0 );
 
 	// Optimal buffer
 	bool						GetOptimalIOConstraints( FileHandle_t hFile, unsigned *pOffsetAlign, unsigned *pSizeAlign, unsigned *pBufferAlign );
-	void						*AllocOptimalReadBuffer( FileHandle_t hFile, unsigned nSize, unsigned nOffset )	{ return MemAlloc_Alloc( nSize ); }
-	void						FreeOptimalReadBuffer( void *p ) { g_pMemAlloc->Free( p ); }
+	void						*AllocOptimalReadBuffer( FileHandle_t hFile, unsigned nSize = 0, unsigned nOffset = 0 );
+	void						FreeOptimalReadBuffer( void *p );
+
+	// Remote resources: everything is local
+	WaitForResourcesHandle_t	WaitForResources( const char *resourcelist );
+	bool						GetWaitForResourcesProgress( WaitForResourcesHandle_t handle, float *progress /* out */ , bool *complete /* out */ );
+	void						CancelWaitForResources( WaitForResourcesHandle_t handle );
+	int							HintResourceNeed( const char *hintlist, int forgetEverything );
+	bool						IsFileImmediatelyAvailable(const char *pFileName);
 
 	// Gets the current working directory
-	virtual bool				GetCurrentDirectory( char* pDirectory, int maxlen );
+	bool				GetCurrentDirectory( char* pDirectory, int maxlen );
 
-	virtual void				CreateDirHierarchy( const char *path, const char *pathID );
+	void				CreateDirHierarchy( const char *path, const char *pathID );
 
 	// returns true if the file is a directory
-	virtual bool				IsDirectory( const char *pFileName, const char *pathID );
+	bool				IsDirectory( const char *pFileName, const char *pathID );
 
 	// path info
-	virtual const char			*GetLocalPath( const char *pFileName, char *pLocalPath, int localPathBufferSize );
-	virtual bool				FullPathToRelativePath( const char *pFullpath, char *pRelative, int maxlen );
+	const char			*GetLocalPath( const char *pFileName, char *pLocalPath, int localPathBufferSize );
+	bool				FullPathToRelativePath( const char *pFullpath, char *pRelative, int maxlen );
 
 	// removes a file from disk
-	virtual void				RemoveFile( char const* pRelativePath, const char *pathID );
+	void				RemoveFile( char const* pRelativePath, const char *pathID );
 
 	// Remove all search paths (including write path?)
-	virtual void				RemoveAllSearchPaths( void );
+	void				RemoveAllSearchPaths( void );
 
 	// Purpose: Removes all search paths for a given pathID, such as all "GAME" paths.
-	virtual void				RemoveSearchPaths( const char *pathID );
+	void				RemoveSearchPaths( const char *pathID );
 
 	// STUFF FROM IFileSystem
 	// Add paths in priority order (mod dir, game dir, ....)
 	// Can also add pak files (errr, NOT YET!)
-	virtual void				AddSearchPath( const char *pPath, const char *pathID, SearchPathAdd_t addType );
-	virtual bool				RemoveSearchPath( const char *pPath, const char *pathID );
-	virtual void				PrintSearchPaths( void );
+	void				AddSearchPath( const char *pPath, const char *pathID, SearchPathAdd_t addType );
+	bool				RemoveSearchPath( const char *pPath, const char *pathID );
+	void				PrintSearchPaths( void );
 
-	virtual void				MarkPathIDByRequestOnly( const char *pPathID, bool bRequestOnly );
+	void				MarkPathIDByRequestOnly( const char *pPathID, bool bRequestOnly );
 
-	virtual bool				IsFileInReadOnlySearchPath(const char *pPath, const char *pathID = 0);
+	bool				IsFileInReadOnlySearchPath(const char *pPath, const char *pathID = 0);
 
-	virtual bool				FileExists( const char *pFileName, const char *pPathID = nullptr );
-	virtual long				GetFileTime( const char *pFileName, const char *pPathID = nullptr );
-	virtual bool				IsFileWritable( char const *pFileName, const char *pPathID = nullptr );
-	virtual bool				SetFileWritable( char const *pFileName, bool writable, const char *pPathID = 0 );
-	virtual void				FileTimeToString( char *pString, int maxChars, long fileTime );
+	bool				FileExists( const char *pFileName, const char *pPathID = nullptr );
+	long				GetFileTime( const char *pFileName, const char *pPathID = nullptr );
+	bool				IsFileWritable( char const *pFileName, const char *pPathID = nullptr );
+	bool				SetFileWritable( char const *pFileName, bool writable, const char *pPathID = 0 );
+	void				FileTimeToString( char *pString, int maxChars, long fileTime );
 	
-	virtual const char			*FindFirst( const char *pWildCard, FileFindHandle_t *pHandle );
-	virtual const char			*FindFirstEx( const char *pWildCard, const char *pPathID, FileFindHandle_t *pHandle );
-	virtual const char			*FindNext( FileFindHandle_t handle );
-	virtual bool				FindIsDirectory( FileFindHandle_t handle );
-	virtual void				FindClose( FileFindHandle_t handle );
+	const char			*FindFirst( const char *pWildCard, FileFindHandle_t *pHandle );
+	const char			*FindFirstEx( const char *pWildCard, const char *pPathID, FileFindHandle_t *pHandle );
+	const char			*FindNext( FileFindHandle_t handle );
+	bool				FindIsDirectory( FileFindHandle_t handle );
+	void				FindClose( FileFindHandle_t handle );
 
-	virtual void				FindFileAbsoluteList( std::vector< std::string > &outAbsolutePathNames, const char *pWildCard, const char *pPathID );
+	void				FindFileAbsoluteList( std::vector< std::string > &outAbsolutePathNames, const char *pWildCard, const char *pPathID );
 
-	virtual void				PrintOpenedFiles( void );
-	virtual void				SetWarningFunc( void (*pfnWarning)( const char *fmt, ... ) );
-	virtual void				SetWarningLevel( FileWarningLevel_t level );
-	virtual void				AddLoggingFunc( FileSystemLoggingFunc_t logFunc );
-	virtual void				RemoveLoggingFunc( FileSystemLoggingFunc_t logFunc );
-	virtual bool				RenameFile( char const *pOldPath, char const *pNewPath, const char *pathID );
+	void				PrintOpenedFiles( void );
+	void				SetWarningFunc( void (*pfnWarning)( const char *fmt, ... ) );
+	void				SetWarningLevel( FileWarningLevel_t level );
+	void				AddLoggingFunc( FileSystemLoggingFunc_t logFunc );
+	void				RemoveLoggingFunc( FileSystemLoggingFunc_t logFunc );
+	bool				RenameFile( char const *pOldPath, char const *pNewPath, const char *pathID );
 
-	virtual void				GetLocalCopy( const char *pFileName );
+	void				GetLocalCopy( const char *pFileName );
 
-	virtual FileNameHandle_t	FindOrAddFileName( char const *pFileName );
-	virtual FileNameHandle_t	FindFileName( char const *pFileName );
-	virtual bool				String( const FileNameHandle_t& handle, char *buf, int buflen );
-	virtual int					GetPathIndex( const FileNameHandle_t &handle );
+	FileNameHandle_t	FindOrAddFileName( char const *pFileName );
+	FileNameHandle_t	FindFileName( char const *pFileName );
+	bool				String( const FileNameHandle_t& handle, char *buf, int buflen );
+	int					GetPathIndex( const FileNameHandle_t &handle );
 	long						GetPathTime( const char *pFileName, const char *pPathID );
 	
 	bool						ShouldGameReloadFile( const char *pFilename );
-	virtual void				EnableWhitelistFileTracking( bool bEnable, bool bCacheAllVPKHashes, bool bRecalculateAndCheckHashes );
-	virtual void				RegisterFileWhitelist( IFileList *pWantCRCList, IFileList *pAllowFromDiskList, IFileList **pFilesToReload );
-	virtual	void				MarkAllCRCsUnverified();
-	virtual void				CacheFileCRCs( const char *pPathname, ECacheCRCType eType, IFileList *pFilter );
+	void				EnableWhitelistFileTracking( bool bEnable, bool bCacheAllVPKHashes, bool bRecalculateAndCheckHashes );
+	void				RegisterFileWhitelist( IFileList *pWantCRCList, IFileList *pAllowFromDiskList, IFileList **pFilesToReload );
+	void				MarkAllCRCsUnverified();
+	void				CacheFileCRCs( const char *pPathname, ECacheCRCType eType, IFileList *pFilter );
 	void						CacheFileCRCs_R( const char *pPathname, ECacheCRCType eType, IFileList *pFilter, std::set< std::string, ks::iless > &searchPathNames );
-	virtual EFileCRCStatus		CheckCachedFileHash( const char *pPathID, const char *pRelativeFilename, int nFileFraction, FileHash_t *pFileHash );
-	virtual int					GetUnverifiedFileHashes( CUnverifiedFileHash *pFiles, int nMaxFiles );
-	virtual int					GetWhitelistSpewFlags();
-	virtual void				SetWhitelistSpewFlags( int flags );
-	virtual void				InstallDirtyDiskReportFunc( FSDirtyDiskReportFunc_t func );
+	EFileCRCStatus		CheckCachedFileHash( const char *pPathID, const char *pRelativeFilename, int nFileFraction, FileHash_t *pFileHash );
+	int					GetUnverifiedFileHashes( CUnverifiedFileHash *pFiles, int nMaxFiles );
+	int					GetWhitelistSpewFlags();
+	void				SetWhitelistSpewFlags( int flags );
+	void				InstallDirtyDiskReportFunc( FSDirtyDiskReportFunc_t func );
 
-	virtual void				CacheAllVPKFileHashes( bool bCacheAllVPKHashes, bool bRecalculateAndCheckHashes );
-	virtual bool				CheckVPKFileHash( int PackFileID, int nPackFileNumber, int nFileFraction, MD5Value_t &md5Value );
+	void				CacheAllVPKFileHashes( bool bCacheAllVPKHashes, bool bRecalculateAndCheckHashes );
+	bool				CheckVPKFileHash( int PackFileID, int nPackFileNumber, int nFileFraction, MD5Value_t &md5Value );
 
 	// Returns the file system statistics retreived by the implementation.  Returns NULL if not supported.
-	virtual const FileSystemStatistics *GetFilesystemStatistics();
+	const FileSystemStatistics *GetFilesystemStatistics();
 	
 	// GetVPKFileStatisticsKV
-	virtual void GetVPKFileStatisticsKV( KeyValues *pKV );
+	void GetVPKFileStatisticsKV( KeyValues *pKV );
 
 	// Load dlls
-	virtual CSysModule 			*LoadModule( const char *pFileName, const char *pPathID, bool bValidatedDllOnly );
-	virtual void				UnloadModule( CSysModule *pModule );
+	CSysModule 			*LoadModule( const char *pFileName, const char *pPathID, bool bValidatedDllOnly );
+	void				UnloadModule( CSysModule *pModule );
 
 	//--------------------------------------------------------
 	// asynchronous file loading
 	//--------------------------------------------------------
-	virtual FSAsyncStatus_t		AsyncReadMultiple( const FileAsyncRequest_t *pRequests, int nRequests, FSAsyncControl_t *pControls );
-	virtual FSAsyncStatus_t		AsyncReadMultipleCreditAlloc( const FileAsyncRequest_t *pRequests, int nRequests, const char *pszFile, int line, FSAsyncControl_t *phControls = nullptr );
-	virtual FSAsyncStatus_t		AsyncDirectoryScan( const char* pSearchSpec, bool recurseFolders, void* pContext, FSAsyncScanAddFunc_t pfnAdd, FSAsyncScanCompleteFunc_t pfnDone, FSAsyncControl_t *pControl = nullptr );
-	virtual FSAsyncStatus_t		AsyncFinish( FSAsyncControl_t hControl, bool wait );
-	virtual FSAsyncStatus_t		AsyncGetResult( FSAsyncControl_t hControl, void **ppData, int *pSize );
-	virtual FSAsyncStatus_t		AsyncAbort( FSAsyncControl_t hControl );
-	virtual FSAsyncStatus_t		AsyncStatus( FSAsyncControl_t hControl );
-	virtual FSAsyncStatus_t		AsyncSetPriority(FSAsyncControl_t hControl, int newPriority);
-	virtual FSAsyncStatus_t		AsyncFlush();
-	virtual FSAsyncStatus_t		AsyncAppend(const char *pFileName, const void *pSrc, int nSrcBytes, bool bFreeMemory, FSAsyncControl_t *pControl) { return AsyncWrite( pFileName, pSrc, nSrcBytes, bFreeMemory, true, pControl); }
-	virtual FSAsyncStatus_t		AsyncWrite(const char *pFileName, const void *pSrc, int nSrcBytes, bool bFreeMemory, bool bAppend, FSAsyncControl_t *pControl);
-	virtual FSAsyncStatus_t		AsyncAppendFile(const char *pDestFileName, const char *pSrcFileName, FSAsyncControl_t *pControl);
-	virtual void				AsyncFinishAll( int iToPriority = std::numeric_limits<int>::min() );
-	virtual void				AsyncFinishAllWrites();
-	virtual bool				AsyncSuspend();
-	virtual bool				AsyncResume();
+	FSAsyncStatus_t		AsyncReadMultiple( const FileAsyncRequest_t *pRequests, int nRequests, FSAsyncControl_t *pControls );
+	FSAsyncStatus_t		AsyncReadMultipleCreditAlloc( const FileAsyncRequest_t *pRequests, int nRequests, const char *pszFile, int line, FSAsyncControl_t *phControls = nullptr );
+	FSAsyncStatus_t		AsyncDirectoryScan( const char* pSearchSpec, bool recurseFolders, void* pContext, FSAsyncScanAddFunc_t pfnAdd, FSAsyncScanCompleteFunc_t pfnDone, FSAsyncControl_t *pControl = nullptr );
+	FSAsyncStatus_t		AsyncFinish( FSAsyncControl_t hControl, bool wait );
+	FSAsyncStatus_t		AsyncGetResult( FSAsyncControl_t hControl, void **ppData, int *pSize );
+	FSAsyncStatus_t		AsyncAbort( FSAsyncControl_t hControl );
+	FSAsyncStatus_t		AsyncStatus( FSAsyncControl_t hControl );
+	FSAsyncStatus_t		AsyncSetPriority(FSAsyncControl_t hControl, int newPriority);
+	FSAsyncStatus_t		AsyncFlush();
+	FSAsyncStatus_t		AsyncAppend(const char *pFileName, const void *pSrc, int nSrcBytes, bool bFreeMemory, FSAsyncControl_t *pControl) { return AsyncWrite( pFileName, pSrc, nSrcBytes, bFreeMemory, true, pControl); }
+	FSAsyncStatus_t		AsyncWrite(const char *pFileName, const void *pSrc, int nSrcBytes, bool bFreeMemory, bool bAppend, FSAsyncControl_t *pControl);
+	FSAsyncStatus_t		AsyncAppendFile(const char *pDestFileName, const char *pSrcFileName, FSAsyncControl_t *pControl);
+	void				AsyncFinishAll( int iToPriority = std::numeric_limits<int>::min() );
+	void				AsyncFinishAllWrites();
+	bool				AsyncSuspend();
+	bool				AsyncResume();
 
-	virtual void				AsyncAddRef( FSAsyncControl_t hControl );
-	virtual void				AsyncRelease( FSAsyncControl_t hControl );
-	virtual FSAsyncStatus_t		AsyncBeginRead( const char *pszFile, FSAsyncFile_t *phFile );
-	virtual FSAsyncStatus_t		AsyncEndRead( FSAsyncFile_t hFile );
+	void				AsyncAddRef( FSAsyncControl_t hControl );
+	void				AsyncRelease( FSAsyncControl_t hControl );
+	FSAsyncStatus_t		AsyncBeginRead( const char *pszFile, FSAsyncFile_t *phFile );
+	FSAsyncStatus_t		AsyncEndRead( FSAsyncFile_t hFile );
 
 	//--------------------------------------------------------
 	// pack files
@@ -514,16 +514,16 @@ public:
 
 	// converts a partial path into a full path
 	// can be filtered to restrict path types and can provide info about resolved path
-	virtual const char			*RelativePathToFullPath( const char *pFileName, const char *pPathID, char *pFullPath, int fullPathBufferSize, PathTypeFilter_t pathFilter = FILTER_NONE, PathTypeQuery_t *pPathType = nullptr );
+	const char			*RelativePathToFullPath( const char *pFileName, const char *pPathID, char *pFullPath, int fullPathBufferSize, PathTypeFilter_t pathFilter = FILTER_NONE, PathTypeQuery_t *pPathType = nullptr );
 	// Returns the search path, each path is separated by ;s. Returns the length of the string returned
-	virtual int					GetSearchPath( const char *pathID, bool bGetPackFiles, char *pPath, int nMaxLen );
-	virtual int					GetSearchPathID( char *pPath, int nMaxLen );
+	int					GetSearchPath( const char *pathID, bool bGetPackFiles, char *pPath, int nMaxLen );
+	int					GetSearchPathID( char *pPath, int nMaxLen );
 
-	virtual bool				GetFileTypeForFullPath( char const *pFullPath, wchar_t *buf, std::size_t bufSizeInBytes );
+	bool				GetFileTypeForFullPath( char const *pFullPath, wchar_t *buf, std::size_t bufSizeInBytes );
 
-	virtual void				BeginMapAccess();
-	virtual void				EndMapAccess();
-	virtual bool				FullPathToRelativePathEx( const char *pFullpath, const char *pPathId, char *pRelative, int maxlen );
+	void				BeginMapAccess();
+	void				EndMapAccess();
+	bool				FullPathToRelativePathEx( const char *pFullpath, const char *pPathId, char *pRelative, int maxlen );
 
 	FSAsyncStatus_t				SyncRead( const FileAsyncRequest_t &request );
 	FSAsyncStatus_t				SyncWrite(const char *pszFilename, const void *pSrc, int nSrcBytes, bool bFreeMemory, bool bAppend );
@@ -536,40 +536,40 @@ public:
 
 	// If the "PreloadedData" hasn't been purged, then this'll try and instance the KeyValues using the fast path of compiled keyvalues loaded during startup.
 	// Otherwise, it'll just fall through to the regular KeyValues loading routines
-	virtual KeyValues			*LoadKeyValues( KeyValuesPreloadType_t type, char const *filename, char const *pPathID = 0 );
-	virtual bool				LoadKeyValues( KeyValues& head, KeyValuesPreloadType_t type, char const *filename, char const *pPathID = 0 );
+	KeyValues			*LoadKeyValues( KeyValuesPreloadType_t type, char const *filename, char const *pPathID = 0 );
+	bool				LoadKeyValues( KeyValues& head, KeyValuesPreloadType_t type, char const *filename, char const *pPathID = 0 );
 
-	virtual bool				IsLaunchedFromXboxHDD() { return m_bLaunchedFromXboxHDD; }
-	virtual bool				IsInstalledToXboxHDDCache() { return m_bFoundXboxImageInCache; }
-	virtual bool				IsDVDHosted() { return m_bDVDHosted; }
-	virtual bool				IsInstallAllowed() { return m_bAllowXboxInstall; }
-	virtual bool				FixupSearchPathsAfterInstall();
+	bool				IsLaunchedFromXboxHDD() { return m_bLaunchedFromXboxHDD; }
+	bool				IsInstalledToXboxHDDCache() { return m_bFoundXboxImageInCache; }
+	bool				IsDVDHosted() { return m_bDVDHosted; }
+	bool				IsInstallAllowed() { return m_bAllowXboxInstall; }
+	bool				FixupSearchPathsAfterInstall();
 
-	virtual FSDirtyDiskReportFunc_t		GetDirtyDiskReportFunc() { return m_DirtyDiskReportFunc; }
+	FSDirtyDiskReportFunc_t		GetDirtyDiskReportFunc() { return m_DirtyDiskReportFunc; }
 
-	virtual void AddVPKFile( char const *pszName, SearchPathAdd_t addType = PATH_ADD_TO_TAIL );
-	virtual void RemoveVPKFile( char const *pszName );
-	virtual void GetVPKFileNames( std::vector< std::string > &destVector );
+	void AddVPKFile( char const *pszName, SearchPathAdd_t addType = PATH_ADD_TO_TAIL );
+	void RemoveVPKFile( char const *pszName );
+	void GetVPKFileNames( std::vector< std::string > &destVector );
 
-	virtual void				RemoveAllMapSearchPaths( void );
+	void				RemoveAllMapSearchPaths( void );
 
 	void						BuildExcludeList();
-	virtual void				SyncDvdDevCache();
+	void				SyncDvdDevCache();
 	bool						FixupFATXFilename( const char *pFilename, char *pOutFilename, int nOutSize );
-	virtual bool				GetStringFromKVPool( CRC32_t poolKey, unsigned int key, char *pOutBuff, int buflen );
+	bool				GetStringFromKVPool( CRC32_t poolKey, unsigned int key, char *pOutBuff, int buflen );
 
-	virtual bool				DiscoverDLC( int iController );
-	virtual int					IsAnyDLCPresent( bool *pbDLCSearchPathMounted = nullptr );
-	virtual bool				GetAnyDLCInfo( int iDLC, unsigned int *pLicenseMask, wchar_t *pTitleBuff, int nOutTitleSize );
-	virtual int					IsAnyCorruptDLC();
-	virtual bool				GetAnyCorruptDLCInfo( int iCorruptDLC, wchar_t *pTitleBuff, int nOutTitleSize );
-	virtual bool				AddDLCSearchPaths();
-	virtual bool				IsSpecificDLCPresent( unsigned int nDLCPackage );
+	bool				DiscoverDLC( int iController );
+	int					IsAnyDLCPresent( bool *pbDLCSearchPathMounted = nullptr );
+	bool				GetAnyDLCInfo( int iDLC, unsigned int *pLicenseMask, wchar_t *pTitleBuff, int nOutTitleSize );
+	int					IsAnyCorruptDLC();
+	bool				GetAnyCorruptDLCInfo( int iCorruptDLC, wchar_t *pTitleBuff, int nOutTitleSize );
+	bool				AddDLCSearchPaths();
+	bool				IsSpecificDLCPresent( unsigned int nDLCPackage );
 	void						PrintDLCInfo();
-	virtual void                SetIODelayAlarm( float flTime );
-	virtual bool				AddXLSPUpdateSearchPath( const void *pData, int nSize );
+	void                SetIODelayAlarm( float flTime );
+	bool				AddXLSPUpdateSearchPath( const void *pData, int nSize );
 
-	virtual IIoStats			*GetIoStats();
+	IIoStats			*GetIoStats();
 
 public:
 	//------------------------------------
@@ -816,26 +816,26 @@ protected:
 	//----------------------------------------------------------------------------
 	// Purpose: Functions implementing basic file system behavior.
 	//----------------------------------------------------------------------------
-	virtual std::FILE *FS_fopen( const char *filename, const char *options, unsigned flags, int64 *size, CFileLoadInfo *pInfo ) = 0;
-	virtual void FS_setbufsize( std::FILE *fp, unsigned nBytes ) = 0;
-	virtual void FS_fclose( std::FILE *fp ) = 0;
-	virtual void FS_fseek( std::FILE *fp, int64 pos, int seekType ) = 0;
-	virtual long FS_ftell( std::FILE *fp ) = 0;
-	virtual int FS_feof( std::FILE *fp ) = 0;
+	std::FILE *FS_fopen( const char *filename, const char *options, unsigned flags, int64 *size, CFileLoadInfo *pInfo );
+	void FS_setbufsize( std::FILE *fp, unsigned nBytes );
+	void FS_fclose( std::FILE *fp );
+	void FS_fseek( std::FILE *fp, int64 pos, int seekType );
+	long FS_ftell( std::FILE *fp );
+	int FS_feof( std::FILE *fp );
 	std::size_t FS_fread( void *dest, std::size_t size, std::FILE *fp ) { return FS_fread( dest, (std::size_t)-1, size, fp ); }
-	virtual std::size_t FS_fread( void *dest, std::size_t destSize, std::size_t size, std::FILE *fp ) = 0;
-    virtual std::size_t FS_fwrite( const void *src, std::size_t size, std::FILE *fp ) = 0;
-	virtual bool FS_setmode( std::FILE *fp, FileMode_t mode ) { return false; }
-	virtual std::size_t FS_vfprintf( std::FILE *fp, const char *fmt, std::va_list list ) = 0;
-	virtual int FS_ferror( std::FILE *fp ) = 0;
-	virtual int FS_fflush( std::FILE *fp ) = 0;
-	virtual char *FS_fgets( char *dest, int destSize, std::FILE *fp ) = 0;
-	virtual int FS_stat( const char *path, ks::platform::file_info *buf ) = 0;
-	virtual bool FS_setwritable( const char *path, bool writable ) = 0;
-	virtual HANDLE FS_FindFirstFile( const char *findname, WIN32_FIND_DATA *dat) = 0;
-	virtual bool FS_FindNextFile(HANDLE handle, WIN32_FIND_DATA *dat) = 0;
-	virtual bool FS_FindClose(HANDLE handle) = 0;
-	virtual int FS_GetSectorSize( std::FILE * ) { return 1; }
+	std::size_t FS_fread( void *dest, std::size_t destSize, std::size_t size, std::FILE *fp );
+    std::size_t FS_fwrite( const void *src, std::size_t size, std::FILE *fp );
+	bool FS_setmode( std::FILE *fp, FileMode_t mode );
+	std::size_t FS_vfprintf( std::FILE *fp, const char *fmt, std::va_list list );
+	int FS_ferror( std::FILE *fp );
+	int FS_fflush( std::FILE *fp );
+	char *FS_fgets( char *dest, int destSize, std::FILE *fp );
+	int FS_stat( const char *path, ks::platform::file_info *buf );
+	bool FS_setwritable( const char *path, bool writable );
+	HANDLE FS_FindFirstFile( const char *findname, WIN32_FIND_DATA *dat);
+	bool FS_FindNextFile(HANDLE handle, WIN32_FIND_DATA *dat);
+	bool FS_FindClose(HANDLE handle);
+	int FS_GetSectorSize( std::FILE * );
 
 	void GetFileNameForHandle( FileHandle_t handle, char *buf, std::size_t buflen );
 
@@ -1083,36 +1083,6 @@ inline int64 CPackFileHandle::AbsoluteBaseOffset()
 }
 
 // Pack file implementation:
-inline CPackFile::CPackFile()
-{
-	m_FileLength = 0;
-	m_hPackFileHandleFS = nullptr;
-	m_fs = nullptr;
-	m_nBaseOffset = 0;
-	m_bIsMapPath = false;
-	m_lPackFileTime = 0L;
-	m_refCount = 0;
-	m_nOpenFiles = 0;
-	m_PackFileID = 0;
-}
-
-inline CPackFile::~CPackFile()
-{
-	if ( m_nOpenFiles )
-	{
-		Error( "Closing pack file with %d open files!\n", m_nOpenFiles );
-	}
-
-	if ( m_hPackFileHandleFS )
-	{
-		m_fs->Trace_FClose( m_hPackFileHandleFS );
-		m_hPackFileHandleFS = nullptr;
-	}
-
-	ks::erase_first( m_fs->m_ZipFiles, this );
-}
-
-
 inline int CPackFile::GetSectorSize()
 {
 	if ( m_hPackFileHandleFS )

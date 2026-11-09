@@ -39,13 +39,13 @@ public:
 	CInferno();
 	virtual ~CInferno();
 
-	virtual void Precache( void );
+	void Precache_Impl( void );
 
-	virtual void Spawn( void );
+	void Spawn_Impl( void );
 
 	void SetMaxFlames( int nMaxFlames )		{ m_nMaxFlames = nMaxFlames; }
 
-	virtual int UpdateTransmitState( void )
+	int UpdateTransmitState_Impl( void )
 	{
 		return FL_EDICT_ALWAYS;
 	}
@@ -77,7 +77,9 @@ public:
 	const CCSWeaponInfo* GetSourceWeaponInfo() const { return m_pWeaponInfo; }
 
 protected:
+public:
 	void FireGameEvent( IGameEvent *event );
+protected:
 	int ExtinguishFlamesAroundSmokeGrenade( Vector vecStart ); // returns count of fire patches extinguished
 	void ExtinguishIndividualFlameBySmokeGrenade( int iFire, Vector vecStart );
 
@@ -157,7 +159,7 @@ public:
 	DECLARE_CLASS( CFireCrackerBlast, CInferno );
 	DECLARE_SERVERCLASS();
 
-	virtual void	Spawn();
+	void	Spawn_Impl();
 
 	virtual const char *GetParticleEffectName();
 	virtual const char *GetImpactParticleEffectName();

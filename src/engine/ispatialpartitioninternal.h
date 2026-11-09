@@ -12,9 +12,9 @@ class ISpatialPartitionInternal : public ISpatialPartition
 public:
 	// Call this to clear out the spatial partition and to re-initialize
 	// it given a particular world size
-	virtual void Init( const Vector& worldmin, const Vector& worldmax ) = 0;
+	void Init( const Vector& worldmin, const Vector& worldmax );
 
-	virtual void DrawDebugOverlays() = 0;
+	void DrawDebugOverlays();
 };
 
 

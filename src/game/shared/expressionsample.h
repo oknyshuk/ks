@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
 #include "interpolatortypes.h"
 
-namespace ks { class byte_reader; class byte_writer; class text_writer; }
 class ISceneTokenProcessor;
 class IChoreoStringPool;
 

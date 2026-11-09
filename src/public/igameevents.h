@@ -44,159 +44,252 @@ data field should not be broadcasted to clients, use the type "local".
 #define MAX_EVENT_BYTES			1024	// max size in bytes for a serialized event
 
 class CGameEvent;
+class CGameEventManager;
 namespace ks::net { struct CSVCMsg_GameEvent; }
+namespace ks::net { struct CSVCMsg_GameEventList; }
+namespace ks::net { struct CCLCMsg_ListenEvents; }
 
-// Class for visiting every key of data on an event
+// The engine has exactly one game event implementation and one event manager.
+using IGameEvent = CGameEvent;
+using IGameEventManager2 = CGameEventManager;
+
+// Called by the manager if the event just occured. Non-owning: what it refers to must
+// outlive the registration.
+using GameEventCallback_t = std::function_ref< void( IGameEvent * ) >;
+
+// Class for visiting every key of data on an event (see CGameEvent::ForEventData).
+// The visitor type is static: a visitor hides the Visit* functions it cares about.
+// return true to keep iterating, false to abort iteration
 class IGameEventVisitor2
 {
 public:
-	// return true to keep iterating, false to abort iteration
-	virtual bool VisitLocal( const char* name, const void* value ) { return true; }
-	virtual bool VisitString( const char* name, const char* value ) { return true; }
-	virtual bool VisitFloat( const char* name, float value ) { return true; }
-	virtual bool VisitInt( const char* name, int value ) { return true; }
-	virtual bool VisitUint64( const char* name, uint64 value ) { return true; }
-	virtual bool VisitWString( const char* name, const wchar_t* value ) { return true; }
-	virtual bool VisitBool( const char* name, bool value ) { return true; }
+	bool VisitLocal( const char* name, const void* value ) { return true; }
+	bool VisitString( const char* name, const char* value ) { return true; }
+	bool VisitFloat( const char* name, float value ) { return true; }
+	bool VisitInt( const char* name, int value ) { return true; }
+	bool VisitUint64( const char* name, uint64 value ) { return true; }
+	bool VisitWString( const char* name, const wchar_t* value ) { return true; }
+	bool VisitBool( const char* name, bool value ) { return true; }
 };
 
-class IGameEvent
+class CGameEventCallback
 {
 public:
-	virtual ~IGameEvent() {};
-	virtual const char *GetName() const = 0;	// get event name
+	CGameEventCallback( const void *owner, GameEventCallback_t callback, int nListenerType )
+		: m_pOwner( owner ), m_Callback( callback ), m_nListenerType( nListenerType ) {}
 
-	virtual bool  IsReliable() const = 0; // if event handled reliable
-	virtual bool  IsLocal() const = 0; // if event is never networked
-	virtual bool  IsEmpty(const char *keyName = nullptr) const = 0; // check if data field exists
+	const void			*m_pOwner;			// identity of the listener (what RemoveListener is given)
+	GameEventCallback_t	m_Callback;			// called when an event fires
+	int					m_nListenerType;	// client or server side ?
+};
+
+class CGameEventDescriptor
+{
+public:
+	CGameEventDescriptor()
+	{
+		eventid = -1;
+		keys = nullptr;
+		local = false;
+		reliable = true;
+		name = nullptr;
+
+		numSerialized = 0;
+		numUnSerialized = 0;
+		totalSerializedBits = 0;
+		totalUnserializedBits = 0;
+	}
+
+public:
+	int			eventid;	// network index number, -1 = not networked
+	const char	*name;		// key in CGameEventManager::m_EventMap
+	KeyValues	*keys;		// KeyValue describing data types, if NULL only name 
+	std::vector< CGameEventCallback* >	listeners;	// registered listeners
+	bool		local;		// local event, never tell clients about that
+	bool		reliable;	// send this event as reliable message
+
+	// Extra data for network monitoring
+	int numSerialized;
+	int numUnSerialized;
+	int totalSerializedBits;
+	int totalUnserializedBits;
+};
+
+class CGameEvent
+{
+public:
+	CGameEvent( CGameEventDescriptor *descriptor, const char *name );
+	~CGameEvent();
+
+	const char *GetName() const;	// get event name
+
+	bool  IsReliable() const; // if event handled reliable
+	bool  IsLocal() const; // if event is never networked
+	bool  IsEmpty(const char *keyName = nullptr) const; // check if data field exists
 	
 	// Data access
-	virtual bool  GetBool( const char *keyName = nullptr, bool defaultValue = false ) const = 0;
-	virtual int   GetInt( const char *keyName = nullptr, int defaultValue = 0 ) const = 0;
-	virtual uint64 GetUint64( const char *keyName = nullptr, uint64 defaultValue = 0 ) const = 0;
-	virtual float GetFloat( const char *keyName = nullptr, float defaultValue = 0.0f ) const = 0;
-	virtual const char *GetString( const char *keyName = nullptr, const char *defaultValue = "" ) const = 0;
-	virtual const wchar_t *GetWString( const char *keyName = nullptr, const wchar_t *defaultValue = L"" ) const = 0;
-	virtual const void *GetPtr( const char *keyName = nullptr ) const = 0;	// LOCAL only
+	bool  GetBool( const char *keyName = nullptr, bool defaultValue = false ) const;
+	int   GetInt( const char *keyName = nullptr, int defaultValue = 0 ) const;
+	uint64 GetUint64( const char *keyName = nullptr, uint64 defaultValue = 0 ) const;
+	float GetFloat( const char *keyName = nullptr, float defaultValue = 0.0f ) const;
+	const char *GetString( const char *keyName = nullptr, const char *defaultValue = "" ) const;
+	const wchar_t *GetWString( const char *keyName = nullptr, const wchar_t *defaultValue = L"" ) const;
+	const void *GetPtr( const char *keyName = nullptr ) const;	// LOCAL only
 
-	virtual void SetBool( const char *keyName, bool value ) = 0;
-	virtual void SetInt( const char *keyName, int value ) = 0;
-	virtual void SetUint64( const char *keyName, uint64 value ) = 0;
-	virtual void SetFloat( const char *keyName, float value ) = 0;
-	virtual void SetString( const char *keyName, const char *value ) = 0;
-	virtual void SetWString( const char *keyName, const wchar_t *value ) = 0;
-	virtual void SetPtr( const char *keyName, const void * value ) = 0;	// LOCAL only
+	void SetBool( const char *keyName, bool value );
+	void SetInt( const char *keyName, int value );
+	void SetUint64( const char *keyName, uint64 value );
+	void SetFloat( const char *keyName, float value );
+	void SetString( const char *keyName, const char *value );
+	void SetWString( const char *keyName, const wchar_t *value );
+	void SetPtr( const char *keyName, const void * value );	// LOCAL only
 
 	// returns true if iteration aborted normally, false if it was aborted by the visitor callback
-	virtual bool ForEventData( IGameEventVisitor2* event ) const = 0;
+	template< class Visitor >
+	bool ForEventData( Visitor *visitor ) const;
+
+	CGameEventDescriptor	*m_pDescriptor;
+	KeyValues				*m_pDataKeys;
 };
 
-inline constexpr int EVENT_DEBUG_ID_INIT = 42;
-inline constexpr int EVENT_DEBUG_ID_SHUTDOWN = 13;
-
-class IGameEventListener2
+// NOTE: Every non-threadsafe externally-callable function must lock m_mutex before modifying the event manager
+// member variables.  Client & server threads can call into this class simultaneously
+//
+// The engine's game event manager. Client and server reach it through the
+// INTERFACEVERSION_GAMEEVENTSMANAGER2 interface; its members are exported from libengine.so.
+class CGameEventManager
 {
 public:
-	virtual	~IGameEventListener2( void ) {};
+	enum
+	{
+		SERVERSIDE = 0,		// this is a server side listener, event logger etc
+		CLIENTSIDE,			// this is a client side listenet, HUD element etc
+		CLIENTSTUB,			// this is a serverside stub for a remote client listener (used by engine only)
+	};
 
-	// FireEvent is called by EventManager if event just occured
-	// KeyValue memory will be freed by manager if not needed anymore
-	virtual void FireGameEvent( IGameEvent *event ) = 0;
+	enum
+	{
+		TYPE_LOCAL = 0,	// not networked
+		TYPE_STRING,	// zero terminated ASCII string
+		TYPE_FLOAT,		// float 32 bit
+		TYPE_LONG,		// signed int 32 bit
+		TYPE_SHORT,		// signed int 16 bit
+		TYPE_BYTE,		// unsigned int 8 bit
+		TYPE_BOOL,		// unsigned int 1 bit
+		TYPE_UINT64,	// unsigned int 64 bit
+		TYPE_WSTRING,	// zero terminated wide char string
+		TYPE_COUNT, 
+	};
 
-	virtual int	 GetEventDebugID( void ) = 0;
-};
-
-class IGameEventManager2 : public IBaseInterface
-{
-public:
-	virtual	~IGameEventManager2( void ) {};
+	CGameEventManager();
+	~CGameEventManager();
 
 	// load game event descriptions from a file eg "resource\gameevents.res"
-	virtual int LoadEventsFromFile( const char *filename ) = 0;
+	int LoadEventsFromFile( const char *filename );
 
 	// removes all and anything
-	virtual void  Reset() = 0;	
+	void Reset();
 
-	// adds a listener for a particular event
-	virtual bool AddListener( IGameEventListener2 *listener, const char *name, bool bServerSide ) = 0;
+	// adds a listener for a particular event. The listener is identified by the owner pointer.
+	bool AddListener( const void *owner, GameEventCallback_t callback, const char *name, bool bServerSide );
 
 	// returns true if this listener is listens to given event
-	virtual bool FindListener( IGameEventListener2 *listener, const char *name ) = 0;
+	bool FindListener( const void *owner, const char *name );
 
 	// removes a listener 
-	virtual void RemoveListener( IGameEventListener2 *listener) = 0;
+	void RemoveListener( const void *owner );
 
 	// add a listener that listens to all events. 
-	virtual bool AddListenerGlobal( IGameEventListener2 *listener, bool bServerSide ) = 0;
+	bool AddListenerGlobal( const void *owner, GameEventCallback_t callback, bool bServerSide );
 
 	// create an event by name, but doesn't fire it. returns NULL is event is not
 	// known or no listener is registered for it. bForce forces the creation even if no listener is active
-	virtual IGameEvent *CreateEvent( const char *name, bool bForce = false, int *pCookie = nullptr ) = 0;
+	IGameEvent *CreateEvent( const char *name, bool bForce = false, int *pCookie = nullptr );
 
 	// fires a server event created earlier, if bDontBroadcast is set, event is not send to clients
-	virtual bool FireEvent( IGameEvent *event, bool bDontBroadcast = false ) = 0;
+	bool FireEvent( IGameEvent *event, bool bDontBroadcast = false );
 
 	// fires an event for the local client only, should be used only by client code
-	virtual bool FireEventClientSide( IGameEvent *event ) = 0;
+	bool FireEventClientSide( IGameEvent *event );
 
 	// create a new copy of this event, must be free later
-	virtual IGameEvent *DuplicateEvent( IGameEvent *event ) = 0;
+	IGameEvent *DuplicateEvent( IGameEvent *event );
 
 	// if an event was created but not fired for some reason, it has to bee freed, same UnserializeEvent
-	virtual void FreeEvent( IGameEvent *event ) = 0;
+	void FreeEvent( IGameEvent *event );
 
 	// write/read event to/from bitbuffer
-	virtual bool SerializeEvent( IGameEvent *event, ks::net::CSVCMsg_GameEvent *eventMsg ) = 0;
-	virtual IGameEvent *UnserializeEvent( const ks::net::CSVCMsg_GameEvent& eventMsg ) = 0; // create new KeyValues, must be deleted
-};
+	bool SerializeEvent( IGameEvent *event, ks::net::CSVCMsg_GameEvent *eventMsg );
+	IGameEvent *UnserializeEvent( const ks::net::CSVCMsg_GameEvent& eventMsg ); // create new KeyValues, must be deleted
 
-// the old game event manager interface, don't use it. Rest is legacy support:
+	KeyValues* GetEventDataTypes( IGameEvent* event );
 
-class IGameEventListener
-{
+	void DumpEventNetworkStats();
+
 public:
-	virtual	~IGameEventListener( void ) {};
+	bool Init();
+	void Shutdown();
+	void ReloadEventDefinitions();	// called by server on new map
+	bool AddListener( const void *owner, GameEventCallback_t callback, CGameEventDescriptor *descriptor, int nListenerType );
 
-	// FireEvent is called by EventManager if event just occured
-	// KeyValue memory will be freed by manager if not needed anymore
-	virtual void FireGameEvent( KeyValues * event) = 0;
+	CGameEventDescriptor *GetEventDescriptor( const char *name, int *pCookie = nullptr );
+	CGameEventDescriptor *GetEventDescriptor( IGameEvent *event );
+	CGameEventDescriptor *GetEventDescriptor( int eventid );
+
+	void WriteEventList(ks::net::CSVCMsg_GameEventList *msg);
+	bool ParseEventList(const ks::net::CSVCMsg_GameEventList& msg);
+
+	void WriteListenEventList(ks::net::CCLCMsg_ListenEvents *msg);
+	bool HasClientListenersChanged( bool bReset = true );
+	void ConPrintEvent( IGameEvent *event);
+	
+	// Debug!
+	void VerifyListenerList( void );
+	
+protected:
+
+	IGameEvent *CreateEvent( CGameEventDescriptor *descriptor, const char *name );
+	bool RegisterEvent( KeyValues * keys );
+	void UnregisterEvent(int index);
+	bool FireEventIntern( IGameEvent *event, bool bServerSide, bool bClientOnly );
+	CGameEventCallback* FindEventListener( const void* owner );
+	
+	std::vector< CGameEventDescriptor >	m_GameEvents;	// list of all known events
+	std::vector< std::unique_ptr< CGameEventCallback > >	m_Listeners;	// owns every callback; descriptors only point at them
+	ks::intern_pool						m_EventFiles;	// list of all loaded event files
+	std::vector< std::string_view >		m_EventFileNames;	// load order, views into m_EventFiles
+	ks::idict< int >					m_EventMap;	// name -> index in m_GameEvents
+	std::recursive_mutex				m_mutex;		// lock this when modifying the event table
+
+	bool	m_bClientListenersChanged;	// true every time client changed listeners
 };
 
-class IGameEventManager : public IBaseInterface
+template< class Visitor >
+bool CGameEvent::ForEventData( Visitor *visitor ) const
 {
-public:
-	virtual	~IGameEventManager( void ) {};
-	
-	// load game event descriptions from a file eg "resource\gameevents.res"
-	virtual int LoadEventsFromFile( const char * filename ) = 0;
+	CGameEventDescriptor *descriptor = m_pDescriptor;
 
-	// removes all and anything
-	virtual void  Reset() = 0;	
-				
-	virtual KeyValues *GetEvent(const char * name) = 0; // returns keys for event
-	
-	// adds a listener for a particular event
-	virtual bool AddListener( IGameEventListener * listener, const char * event, bool bIsServerSide ) = 0;
-	// registers for all known events
-	virtual bool AddListener( IGameEventListener * listener, bool bIsServerSide ) = 0; 
-	
-	// removes a listener 
-	virtual void RemoveListener( IGameEventListener * listener) = 0;
-		
-	// fires an global event, specific event data is stored in KeyValues
-	// local listeners will receive the event instantly
-	// a network message will be send to all connected clients to invoke
-	// the same event there
-	virtual bool FireEvent( KeyValues * event ) = 0;
+	bool iterate = true;
+	for ( KeyValues* key = descriptor->keys->GetFirstSubKey(); key && iterate; key = key->GetNextKey() )
+	{
+		const char * keyName = key->GetName();
 
-	// fire a side server event, that it wont be broadcasted to player clients
-	virtual bool FireEventServerOnly( KeyValues * event ) = 0;
+		int type = key->GetInt();
 
-	// fires an event only on this local client
-	// can be used to fake events coming over the network 
-	virtual bool FireEventClientOnly( KeyValues * event ) = 0;
+		// see s_GameEventTypesMap for index
+		switch ( type )
+		{
+		case CGameEventManager::TYPE_LOCAL: iterate = visitor->VisitLocal( keyName, GetPtr( keyName ) ); break;
+		case CGameEventManager::TYPE_STRING: iterate = visitor->VisitString( keyName, GetString( keyName, "" ) ); break;
+		case CGameEventManager::TYPE_FLOAT: iterate = visitor->VisitFloat( keyName, GetFloat( keyName, 0.0f ) ); break;
+		case CGameEventManager::TYPE_LONG: iterate = visitor->VisitInt( keyName, GetInt( keyName, 0 ) ); break;
+		case CGameEventManager::TYPE_SHORT: iterate = visitor->VisitInt( keyName, GetInt( keyName, 0 ) ); break;
+		case CGameEventManager::TYPE_BYTE: iterate = visitor->VisitInt( keyName, GetInt( keyName, 0 ) ); break;
+		case CGameEventManager::TYPE_BOOL: iterate = visitor->VisitBool( keyName, GetBool( keyName, false ) ); break;
+		case CGameEventManager::TYPE_UINT64: iterate = visitor->VisitUint64( keyName, GetUint64( keyName, 0 ) ); break;
+		case CGameEventManager::TYPE_WSTRING: iterate = visitor->VisitWString( keyName, GetWString( keyName, L"" ) ); break;
+		}
+	}
 
-	// write/read event to/from bitbuffer
-	virtual bool SerializeKeyValues( KeyValues *event, bf_write *buf, CGameEvent *eventtype = nullptr ) = 0;
-	virtual KeyValues *UnserializeKeyValue( bf_read *msg ) = 0; // create new KeyValues, must be deleted
-};
+	return iterate;
+}

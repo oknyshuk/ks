@@ -35,11 +35,11 @@ class CEnvMicrophone : public CPointEntity
 public:
 	~CEnvMicrophone();
 
-	void Spawn(void);
-	void Activate(void);
-	void OnRestore( void );
+	void Spawn_Impl(void);
+	void Activate_Impl(void);
+	void OnRestore_Impl( void );
 	void ActivateSpeaker( void );
-	void Think(void);
+	void Think_Impl(void);
 	bool CanHearSound(CSound *pSound, float &flVolume);
 	bool CanHearSound( int entindex, soundlevel_t soundlevel, float &flVolume, const Vector *pOrigin );
 

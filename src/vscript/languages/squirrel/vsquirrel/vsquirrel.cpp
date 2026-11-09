@@ -549,7 +549,7 @@ public:
 	//-------------------------------------------------------------
 	//
 	//-------------------------------------------------------------
-	virtual bool Init()
+	bool Init()
 	{
 		m_hVM = sq_open(1024);
 
@@ -624,7 +624,7 @@ public:
 	//-------------------------------------------------------------
 	//
 	//-------------------------------------------------------------
-	virtual void Shutdown()
+	void Shutdown()
 	{
 		if ( m_hVM ) 
 		{
@@ -649,12 +649,12 @@ public:
 	//-------------------------------------------------------------
 	//
 	//-------------------------------------------------------------
-	virtual const char *GetLanguageName()
+	const char *GetLanguageName()
 	{
 		return "Squirrel";
 	}
 
-	virtual void AddSearchPath( const char *pszSearchPath )
+	void AddSearchPath( const char *pszSearchPath )
 	{
 
 	}
@@ -989,7 +989,7 @@ public:
 	//-------------------------------------------------------------
 	//
 	//-------------------------------------------------------------
-	virtual bool RegisterClass( ScriptClassDesc_t *pClassDesc )
+	bool RegisterClass( ScriptClassDesc_t *pClassDesc )
 	{
 		if ( m_TypeMap.contains( pClassDesc ) )
 		{
@@ -1189,7 +1189,7 @@ public:
 	//-------------------------------------------------------------
 	//
 	//-------------------------------------------------------------
-	virtual bool ValueExists(  HSCRIPT hScope, const char *pszKey )
+	bool ValueExists(  HSCRIPT hScope, const char *pszKey )
 	{
 		return !sq_isnull( LookupObject( pszKey, hScope, false ) );
 	}
@@ -1312,7 +1312,7 @@ public:
 	//			pKey - the key entry
 	//			pValue - the value entry
 	//------------------------------------------------------------------------------
-	virtual int GetKeyValue( HSCRIPT hScope, int nIterator, ScriptVariant_t *pKey, ScriptVariant_t *pValue )
+	int GetKeyValue( HSCRIPT hScope, int nIterator, ScriptVariant_t *pKey, ScriptVariant_t *pValue )
 	{
 		HSQOBJECT KeyResult = { OT_NULL, nullptr };
 		HSQOBJECT ValueResult = { OT_NULL, nullptr };
@@ -1399,7 +1399,7 @@ public:
 	//-------------------------------------------------------------
 	//
 	//-------------------------------------------------------------
-	virtual void ReleaseValue( ScriptVariant_t &value )
+	void ReleaseValue( ScriptVariant_t &value )
 	{
 		if ( value.m_type == FIELD_HSCRIPT )
 		{
@@ -1416,7 +1416,7 @@ public:
 	//-------------------------------------------------------------
 	//
 	//-------------------------------------------------------------
-	virtual bool RaiseException( const char *pszExceptionText )
+	bool RaiseException( const char *pszExceptionText )
 	{
 		m_ErrorString = SQString::Create( m_hVM->_sharedstate, pszExceptionText );
 		return true;
@@ -1425,7 +1425,7 @@ public:
 	//-------------------------------------------------------------
 	//
 	//-------------------------------------------------------------
-	virtual void DumpState()
+	void DumpState()
 	{
 		struct CIterator : public CSQStateIterator
 		{
@@ -1507,7 +1507,7 @@ public:
 	//-------------------------------------------------------------
 	//
 	//-------------------------------------------------------------
-	virtual void WriteState( ks::byte_writer *pBuffer )
+	void WriteState( ks::byte_writer *pBuffer )
 	{
 #ifdef VSQUIRREL_DEBUG_SERIALIZATION
 		Msg( "BEGIN WRITE\n" );
@@ -1534,7 +1534,7 @@ public:
 	//-------------------------------------------------------------
 	//
 	//-------------------------------------------------------------
-	virtual void ReadState( ks::byte_reader *pBuffer )
+	void ReadState( ks::byte_reader *pBuffer )
 	{
 #ifdef VSQUIRREL_DEBUG_SERIALIZATION
 #ifdef VSQUIRREL_DEBUG_SERIALIZATION_HEAPCHK
@@ -1571,7 +1571,7 @@ public:
 	//-------------------------------------------------------------
 	//
 	//-------------------------------------------------------------
-	virtual void RemoveOrphanInstances()
+	void RemoveOrphanInstances()
 	{
 
 	}
@@ -1579,7 +1579,7 @@ public:
 	//-------------------------------------------------------------
 	//
 	//-------------------------------------------------------------
-	virtual void SetOutputCallback( ScriptOutputFunc_t pFunc )
+	void SetOutputCallback( ScriptOutputFunc_t pFunc )
 	{
 
 	}
@@ -1587,7 +1587,7 @@ public:
 	//-------------------------------------------------------------
 	//
 	//-------------------------------------------------------------
-	virtual void SetErrorCallback( ScriptErrorFunc_t pFunc )
+	void SetErrorCallback( ScriptErrorFunc_t pFunc )
 	{
 
 	}
@@ -3535,3 +3535,9 @@ int main( int argc, const char **argv)
 }
 
 #endif
+
+
+//-----------------------------------------------------------------------------
+// The IScriptVM members forward to CSquirrelVM
+//-----------------------------------------------------------------------------
+#include "facade/iscriptvm.inl"

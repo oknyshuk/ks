@@ -19,7 +19,6 @@ export import :l2cache;
 export import :logging;
 export import :mem;
 export import :memalloc;
-export import :memvirt;
 export import :microprofiler;
 export import :minidump;
 export import :numeric;

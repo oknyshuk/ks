@@ -363,37 +363,12 @@ IPhysicsFluidController *JoltPhysicsEnvironment::CreateFluidController( IPhysics
 void JoltPhysicsEnvironment::DestroyFluidController( IPhysicsFluidController *pFluidController )
 {
 	JoltPhysicsFluidController *pInternalFluidController = static_cast<JoltPhysicsFluidController *>( pFluidController );
-	Erase( m_pPhysicsControllers, pInternalFluidController );
+	Erase( m_pPhysicsControllers, JoltPhysicsController( pInternalFluidController ) );
 	delete pInternalFluidController;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-class JoltPhysicsSpring final : public IPhysicsSpring, public IJoltObjectListener
-{
-public:
-	JoltPhysicsSpring( JPH::PhysicsSystem *pPhysicsSystem, JoltPhysicsObject *pObjectStart, JoltPhysicsObject *pObjectEnd, springparams_t *pParams );
-	~JoltPhysicsSpring() override;
-
-	void GetEndpoints( Vector *worldPositionStart, Vector *worldPositionEnd ) override;
-	void SetSpringConstant( float flSpringConstant ) override;
-	void SetSpringDamping( float flSpringDamping ) override;
-	void SetSpringLength( float flSpringLength ) override;
-
-	IPhysicsObject *GetStartObject() override;
-	IPhysicsObject *GetEndObject() override;
-
-	void OnJoltPhysicsObjectDestroyed( JoltPhysicsObject *pObject );
-
-private:
-	JPH::PhysicsSystem *m_pPhysicsSystem = nullptr;
-
-	JoltPhysicsObject *m_pObjectStart = nullptr;
-	JoltPhysicsObject *m_pObjectEnd = nullptr;
-
-	JPH::DistanceConstraint *m_pConstraint = nullptr;
-	bool m_OnlyStretch = false;
-};
 
 //-------------------------------------------------------------------------------------------------
 
@@ -620,7 +595,7 @@ IPhysicsShadowController *JoltPhysicsEnvironment::CreateShadowController( IPhysi
 void JoltPhysicsEnvironment::DestroyShadowController( IPhysicsShadowController *pShadowController )
 {
 	JoltPhysicsShadowController *pController = static_cast< JoltPhysicsShadowController * >( pShadowController );
-	Erase( m_pPhysicsControllers, pController );
+	Erase( m_pPhysicsControllers, JoltPhysicsController( pController ) );
 	delete pController;
 }
 
@@ -636,7 +611,7 @@ IPhysicsPlayerController *JoltPhysicsEnvironment::CreatePlayerController( IPhysi
 void JoltPhysicsEnvironment::DestroyPlayerController( IPhysicsPlayerController *pPlayerController )
 {
 	JoltPhysicsPlayerController *pController = static_cast< JoltPhysicsPlayerController * >( pPlayerController );
-	Erase( m_pPhysicsControllers, pController );
+	Erase( m_pPhysicsControllers, JoltPhysicsController( pController ) );
 	delete pController;
 }
 
@@ -652,7 +627,7 @@ IPhysicsMotionController *JoltPhysicsEnvironment::CreateMotionController( IMotio
 void JoltPhysicsEnvironment::DestroyMotionController( IPhysicsMotionController *pController )
 {
 	JoltPhysicsMotionController *pJoltController = static_cast< JoltPhysicsMotionController * >( pController );
-	Erase( m_pPhysicsControllers, pJoltController );
+	Erase( m_pPhysicsControllers, JoltPhysicsController( pJoltController ) );
 	delete pJoltController;
 }
 
@@ -670,7 +645,7 @@ IPhysicsVehicleController *JoltPhysicsEnvironment::CreateVehicleController( IPhy
 void JoltPhysicsEnvironment::DestroyVehicleController( IPhysicsVehicleController *pVehicleController )
 {
 	JoltPhysicsVehicleController *pJoltController = static_cast<JoltPhysicsVehicleController *>( pVehicleController );
-	Erase( m_pPhysicsControllers, pJoltController );
+	Erase( m_pPhysicsControllers, JoltPhysicsController( pJoltController ) );
 	delete pJoltController;
 }
 
@@ -705,8 +680,8 @@ void JoltPhysicsEnvironment::Simulate( float deltaTime )
 	m_ContactListener.PostSimulationFrame();
 
 	// Run pre-simulation controllers
-	for ( IJoltPhysicsController *pController : m_pPhysicsControllers )
-		pController->OnPreSimulate( deltaTime );
+	for ( const JoltPhysicsController &controller : m_pPhysicsControllers )
+		std::visit( [deltaTime]( auto *pController ) { pController->OnPreSimulate( deltaTime ); }, controller );
 
 	const int nCollisionSubSteps = vjolt_substeps_collision.GetInt();
 
@@ -746,8 +721,14 @@ void JoltPhysicsEnvironment::Simulate( float deltaTime )
 	m_ContactListener.FlushCallbacks();
 
 	// Run post-simulation controllers
-	for ( IJoltPhysicsController *pController : m_pPhysicsControllers )
-		pController->OnPostSimulate( deltaTime );
+	for ( const JoltPhysicsController &controller : m_pPhysicsControllers )
+	{
+		std::visit( [deltaTime]( auto *pController )
+		{
+			if constexpr ( requires { pController->OnPostSimulate( deltaTime ); } )
+				pController->OnPostSimulate( deltaTime );
+		}, controller );
+	}
 
 	m_bSimulating = false;
 
@@ -1202,3 +1183,8 @@ void JoltPhysicsEnvironment::HandleDebugDumpingEnvironment( void *pReturnAddress
 	s_bShouldDumpEnvironmentClient = false;
 	s_bShouldDumpEnvironmentServer = false;
 }
+
+//-------------------------------------------------------------------------------------------------
+#include "facade/iphysicsenvironment.inl"
+#include "facade/iphysicsspring.inl"
+#include "facade/iphysicscollisiondata.inl"

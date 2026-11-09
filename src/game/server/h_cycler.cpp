@@ -3,8 +3,6 @@
 
 // Purpose: The Halflife Cycler NPCs
 
-import std;
-import ks.vstdlib;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -20,7 +18,6 @@ import ks.vstdlib;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -60,13 +57,13 @@ class CGenericCycler : public CCycler
 public:
 	DECLARE_CLASS( CGenericCycler, CCycler );
 
-	void Spawn()
+	void Spawn_Impl()
 	{
 		GenericCyclerSpawn( (char *)STRING( GetModelName() ), Vector(-16, -16, 0), Vector(16, 16, 72) );
 	}
 };
 LINK_ENTITY_TO_CLASS( cycler, CGenericCycler );
-LINK_ENTITY_TO_CLASS( model_studio, CGenericCycler ); // For now model_studios build as cyclers.
+LINK_ENTITY_TO_CLASS_ALIAS( model_studio, CGenericCycler ); // For now model_studios build as cyclers.
 
 
 // Cycler member functions
@@ -86,19 +83,19 @@ void CCycler::GenericCyclerSpawn(char *szModel, Vector vecMin, Vector vecMax)
 
 	m_bloodColor = DONT_BLEED;
 
-	CCycler::Spawn( );
+	CCycler::Spawn_Impl( );
 
 	UTIL_SetSize(this, vecMin, vecMax);
 }
 
 
-void CCycler::Precache()
+void CCycler::Precache_Impl()
 {
 	PrecacheModel( (const char *)STRING( GetModelName() ) );
 }
 
 
-void CCycler::Spawn( )
+void CCycler::Spawn_Impl( )
 {
 	InitBoneControllers();
 	
@@ -142,7 +139,7 @@ void CCycler::Spawn( )
 //
 // cycler think
 //
-void CCycler::Think( void )
+void CCycler::Think_Impl( void )
 {
 	SetNextThink( gpGlobals->curtime + 0.1f );
 
@@ -168,7 +165,7 @@ void CCycler::Think( void )
 //
 // CyclerUse - starts a rotation trend
 //
-void CCycler::Use ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CCycler::Use_Impl ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	m_animate = !m_animate;
 	if (m_animate)
@@ -180,7 +177,7 @@ void CCycler::Use ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 //-----------------------------------------------------------------------------
 // Purpose: Changes sequences when hurt.
 //-----------------------------------------------------------------------------
-int CCycler::OnTakeDamage( const CTakeDamageInfo &info )
+int CCycler::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	if (m_animate)
 	{
@@ -243,7 +240,7 @@ public:
 
 	DECLARE_SERVERCLASS();
 
-	void Spawn( void );
+	void Spawn_Impl( void );
 
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
@@ -261,7 +258,7 @@ LINK_ENTITY_TO_CLASS( cycler_weapon, CWeaponCycler );
 // Save/Restore
 //---------------------------------------------------------
 
-void CWeaponCycler::Spawn( )
+void CWeaponCycler::Spawn_Impl( )
 {
 	SetSolid( SOLID_BBOX );
 	AddSolidFlags( FSOLID_NOT_STANDABLE );
@@ -345,9 +342,9 @@ public:
 	DECLARE_CLASS( CWreckage, CAI_BaseNPC );
 
 
-	void Spawn( void );
-	void Precache( void );
-	void Think( void );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	void Think_Impl( void );
 
 	float m_flStartTime;
 	float m_flDieTime;
@@ -357,7 +354,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( cycler_wreckage, CWreckage );
 
-void CWreckage::Spawn( void )
+void CWreckage::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	SetMoveType( MOVETYPE_NONE );
@@ -375,13 +372,13 @@ void CWreckage::Spawn( void )
 	m_flStartTime		= gpGlobals->curtime;
 }
 
-void CWreckage::Precache( )
+void CWreckage::Precache_Impl( )
 {
 	if ( GetModelName() != NULL_STRING )
 		PrecacheModel( STRING( GetModelName() ) );
 }
 
-void CWreckage::Think( void )
+void CWreckage::Think_Impl( void )
 {
 	StudioFrameAdvance( );
 	SetNextThink( gpGlobals->curtime + 0.2 );
@@ -415,10 +412,11 @@ class CBlendingCycler : public CCycler
 public:
 	DECLARE_CLASS( CBlendingCycler, CCycler );
 
-	void Spawn( void );
-	bool KeyValue( const char *szKeyName, const char *szValue );
-	void Think( void );
-	virtual int	ObjectCaps( void ) { return (BaseClass::ObjectCaps() | FCAP_DONT_SAVE | FCAP_IMPULSE_USE); }
+	void Spawn_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	void Think_Impl( void );
+	int	ObjectCaps_Impl( void ) { return (BaseClass::ObjectCaps_Impl() | FCAP_DONT_SAVE | FCAP_IMPULSE_USE); }
 
 	int m_iLowerBound;
 	int m_iUpperBound;
@@ -432,7 +430,7 @@ LINK_ENTITY_TO_CLASS( cycler_blender, CBlendingCycler );
 // Save/Restore
 //---------------------------------------------------------
 
-void CBlendingCycler::Spawn( void )
+void CBlendingCycler::Spawn_Impl( void )
 {
 	// Remove if it's not blending
 	if (m_iLowerBound == 0 && m_iUpperBound == 0)
@@ -454,7 +452,7 @@ void CBlendingCycler::Spawn( void )
 	m_iCurrent = m_iLowerBound;
 }
 
-bool CBlendingCycler::KeyValue( const char *szKeyName, const char *szValue )
+bool CBlendingCycler::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "lowboundary"))
 	{
@@ -473,13 +471,13 @@ bool CBlendingCycler::KeyValue( const char *szKeyName, const char *szValue )
 		m_iszSequence = AllocPooledString(szValue);
 	}
 	else
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 
 	return true;
 }
 
 // Blending Cycler think
-void CBlendingCycler::Think( void )
+void CBlendingCycler::Think_Impl( void )
 {
 	SetNextThink( gpGlobals->curtime + 0.1f );
 

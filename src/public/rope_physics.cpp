@@ -3,6 +3,8 @@
 
 import std;
 import ks.core;
+import ks.math;
+import ks.tier1;
 #include "rope_physics.h"
 
 CBaseRopePhysics::CBaseRopePhysics( CSimplePhysics::CNode *pNodes, int nNodes, CRopeSpring *pSprings, float *flSpringDistsSqr )

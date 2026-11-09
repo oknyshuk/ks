@@ -3,9 +3,7 @@
 
 // Purpose: Color correction entity.
 
-import std;
 
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -23,7 +21,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -61,17 +58,18 @@ public:
 
 	CColorCorrectionVolume();
 
-	void Spawn( void );
-	bool KeyValue( const char *szKeyName, const char *szValue );
-	int  UpdateTransmitState();
+	void Spawn_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	int  UpdateTransmitState_Impl();
 
 	void ThinkFunc();
 
 	virtual bool PassesTriggerFilters(CBaseEntity *pOther);
-	virtual void StartTouch( CBaseEntity *pEntity );
-	virtual void EndTouch( CBaseEntity *pEntity );
+	void StartTouch_Impl( CBaseEntity *pEntity );
+	void EndTouch_Impl( CBaseEntity *pEntity );
 
-	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	int	ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION; }
 	
 	// Inputs
 	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void	InputEnable( inputdata_t &inputdata );
@@ -114,14 +112,14 @@ CColorCorrectionVolume::CColorCorrectionVolume() : BaseClass()
 //------------------------------------------------------------------------------
 // Purpose : Send even though we don't have a model
 //------------------------------------------------------------------------------
-int CColorCorrectionVolume::UpdateTransmitState()
+int CColorCorrectionVolume::UpdateTransmitState_Impl()
 {
 	// ALWAYS transmit to all clients.
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
 
 
-bool CColorCorrectionVolume::KeyValue( const char *szKeyName, const char *szValue )
+bool CColorCorrectionVolume::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if ( FStrEq( szKeyName, "filename" ) )
 	{
@@ -138,15 +136,15 @@ bool CColorCorrectionVolume::KeyValue( const char *szKeyName, const char *szValu
 		return true;
 	}
 
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 //------------------------------------------------------------------------------
 // Purpose :
 //------------------------------------------------------------------------------
-void CColorCorrectionVolume::Spawn( void )
+void CColorCorrectionVolume::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	AddEFlags( EFL_FORCE_CHECK_TRANSMIT | EFL_DIRTY_ABSTRANSFORM );
 	Precache();
@@ -176,13 +174,13 @@ bool CColorCorrectionVolume::PassesTriggerFilters( CBaseEntity *pEntity )
 	return false;
 }
 
-void CColorCorrectionVolume::StartTouch( CBaseEntity *pEntity )
+void CColorCorrectionVolume::StartTouch_Impl( CBaseEntity *pEntity )
 {
 	m_LastEnterTime = gpGlobals->curtime;
 	m_LastEnterWeight = m_Weight;
 }
 
-void CColorCorrectionVolume::EndTouch( CBaseEntity *pEntity )
+void CColorCorrectionVolume::EndTouch_Impl( CBaseEntity *pEntity )
 {
 	m_LastExitTime = gpGlobals->curtime;
 	m_LastExitWeight = m_Weight;

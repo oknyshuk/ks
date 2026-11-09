@@ -4,8 +4,6 @@
 // Purpose: This file contains code to allow us to associate client data with bsp leaves.
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -460,9 +458,13 @@ void CClientLeafSystem::DestroyClientAlphaProperty( IClientAlphaProperty *pAlpha
 //-----------------------------------------------------------------------------
 CClientLeafSystem CClientLeafSystem::s_ClientLeafSystem;
 IClientLeafSystem *g_pClientLeafSystem = &CClientLeafSystem::s_ClientLeafSystem;
-IClientAlphaPropertyMgr *g_pClientAlphaPropertyMgr = &CClientLeafSystem::s_ClientLeafSystem;
 static InterfaceReg s_Reg_CClientLeafSystem_IClientLeafSystem( []() -> void * { return static_cast<IClientLeafSystem *>( &CClientLeafSystem::s_ClientLeafSystem ); }, CLIENTLEAFSYSTEM_INTERFACE_VERSION );;
 static InterfaceReg s_Reg_CClientLeafSystem_IClientAlphaPropertyMgr( []() -> void * { return static_cast<IClientAlphaPropertyMgr *>( &CClientLeafSystem::s_ClientLeafSystem ); }, CLIENT_ALPHA_PROPERTY_MGR_INTERFACE_VERSION );;
+
+IClientAlphaPropertyMgr *ClientAlphaPropertyMgr()
+{
+	return &CClientLeafSystem::s_ClientLeafSystem;
+}
 
 void CalcRenderableWorldSpaceAABB_Fast( IClientRenderable *pRenderable, Vector &absMin, Vector &absMax );
 
@@ -470,13 +472,13 @@ void CalcRenderableWorldSpaceAABB_Fast( IClientRenderable *pRenderable, Vector &
 //-----------------------------------------------------------------------------
 // Helper functions.
 //-----------------------------------------------------------------------------
-void DefaultRenderBoundsWorldspace( IClientRenderable *pRenderable, Vector &absMins, Vector &absMaxs )
+static void ClientRenderBoundsWorldspace( IClientRenderable *pRenderable, Vector &absMins, Vector &absMaxs )
 {
 //	SNPROF("DefaultRenderBoundsWorldspace");
 
 	// Tracker 37433:  This fixes a bug where if the stunstick is being wielded by a combine soldier, the fact that the stick was
 	//  attached to the soldier's hand would move it such that it would get frustum culled near the edge of the screen.
-	C_BaseEntity *pEnt = pRenderable->GetIClientUnknown()->GetBaseEntity();
+	C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( pRenderable->GetIClientUnknown()->GetBaseEntity() );
 	if ( pEnt && ( pEnt->IsFollowingEntity() || ( pEnt->GetParentAttachment() > 0 ) ) )
 	{
 		C_BaseEntity *pParent = pEnt->GetMoveParent();
@@ -519,6 +521,7 @@ void DefaultRenderBoundsWorldspace( IClientRenderable *pRenderable, Vector &absM
 	}
 	contract_assert( absMins.IsValid() && absMaxs.IsValid() );
 }
+static const bool s_bRenderBoundsInstalled = ( g_pfnClientRenderBoundsWorldspace = &ClientRenderBoundsWorldspace, true );
 
 // Figure out a world space bounding box that encloses the entity's local render bounds in world space.
 inline void CalcRenderableWorldSpaceAABB( 
@@ -540,7 +543,7 @@ void CalcRenderableWorldSpaceAABB_Fast( IClientRenderable *pRenderable, Vector &
 		return;
 	}
 
-	C_BaseEntity *pEnt = pRenderable->GetIClientUnknown()->GetBaseEntity();
+	C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( pRenderable->GetIClientUnknown()->GetBaseEntity() );
 	if ( pEnt && ( pEnt->IsFollowingEntity() || ( pEnt->GetMoveParent() && ( pEnt->GetParentAttachment() > 0 ) ) ) )
 	{
 		C_BaseEntity *pParent = pEnt->GetMoveParent();
@@ -1632,7 +1635,7 @@ void CClientLeafSystem::InsertIntoTree( ClientRenderHandle_t &handle, const Vect
 	{
 		char pTemp[256];
 		const char *pClassName = "<unknown renderable>";
-		C_BaseEntity *pEnt = info.m_pRenderable->GetIClientUnknown()->GetBaseEntity();
+		C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( info.m_pRenderable->GetIClientUnknown()->GetBaseEntity() );
 		if ( pEnt )
 		{
 			pClassName = pEnt->GetClassname();
@@ -3160,7 +3163,7 @@ int CClientLeafSystem::GetEntitiesInBox( C_BaseEntity **pEntityList, int listMax
 
 			if ( IsBoxIntersectingBox( vWorldSpaceMins, vWorldSpaceMaxs, info.m_vecAbsMins, info.m_vecAbsMaxs ) )
 			{
-				C_BaseEntity *pEnt = m_Renderables[ handle ].m_pRenderable->GetIClientUnknown()->GetBaseEntity();
+				C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( m_Renderables[ handle ].m_pRenderable->GetIClientUnknown()->GetBaseEntity() );
 				if ( pEnt )
 				{
 					pEntityList[totalCount] = pEnt;

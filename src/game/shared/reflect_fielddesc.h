@@ -8,9 +8,11 @@
 
 
 #include "datamap.h"
+#include "shareddefs.h"
 
-namespace ks::reflect
+namespace ksr
 {
+using namespace ::ks::reflect;
 
 struct FieldDesc
 {
@@ -40,7 +42,7 @@ inline typedescription_t MakeField( const FieldDesc &d )
 	t.flags            = d.flags;
 	t.externalName     = d.external;
 	t.pSaveRestoreOps  = d.ops;
-	t.inputFunc        = d.input;
+	t.inputFunc        = ToInputStorage( d.input );
 	t.td               = d.td;
 	t.fieldSizeInBytes = d.bytes;
 	t.override_field   = nullptr;
@@ -49,5 +51,5 @@ inline typedescription_t MakeField( const FieldDesc &d )
 	return t;
 }
 
-} // namespace ks::reflect
+} // namespace ksr
 

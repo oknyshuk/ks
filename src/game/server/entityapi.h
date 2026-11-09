@@ -5,7 +5,6 @@
 #include "edict.h"
 #include "server_class.h"
 
-class SendTable;
 
 extern void LoadMapEntities( const char *pMapEntities );
 extern void	DispatchObjectCollisionBox( edict_t *pent );

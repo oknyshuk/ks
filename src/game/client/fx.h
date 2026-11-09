@@ -2,14 +2,10 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "particles_simple.h"
 #include "c_pixel_visibility.h"
 #include "icliententityinternal.h"
 
-class CGameTrace;
-typedef CGameTrace trace_t;
 //struct trace_t;
 
 enum
@@ -50,8 +46,6 @@ void FX_EnergySplash( const Vector &pos, const Vector &normal, int nFlags = FX_E
 void FX_MicroExplosion( Vector &position, Vector &normal );
 void FX_Explosion( Vector& origin, Vector& normal, char materialType );
 void FX_ConcussiveExplosion( Vector& origin, Vector& normal ); 
-void FX_DustImpact( const Vector &origin, trace_t *tr, int iScale );
-void FX_DustImpact( const Vector &origin, trace_t *tr, float flScale );
 void FX_MuzzleEffect( const Vector &origin, const QAngle &angles, float scale, ClientEntityHandle_t hEntity, unsigned char *pFlashColor = nullptr, bool bOneFrame = false );
 void FX_MuzzleEffectAttached( float scale, ClientEntityHandle_t hEntity, int attachmentIndex, unsigned char *pFlashColor = nullptr, bool bOneFrame = false  );
 void FX_StriderMuzzleEffect( const Vector &origin, const QAngle &angles, float scale, ClientEntityHandle_t hEntity, unsigned char *pFlashColor = nullptr );

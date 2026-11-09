@@ -13,10 +13,11 @@ class CLight : public CPointEntity
 public:
 	DECLARE_CLASS( CLight, CPointEntity );
 
-	bool	KeyValue( const char *szKeyName, const char *szValue );
-	void	Spawn( void );
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue );
+	void	Spawn_Impl( void );
 	void	FadeThink( void );
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void	Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	
 	void	TurnOn( void );
 	void	TurnOff( void );

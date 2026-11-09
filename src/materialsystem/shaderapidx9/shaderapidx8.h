@@ -75,74 +75,73 @@ class IShaderAPIDX8 : public CShaderAPIBase
 {
 public:
 	// Draws the mesh
-	virtual void DrawMesh( CMeshBase *pMesh, int nCount, const MeshInstanceData_t *pInstances, VertexCompressionType_t nCompressionType, CompiledLightingState_t* pCompiledState, InstanceInfo_t *pInfo ) = 0;
+	void DrawMesh( CMeshBase *pMesh, int nCount, const MeshInstanceData_t *pInstances, VertexCompressionType_t nCompressionType, CompiledLightingState_t* pCompiledState, InstanceInfo_t *pInfo );
 
 	// Draw the mesh with the currently bound vertex and index buffers.
-	virtual void DrawWithVertexAndIndexBuffers( void ) = 0;
+	void DrawWithVertexAndIndexBuffers( void );
 
 	// Gets the current buffered state... (debug only)
-	virtual void GetBufferedState( BufferedState_t &state ) = 0;
+	void GetBufferedState( BufferedState_t &state );
 
 	// Gets the current backface cull state....
-	virtual D3DCULL GetCullMode() const = 0;
+	D3DCULL GetCullMode() const;
 
 	// Measures fill rate
-	virtual void ComputeFillRate() = 0;
+	void ComputeFillRate();
 
 	// Selection mode methods
-	virtual bool IsInSelectionMode() const = 0;
+	bool IsInSelectionMode() const;
 
 	// We hit somefin in selection mode
-	virtual void RegisterSelectionHit( float minz, float maxz ) = 0;
+	void RegisterSelectionHit( float minz, float maxz );
 
 	// Get the currently bound material
-	virtual IMaterialInternal* GetBoundMaterial() = 0;
+	IMaterialInternal* GetBoundMaterial();
 
 	// These methods are called by the transition table
 	// They depend on dynamic state so can't exist inside the transition table
-	virtual void ApplyZBias( const DepthTestState_t  &shaderState ) = 0;
-	virtual void ApplyCullEnable( bool bEnable ) = 0;
-	virtual void ApplyFogMode( ShaderFogMode_t fogMode, bool bVertexFog, bool bSRGBWritesEnabled, bool bDisableGammaCorrection ) = 0;
+	void ApplyZBias( const DepthTestState_t  &shaderState );
+	void ApplyCullEnable( bool bEnable );
+	void ApplyFogMode( ShaderFogMode_t fogMode, bool bVertexFog, bool bSRGBWritesEnabled, bool bDisableGammaCorrection );
 
-	virtual int GetActualSamplerCount() const = 0;
+	int GetActualSamplerCount() const;
 
-	virtual bool IsRenderingMesh() const = 0;
+	bool IsRenderingMesh() const;
 
 	// Fog methods...
-	virtual void EnableFixedFunctionFog( bool bFogEnable ) = 0;
+	void EnableFixedFunctionFog( bool bFogEnable );
 
-	virtual int GetCurrentFrameCounter( void ) const = 0;
+	int GetCurrentFrameCounter( void ) const;
 
 	// Workaround hack for visualization of selection mode
-	virtual void SetupSelectionModeVisualizationState() = 0;
+	void SetupSelectionModeVisualizationState();
 
-	virtual bool UsingSoftwareVertexProcessing() const = 0;
+	bool UsingSoftwareVertexProcessing() const;
 
 	//notification that the SRGB write state is being changed
-	virtual void EnabledSRGBWrite( bool bEnabled ) = 0;
-	virtual void SetSRGBWrite( bool bState ) = 0;
+	void EnabledSRGBWrite( bool bEnabled );
+	void SetSRGBWrite( bool bState );
 
 	// Alpha to coverage
-	virtual void ApplyAlphaToCoverage( bool bEnable ) = 0;
+	void ApplyAlphaToCoverage( bool bEnable );
 
-	virtual void PrintfVA( char *fmt, std::va_list vargs ) = 0;
-	virtual void Printf( char *fmt, ... ) = 0;	
-	virtual float Knob( char *knobname, float *setvalue = nullptr ) = 0;
+	void PrintfVA( char *fmt, std::va_list vargs );
+	float Knob( char *knobname, float *setvalue = nullptr );
 
-	virtual void NotifyShaderConstantsChangedInRenderPass() = 0;
+	void NotifyShaderConstantsChangedInRenderPass();
 
-	virtual void GenerateNonInstanceRenderState( MeshInstanceData_t *pInstance, CompiledLightingState_t** pCompiledState, InstanceInfo_t **pInfo ) = 0;
+	void GenerateNonInstanceRenderState( MeshInstanceData_t *pInstance, CompiledLightingState_t** pCompiledState, InstanceInfo_t **pInfo );
 
 	// Executes the per-instance command buffer
-	virtual void ExecuteInstanceCommandBuffer( const unsigned char *pCmdBuf, int nInstanceIndex, bool bForceStateSet ) = 0;
+	void ExecuteInstanceCommandBuffer( const unsigned char *pCmdBuf, int nInstanceIndex, bool bForceStateSet );
 
 	// Sets the vertex decl
-	virtual void SetVertexDecl( VertexFormat_t vertexFormat, bool bHasColorMesh, bool bUsingFlex, bool bUsingMorph, bool bUsingPreTessPatch, VertexStreamSpec_t *pStreamSpec ) = 0;
+	void SetVertexDecl( VertexFormat_t vertexFormat, bool bHasColorMesh, bool bUsingFlex, bool bUsingMorph, bool bUsingPreTessPatch, VertexStreamSpec_t *pStreamSpec );
 
 	// Set Tessellation Enable
 	void SetTessellationMode( TessellationMode_t mode ) {}
 
-	virtual void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics ) = 0;
+	void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics );
 
-	virtual float GetLightMapScaleFactor() const = 0;
+	float GetLightMapScaleFactor() const;
 };

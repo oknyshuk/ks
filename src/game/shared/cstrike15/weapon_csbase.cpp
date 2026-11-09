@@ -7,10 +7,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -26,7 +23,6 @@ import ks.tier1;
 #include "npcevent.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -42,7 +38,6 @@ import ks.math;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -95,7 +90,6 @@ constexpr auto SILENCER_HIDDEN = 1;
 	#include "materialsystem/icompositetexturegenerator.h"
 	#include "materialsystem/icustommaterialmanager.h"
 	#include "cs_custom_material_swap.h"
-	#include "cs_custom_weapon_visualsdata_processor.h"
 	//#include "glow_outline_effect.h"
 
 	extern IVModelInfoClient* modelinfo;
@@ -499,9 +493,9 @@ void CWeaponCSBase::ResetGunHeat()
 
 
 #ifndef CLIENT_DLL
-bool CWeaponCSBase::KeyValue( const char *szKeyName, const char *szValue )
+bool CWeaponCSBase::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
-	if ( !BaseClass::KeyValue( szKeyName, szValue ) )
+	if ( !BaseClass::KeyValue_Impl( szKeyName, szValue ) )
 	{
 		if ( FStrEq( szKeyName, "ammo" ) )
 		{
@@ -1274,9 +1268,9 @@ const char *CWeaponCSBase::GetViewModel( int /*viewmodelindex = 0 -- this is ign
 // 	return CALL_ATTRIB_HOOK_BOOL( taunt_id );
 // }
 
-void CWeaponCSBase::Precache( void )
+void CWeaponCSBase::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	if ( GetSilencerModel()[0] != 0 )
 	{
@@ -2548,7 +2542,7 @@ void CWeaponCSBase::CheckRespawn()
 // Respawn- this item is already in the world, but it is
 // invisible and intangible. Make it visible and tangible.
 //=========================================================
-CBaseEntity* CWeaponCSBase::Respawn()
+CBaseEntity* CWeaponCSBase::Respawn_Impl()
 {
 	// make a copy of this weapon that is invisible and inaccessible to players ( no touch function ). The weapon spawn/respawn code
 	// will decide when to make the weapon visible and touchable.
@@ -2577,7 +2571,7 @@ CBaseEntity* CWeaponCSBase::Respawn()
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CWeaponCSBase::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CWeaponCSBase::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	CBasePlayer *pPlayer = ToBasePlayer( pActivator );
 
@@ -2958,12 +2952,12 @@ void CWeaponCSBase::InitializeEconItemView( const char *pszItemName )
 		SetEconItemDefinition( pDef );
 }
 
-void CWeaponCSBase::Spawn()
+void CWeaponCSBase::Spawn_Impl()
 {
 	m_nWeaponID = WeaponIdFromString( GetClassname() );
 	InitializeEconItemView( GetClassname() );
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	// Override the bloat that our base class sets as it's a little bit bigger than we want.
 	// If it's too big, you drop a weapon and its box is so big that you're still touching it
@@ -3499,7 +3493,7 @@ float CWeaponCSBase::CalcViewmodelBob( void )
 #endif
 
 #ifndef CLIENT_DLL
-bool CWeaponCSBase::PhysicsSplash( const Vector &centerPoint, const Vector &normal, float rawSpeed, float scaledSpeed )
+bool CWeaponCSBase::PhysicsSplash_Impl( const Vector &centerPoint, const Vector &normal, float rawSpeed, float scaledSpeed )
 {
 	if ( rawSpeed > 20 )
 	{

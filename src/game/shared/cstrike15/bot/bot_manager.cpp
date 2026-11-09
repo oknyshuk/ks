@@ -3,8 +3,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.core;
 
 #include "bot.h"
 #include "bot_manager.h"
@@ -36,7 +34,7 @@ CBotManager::~CBotManager()
 /**
  * Invoked when the round is restarting
  */
-void CBotManager::RestartRound( void )
+void CBotManager::RestartRoundBase( void )
 {
 	DestroyAllGrenades();
 	ClearDebugMessages();
@@ -46,7 +44,7 @@ void CBotManager::RestartRound( void )
 /**
  * Invoked at the start of each frame
  */
-void CBotManager::StartFrame( void )
+void CBotManager::StartFrameBase( void )
 {
 	CVProfScope _( "CBotManager::StartFrame", 0, VPROF_BUDGETGROUP_NPCS, false, BUDGETFLAG_OTHER );
 
@@ -112,9 +110,7 @@ void CBotManager::StartFrame( void )
 		// because they can be setup to mimic the player's usercmds.
 		if (player->IsBot() && IsEntityValid( player ) )
 		{
-			// EVIL: Messes up vtables
-			//CBot< CBasePlayer > *bot = static_cast< CBot< CBasePlayer > * >( player );
-			CCSBot *bot = dynamic_cast< CCSBot * >( player );
+			CCSBot *bot = ToCSBot( player );
 
 			if ( bot )
 			{

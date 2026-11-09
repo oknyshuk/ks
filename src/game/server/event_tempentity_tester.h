@@ -15,8 +15,8 @@ class CTempEntTester : public CPointEntity
 public:
 	DECLARE_CLASS( CTempEntTester, CPointEntity );
 
-	void				Spawn( void );
-	void				Think( void );
+	void				Spawn_Impl( void );
+	void				Think_Impl( void );
 
 	static	CBaseEntity *Create( const Vector &vecOrigin, const QAngle &vecAngles, const char *lifetime, const char *single_te );
 private:

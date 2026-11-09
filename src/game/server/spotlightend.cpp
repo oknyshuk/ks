@@ -3,8 +3,6 @@
 
 // Purpose: Dynamic light at the end of a spotlight
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -52,7 +49,7 @@ IMPLEMENT_REFLECT_SERVERCLASS( CSpotlightEnd, DT_SpotlightEnd )
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
-void CSpotlightEnd::Spawn( void )
+void CSpotlightEnd::Spawn_Impl( void )
 {
 	Precache();
 	m_flLightScale  = 100;

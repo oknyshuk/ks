@@ -22,14 +22,14 @@ public:
 	static CEntityParticleTrail	*Create( CBaseEntity *pTarget, const EntityParticleTrailInfo_t &info, CBaseEntity *pConstraint );
 	static void Destroy( CBaseEntity *pTarget, const EntityParticleTrailInfo_t &info );
 
-	void Spawn();
-	virtual void UpdateOnRemove();
+	void Spawn_Impl();
+	void UpdateOnRemove_Impl();
 
 	// Force our constraint entity to be trasmitted
-	virtual void SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
+	void SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways );
 
 	// Clean up when the entity goes away.
-	virtual void NotifySystemEvent( CBaseEntity *pNotify, notify_system_event_t eventType, const notify_system_event_params_t &params );
+	void NotifySystemEvent_Impl( CBaseEntity *pNotify, notify_system_event_t eventType, const notify_system_event_params_t &params );
 
 private:
 	void	AttachToEntity( CBaseEntity *pTarget );

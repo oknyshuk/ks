@@ -377,7 +377,7 @@ void CriteriaSet::Reset()
 	m_Lookup.shrink_to_fit();
 }
 
-void CriteriaSet::WriteToEntity( CBaseEntity *pEntity )
+void CriteriaSet::WriteToEntity( IHandleEntity *pEntity )
 {
 	contract_assert( false && "CriteriaSet::WriteToEntity has not been ported from l4d2.\n" );
 }

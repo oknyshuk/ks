@@ -5,8 +5,6 @@
 // Implementation of Navigation Mesh edit mode
 // Author: Michael Booth, 2003-2004
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -2141,7 +2139,7 @@ void CommandNavCenterInWorld( void )
 	}
 
 	// Get the world's extent
-	CWorld *world = dynamic_cast< CWorld * >( CBaseEntity::Instance( INDEXENT( 0 ) ) );
+	CWorld *world = static_cast< CWorld * >( CBaseEntity::Instance( INDEXENT( 0 ) ) );	// edict 0 is the world
 	if ( !world )
 		return;
 

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -54,12 +51,12 @@ public:
 
 	CRagdollManager();
 
-	virtual void	Activate();
-	virtual int		UpdateTransmitState();
+	void	Activate_Impl();
+	int		UpdateTransmitState_Impl();
 
 	[[= ks::reflect::Input{ .name = "SetMaxRagdollCount", .type = FIELD_INTEGER } ]] void InputSetMaxRagdollCount(inputdata_t &data);
 
-	int DrawDebugTextOverlays(void);
+	int DrawDebugTextOverlays_Impl(void);
 
 public:
 
@@ -93,7 +90,7 @@ CRagdollManager::CRagdollManager( void )
 // Input  : *pInfo - 
 // Output : int
 //-----------------------------------------------------------------------------
-int CRagdollManager::UpdateTransmitState()
+int CRagdollManager::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }
@@ -101,9 +98,9 @@ int CRagdollManager::UpdateTransmitState()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CRagdollManager::Activate()
+void CRagdollManager::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	UpdateCurrentMaxRagDollCount();
 }
 
@@ -135,9 +132,9 @@ bool RagdollManager_SaveImportant( CAI_BaseNPC *pNPC )
 // Purpose: Draw any debug text overlays
 // Output : Current text offset from the top
 //-----------------------------------------------------------------------------
-int CRagdollManager::DrawDebugTextOverlays( void ) 
+int CRagdollManager::DrawDebugTextOverlays_Impl( void ) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{

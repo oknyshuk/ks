@@ -14,28 +14,27 @@ class CBaseClient;
 class INetworkStringDict
 {
 public:
-	virtual ~INetworkStringDict() {}
 
-	virtual unsigned int Count() = 0;
-	virtual void Purge() = 0;
-	virtual const char *String( int index ) = 0;
-	virtual bool IsValidIndex( int index ) = 0;
-	virtual int Insert( const char *pString ) = 0;
-	virtual int Find( const char *pString ) = 0;
-	virtual void UpdateDictionary( int index ) = 0;
-	virtual int DictionaryIndex( int index ) = 0;
-	virtual CNetworkStringTableItem	&Element( int index ) = 0;
-	virtual const CNetworkStringTableItem &Element( int index ) const = 0;
+	unsigned int Count();
+	void Purge();
+	const char *String( int index );
+	bool IsValidIndex( int index );
+	int Insert( const char *pString );
+	int Find( const char *pString );
+	void UpdateDictionary( int index );
+	int DictionaryIndex( int index );
+	CNetworkStringTableItem	&Element( int index );
+	const CNetworkStringTableItem &Element( int index ) const;
 };
 
 class INetworkStringTableDictionaryMananger
 {
 public:
-	virtual bool OnLevelLoadStart( char const *pchMapName, CRC32_t *pStringTableCRC ) = 0;
+	bool OnLevelLoadStart( char const *pchMapName, CRC32_t *pStringTableCRC );
 	// Indicates .bsp file is fully unloaded, safe to overwrite.
-	virtual void OnBSPFullyUnloaded() = 0;
+	void OnBSPFullyUnloaded();
 
-	virtual CRC32_t GetCRC() = 0;
+	CRC32_t GetCRC();
 };
 
 extern INetworkStringTableDictionaryMananger *g_pStringTableDictionary;
@@ -50,7 +49,7 @@ class CNetworkStringTable  : public INetworkStringTable
 public:
 	// Construction
 					CNetworkStringTable( TABLEID id, const char *tableName, int maxentries, int userdatafixedsize, int userdatanetworkbits, int flags );
-	virtual			~CNetworkStringTable( void );
+	~CNetworkStringTable( void );
 
 public:
 	// INetworkStringTable interface:
@@ -106,13 +105,13 @@ public:
 	CNetworkStringTableItem *GetItem( int i );
 	
 	// debug ouptput
-	virtual void	Dump( void );
-	virtual bool	Lock( bool bLock );
+	void	Dump( void );
+	bool	Lock( bool bLock );
 	
 	void SetAllowClientSideAddString( bool state );
 	pfnStringChanged	GetCallback();
 
-protected:
+public:
 	void			DataChanged( int stringNumber, CNetworkStringTableItem *item );
 
 	// Destroy string table
@@ -172,8 +171,8 @@ public:
 	INetworkStringTable	*GetTable( TABLEID stringTable ) const;
 	int					GetNumTables( void ) const;
 
-	virtual void				SetAllowClientSideAddString( INetworkStringTable *table, bool bAllowClientSideAddString );
-	virtual void				CreateDictionary( char const *pchMapName );
+	void				SetAllowClientSideAddString( INetworkStringTable *table, bool bAllowClientSideAddString );
+	void				CreateDictionary( char const *pchMapName );
 	void						UpdateDictionaryStrings();
 
 public:
@@ -209,7 +208,7 @@ public:
 
 	void		SetAllowClientSideAddString( bool state );
 
-private:
+public:
 	bool		m_bAllowCreation;	// creat guard Guard
 	int			m_nTickCount;		// current tick
 	bool		m_bLocked;			// currently locked?

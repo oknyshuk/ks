@@ -6,7 +6,6 @@
 #include "igamesystem.h"
 #include "shareddefs.h"
 
-class IMaterial;
 
 class CRadioStatus : public CAutoGameSystem
 {

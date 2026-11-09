@@ -34,8 +34,8 @@ public:
 	DECLARE_DATADESC();
 	CSkyCamera();
 	~CSkyCamera();
-	virtual void Spawn( void );
-	virtual void Activate();
+	void Spawn_Impl( void );
+	void Activate_Impl();
 
 	[[= ks::reflect::Input{ .name = "ActivateSkybox", .type = FIELD_VOID } ]] void InputActivateSkybox( inputdata_t &inputdata );
 

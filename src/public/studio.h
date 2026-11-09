@@ -3040,7 +3040,8 @@ public:
 		static void ReleaseMapping( CActivityToSequenceMapping *pMap );
 		static void ResetMappings();
 
-	private:
+	// What follows is the state the game's sequence selection (SelectWeightedSequence() in
+	// animation.cpp) works on.
 
 		/// Allocate my internal array. (It is freed in the destructor.) Also,
 		/// build the hash of activities to sequences and populate m_pSequenceTuples.
@@ -3048,12 +3049,6 @@ public:
 
 		/// Force Initialize() to occur again, even if it has already occured.
 		void Reinitialize( CStudioHdr *pstudiohdr );
-
-		/// A more efficient version of the old SelectWeightedSequence() function in animation.cpp. 
-		int SelectWeightedSequence( CStudioHdr *pstudiohdr, int activity, int curSequence );
-
-		// selects the sequence with the most matching modifiers
-		int SelectWeightedSequenceFromModifiers( CStudioHdr *pstudiohdr, int activity, const ActivityModifierSym_t *pActivityModifiers, int iModifierCount );
 
 		// Actually a big array, into which the hash values index.
 		SequenceTuple *m_pSequenceTuples;
@@ -3091,18 +3086,12 @@ public:
 		}
 	}
 
-	/// A more efficient version of the old SelectWeightedSequence() function in animation.cpp. 
-	/// Returns -1 on failure to find a sequence
-	inline int SelectWeightedSequence( int activity, int curSequence )
+	// The sequence picked for an activity depends on the game's random numbers, see
+	// SelectWeightedSequence() in animation.cpp.
+	CActivityToSequenceMapping *ActivityToSequence()
 	{
 		InitActivityToSequence();
-		return m_pActivityToSequence->SelectWeightedSequence( this, activity, curSequence );
-	}
-
-	inline int SelectWeightedSequenceFromModifiers( int activity, const ActivityModifierSym_t *pActivityModifiers, int iModifierCount )
-	{
-		InitActivityToSequence();
-		return m_pActivityToSequence->SelectWeightedSequenceFromModifiers( this, activity, pActivityModifiers, iModifierCount );
+		return m_pActivityToSequence;
 	}
 
 	/// True iff there is at least one sequence for the given activity.

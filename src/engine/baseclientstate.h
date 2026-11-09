@@ -215,71 +215,118 @@ public:
 
 // CBaseClientState
 class CBaseClientState :
-	public INetChannelHandler,
-	public IConnectionlessPacketHandler
+	public INetChannelHandler
 {
 	
 public:
-	CBaseClientState();
-	virtual ~CBaseClientState();
+	enum class state_kind_t : unsigned char { game, hltv };
 
-public: // IConnectionlessPacketHandler interface:
+	explicit CBaseClientState( state_kind_t kind );
+	~CBaseClientState();
+
+	state_kind_t m_state_kind;	// the class this object really is (see facade/baseclientstate.inl)
+
+public:
+	bool ProcessConnectionlessPacket( struct netpacket_s *packet );
+ // IConnectionlessPacketHandler interface:
 		
-	virtual bool ProcessConnectionlessPacket(struct netpacket_s *packet);
+	bool ProcessConnectionlessPacketBase(struct netpacket_s *packet);
 
-public: // INetMsgHandler interface:
+public:
+	void ConnectionStart( INetChannel *chan );
+ // INetMsgHandler interface:
 		
-	virtual void ConnectionStart(INetChannel *chan) override;
-	virtual void ConnectionStop( ) override;
-	virtual void ConnectionClosing( const char *reason );
-	virtual void ConnectionCrashed(const char *reason);
+	void ConnectionStartBase(INetChannel *chan);
+	void ConnectionStop(  );
 
-	virtual void PacketStart(int incoming_sequence, int outgoing_acknowledged) {};
-	virtual void PacketEnd( void ) {};
+	void ConnectionStopBase( );
+	void ConnectionClosing( const char *reason );
 
-	virtual void FileReceived( const char *fileName, unsigned int transferID, bool isReplayDemoFile );
-	virtual void FileRequested(const char *fileName, unsigned int transferID, bool isReplayDemoFile );
-	virtual void FileDenied(const char *fileName, unsigned int transferID, bool isReplayDemoFile );
-	virtual void FileSent(const char *fileName, unsigned int transferID, bool isReplayDemoFile );
+	void ConnectionClosingBase( const char *reason );
+	void ConnectionCrashed( const char *reason );
 
-	virtual bool ChangeSplitscreenUser( int nSplitScreenUserSlot ); // interleaved networking used by SS system is changing the SS player slot that the subsequent messages pertain to
+	void ConnectionCrashedBase(const char *reason);
+	void PacketStart( int incoming_sequence, int outgoing_acknowledged );
 
-public: // IServerMessageHandlers
+
+	void PacketStartBase(int incoming_sequence, int outgoing_acknowledged) {};
+	void PacketEnd( void );
+
+	void PacketEndBase( void ) {};
+	void FileReceived( const char *fileName, unsigned int transferID, bool isReplayDemoFile );
+
+
+	void FileReceivedBase( const char *fileName, unsigned int transferID, bool isReplayDemoFile );
+	void FileRequested( const char *fileName, unsigned int transferID, bool isReplayDemoFile );
+
+	void FileRequestedBase(const char *fileName, unsigned int transferID, bool isReplayDemoFile );
+	void FileDenied( const char *fileName, unsigned int transferID, bool isReplayDemoFile );
+
+	void FileDeniedBase(const char *fileName, unsigned int transferID, bool isReplayDemoFile );
+	void FileSent(const char *fileName, unsigned int transferID, bool isReplayDemoFile );
+
+	bool ChangeSplitscreenUser( int nSplitScreenUserSlot ); // interleaved networking used by SS system is changing the SS player slot that the subsequent messages pertain to
+
+public:
+	bool NETMsg_Tick( const ks::net::CNETMsg_Tick& msg );
+ // IServerMessageHandlers
 	
-	virtual bool NETMsg_Tick( const ks::net::CNETMsg_Tick& msg );
+	bool NETMsg_TickBase( const ks::net::CNETMsg_Tick& msg );
 	static bool NETMsg_Tick_Delegate( CBaseClientState *pThis, const ks::net::CNETMsg_Tick& msg ) { return pThis->NETMsg_Tick( msg ); }
-	virtual bool NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg );
+	bool NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg );
+
+	bool NETMsg_StringCmdBase( const ks::net::CNETMsg_StringCmd& msg );
 	bool NETMsg_SignonState( const ks::net::CNETMsg_SignonState& msg );
-	virtual bool NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg );
-	virtual bool NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg );
+	bool NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg );
+
+	bool NETMsg_PlayerAvatarDataBase( const ks::net::CNETMsg_PlayerAvatarData& msg );
+	bool NETMsg_SetConVar( const ks::net::CNETMsg_SetConVar& msg );
+
+	bool NETMsg_SetConVarBase( const ks::net::CNETMsg_SetConVar& msg );
 
 	bool SVCMsg_CmdKeyValues( const ks::net::CSVCMsg_CmdKeyValues& msg);
-	virtual bool SVCMsg_EncryptedData( const ks::net::CSVCMsg_EncryptedData& msg );
+	bool SVCMsg_EncryptedData( const ks::net::CSVCMsg_EncryptedData& msg );
+
+	bool SVCMsg_EncryptedDataBase( const ks::net::CSVCMsg_EncryptedData& msg );
 	bool SVCMsg_SendTable( const ks::net::CSVCMsg_SendTable& msg );
 	bool SVCMsg_Print( const ks::net::CSVCMsg_Print& msg );
-	virtual bool SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg );
-	virtual bool SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg );
-	virtual bool SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg );
-	virtual bool SVCMsg_SetView( const ks::net::CSVCMsg_SetView& msg );
-	virtual bool SVCMsg_CreateStringTable( const ks::net::CSVCMsg_CreateStringTable& msg );
-	virtual bool SVCMsg_UpdateStringTable( const ks::net::CSVCMsg_UpdateStringTable& msg );
-	virtual bool SVCMsg_VoiceInit( const ks::net::CSVCMsg_VoiceInit& msg ) = 0;
-	virtual bool SVCMsg_VoiceData( const ks::net::CSVCMsg_VoiceData& msg ) = 0;
-	virtual bool SVCMsg_FixAngle( const ks::net::CSVCMsg_FixAngle& msg ) = 0;
-	virtual bool SVCMsg_Prefetch( const ks::net::CSVCMsg_Prefetch& msg ) = 0;
-	virtual bool SVCMsg_CrosshairAngle( const ks::net::CSVCMsg_CrosshairAngle& msg ) = 0;
-	virtual bool SVCMsg_BSPDecal( const ks::net::CSVCMsg_BSPDecal& msg ) = 0;
-	virtual bool SVCMsg_SplitScreen( const ks::net::CSVCMsg_SplitScreen& msg );
-	virtual bool SVCMsg_GetCvarValue( const ks::net::CSVCMsg_GetCvarValue& msg );
-	virtual bool SVCMsg_Menu( const ks::net::CSVCMsg_Menu& msg );
-	virtual bool SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage& msg ) = 0;
-	virtual bool SVCMsg_PaintmapData( const ks::net::CSVCMsg_PaintmapData& msg ) = 0;
-	virtual bool SVCMsg_GameEvent( const ks::net::CSVCMsg_GameEvent& msg ) = 0;
-	virtual bool SVCMsg_GameEventList( const ks::net::CSVCMsg_GameEventList &msg );
-	virtual bool SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities& msg ) = 0;
-	virtual bool SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntities& msg );
-	virtual bool SVCMsg_Sounds( const ks::net::CSVCMsg_Sounds& msg ) = 0;
-	virtual bool SVCMsg_EntityMsg( const ks::net::CSVCMsg_EntityMsg& msg ) = 0;
+	bool SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg );
+
+	bool SVCMsg_ServerInfoBase( const ks::net::CSVCMsg_ServerInfo& msg );
+	bool SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg );
+
+	bool SVCMsg_ClassInfoBase( const ks::net::CSVCMsg_ClassInfo& msg );
+	bool SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg );
+
+	bool SVCMsg_SetPauseBase( const ks::net::CSVCMsg_SetPause& msg );
+	bool SVCMsg_SetView( const ks::net::CSVCMsg_SetView& msg );
+
+	bool SVCMsg_SetViewBase( const ks::net::CSVCMsg_SetView& msg );
+	bool SVCMsg_CreateStringTable( const ks::net::CSVCMsg_CreateStringTable& msg );
+	bool SVCMsg_UpdateStringTable( const ks::net::CSVCMsg_UpdateStringTable& msg );
+	bool SVCMsg_VoiceInit( const ks::net::CSVCMsg_VoiceInit& msg );
+	bool SVCMsg_VoiceData( const ks::net::CSVCMsg_VoiceData& msg );
+	bool SVCMsg_FixAngle( const ks::net::CSVCMsg_FixAngle& msg );
+	bool SVCMsg_Prefetch( const ks::net::CSVCMsg_Prefetch& msg );
+	bool SVCMsg_CrosshairAngle( const ks::net::CSVCMsg_CrosshairAngle& msg );
+	bool SVCMsg_BSPDecal( const ks::net::CSVCMsg_BSPDecal& msg );
+	bool SVCMsg_SplitScreen( const ks::net::CSVCMsg_SplitScreen& msg );
+	bool SVCMsg_GetCvarValue( const ks::net::CSVCMsg_GetCvarValue& msg );
+	bool SVCMsg_Menu( const ks::net::CSVCMsg_Menu& msg );
+
+	bool SVCMsg_MenuBase( const ks::net::CSVCMsg_Menu& msg );
+	bool SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage& msg );
+	bool SVCMsg_PaintmapData( const ks::net::CSVCMsg_PaintmapData& msg );
+	bool SVCMsg_GameEvent( const ks::net::CSVCMsg_GameEvent& msg );
+	bool SVCMsg_GameEventList( const ks::net::CSVCMsg_GameEventList &msg );
+
+	bool SVCMsg_GameEventListBase( const ks::net::CSVCMsg_GameEventList &msg );
+	bool SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities& msg );
+	bool SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntities& msg );
+
+	bool SVCMsg_PacketEntitiesBase( const ks::net::CSVCMsg_PacketEntities& msg );
+	bool SVCMsg_Sounds( const ks::net::CSVCMsg_Sounds& msg );
+	bool SVCMsg_EntityMsg( const ks::net::CSVCMsg_EntityMsg& msg );
 	
 	CNetMessageBinder m_NETMsgTick;
 	CNetMessageBinder m_NETMsgStringCmd;
@@ -315,31 +362,51 @@ public: // IServerMessageHandlers
 	CNetMessageBinder m_SVCMsgSounds;
 	CNetMessageBinder m_SVCMsgEntityMsg;
 
-public: // IMatchEventsSink
-	virtual void OnEvent( KeyValues *pEvent );
+public: // match events
+	void OnEvent( KeyValues *pEvent );
 
 public: 
 	inline	bool IsActive( void ) const { return m_nSignonState == SIGNONSTATE_FULL; };
 	inline	bool IsConnected( void ) const { return m_nSignonState >= SIGNONSTATE_CONNECTED; };
 	inline	bool IsConnecting( void ) const { return m_nSignonState >= SIGNONSTATE_NONE; }
-	virtual	void Clear( void );
-	virtual void FullConnect( const ns_address &adr, int nEncryptionKey ); // a connection was established
-	virtual void Connect( const char *pchPublicAddress, char const *pchPrivateAddress, const char* szJoinType ); // start a connection challenge
-	virtual void ConnectSplitScreen( const char *pchPublicAddress, char const *pchPrivateAddress, int numPlayers, const char* szJoinType ); // start a connection challenge
-	virtual bool SetSignonState ( int state, int count, const ks::net::CNETMsg_SignonState *msg );
-	virtual void Disconnect( bool bShowMainMenu = true );
-	virtual void SendConnectPacket ( const ns_address &netAdrRemote, int challengeNr, int authProtocol );
-	virtual const char *GetCDKeyHash() { return "123"; }
-	virtual void RunFrame ( void );
-	virtual void CheckForResend ( bool bForceResendNow = false );
-	virtual void CheckForReservationResend( void );
-	virtual void ResendGameDetailsRequest( const ns_address &adr );
-	virtual void InstallStringTableCallback( char const *tableName ) { }
-	virtual bool HookClientStringTable( char const *tableName ) { return false; }
-	virtual bool LinkClasses( void );
-	virtual int  GetConnectionRetryNumber() const { return m_nRetryMax; }
-	virtual const char *GetClientName() { return cl_name.GetString(); }
-	virtual void ReserveServer( const ns_address &netAdrPublic, const ns_address &netAdrPrivate, uint64 nServerReservationCookie,
+	void Clear( void );
+
+	void ClearBase( void );
+	void FullConnect( const ns_address &adr, int nEncryptionKey );
+
+	void FullConnectBase( const ns_address &adr, int nEncryptionKey ); // a connection was established
+	void Connect( const char *pchPublicAddress, char const *pchPrivateAddress, const char* szJoinType ); // start a connection challenge
+	void ConnectSplitScreen( const char *pchPublicAddress, char const *pchPrivateAddress, int numPlayers, const char* szJoinType );
+	bool SetSignonState( int state, int count, const ks::net::CNETMsg_SignonState *msg );
+ // start a connection challenge
+	bool SetSignonStateBase ( int state, int count, const ks::net::CNETMsg_SignonState *msg );
+	void Disconnect( bool bShowMainMenu = true );
+
+	void DisconnectBase( bool bShowMainMenu = true );
+	void SendConnectPacket ( const ns_address &netAdrRemote, int challengeNr, int authProtocol );
+	const char * GetCDKeyHash(  );
+
+	const char *GetCDKeyHashBase() { return "123"; }
+	void RunFrame( void );
+
+	void RunFrameBase ( void );
+	void CheckForResend ( bool bForceResendNow = false );
+	void CheckForReservationResend( void );
+	void ResendGameDetailsRequest( const ns_address &adr );
+	void InstallStringTableCallback( char const *tableName );
+
+	void InstallStringTableCallbackBase( char const *tableName ) { }
+	bool HookClientStringTable( char const *tableName );
+
+	bool HookClientStringTableBase( char const *tableName ) { return false; }
+	bool LinkClasses( void );
+	int GetConnectionRetryNumber(  ) const;
+
+	int  GetConnectionRetryNumberBase() const { return m_nRetryMax; }
+	const char * GetClientName(  );
+
+	const char *GetClientNameBase() { return cl_name.GetString(); }
+	void ReserveServer( const ns_address &netAdrPublic, const ns_address &netAdrPrivate, uint64 nServerReservationCookie,
 		KeyValues *pKVGameSettings, IMatchAsyncOperationCallback *pCallback, IMatchAsyncOperation **ppAsyncOperation );
 
 	bool CheckServerReservation( const ns_address &netAdrPublic, uint64 nServerReservationCookie, uint32 uiReservationStage, IMatchAsyncOperationCallback *pCallback, IMatchAsyncOperation **ppAsyncOperation );
@@ -353,10 +420,10 @@ public:
 		bool m_bValveDS;
 		uint32 m_numGameSlots;
 	};
-	virtual void HandleReservationResponse( const ReservationResponseReply_t &reply );
-	virtual void HandleReserveServerChallengeResponse( int nChallengeNr );
+	void HandleReservationResponse( const ReservationResponseReply_t &reply );
+	void HandleReserveServerChallengeResponse( int nChallengeNr );
 
-	virtual void SetServerReservationCookie( uint64 nReservationCookie ) { m_nServerReservationCookie = nReservationCookie; }
+	void SetServerReservationCookie( uint64 nReservationCookie ) { m_nServerReservationCookie = nReservationCookie; }
 
 	static ClientClass* FindClientClass(const char *pClassName);
 
@@ -382,20 +449,21 @@ public:
 
 	void ForceFullUpdate( char const *pchReason );
 	void SendStringCmd(const char * command);
-	
-	virtual void ReadPacketEntities( CEntityReadInfo &u ) = 0;
+	void ReadPacketEntities( CEntityReadInfo &u );
 
 	int				GetViewEntity();
 	void			HandleDeferredConnection();
 	void			SetConnectionPassword( char const *pchCurrentPW );
 	void			ResetConnectionRetries();
+	bool IsClientStateTv(  ) const;
 
-	virtual bool IsClientStateTv() const { return false; }
-protected:
+
+	bool IsClientStateTvBase() const { return false; }
+public:
 
 	bool InternalProcessStringCmd( const ks::net::CNETMsg_StringCmd& msg );
 
-private:
+public:
 	void SendReserveServerMsg();	
 	void SendReserveServerChallenge();
 	void BuildReserveServerPayload( bf_write &msg, int nChallengeNr );
@@ -469,12 +537,12 @@ public:
 			m_numGameSlotsForReservation = 0;
 		}
 
-		virtual bool IsFinished() { return m_eState > AOS_ABORTING; }
-		virtual AsyncOperationState_t GetState() { return m_eState; }
-		virtual uint64 GetResult();
-		virtual uint64 GetResultExtraInfo() { return m_numGameSlotsForReservation; }
-		virtual void Abort() {}
-		virtual void Release()
+		bool IsFinished() { return m_eState > AOS_ABORTING; }
+		AsyncOperationState_t GetState() { return m_eState; }
+		uint64 GetResult();
+		uint64 GetResultExtraInfo() { return m_numGameSlotsForReservation; }
+		void Abort() {}
+		void Release()
 		{
 			if ( m_pParent && m_pParent->m_pServerReservationOperation == this )
 			{

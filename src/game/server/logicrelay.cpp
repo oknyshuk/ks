@@ -7,8 +7,6 @@
 // off an I/O connection, or as a container for holding a set of outputs that
 // can be triggered from multiple places.
 
-import std;
-import ks.math;
 #include "edict.h"
 #include "iserverentity.h"
 #include "shareddefs.h"
@@ -50,9 +48,9 @@ CLogicRelay::CLogicRelay(void)
 //------------------------------------------------------------------------------
 // Kickstarts a think if we have OnSpawn connections.
 //------------------------------------------------------------------------------
-void CLogicRelay::Activate()
+void CLogicRelay::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	
 	if ( m_OnSpawn.NumberOfElements() > 0)
 	{
@@ -65,7 +63,7 @@ void CLogicRelay::Activate()
 // If we have OnSpawn connections, this is called shortly after spawning to
 // fire the OnSpawn output.
 //-----------------------------------------------------------------------------
-void CLogicRelay::Think()
+void CLogicRelay::Think_Impl()
 {
 	// Fire an output when we spawn. This is used for self-starting an entity
 	// template -- since the logic_relay is inside the template, it gets all the

@@ -1,7 +1,6 @@
 #pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
-import ks.core;
 
 #include "ivrenderview.h"
 
@@ -55,7 +54,6 @@ enum DrawFlags_t
 //-----------------------------------------------------------------------------
 // Purpose: View setup and rendering
 //-----------------------------------------------------------------------------
-class CViewSetup;
 class C_BaseEntity;
 class C_BaseViewModel;
 

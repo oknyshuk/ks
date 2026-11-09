@@ -3,8 +3,6 @@
 
 // nav_simplify.cpp
 
-import std;
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"

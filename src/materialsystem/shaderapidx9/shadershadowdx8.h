@@ -160,18 +160,14 @@ class IShaderShadowDX8 : public IShaderShadow
 {
 public:
 	// Initializes it
-	virtual void Init() = 0;
+	void Init();
 
 	// Gets at the shadow state
-	virtual ShadowState_t const& GetShadowState() = 0;
-	virtual ShadowShaderState_t const& GetShadowShaderState() = 0;
+	ShadowState_t const& GetShadowState();
+	ShadowShaderState_t const& GetShadowShaderState();
 
 	// This must be called right before taking a snapshot
-	virtual void ComputeAggregateShadowState( ) = 0;
-
-	// Class factory methods
-	static IShaderShadowDX8* Create( IShaderAPIDX8* pShaderAPIDX8 );
-	static void Destroy( IShaderShadowDX8* pShaderShadow );
+	void ComputeAggregateShadowState( );
 };
 
 extern IShaderShadowDX8 *g_pShaderShadowDx8;

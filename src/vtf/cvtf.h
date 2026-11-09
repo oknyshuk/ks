@@ -112,18 +112,18 @@ class CVTFTexture : public IVTFTexture
 {
 public:
 	CVTFTexture();
-	virtual ~CVTFTexture();
+	~CVTFTexture();
 
-	virtual bool Init( int nWidth, int nHeight, int nDepth, ImageFormat fmt, int iFlags, int iFrameCount, int nForceMipCount );
+	bool Init( int nWidth, int nHeight, int nDepth, ImageFormat fmt, int iFlags, int iFrameCount, int nForceMipCount );
 
 	// Methods to initialize the low-res image
-	virtual void InitLowResImage( int nWidth, int nHeight, ImageFormat fmt );
+	void InitLowResImage( int nWidth, int nHeight, ImageFormat fmt );
 
-	virtual void *SetResourceData( uint32 eType, void const *pData, std::size_t nDataSize );
-	virtual void *GetResourceData( uint32 eType, std::size_t *pDataSize ) const;
+	void *SetResourceData( uint32 eType, void const *pData, std::size_t nDataSize );
+	void *GetResourceData( uint32 eType, std::size_t *pDataSize ) const;
 
 	// Locates the resource entry info if it's present, easier than crawling array types
-	virtual bool HasResourceEntry( uint32 eType ) const;
+	bool HasResourceEntry( uint32 eType ) const;
 
 	// Retrieve available resource types of this IVTFTextures
 	//		arrTypesBuffer			buffer to be filled with resource types available.
@@ -131,123 +131,123 @@ public:
 	// Returns:
 	//		number of resource types available (can be greater than "numTypesBufferElems"
 	//		in which case only first "numTypesBufferElems" are copied to "arrTypesBuffer")
-	virtual unsigned int GetResourceTypes( uint32 *arrTypesBuffer, int numTypesBufferElems ) const;
+	unsigned int GetResourceTypes( uint32 *arrTypesBuffer, int numTypesBufferElems ) const;
 
 	// Methods to set other texture fields
-	virtual void SetBumpScale( float flScale );
-	virtual void SetReflectivity( const Vector &vecReflectivity );
+	void SetBumpScale( float flScale );
+	void SetReflectivity( const Vector &vecReflectivity );
 
 	// These are methods to help with optimization of file access
-	virtual void LowResFileInfo( int *pStartLocation, int *pSizeInBytes ) const;
-	virtual void ImageFileInfo( int nFrame, int nFace, int nMip, int *pStartLocation, int *pSizeInBytes) const;
-	virtual int FileSize( int nMipSkipCount = 0 ) const;
+	void LowResFileInfo( int *pStartLocation, int *pSizeInBytes ) const;
+	void ImageFileInfo( int nFrame, int nFace, int nMip, int *pStartLocation, int *pSizeInBytes) const;
+	int FileSize( int nMipSkipCount = 0 ) const;
 
 	// When unserializing, we can skip a certain number of mip levels,
 	// and we also can just load everything but the image data
-	virtual bool Unserialize( ks::byte_reader &buf, bool bBufferHeaderOnly = false, int nSkipMipLevels = 0 );
-	virtual bool Serialize( ks::byte_writer &buf );
+	bool Unserialize( ks::byte_reader &buf, bool bBufferHeaderOnly = false, int nSkipMipLevels = 0 );
+	bool Serialize( ks::byte_writer &buf );
 
 	// Attributes...
-	virtual int Width() const;
-	virtual int Height() const;
-	virtual int Depth() const;
-	virtual int MipCount() const;
+	int Width() const;
+	int Height() const;
+	int Depth() const;
+	int MipCount() const;
 
-	virtual int RowSizeInBytes( int nMipLevel ) const;
-	virtual int FaceSizeInBytes( int nMipLevel ) const;
+	int RowSizeInBytes( int nMipLevel ) const;
+	int FaceSizeInBytes( int nMipLevel ) const;
 
-	virtual ImageFormat Format() const;
-	virtual int FaceCount() const;
-	virtual int FrameCount() const;
-	virtual int Flags() const;
+	ImageFormat Format() const;
+	int FaceCount() const;
+	int FrameCount() const;
+	int Flags() const;
 
-	virtual float BumpScale() const;
-	virtual const Vector &Reflectivity() const;
+	float BumpScale() const;
+	const Vector &Reflectivity() const;
 
-	virtual bool IsCubeMap() const;
-	virtual bool IsNormalMap() const;
-	virtual bool IsVolumeTexture() const;
+	bool IsCubeMap() const;
+	bool IsNormalMap() const;
+	bool IsVolumeTexture() const;
 
-	virtual int LowResWidth() const;
-	virtual int LowResHeight() const;
-	virtual ImageFormat LowResFormat() const;
+	int LowResWidth() const;
+	int LowResHeight() const;
+	ImageFormat LowResFormat() const;
 
 	// Computes the size (in bytes) of a single mipmap of a single face of a single frame 
-	virtual int ComputeMipSize( int iMipLevel ) const;
+	int ComputeMipSize( int iMipLevel ) const;
 
 	// Computes the size (in bytes) of a single face of a single frame
 	// All mip levels starting at the specified mip level are included
-	virtual int ComputeFaceSize( int iStartingMipLevel = 0 ) const;
+	int ComputeFaceSize( int iStartingMipLevel = 0 ) const;
 
 	// Computes the total size of all faces, all frames
-	virtual int ComputeTotalSize( ) const;
+	int ComputeTotalSize( ) const;
 
 	// Computes the dimensions of a particular mip level
-	virtual void ComputeMipLevelDimensions( int iMipLevel, int *pWidth, int *pHeight, int *pMipDepth ) const;
+	void ComputeMipLevelDimensions( int iMipLevel, int *pWidth, int *pHeight, int *pMipDepth ) const;
 
 	// Computes the size of a subrect (specified at the top mip level) at a particular lower mip level
-	virtual void ComputeMipLevelSubRect( Rect_t* pSrcRect, int nMipLevel, Rect_t *pSubRect ) const;
+	void ComputeMipLevelSubRect( Rect_t* pSrcRect, int nMipLevel, Rect_t *pSubRect ) const;
 
 	// Returns the base address of the image data
-	virtual unsigned char *ImageData();
+	unsigned char *ImageData();
 
 	// Returns a pointer to the data associated with a particular frame, face, and mip level
-	virtual unsigned char *ImageData( int iFrame, int iFace, int iMipLevel );
+	unsigned char *ImageData( int iFrame, int iFace, int iMipLevel );
 
 	// Returns a pointer to the data associated with a particular frame, face, mip level, and offset
-	virtual unsigned char *ImageData( int iFrame, int iFace, int iMipLevel, int x, int y, int z );
+	unsigned char *ImageData( int iFrame, int iFace, int iMipLevel, int x, int y, int z );
 
 	// Returns the base address of the low-res image data
-	virtual unsigned char *LowResImageData();
+	unsigned char *LowResImageData();
 
 	// Converts the texture's image format. Use IMAGE_FORMAT_DEFAULT
-	virtual void ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV, bool bNormalToDXT5GA );
+	void ConvertImageFormat( ImageFormat fmt, bool bNormalToDUDV, bool bNormalToDXT5GA );
 
 	// Generate spheremap based on the current cube faces (only works for cubemaps)
 	// The look dir indicates the direction of the center of the sphere
-	virtual void GenerateSpheremap( LookDir_t lookDir );
+	void GenerateSpheremap( LookDir_t lookDir );
 
-	virtual void GenerateHemisphereMap( unsigned char *pSphereMapBitsRGBA, int targetWidth, 
+	void GenerateHemisphereMap( unsigned char *pSphereMapBitsRGBA, int targetWidth, 
 		int targetHeight, LookDir_t lookDir, int iFrame );
 
 	// Fixes the cubemap faces orientation from our standard to the
 	// standard the material system needs.
-	virtual void FixCubemapFaceOrientation( );
+	void FixCubemapFaceOrientation( );
 
 	// Normalize the top mip level if necessary
-	virtual void NormalizeTopMipLevel();
+	void NormalizeTopMipLevel();
 	
 	// Generates mipmaps from the base mip levels
-	virtual void GenerateMipmaps();
+	void GenerateMipmaps();
 
 	// Put 1/miplevel (1..n) into alpha.
-	virtual void PutOneOverMipLevelInAlpha();
+	void PutOneOverMipLevelInAlpha();
 
 	// Scale alpha by miplevel/ mipcount
-	virtual void PremultAlphaWithMipFraction();
+	void PremultAlphaWithMipFraction();
 
 	// Computes the reflectivity
-	virtual void ComputeReflectivity( );
+	void ComputeReflectivity( );
 
 	// Computes the alpha flags
-	virtual void ComputeAlphaFlags();
+	void ComputeAlphaFlags();
 
-	virtual void Compute2DGradient();
+	void Compute2DGradient();
 
 	// Gets the texture all internally consistent assuming you've loaded
 	// mip 0 of all faces of all frames
-	virtual void PostProcess(bool bGenerateSpheremap, LookDir_t lookDir = LOOK_DOWN_Z, bool bAllowFixCubemapOrientation = true, bool bLoadedMiplevels = false);
-	virtual void SetPostProcessingSettings( VtfProcessingOptions const *pOptions );
+	void PostProcess(bool bGenerateSpheremap, LookDir_t lookDir = LOOK_DOWN_Z, bool bAllowFixCubemapOrientation = true, bool bLoadedMiplevels = false);
+	void SetPostProcessingSettings( VtfProcessingOptions const *pOptions );
 
 	// Generate the low-res image bits
-	virtual bool ConstructLowResImage();
+	bool ConstructLowResImage();
 
-	virtual void MatchCubeMapBorders( int iStage, ImageFormat finalFormat, bool bSkybox );
+	void MatchCubeMapBorders( int iStage, ImageFormat finalFormat, bool bSkybox );
 
 	// Sets threshhold values for alphatest mipmapping
-	virtual void SetAlphaTestThreshholds( float flBase, float flHighFreq );
+	void SetAlphaTestThreshholds( float flBase, float flHighFreq );
 
-	virtual bool IsPreTiled() const;
+	bool IsPreTiled() const;
 
 private:
 	// Unserialization

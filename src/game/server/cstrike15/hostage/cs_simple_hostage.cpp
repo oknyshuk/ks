@@ -6,8 +6,6 @@
 // Author: Michael S. Booth and Matt Boone, July 2004
 // Bugs Fixed by: Everyone else
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -53,6 +51,7 @@ import ks.tier1;
 #include "cvisibilitymonitor.h"
 #include "cs_entity_spotting.h"
 #include "cs_shareddefs.h"
+#include "../Effects/chicken.h"
 
 constexpr auto HOSTAGE_THINK_INTERVAL = (1.0f/60.0f); //We increased this from 0.1 in CS:GO so that the hostages don't stutter as much.
 constexpr auto HOSTAGE_THINK_CARRIED_INTERVAL = (1.0f/45.0f);
@@ -123,7 +122,7 @@ END_SCRIPTDESC()
 
 //-----------------------------------------------------------------------------------------------------
 LINK_ENTITY_TO_CLASS( info_hostage_spawn, CHostage );
-LINK_ENTITY_TO_CLASS( hostage_entity, CHostage );
+LINK_ENTITY_TO_CLASS_ALIAS( hostage_entity, CHostage );
 
 //-----------------------------------------------------------------------------------------------------
 IMPLEMENT_REFLECT_DATAMAP( CHostage )
@@ -138,7 +137,7 @@ std::vector< CHostage * > g_Hostages;
 static CountdownTimer announceTimer;		// used to stop "hostage rescued" announcements from stepping on each other
 
 //-----------------------------------------------------------------------------------------------------
-CHostage::CHostage()
+CHostage::CHostage() : CImprovLocomotor( CImprovLocomotor::Kind::Hostage )
 {
 	if ( std::ssize( g_Hostages ) < MAX_HOSTAGES )
 	{
@@ -193,7 +192,7 @@ bool CHostage::CSAnim_CanMove()
 	return true;
 }
 
-bool CHostage::KeyValue( const char *szKeyName, const char *szValue )
+bool CHostage::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if ( char const *szHostageSpawnExclusionGroup = StringAfterPrefix( szKeyName, "HostageSpawnExclusionGroup" ) )
 	{
@@ -220,11 +219,11 @@ bool CHostage::KeyValue( const char *szKeyName, const char *szValue )
 		return true;
 	}
 
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 //-----------------------------------------------------------------------------------------------------
-void CHostage::Spawn( void )
+void CHostage::Spawn_Impl( void )
 {
 	// No hostages in deathmatch
 	if ( CSGameRules()->IsPlayingGunGame() || ( CSGameRules()->IsWarmupPeriod() && !mp_hostages_spawn_same_every_round.GetBool() ) )
@@ -355,7 +354,7 @@ void CHostage::Spawn( void )
 }
 
 //-----------------------------------------------------------------------------------------------------
-void CHostage::Precache()
+void CHostage::Precache_Impl()
 {
 	const char *mapName = ( gpGlobals ? STRING( gpGlobals->mapname ) : nullptr );
 
@@ -408,15 +407,15 @@ void CHostage::Precache()
 	PrecacheScriptSound( "Hostage.PickUp" );
 	PrecacheScriptSound( "Hostage.Drop" );
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-void CHostage::ModifyOrAppendCriteria( AI_CriteriaSet& set )
+void CHostage::ModifyOrAppendCriteria_Impl( AI_CriteriaSet& set )
 {
-	BaseClass::ModifyOrAppendCriteria( set );
+	BaseClass::ModifyOrAppendCriteria_Impl( set );
 
 	set.AppendCriteria( "rescued", (IsRescued() ? "yes" : "no") );
 }
@@ -488,7 +487,7 @@ float CHostage::GetModifiedDamage( float flDamage, int nHitGroup )
 }
 
 //-----------------------------------------------------------------------------------------------------
-void CHostage::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
+void CHostage::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr )
 {
 	CTakeDamageInfo scaledInfo = info;
 	scaledInfo.SetDamage( GetModifiedDamage( info.GetDamage(), ptr->hitgroup ) );
@@ -548,7 +547,7 @@ void CHostage::CheckForHostageAbuse( CCSPlayer *player )
 /**
  * Hostage was killed
  */
-void CHostage::Event_Killed( const CTakeDamageInfo &info )
+void CHostage::Event_Killed_Impl( const CTakeDamageInfo &info )
 {
 	// clear followers for music cue
 	CCSPlayer *player = GetLeader();
@@ -588,7 +587,7 @@ void CHostage::Event_Killed( const CTakeDamageInfo &info )
 	m_lastLeaderID = 0;
 
 	SetUse( nullptr );
-	BaseClass::Event_Killed( info );
+	BaseClass::Event_Killed_Impl( info );
 
 	IGameEvent *event = gameeventmanager->CreateEvent("hostage_killed");
 	if ( event )
@@ -810,9 +809,9 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 /**
  * In contact with "other"
  */
-void CHostage::Touch( CBaseEntity *other )
+void CHostage::Touch_Impl( CBaseEntity *other )
 {
-	BaseClass::Touch( other );
+	BaseClass::Touch_Impl( other );
 
 	if (!mp_hostages_moveable.GetBool())
 		return;
@@ -1111,9 +1110,9 @@ void CHostage::PushawayThink( void )
  * MoveHelperServer()->SetHost( this );
  * this->PlayerRunCommand( &cmd, MoveHelperServer() );
  */
-void CHostage::PhysicsSimulate( void )
+void CHostage::PhysicsSimulate_Impl( void )
 {
-	BaseClass::PhysicsSimulate();
+	BaseClass::PhysicsSimulate_Impl();
 
 	SetAbsVelocity( m_vel );
 }
@@ -1958,7 +1957,215 @@ void CHostage::OnMoveToFailure( const Vector &goal, MoveToFailureType reason )
 }
 
 
-unsigned int CHostage::PhysicsSolidMaskForEntity() const
+unsigned int CHostage::PhysicsSolidMaskForEntity_Impl() const
 {
 	return MASK_PLAYERSOLID;
 }
+
+
+//--------------------------------------------------------------------------------------------------------------
+// CImprovLocomotor methods: forward to the concrete class (CHostage or CChicken) according to the Kind
+//
+
+const Vector & CImprovLocomotor::GetCentroid( void ) const
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	return static_cast< const CHostage * >( this )->GetCentroid();
+	case Kind::Chicken:	return static_cast< const CChicken * >( this )->GetCentroid();
+	}
+
+	std::unreachable();
+}
+
+const Vector & CImprovLocomotor::GetFeet( void ) const
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	return static_cast< const CHostage * >( this )->GetFeet();
+	case Kind::Chicken:	return static_cast< const CChicken * >( this )->GetFeet();
+	}
+
+	std::unreachable();
+}
+
+const Vector & CImprovLocomotor::GetEyes( void ) const
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	return static_cast< const CHostage * >( this )->GetEyes();
+	case Kind::Chicken:	return static_cast< const CChicken * >( this )->GetEyes();
+	}
+
+	std::unreachable();
+}
+
+float CImprovLocomotor::GetMoveAngle( void ) const
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	return static_cast< const CHostage * >( this )->GetMoveAngle();
+	case Kind::Chicken:	return static_cast< const CChicken * >( this )->GetMoveAngle();
+	}
+
+	std::unreachable();
+}
+
+CNavArea * CImprovLocomotor::GetLastKnownArea( void ) const
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	return static_cast< const CHostage * >( this )->GetLastKnownArea();
+	case Kind::Chicken:	return static_cast< const CChicken * >( this )->GetLastKnownArea();
+	}
+
+	std::unreachable();
+}
+
+bool CImprovLocomotor::GetSimpleGroundHeightWithFloor( const Vector &pos, float *height, Vector *normal )
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	return static_cast< CHostage * >( this )->GetSimpleGroundHeightWithFloor( pos, height, normal );
+	case Kind::Chicken:	return static_cast< CChicken * >( this )->GetSimpleGroundHeightWithFloor( pos, height, normal );
+	}
+
+	std::unreachable();
+}
+
+void CImprovLocomotor::Crouch( void )
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	static_cast< CHostage * >( this )->Crouch();	break;
+	case Kind::Chicken:	static_cast< CChicken * >( this )->Crouch();	break;
+	}
+}
+
+void CImprovLocomotor::StandUp( void )
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	static_cast< CHostage * >( this )->StandUp();	break;
+	case Kind::Chicken:	static_cast< CChicken * >( this )->StandUp();	break;
+	}
+}
+
+bool CImprovLocomotor::IsCrouching( void ) const
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	return static_cast< const CHostage * >( this )->IsCrouching();
+	case Kind::Chicken:	return static_cast< const CChicken * >( this )->IsCrouching();
+	}
+
+	std::unreachable();
+}
+
+void CImprovLocomotor::Jump( void )
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	static_cast< CHostage * >( this )->Jump();	break;
+	case Kind::Chicken:	static_cast< CChicken * >( this )->Jump();	break;
+	}
+}
+
+bool CImprovLocomotor::IsJumping( void ) const
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	return static_cast< const CHostage * >( this )->IsJumping();
+	case Kind::Chicken:	return static_cast< const CChicken * >( this )->IsJumping();
+	}
+
+	std::unreachable();
+}
+
+void CImprovLocomotor::Run( void )
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	static_cast< CHostage * >( this )->Run();	break;
+	case Kind::Chicken:	static_cast< CChicken * >( this )->Run();	break;
+	}
+}
+
+void CImprovLocomotor::Walk( void )
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	static_cast< CHostage * >( this )->Walk();	break;
+	case Kind::Chicken:	static_cast< CChicken * >( this )->Walk();	break;
+	}
+}
+
+bool CImprovLocomotor::IsRunning( void ) const
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	return static_cast< const CHostage * >( this )->IsRunning();
+	case Kind::Chicken:	return static_cast< const CChicken * >( this )->IsRunning();
+	}
+
+	std::unreachable();
+}
+
+void CImprovLocomotor::StartLadder( const CNavLadder *ladder, NavTraverseType how, const Vector &approachPos, const Vector &departPos )
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	static_cast< CHostage * >( this )->StartLadder( ladder, how, approachPos, departPos );	break;
+	case Kind::Chicken:	static_cast< CChicken * >( this )->StartLadder( ladder, how, approachPos, departPos );	break;
+	}
+}
+
+bool CImprovLocomotor::TraverseLadder( const CNavLadder *ladder, NavTraverseType how, const Vector &approachPos, const Vector &departPos, float deltaT )
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	return static_cast< CHostage * >( this )->TraverseLadder( ladder, how, approachPos, departPos, deltaT );
+	case Kind::Chicken:	return static_cast< CChicken * >( this )->TraverseLadder( ladder, how, approachPos, departPos, deltaT );
+	}
+
+	std::unreachable();
+}
+
+bool CImprovLocomotor::IsUsingLadder( void ) const
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	return static_cast< const CHostage * >( this )->IsUsingLadder();
+	case Kind::Chicken:	return static_cast< const CChicken * >( this )->IsUsingLadder();
+	}
+
+	std::unreachable();
+}
+
+void CImprovLocomotor::TrackPath( const Vector &pathGoal, float deltaT )
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	static_cast< CHostage * >( this )->TrackPath( pathGoal, deltaT );	break;
+	case Kind::Chicken:	static_cast< CChicken * >( this )->TrackPath( pathGoal, deltaT );	break;
+	}
+}
+
+void CImprovLocomotor::OnMoveToSuccess( const Vector &goal )
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	static_cast< CHostage * >( this )->OnMoveToSuccess( goal );	break;
+	case Kind::Chicken:	static_cast< CChicken * >( this )->OnMoveToSuccess( goal );	break;
+	}
+}
+
+void CImprovLocomotor::OnMoveToFailure( const Vector &goal, MoveToFailureType reason )
+{
+	switch ( m_improvKind )
+	{
+	case Kind::Hostage:	static_cast< CHostage * >( this )->OnMoveToFailure( goal, reason );	break;
+	case Kind::Chicken:	static_cast< CChicken * >( this )->OnMoveToFailure( goal, reason );	break;
+	}
+}
+

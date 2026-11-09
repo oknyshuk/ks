@@ -21,13 +21,13 @@ class CMatchExtensions : public IMatchExtensions
 	// Methods of IMatchExtensions
 public:
 	// Registers an extension interface
-	virtual void RegisterExtensionInterface( char const *szInterfaceString, void *pvInterface );
+	void RegisterExtensionInterface( char const *szInterfaceString, void *pvInterface );
 
 	// Unregisters an extension interface
-	virtual void UnregisterExtensionInterface( char const *szInterfaceString, void *pvInterface );
+	void UnregisterExtensionInterface( char const *szInterfaceString, void *pvInterface );
 
 	// Gets a pointer to a registered extension interface
-	virtual void * GetRegisteredExtensionInterface( char const *szInterfaceString );
+	void * GetRegisteredExtensionInterface( char const *szInterfaceString );
 
 public:
 	CMatchExtensions();

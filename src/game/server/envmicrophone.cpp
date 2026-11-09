@@ -6,8 +6,6 @@
 //			hear sounds that were emitted using the CSound::InsertSound function.
 //			It does not hear danger sounds since they are not technically sounds.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -25,7 +23,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -73,7 +70,7 @@ CEnvMicrophone::~CEnvMicrophone( void )
 //-----------------------------------------------------------------------------
 // Purpose: Called before spawning, after keyvalues have been handled.
 //-----------------------------------------------------------------------------
-void CEnvMicrophone::Spawn(void)
+void CEnvMicrophone::Spawn_Impl(void)
 {
 	//
 	// Build our sound type mask from our spawnflags.
@@ -119,9 +116,9 @@ void CEnvMicrophone::Spawn(void)
 // Purpose: Called after all entities have spawned and after a load game.
 //			Finds the reference point at which to measure sound level.
 //-----------------------------------------------------------------------------
-void CEnvMicrophone::Activate(void)
+void CEnvMicrophone::Activate_Impl(void)
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	// Get a handle to my filter entity if there is one
 	if (m_iszListenFilter != NULL_STRING)
@@ -154,9 +151,9 @@ void CEnvMicrophone::Activate(void)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvMicrophone::OnRestore( void )
+void CEnvMicrophone::OnRestore_Impl( void )
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	ActivateSpeaker();
 }
@@ -377,7 +374,7 @@ void CEnvMicrophone::SetSpeaker( string_t iszSpeakerName, EHANDLE hSpeaker )
 //-----------------------------------------------------------------------------
 // Purpose: Listens for sounds and updates the value of the SoundLevel output.
 //-----------------------------------------------------------------------------
-void CEnvMicrophone::Think(void)
+void CEnvMicrophone::Think_Impl(void)
 {
 	int nSound = CSoundEnt::ActiveList();
 	bool fHearSound = false;

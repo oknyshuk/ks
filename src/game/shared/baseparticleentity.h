@@ -34,7 +34,7 @@ public:
 	// CBaseEntity overrides.
 public:
 #if !defined( CLIENT_DLL )
-	virtual int		UpdateTransmitState( void );	
+	KS_VIRTUAL int		UpdateTransmitState_Impl( void );	
 #else
 // Default IParticleEffect overrides.
 public:
@@ -49,8 +49,8 @@ public:
 	CParticleEffectBinding	m_ParticleEffect;
 #endif
 
-	virtual void	Activate();
-	virtual void	Think();	
+	KS_VIRTUAL void	Activate_Impl();
+	KS_VIRTUAL void	Think_Impl();	
 
 #if defined( CLIENT_DLL )
 	// NOTE: Ths enclosed particle effect binding will do all the drawing

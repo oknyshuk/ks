@@ -7,10 +7,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -23,7 +20,6 @@ import ks.tier1;
 #include "cdll_client_int.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -85,10 +81,10 @@ CWeaponBaseItem::CWeaponBaseItem()
 }
 
 //--------------------------------------------------------------------------------------------------------
-void CWeaponBaseItem::Spawn( void )
+void CWeaponBaseItem::Spawn_Impl( void )
 {
 	m_UseTimer.Invalidate();
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	SetCollisionGroup( COLLISION_GROUP_WEAPON );
 }
 

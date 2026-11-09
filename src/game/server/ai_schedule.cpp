@@ -3,8 +3,6 @@
 
 // Purpose: Base combat character with no AI
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -33,7 +31,6 @@ import ks.tier1;
 #include "recipientfilter.h"
 #include "npcevent.h"
 #include "ai_basenpc.h"
-#include "ai_agent.h"
 #include "ai_activity.h"
 #include "ai_schedule.h"
 #include "ai_default.h"
@@ -45,7 +42,6 @@ import ks.tier1;
 // Init static variables
 //-----------------------------------------------------------------------------
 CAI_SchedulesManager g_AI_SchedulesManager;
-CAI_SchedulesManager g_AI_AgentSchedulesManager;
 
 //-----------------------------------------------------------------------------
 // Purpose:	Delete all the string registries
@@ -54,7 +50,6 @@ CAI_SchedulesManager g_AI_AgentSchedulesManager;
 //-----------------------------------------------------------------------------
 void CAI_SchedulesManager::DestroyStringRegistries(void)
 {
-	CAI_Agent::GetSchedulingSymbols()->Clear();
 	CAI_BaseNPC::GetSchedulingSymbols()->Clear();
 	CAI_BaseNPC::gm_SquadSlotNamespace.Clear();
 
@@ -69,7 +64,6 @@ void CAI_SchedulesManager::DestroyStringRegistries(void)
 
 void CAI_SchedulesManager::CreateStringRegistries( void )
 {
-	CAI_Agent::GetSchedulingSymbols()->Clear();
 	CAI_BaseNPC::GetSchedulingSymbols()->Clear();
 	CAI_BaseNPC::gm_SquadSlotNamespace.Clear();
 
@@ -92,14 +86,6 @@ void CAI_BaseNPC::InitSchedulingTables()
 	CAI_BaseNPC::InitDefaultSquadSlotSR();
 }
 
-void CAI_Agent::InitSchedulingTables()
-{
-	CAI_Agent::gm_ClassScheduleIdSpace.Init( "CAI_Agent", CAI_Agent::GetSchedulingSymbols() );
-	CAI_Agent::InitDefaultScheduleSR();
-	CAI_Agent::InitDefaultConditionSR();
-	CAI_Agent::InitDefaultTaskSR();
-}
-
 bool CAI_SchedulesManager::LoadAllSchedules(void)
 {
 	// If I haven't loaded schedules yet
@@ -107,15 +93,9 @@ bool CAI_SchedulesManager::LoadAllSchedules(void)
 	{
 		// Init defaults
 		CAI_BaseNPC::InitSchedulingTables();
-		CAI_Agent::InitSchedulingTables();
 		if (!CAI_BaseNPC::LoadDefaultSchedules())
 		{
 			CAI_BaseNPC::m_nDebugBits |= bits_debugDisableAI;
-			DevMsg("ERROR:  Mistake in default schedule definitions, AI Disabled.\n");
-		}
-
-		if (!CAI_Agent::LoadDefaultSchedules())
-		{
 			DevMsg("ERROR:  Mistake in default schedule definitions, AI Disabled.\n");
 		}
 	}

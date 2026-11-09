@@ -3,8 +3,6 @@
 
 // Purpose: AI Utility classes for building the initial AI Networks
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -39,11 +37,11 @@ import ks.math;
 #include "ai_network.h"
 
 LINK_ENTITY_TO_CLASS( info_hint,			CNodeEnt );	
-LINK_ENTITY_TO_CLASS( info_node,			CNodeEnt );	
-LINK_ENTITY_TO_CLASS( info_node_hint,		CNodeEnt );	
-LINK_ENTITY_TO_CLASS( info_node_air,		CNodeEnt );	
-LINK_ENTITY_TO_CLASS( info_node_air_hint,	CNodeEnt );	
-LINK_ENTITY_TO_CLASS( info_node_climb,		CNodeEnt );
+LINK_ENTITY_TO_CLASS_ALIAS( info_node,			CNodeEnt );	
+LINK_ENTITY_TO_CLASS_ALIAS( info_node_hint,		CNodeEnt );	
+LINK_ENTITY_TO_CLASS_ALIAS( info_node_air,		CNodeEnt );	
+LINK_ENTITY_TO_CLASS_ALIAS( info_node_air_hint,	CNodeEnt );	
+LINK_ENTITY_TO_CLASS_ALIAS( info_node_climb,		CNodeEnt );
 LINK_ENTITY_TO_CLASS( aitesthull, CAI_TestHull );
 
 //-----------------------------------------------------------------------------
@@ -60,16 +58,16 @@ CAI_TestHull*	CAI_TestHull::pTestHull			= nullptr;
 //-----------------------------------------------------------------------------
 // Purpose: Make sure we have a "player.mdl" hull to test with
 //-----------------------------------------------------------------------------
-void CAI_TestHull::Precache()
+void CAI_TestHull::Precache_Impl()
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 	PrecacheModel( PLAYER_MODEL );
 }
 
 //=========================================================
 // CAI_TestHull::Spawn
 //=========================================================
-void CAI_TestHull::Spawn(void)
+void CAI_TestHull::Spawn_Impl(void)
 {
 	Precache();
 
@@ -179,7 +177,7 @@ IMPLEMENT_REFLECT_DATAMAP_SIMPLE( HintNodeData )
 
 //=========================================================
 //=========================================================
-void CNodeEnt::Spawn( void )
+void CNodeEnt::Spawn_Impl( void )
 {
 	Spawn( nullptr );
 }

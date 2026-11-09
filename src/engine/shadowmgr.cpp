@@ -127,94 +127,94 @@ public:
 	CShadowMgr();
 
 	// Methods inherited from IShadowMgr
-	virtual ShadowHandle_t CreateShadow( IMaterial* pMaterial, IMaterial* pModelMaterial, void* pBindProxy, int creationFlags );
-	virtual ShadowHandle_t CreateShadowEx( IMaterial* pMaterial, IMaterial* pModelMaterial, void* pBindProxy, int creationFlags, int nEntIndex );
-	virtual void DestroyShadow( ShadowHandle_t handle );
-	virtual void SetShadowMaterial( ShadowHandle_t handle, IMaterial* pMaterial, IMaterial* pModelMaterial, void* pBindProxy );
-	virtual void EnableShadow( ShadowHandle_t handle, bool bEnable );
-	virtual void ProjectFlashlight( ShadowHandle_t handle, const VMatrix& worldToShadow, int nLeafCount, const int *pLeafList );
-	virtual void ProjectShadow( ShadowHandle_t handle, const Vector &origin,
+	ShadowHandle_t CreateShadow( IMaterial* pMaterial, IMaterial* pModelMaterial, void* pBindProxy, int creationFlags );
+	ShadowHandle_t CreateShadowEx( IMaterial* pMaterial, IMaterial* pModelMaterial, void* pBindProxy, int creationFlags, int nEntIndex );
+	void DestroyShadow( ShadowHandle_t handle );
+	void SetShadowMaterial( ShadowHandle_t handle, IMaterial* pMaterial, IMaterial* pModelMaterial, void* pBindProxy );
+	void EnableShadow( ShadowHandle_t handle, bool bEnable );
+	void ProjectFlashlight( ShadowHandle_t handle, const VMatrix& worldToShadow, int nLeafCount, const int *pLeafList );
+	void ProjectShadow( ShadowHandle_t handle, const Vector &origin,
 		const Vector& projectionDir, const VMatrix& worldToShadow, const Vector2D& size,
 		int nLeafCount, const int *pLeafList,
 		float maxHeight, float falloffOffset, float falloffAmount, const Vector &vecCasterOrigin );
-	virtual const Frustum_t &GetFlashlightFrustum( ShadowHandle_t handle );
-	virtual const FlashlightState_t &GetFlashlightState( ShadowHandle_t handle );
-	virtual int ProjectAndClipVertices( ShadowHandle_t handle, int count, 
+	const Frustum_t &GetFlashlightFrustum( ShadowHandle_t handle );
+	const FlashlightState_t &GetFlashlightState( ShadowHandle_t handle );
+	int ProjectAndClipVertices( ShadowHandle_t handle, int count, 
 		Vector** ppPosition, ShadowVertex_t*** ppOutVertex );
-	virtual void AddShadowToBrushModel( ShadowHandle_t handle, model_t* pModel, 	
+	void AddShadowToBrushModel( ShadowHandle_t handle, model_t* pModel, 	
 										const Vector& origin, const QAngle& angles );
-	virtual void RemoveAllShadowsFromBrushModel( model_t* pModel );
-	virtual void AddShadowToModel( ShadowHandle_t shadow, ModelInstanceHandle_t handle );
-	virtual void RemoveAllShadowsFromModel( ModelInstanceHandle_t handle );
- 	virtual const ShadowInfo_t& GetInfo( ShadowHandle_t handle );
-	virtual void SetFlashlightRenderState( ShadowHandle_t handle );
-	virtual int GetNumShadowsOnModel( ModelInstanceHandle_t instance );
-	virtual int GetShadowsOnModel( ModelInstanceHandle_t instance, ShadowHandle_t* pShadowArray, bool bNormalShadows, bool bFlashlightShadows );
-	virtual void FlashlightDrawCallback( ShadowDrawCallbackFn_t pCallback, void *pData );
-	virtual void SetSinglePassFlashlightRenderState( ShadowHandle_t handle );
-	virtual void PushSinglePassFlashlightStateEnabled( bool bEnable );
-	virtual void PopSinglePassFlashlightStateEnabled( void );
+	void RemoveAllShadowsFromBrushModel( model_t* pModel );
+	void AddShadowToModel( ShadowHandle_t shadow, ModelInstanceHandle_t handle );
+	void RemoveAllShadowsFromModel( ModelInstanceHandle_t handle );
+ 	const ShadowInfo_t& GetInfo( ShadowHandle_t handle );
+	void SetFlashlightRenderState( ShadowHandle_t handle );
+	int GetNumShadowsOnModel( ModelInstanceHandle_t instance );
+	int GetShadowsOnModel( ModelInstanceHandle_t instance, ShadowHandle_t* pShadowArray, bool bNormalShadows, bool bFlashlightShadows );
+	void FlashlightDrawCallback( ShadowDrawCallbackFn_t pCallback, void *pData );
+	void SetSinglePassFlashlightRenderState( ShadowHandle_t handle );
+	void PushSinglePassFlashlightStateEnabled( bool bEnable );
+	void PopSinglePassFlashlightStateEnabled( void );
 
 	// Methods inherited from IShadowMgrInternal
-	virtual void LevelInit( int nSurfCount );
-	virtual void LevelShutdown();
-	virtual void AddShadowsOnSurfaceToRenderList( ShadowDecalHandle_t decalHandle );
-	virtual void ClearShadowRenderList();
-	virtual void ComputeRenderInfo( ShadowDecalRenderInfo_t* pInfo, ShadowHandle_t handle ) const;
-	virtual void SetModelShadowState( ModelInstanceHandle_t instance );
-	virtual unsigned short InvalidShadowIndex( );
+	void LevelInit( int nSurfCount );
+	void LevelShutdown();
+	void AddShadowsOnSurfaceToRenderList( ShadowDecalHandle_t decalHandle );
+	void ClearShadowRenderList();
+	void ComputeRenderInfo( ShadowDecalRenderInfo_t* pInfo, ShadowHandle_t handle ) const;
+	void SetModelShadowState( ModelInstanceHandle_t instance );
+	unsigned short InvalidShadowIndex( );
 
 	// Methods of ISpatialLeafEnumerator
-	virtual bool EnumerateLeaf( int leaf, intp context );
+	bool EnumerateLeaf( int leaf, intp context );
 
 	// Sets the texture coordinate range for a shadow...
-	virtual void SetShadowTexCoord( ShadowHandle_t handle, float x, float y, float w, float h );
+	void SetShadowTexCoord( ShadowHandle_t handle, float x, float y, float w, float h );
 
 	// Set extra clip planes related to shadows...
 	// These are used to prevent pokethru and back-casting
-	virtual void ClearExtraClipPlanes( ShadowHandle_t shadow );
-	virtual void AddExtraClipPlane( ShadowHandle_t shadow, const Vector& normal, float dist );
+	void ClearExtraClipPlanes( ShadowHandle_t shadow );
+	void AddExtraClipPlane( ShadowHandle_t shadow, const Vector& normal, float dist );
 
 	// Gets the first model associated with a shadow
 	unsigned short& FirstModelInShadow( ShadowHandle_t h ) { return m_Shadows[h].m_FirstModel; }
 	
 	// Set the darkness falloff bias
-	virtual void SetFalloffBias( ShadowHandle_t shadow, unsigned char ucBias );
+	void SetFalloffBias( ShadowHandle_t shadow, unsigned char ucBias );
 
 	// Set the number of world material buckets.  This should happen exactly once per level load.
-	virtual void SetNumWorldMaterialBuckets( int numMaterialSortBins );
+	void SetNumWorldMaterialBuckets( int numMaterialSortBins );
 
 	// Update the state for a flashlight.
-	virtual void UpdateFlashlightState( ShadowHandle_t shadowHandle, const FlashlightState_t &lightState );
+	void UpdateFlashlightState( ShadowHandle_t shadowHandle, const FlashlightState_t &lightState );
 
-	virtual void DrawFlashlightDecals( IMatRenderContext *pRenderContext, int sortGroup, bool bDoMasking, float flFade );
-	virtual void DrawFlashlightDecalsOnSurfaceList( IMatRenderContext *pRenderContext, SurfaceHandle_t *pList, int listCount, bool bDoMasking );
+	void DrawFlashlightDecals( IMatRenderContext *pRenderContext, int sortGroup, bool bDoMasking, float flFade );
+	void DrawFlashlightDecalsOnSurfaceList( IMatRenderContext *pRenderContext, SurfaceHandle_t *pList, int listCount, bool bDoMasking );
 
-	virtual void DrawFlashlightOverlays( IMatRenderContext *pRenderContext, int sortGroup, bool bDoMasking );
+	void DrawFlashlightOverlays( IMatRenderContext *pRenderContext, int sortGroup, bool bDoMasking );
 
-	virtual void DrawFlashlightDepthTexture( );
-	virtual void SetFlashlightDepthTexture( ShadowHandle_t shadowHandle, ITexture *pFlashlightDepthTexture, unsigned char ucShadowStencilBit );
+	void DrawFlashlightDepthTexture( );
+	void SetFlashlightDepthTexture( ShadowHandle_t shadowHandle, ITexture *pFlashlightDepthTexture, unsigned char ucShadowStencilBit );
 
-	virtual void DrawFlashlightDecalsOnDisplacements( IMatRenderContext *pRenderContext, int sortGroup, CDispInfo **visibleDisps, int nVisibleDisps, bool bDoMasking );
-	virtual bool ModelHasShadows( ModelInstanceHandle_t instance );
+	void DrawFlashlightDecalsOnDisplacements( IMatRenderContext *pRenderContext, int sortGroup, CDispInfo **visibleDisps, int nVisibleDisps, bool bDoMasking );
+	bool ModelHasShadows( ModelInstanceHandle_t instance );
 
-	virtual void DrawVolumetrics();
-	virtual int ProjectAndClipVerticesEx( ShadowHandle_t handle, int count, 
+	void DrawVolumetrics();
+	int ProjectAndClipVerticesEx( ShadowHandle_t handle, int count, 
 		Vector** ppPosition, ShadowVertex_t*** ppOutVertex, ShadowClipState_t& clip );
 
-	virtual bool SinglePassFlashlightModeEnabled( void );
-	virtual int SetupFlashlightRenderInstanceInfo( ShadowHandle_t *pFlashlights, uint32 *pModelUsageMask, int nUsageStride, int nInstanceCount, const ModelInstanceHandle_t *pInstance );
-	virtual void GetFlashlightRenderInfo( FlashlightInstance_t *pFlashlightState, int nCount, const ShadowHandle_t *pHandles );
+	bool SinglePassFlashlightModeEnabled( void );
+	int SetupFlashlightRenderInstanceInfo( ShadowHandle_t *pFlashlights, uint32 *pModelUsageMask, int nUsageStride, int nInstanceCount, const ModelInstanceHandle_t *pInstance );
+	void GetFlashlightRenderInfo( FlashlightInstance_t *pFlashlightState, int nCount, const ShadowHandle_t *pHandles );
 
-	virtual void RemoveAllDecalsFromShadow( ShadowHandle_t handle );
+	void RemoveAllDecalsFromShadow( ShadowHandle_t handle );
 
-	virtual void SkipShadowForEntity( int nEntIndex );
+	void SkipShadowForEntity( int nEntIndex );
 
-	virtual void PushFlashlightScissorBounds( void );
-	virtual void PopFlashlightScissorBounds( void );
-	virtual void DisableDropShadows();
+	void PushFlashlightScissorBounds( void );
+	void PopFlashlightScissorBounds( void );
+	void DisableDropShadows();
 
-private:
+public:
 	enum
 	{
 		SHADOW_DISABLED = (SHADOW_LAST_FLAG << 1),
@@ -358,7 +358,7 @@ private:
 		int indexCount;
 	};
 
-private:
+public:
 	// Applies a flashlight to all surfaces in the leaf
 	void ApplyFlashlightToLeaf( const Shadow_t &shadow, mleaf_t* pLeaf, ShadowBuildInfo_t* pBuild );
 
@@ -471,7 +471,7 @@ private:
 	const SurfaceBounds_t* GetSurfaceBounds( SurfaceHandle_t nSurfID );
 	bool IsShadowNearSurface( ShadowHandle_t h, SurfaceHandle_t nSurfID, const VMatrix* pModelToWorld, const VMatrix* pWorldToModel );
 
-private:
+public:
 	// List of all shadows (one per cast shadow)
 	// Align it so the Ray in the Shadow_t is aligned
 	ks::slot_pool< Shadow_t, ShadowHandle_t > m_Shadows;
@@ -546,6 +546,9 @@ private:
 	std::vector< FlashLightScissorStateBackup_t > m_ScissorStateBackups;
 	std::vector< int > m_ScissorStateEntryStart;
 };
+
+#include "facade/ishadowmgr.inl"
+
 
 
 //-----------------------------------------------------------------------------

@@ -4,7 +4,6 @@
 
 // Purpose: A game system for tracking and updating entity spot state
 
-import std;
 #include "igamesystem.h"
 #include "baseentity.h"
 

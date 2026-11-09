@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -62,8 +59,8 @@ public:
 	DECLARE_DATADESC();
 	DECLARE_ENT_SCRIPTDESC();
 
-	virtual void Spawn( void );
-	virtual void Activate( void );
+	void Spawn_Impl( void );
+	void Activate_Impl( void );
 
 	void		 SpawnEntity( Vector vecAlternateOrigin = vec3_invalid, QAngle vecAlternateAngles = vec3_angle );
 	void		 CheckSpawnThink( void );
@@ -115,7 +112,7 @@ LINK_ENTITY_TO_CLASS( env_entity_maker, CEnvEntityMaker );
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvEntityMaker::Spawn( void )
+void CEnvEntityMaker::Spawn_Impl( void )
 {
 	m_vecEntityMins = vec3_origin;
 	m_vecEntityMaxs = vec3_origin;
@@ -127,9 +124,9 @@ void CEnvEntityMaker::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvEntityMaker::Activate( void )
+void CEnvEntityMaker::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	// check for valid template
 	if ( m_iszTemplate == NULL_STRING )

@@ -26,7 +26,7 @@ CMemoryStack::CMemoryStack()
  	, m_maxSize( 0 )
 	, m_alignment( 16 )
 {
-	AddMemoryInfoCallback( this );
+	AddMemoryInfoCallback( this, std::function_ref< MemoryInfo_t() const >( std::cw< &CMemoryStack::GetMemoryInfo >, this ) );
 	m_pszAllocOwner = MemAlloc_StrDup( "CMemoryStack unattributed" );
 }
 	
@@ -176,30 +176,14 @@ void CMemoryStack::Access( void **ppRegion, unsigned *pBytes )
 	*pBytes = ( m_pNextAlloc - m_pBase);
 }
 
-const char* CMemoryStack::GetMemoryName() const
+MemoryInfo_t CMemoryStack::GetMemoryInfo() const
 {
-	return m_pszAllocOwner;
-}
-
-std::size_t CMemoryStack::GetAllocatedBytes() const
-{
-	return GetUsed();
-}
-
-std::size_t CMemoryStack::GetCommittedBytes() const
-{
-	return GetSize();
-}
-
-std::size_t CMemoryStack::GetReservedBytes() const
-{
-	return GetMaxSize();
-}
-
-std::size_t CMemoryStack::GetHighestBytes() const
-{
-	std::size_t highest = m_pHighestAllocLimit - m_pBase;
-	return highest;
+	return MemoryInfo_t{
+		.name = m_pszAllocOwner,
+		.allocatedBytes = static_cast< std::size_t >( GetUsed() ),
+		.committedBytes = static_cast< std::size_t >( GetSize() ),
+		.reservedBytes = static_cast< std::size_t >( GetMaxSize() ),
+		.highestBytes = static_cast< std::size_t >( m_pHighestAllocLimit - m_pBase ) };
 }
 
 //-------------------------------------

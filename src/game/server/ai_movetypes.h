@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
 #include "ai_navtype.h"
-import std;
 #include "entitylist.h"
 
 class CAI_Path;

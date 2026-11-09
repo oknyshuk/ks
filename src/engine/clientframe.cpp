@@ -269,6 +269,6 @@ void CClientFrameManager::FreeFrame( CClientFrame* pFrame )
 	}
 	else
 	{
-		delete pFrame;
+		pFrame->DeleteThis();
 	}
 }

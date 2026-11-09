@@ -35,35 +35,73 @@ struct AsyncTextureContext_t
 class ITextureRegenerator
 {
 public:
-	// This will be called when the texture bits need to be regenerated.
-	// Use the VTFTexture interface, which has been set up with the
-	// appropriate texture size + format
-	// The rect specifies which part of the texture needs to be updated
-	// You can choose to update all of the bits if you prefer
-	virtual void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pRect ) = 0;
+	// Wraps a regenerator object that outlives the texture it is set on (a member or a static).
+	// It provides
+	//	void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pRect );
+	// which is called when the texture bits need to be regenerated.  Use the VTFTexture interface,
+	// which has been set up with the appropriate texture size + format.  The rect specifies which
+	// part of the texture needs to be updated; you can choose to update all of the bits if you prefer.
+	// A Release() of the object, if it has one, is called when the texture lets go of the regenerator.
+	template < class T >
+		requires ( !std::is_same_v< std::remove_cvref_t< T >, ITextureRegenerator > )
+	explicit ITextureRegenerator( T &regenerator )
+		: m_Regenerate( [&regenerator]( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pRect ) { regenerator.RegenerateTextureBits( pTexture, pVTFTexture, pRect ); } )
+	{
+		if constexpr ( requires { regenerator.Release(); } )
+			m_Release = [&regenerator] { regenerator.Release(); };
+	}
+
+	// A regenerator that owns the object it calls; Release() destroys both.
+	template < class T >
+	static ITextureRegenerator *Owned( T regenerator )
+	{
+		auto *pRegen = new ITextureRegenerator( std::move( regenerator ), OwnedTag{} );
+		pRegen->m_bOwned = true;
+		return pRegen;
+	}
+
+	ITextureRegenerator( const ITextureRegenerator & ) = delete;
+	ITextureRegenerator &operator=( const ITextureRegenerator & ) = delete;
+
+	void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pRect ) { m_Regenerate( pTexture, pVTFTexture, pRect ); }
 
 	// This will be called when the regenerator needs to be deleted
 	// which will happen when the texture is destroyed
-	virtual void Release() = 0;
+	void Release()
+	{
+		if ( m_bOwned )
+			delete this;
+		else if ( m_Release )
+			m_Release();
+	}
 
-	virtual bool HasPreallocatedScratchTexture() const { return false; }
-	virtual IVTFTexture *GetPreallocatedScratchTexture() { return nullptr; }
+private:
+	struct OwnedTag {};
+	template < class T >
+	ITextureRegenerator( T &&regenerator, OwnedTag )
+		: m_Regenerate( [r = std::forward< T >( regenerator )]( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pRect ) mutable { r.RegenerateTextureBits( pTexture, pVTFTexture, pRect ); } )
+	{
+	}
+
+	std::move_only_function< void( ITexture *, IVTFTexture *, Rect_t * ) > m_Regenerate;
+	std::move_only_function< void() > m_Release;
+	bool m_bOwned = false;
 };
 
 class ITexture
 {
 public:
 	// Various texture polling methods
-	virtual const char *GetName( void ) const = 0;
-	virtual int GetMappingWidth() const = 0;
-	virtual int GetMappingHeight() const = 0;
-	virtual int GetActualWidth() const = 0;
-	virtual int GetActualHeight() const = 0;
-	virtual int GetNumAnimationFrames() const = 0;
-	virtual bool IsTranslucent() const = 0;
-	virtual bool IsMipmapped() const = 0;
+	const char *GetName( void ) const;
+	int GetMappingWidth() const;
+	int GetMappingHeight() const;
+	int GetActualWidth() const;
+	int GetActualHeight() const;
+	int GetNumAnimationFrames() const;
+	bool IsTranslucent() const;
+	bool IsMipmapped() const;
 
-	virtual void GetLowResColorSample( float s, float t, float *color ) const = 0;
+	void GetLowResColorSample( float s, float t, float *color ) const;
 
 	// Gets texture resource data of the specified type.
 	// Params:
@@ -71,74 +109,74 @@ public:
 	//		pnumBytes		on return is the number of bytes available in the read-only data buffer or is undefined
 	// Returns:
 	//		pointer to the resource data, or NULL
-	virtual void *GetResourceData( uint32 eDataType, std::size_t *pNumBytes ) const = 0;
+	void *GetResourceData( uint32 eDataType, std::size_t *pNumBytes ) const;
 
 	// Methods associated with reference count
-	virtual void IncrementReferenceCount( void ) = 0;
-	virtual void DecrementReferenceCount( void ) = 0;
+	void IncrementReferenceCount( void );
+	void DecrementReferenceCount( void );
 
 	inline void AddRef() { IncrementReferenceCount(); }
 	inline void Release() { DecrementReferenceCount(); }
 
 	// Used to modify the texture bits (procedural textures only)
-	virtual void SetTextureRegenerator( ITextureRegenerator *pTextureRegen, bool releaseExisting = true ) = 0;
+	void SetTextureRegenerator( ITextureRegenerator *pTextureRegen, bool releaseExisting = true );
 
 	// Reconstruct the texture bits in HW memory
 
 	// If rect is not specified, reconstruct all bits, otherwise just
 	// reconstruct a subrect.
-	virtual void Download( Rect_t *pRect = 0, int nAdditionalCreationFlags = 0 ) = 0;
+	void Download( Rect_t *pRect = 0, int nAdditionalCreationFlags = 0 );
 
 	// Uses for stats. . .get the approximate size of the texture in it's current format.
-	virtual int GetApproximateVidMemBytes( void ) const = 0;
+	int GetApproximateVidMemBytes( void ) const;
 
 	// Returns true if the texture data couldn't be loaded.
-	virtual bool IsError() const = 0;
+	bool IsError() const;
 
 	// NOTE: Stuff after this is added after shipping HL2.
 
 	// For volume textures
-	virtual bool IsVolumeTexture() const = 0;
-	virtual int GetMappingDepth() const = 0;
-	virtual int GetActualDepth() const = 0;
+	bool IsVolumeTexture() const;
+	int GetMappingDepth() const;
+	int GetActualDepth() const;
 
-	virtual ImageFormat GetImageFormat() const = 0;
+	ImageFormat GetImageFormat() const;
 
 	// Various information about the texture
-	virtual bool IsRenderTarget() const = 0;
-	virtual bool IsCubeMap() const = 0;
-	virtual bool IsNormalMap() const = 0;
-	virtual bool IsProcedural() const = 0;
-	virtual bool IsDefaultPool() const = 0;
+	bool IsRenderTarget() const;
+	bool IsCubeMap() const;
+	bool IsNormalMap() const;
+	bool IsProcedural() const;
+	bool IsDefaultPool() const;
 
-	virtual void DeleteIfUnreferenced() = 0;
+	void DeleteIfUnreferenced();
 
 
 	// swap everything except the name with another texture
-	virtual void SwapContents( ITexture *pOther ) = 0;
+	void SwapContents( ITexture *pOther );
 
 	// Retrieve the vtf flags mask
-	virtual unsigned int GetFlags( void ) const = 0;
+	unsigned int GetFlags( void ) const;
 
 	// Force LOD override (automatically downloads the texture)
-	virtual void ForceLODOverride( int iNumLodsOverrideUpOrDown ) = 0;
+	void ForceLODOverride( int iNumLodsOverrideUpOrDown );
 
 	// Force exclude override (automatically downloads the texture)
-	virtual void ForceExcludeOverride( int iExcludeOverride ) = 0;
+	void ForceExcludeOverride( int iExcludeOverride );
 
 	//swap out the active texture surface, only valid for MultiRenderTarget textures
-	virtual void AddDownsizedSubTarget( const char *szName, int iDownsizePow2, MaterialRenderTargetDepth_t depth ) = 0;
-	virtual void SetActiveSubTarget( const char *szName ) = 0; //NULL to return to base target
+	void AddDownsizedSubTarget( const char *szName, int iDownsizePow2, MaterialRenderTargetDepth_t depth );
+	void SetActiveSubTarget( const char *szName ); //NULL to return to base target
 
-	virtual int GetReferenceCount() const = 0;
+	int GetReferenceCount() const;
 
-	virtual bool IsTempExcluded() const = 0;
-	virtual bool CanBeTempExcluded() const = 0;
+	bool IsTempExcluded() const;
+	bool CanBeTempExcluded() const;
 
-	virtual bool FinishAsyncDownload( AsyncTextureContext_t *pContext, void *pData, int nNumReadBytes, bool bAbort, float flMaxTimeMs ) = 0;
+	bool FinishAsyncDownload( AsyncTextureContext_t *pContext, void *pData, int nNumReadBytes, bool bAbort, float flMaxTimeMs );
 
-	virtual bool IsForceExcluded() const = 0;
-	virtual bool ClearForceExclusion() = 0;
+	bool IsForceExcluded() const;
+	bool ClearForceExclusion();
 };
 
 

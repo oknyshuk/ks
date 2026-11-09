@@ -3,8 +3,6 @@
 
 // Purpose: spawn and think functions for editor-placed lights
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -53,7 +50,7 @@ IMPLEMENT_REFLECT_DATAMAP( CLight )
 //
 // Cache user-entity-field values until spawn is called.
 //
-bool CLight::KeyValue( const char *szKeyName, const char *szValue )
+bool CLight::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "pitch"))
 	{
@@ -63,7 +60,7 @@ bool CLight::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
@@ -71,7 +68,7 @@ bool CLight::KeyValue( const char *szKeyName, const char *szValue )
 
 // Light entity
 // If targeted, it will toggle between on or off.
-void CLight::Spawn( void )
+void CLight::Spawn_Impl( void )
 {
 	if (!GetEntityName())
 	{       // inert light
@@ -96,7 +93,7 @@ void CLight::Spawn( void )
 }
 
 
-void CLight::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CLight::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	if (m_iStyle >= 32)
 	{
@@ -242,22 +239,23 @@ void CLight::FadeThink(void)
 //
 // shut up spawn functions for new spotlights
 //
-LINK_ENTITY_TO_CLASS( light_spot, CLight );
-LINK_ENTITY_TO_CLASS( light_glspot, CLight );
-LINK_ENTITY_TO_CLASS( light_directional, CLight );
+LINK_ENTITY_TO_CLASS_ALIAS( light_spot, CLight );
+LINK_ENTITY_TO_CLASS_ALIAS( light_glspot, CLight );
+LINK_ENTITY_TO_CLASS_ALIAS( light_directional, CLight );
 
 class CEnvLight : public CLight
 {
 public:
 	DECLARE_CLASS( CEnvLight, CLight );
 
-	bool	KeyValue( const char *szKeyName, const char *szValue ); 
-	void	Spawn( void );
+	using BaseClass::KeyValue_Impl;
+	bool	KeyValue_Impl( const char *szKeyName, const char *szValue ); 
+	void	Spawn_Impl( void );
 };
 
 LINK_ENTITY_TO_CLASS( light_environment, CEnvLight );
 
-bool CEnvLight::KeyValue( const char *szKeyName, const char *szValue )
+bool CEnvLight::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	bool bSuccess = true;
 	if (FStrEq(szKeyName, "_light"))
@@ -272,7 +270,7 @@ bool CEnvLight::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		bSuccess = BaseClass::KeyValue( szKeyName, szValue );
+		bSuccess = BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	if ( FStrEq( szKeyName, "pitch" ) )
@@ -285,9 +283,9 @@ bool CEnvLight::KeyValue( const char *szKeyName, const char *szValue )
 	return bSuccess;
 }
 
-void CEnvLight::Spawn( void )
+void CEnvLight::Spawn_Impl( void )
 {
-	BaseClass::Spawn( );
+	BaseClass::Spawn_Impl( );
 		
 	CCascadeLight::SetEnvLightShadowAngles( GetAbsAngles() );
 }

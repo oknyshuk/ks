@@ -105,8 +105,10 @@ public:
 	}
 
 private:
-	void Spawn();
-	void Activate();
+	public: void Spawn_Impl();
+	private:
+	public: void Activate_Impl();
+	private:
 
 	void EvaluationThink();
 
@@ -143,7 +145,8 @@ private:
 	int AddNewElement( CBaseEntity *pActor );
 
 	bool ActorInList( CBaseEntity *pActor );
-	void UpdateOnRemove( void );
+	public: void UpdateOnRemove_Impl( void );
+	private:
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "Enable", .type = FIELD_VOID } ]] void InputEnable( inputdata_t &inputdata );
@@ -180,7 +183,8 @@ private:
 	static bool PlayerHasLineOfSight( CBaseEntity *pViewer, CBaseEntity *pViewed, bool fNot );
 	static bool ActorInPlayersPVS( CBaseEntity *pActor, bool bNot );
 
-	virtual void OnRestore( void );
+	public: void OnRestore_Impl( void );
+	private:
 
 	//---------------------------------
 	// General conditions info

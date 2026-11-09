@@ -17,7 +17,7 @@ inline constexpr auto MAX_WORLD_AREAS = 8;
 class ServerClass;
 class SendTable;
 struct edict_t;
-class CBaseEntity;
+class IServerUnknown;
 class CSerialEntity;
 class CBaseNetworkable;
 
@@ -98,7 +98,7 @@ public:
 
 	// In place of a generic QueryInterface.
 	virtual CBaseNetworkable* GetBaseNetworkable() = 0;
-	virtual CBaseEntity*	GetBaseEntity() = 0; // Only used by game code.
+	virtual IServerUnknown*	GetBaseEntity() = 0; // Only used by game code, which casts it to its entity class.
 	virtual PVSInfo_t*		GetPVSInfo() = 0; // get current visibilty data
 
 protected:

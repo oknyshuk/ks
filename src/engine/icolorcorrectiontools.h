@@ -7,16 +7,16 @@ class IColorOperation;
 class IColorCorrectionTools
 {
 public:
-	virtual void		Init( void ) = 0;
-	virtual void		Shutdown( void ) = 0;
+	void		Init( void );
+	void		Shutdown( void );
 
-	virtual bool		ShouldPause() const = 0;
+	bool		ShouldPause() const;
 
-	virtual void		GrabPreColorCorrectedFrame( int x, int y, int width, int height ) =  0;
+	void		GrabPreColorCorrectedFrame( int x, int y, int width, int height );
 
-	virtual void		UpdateColorCorrection( ) =  0;
+	void		UpdateColorCorrection( );
 
-	virtual void		SetFinalOperation( IColorOperation *pOp ) = 0;
+	void		SetFinalOperation( IColorOperation *pOp );
 };
 
 extern IColorCorrectionTools *colorcorrectiontools;

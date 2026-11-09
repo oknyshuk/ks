@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -25,7 +22,6 @@ import ks.tier1;
 #include "engine/ivmodelinfo.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -324,21 +320,21 @@ void CSmokeGrenadeProjectile::Detonate( void )
 }
 
 
-void CSmokeGrenadeProjectile::Spawn()
+void CSmokeGrenadeProjectile::Spawn_Impl()
 {
 	SetModel( GRENADE_MODEL );
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	SetBodygroupPreset( "thrown" );
 }
 
 
-void CSmokeGrenadeProjectile::Precache()
+void CSmokeGrenadeProjectile::Precache_Impl()
 {
 	PrecacheModel( GRENADE_MODEL );
 	PrecacheScriptSound( "BaseSmokeEffect.Sound" );
 	PrecacheScriptSound( "SmokeGrenade.Bounce" );
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 

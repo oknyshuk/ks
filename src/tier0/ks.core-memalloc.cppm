@@ -27,71 +27,72 @@ struct GenericMemoryStat_t
 	int value;
 };
 
-// Virtual memory interface
+// Non-heap memory statistics
 
-/// This interface class is used to let the mem_dump command retrieve
-/// information about memory allocations outside of the heap. It is currently
-/// used by CMemoryStack to report on its allocations.
-class IMemoryInfo
+/// Describes one non-heap allocation owner (currently CMemoryStack) for the mem_dump command.
+struct MemoryInfo_t
 {
-public:
-	virtual const char* GetMemoryName() const = 0; // User friendly name for this stack or pool
-	virtual std::size_t GetAllocatedBytes() const = 0; // Number of bytes currently allocated
-	virtual std::size_t GetCommittedBytes() const = 0; // Bytes committed -- may be greater than allocated.
-	virtual std::size_t GetReservedBytes() const = 0; // Bytes reserved -- may be greater than committed.
-	virtual std::size_t GetHighestBytes() const = 0; // The maximum number of bytes allocated or committed.
+	const char* name; // User friendly name for this stack or pool
+	std::size_t allocatedBytes; // Number of bytes currently allocated
+	std::size_t committedBytes; // Bytes committed -- may be greater than allocated.
+	std::size_t reservedBytes; // Bytes reserved -- may be greater than committed.
+	std::size_t highestBytes; // The maximum number of bytes allocated or committed.
 };
 
 // Add and remove callbacks used to get statistics on non-heap memory allocations.
-void AddMemoryInfoCallback( IMemoryInfo* pMemoryInfo );
-void RemoveMemoryInfoCallback( IMemoryInfo* pMemoryInfo );
+// The owner pointer identifies the registration; the query borrows the owner's state,
+// so the owner must remove the callback before it dies.
+void AddMemoryInfoCallback( const void *pOwner, std::function_ref< MemoryInfo_t() const > query );
+void RemoveMemoryInfoCallback( const void *pOwner );
 // Display the memory statistics from the callbacks controlled by the above functions.
 void DumpMemoryInfoStats();
 
 //-----------------------------------------------------------------------------
 // NOTE! This should never be called directly from leaf code
 // Just use new,delete,malloc,free etc. They will call into this eventually
+//
+// There is exactly one allocator: the std/C-library backed one (memstd.cpp). Its state
+// is constant-initialised so it is usable before any static initialiser runs.
 //-----------------------------------------------------------------------------
 class IMemAlloc
 {
 public:
-	// Release versions
-	virtual void *Alloc( std::size_t nSize ) = 0;
-public:
-	virtual void *Realloc( void *pMem, std::size_t nSize ) = 0;
+	constexpr IMemAlloc() : m_pfnFailHandler( DefaultFailHandler ), m_sMemoryAllocFailed( 0 ) {}
 
-	virtual void Free( void *pMem ) = 0;
-    virtual void *Expand_NoLongerSupported( void *pMem, std::size_t nSize ) = 0;
+	// Release versions
+	void *Alloc( std::size_t nSize );
+	void *Realloc( void *pMem, std::size_t nSize );
+	void Free( void *pMem );
+	void *Expand_NoLongerSupported( void *pMem, std::size_t nSize );
 
 	// Debug versions
-    virtual void *Alloc( std::size_t nSize, const char *pFileName, int nLine ) = 0;
-public:
-    virtual void *Realloc( void *pMem, std::size_t nSize, const char *pFileName, int nLine ) = 0;
-    virtual void  Free( void *pMem, const char *pFileName, int nLine ) = 0;
-    virtual void *Expand_NoLongerSupported( void *pMem, std::size_t nSize, const char *pFileName, int nLine ) = 0;
+	void *Alloc( std::size_t nSize, const char *pFileName, int nLine );
+	void *Realloc( void *pMem, std::size_t nSize, const char *pFileName, int nLine );
+	void  Free( void *pMem, const char *pFileName, int nLine );
+	void *Expand_NoLongerSupported( void *pMem, std::size_t nSize, const char *pFileName, int nLine );
 
 	inline void *IndirectAlloc( std::size_t nSize )										{ return Alloc( nSize ); }
 	inline void *IndirectAlloc( std::size_t nSize, const char *pFileName, int nLine )	{ return Alloc( nSize, pFileName, nLine ); }
 
 	// Returns the size of a particular allocation (NOTE: may be larger than the size requested!)
-	virtual std::size_t GetSize( void *pMem ) = 0;
+	std::size_t GetSize( void *pMem );
 
-    // Force file + line information for an allocation
-    virtual void PushAllocDbgInfo( const char *pFileName, int nLine ) = 0;
-    virtual void PopAllocDbgInfo() = 0;
+	// Force file + line information for an allocation
+	void PushAllocDbgInfo( const char *pFileName, int nLine );
+	void PopAllocDbgInfo();
 
 	// FIXME: Remove when we have our own allocator
 	// these methods of the Crt debug code is used in our codebase currently
-	virtual int32 CrtSetBreakAlloc( int32 lNewBreakAlloc ) = 0;
-	virtual	int CrtSetReportMode( int nReportType, int nReportMode ) = 0;
-	virtual int CrtIsValidHeapPointer( const void *pMem ) = 0;
-	virtual int CrtIsValidPointer( const void *pMem, unsigned int size, int access ) = 0;
-	virtual int CrtCheckMemory( void ) = 0;
-	virtual int CrtSetDbgFlag( int nNewFlag ) = 0;
-	virtual void CrtMemCheckpoint( _CrtMemState *pState ) = 0;
+	int32 CrtSetBreakAlloc( int32 lNewBreakAlloc );
+	int CrtSetReportMode( int nReportType, int nReportMode );
+	int CrtIsValidHeapPointer( const void *pMem );
+	int CrtIsValidPointer( const void *pMem, unsigned int size, int access );
+	int CrtCheckMemory( void );
+	int CrtSetDbgFlag( int nNewFlag );
+	void CrtMemCheckpoint( _CrtMemState *pState );
 
 	// FIXME: Make a better stats interface
-	virtual void DumpStats() = 0;
+	void DumpStats();
 
 	enum DumpStatsFormat_t
 	{
@@ -99,61 +100,70 @@ public:
 		FORMAT_HTML
 	};
 
-	virtual void DumpStatsFileBase( char const *pchFileBase, DumpStatsFormat_t nFormat = FORMAT_TEXT ) = 0;
-	virtual std::size_t ComputeMemoryUsedBy( char const *pchSubStr ) = 0;
+	void DumpStatsFileBase( char const *pchFileBase, DumpStatsFormat_t nFormat = FORMAT_TEXT );
+	std::size_t ComputeMemoryUsedBy( char const *pchSubStr );
 
 	// FIXME: Remove when we have our own allocator
-	virtual void* CrtSetReportFile( int nRptType, void* hFile ) = 0;
-	virtual void* CrtSetReportHook( void* pfnNewHook ) = 0;
-	virtual int CrtDbgReport( int nRptType, const char * szFile,
-			int nLine, const char * szModule, const char * pMsg ) = 0;
+	void* CrtSetReportFile( int nRptType, void* hFile );
+	void* CrtSetReportHook( void* pfnNewHook );
+	int CrtDbgReport( int nRptType, const char * szFile,
+			int nLine, const char * szModule, const char * pMsg );
 
-	virtual int heapchk() = 0;
+	int heapchk();
 
-	virtual bool IsDebugHeap() = 0;
+	bool IsDebugHeap() { return false; }
 
-	virtual void GetActualDbgInfo( const char *&pFileName, int &nLine ) = 0;
-	virtual void RegisterAllocation( const char *pFileName, int nLine, std::size_t nLogicalSize, std::size_t nActualSize, unsigned nTime ) = 0;
-	virtual void RegisterDeallocation( const char *pFileName, int nLine, std::size_t nLogicalSize, std::size_t nActualSize, unsigned nTime ) = 0;
+	void GetActualDbgInfo( const char *&pFileName, int &nLine ) {}
+	void RegisterAllocation( const char *pFileName, int nLine, std::size_t nLogicalSize, std::size_t nActualSize, unsigned nTime ) {}
+	void RegisterDeallocation( const char *pFileName, int nLine, std::size_t nLogicalSize, std::size_t nActualSize, unsigned nTime ) {}
 
-	virtual int GetVersion() = 0;
+	int GetVersion() { return MEMALLOC_VERSION; }
 
-	virtual void CompactHeap() = 0;
+	void CompactHeap();
 
 	// Function called when malloc fails or memory limits hit to attempt to free up memory (can come in any thread)
-	virtual MemAllocFailHandler_t SetAllocFailHandler( MemAllocFailHandler_t pfnMemAllocFailHandler ) = 0;
+	MemAllocFailHandler_t SetAllocFailHandler( MemAllocFailHandler_t pfnMemAllocFailHandler );
+	std::size_t CallAllocFailHandler( std::size_t nBytes ) { return (*m_pfnFailHandler)( nBytes); }
 
-	virtual void DumpBlockStats( void * ) = 0;
+	void DumpBlockStats( void * ) {}
 
-	virtual void SetStatsExtraInfo( const char *pMapName, const char *pComment ) = 0;
+	void SetStatsExtraInfo( const char *pMapName, const char *pComment );
 
 	// Returns 0 if no failure, otherwise the size_t of the last requested chunk
-	virtual std::size_t MemoryAllocFailed() = 0;
+	std::size_t MemoryAllocFailed();
 
-	virtual void CompactIncremental() = 0; 
+	void CompactIncremental();
 
-	virtual void OutOfMemory( std::size_t nBytesAttempted = 0 ) = 0;
+	void OutOfMemory( std::size_t nBytesAttempted = 0 ) { SetCRTAllocFailed( nBytesAttempted ); }
 
 	// Region-based allocations
-	virtual void *RegionAlloc( int region, std::size_t nSize ) = 0;
-	virtual void *RegionAlloc( int region, std::size_t nSize, const char *pFileName, int nLine ) = 0;
+	void *RegionAlloc( int region, std::size_t nSize );
+	void *RegionAlloc( int region, std::size_t nSize, const char *pFileName, int nLine );
 
 	// Replacement for ::GlobalMemoryStatus which accounts for unused memory in our system
-	virtual void GlobalMemoryStatus( std::size_t *pUsedMemory, std::size_t *pFreeMemory ) = 0;
-
-	// Obtain virtual memory manager interface
-	virtual IVirtualMemorySection * AllocateVirtualMemorySection( std::size_t numMaxBytes ) = 0;
+	void GlobalMemoryStatus( std::size_t *pUsedMemory, std::size_t *pFreeMemory );
 
 	// Request 'generic' memory stats (returns a list of N named values; caller should assume this list will change over time)
-	virtual int GetGenericMemoryStats( GenericMemoryStat_t **ppMemoryStats ) = 0;
-
-	virtual ~IMemAlloc() { };
+	int GetGenericMemoryStats( GenericMemoryStat_t **ppMemoryStats );
 
 	// handles storing allocation info for coroutines
-	virtual uint32 GetDebugInfoSize() = 0;
-	virtual void SaveDebugInfo( void *pvDebugInfo ) = 0;
-	virtual void RestoreDebugInfo( const void *pvDebugInfo ) = 0;	
-	virtual void InitDebugInfo( void *pvDebugInfo, const char *pchRootFileName, int nLine ) = 0;
+	uint32 GetDebugInfoSize() { return 0; }
+	void SaveDebugInfo( void *pvDebugInfo ) { }
+	void RestoreDebugInfo( const void *pvDebugInfo ) {}
+	void InitDebugInfo( void *pvDebugInfo, const char *pchRootFileName, int nLine ) {}
+
+	static std::size_t DefaultFailHandler( std::size_t );
+
+	void SetCRTAllocFailed( std::size_t nMemSize );
+
+private:
+	// Internal versions
+	void *InternalAlloc( int region, std::size_t nSize );
+	void *InternalRealloc( void *pMem, std::size_t nSize );
+	void  InternalFree( void *pMem );
+
+	MemAllocFailHandler_t m_pfnFailHandler;
+	std::size_t m_sMemoryAllocFailed;
 };
 
 //-----------------------------------------------------------------------------

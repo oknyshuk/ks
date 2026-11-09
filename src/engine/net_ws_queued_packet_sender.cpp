@@ -18,20 +18,19 @@ public:
 
 	// IQueuedPacketSender
 
-	virtual bool Setup();
-	virtual void Shutdown();
-	virtual bool IsRunning() { return CThread::IsAlive(); }
+	bool Setup();
+	void Shutdown();
+	bool IsRunning() { return CThread::IsAlive(); }
 
-	virtual void ClearQueuedPacketsForChannel( INetChannel *pChan );
-	virtual void QueuePacket( INetChannel *pChan, SOCKET s, const char  *buf, int len, const ns_address &to, uint32 msecDelay );
-	virtual bool HasQueuedPackets( const INetChannel *pChan ) const;
-private:
+	void ClearQueuedPacketsForChannel( INetChannel *pChan );
+	void QueuePacket( INetChannel *pChan, SOCKET s, const char  *buf, int len, const ns_address &to, uint32 msecDelay );
+	bool HasQueuedPackets( const INetChannel *pChan ) const;
+public:
 
-	// CThread Overrides
-	virtual bool Start( unsigned int nBytesStack = 0 );
-	virtual int Run();
+	bool Start( unsigned int nBytesStack = 0 );
+	int Run();
 
-private:
+public:
 
 	class CQueuedPacket
 	{
@@ -55,11 +54,15 @@ private:
 	std::atomic<bool> m_bThreadShouldExit;
 };
 
+#include "facade/iqueuedpacketsender.inl"
+
+
 static CQueuedPacketSender g_QueuedPacketSender;
 IQueuedPacketSender *g_pQueuedPackedSender = &g_QueuedPacketSender;
 
 
-CQueuedPacketSender::CQueuedPacketSender()
+CQueuedPacketSender::CQueuedPacketSender() :
+	CThread( [this] { return Run(); } )
 {
 	SetName( "QueuedPacketSender" );
 	m_bThreadShouldExit = false;

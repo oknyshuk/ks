@@ -3,13 +3,13 @@
 
 // Purpose: Class to help with rendering CMDLs & CMergedMDLs to textures.
 
-import std;
-import ks.tier1;
 #include "render_to_rt_helper.h"
 #include "istudiorender.h"
 #include "tier2/renderutils.h"
 #include "materialsystem/MaterialSystemUtil.h"
 #include "renderparm.h"
+
+extern IRenderToRTHelper *g_pRenderToRTHelper;
 
 // uncomment these to write out VTFs of the inventory icons with no lighting to be used for the "default icon images"
 //#define WRITE_OUT_VTF

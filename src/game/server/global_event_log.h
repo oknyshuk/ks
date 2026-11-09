@@ -5,7 +5,6 @@
 // Purpose: work in progress
 
 #include "igamesystem.h"
-import std;
 
 class CGlobalEvent;
 

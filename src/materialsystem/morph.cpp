@@ -155,22 +155,24 @@ void CVertexMorphDict::SortDeltas()
 // Morph data class 
 //
 //-----------------------------------------------------------------------------
-class CMorph : public IMorphInternal, public ITextureRegenerator
+class CMorph : public IMorphInternal
 {
 public:
+	friend class IMorph;
+	friend class IMorphInternal;
 	// Constructor, destructor
 	CMorph();
 	~CMorph();
 
 	// Inherited from IMorph
-	virtual void Lock( float flFloatToFixedScale );
-	virtual void AddMorph( const MorphVertexInfo_t &info );
-	virtual void Unlock(  );
+	void Lock( float flFloatToFixedScale );
+	void AddMorph( const MorphVertexInfo_t &info );
+	void Unlock(  );
 
 	// Inherited from IMorphInternal
-	virtual void Init( MorphFormat_t format, const char *pDebugName );
-	virtual bool Bind( IMorphMgrRenderContext *pRenderContext );
-	virtual MorphFormat_t GetMorphFormat() const;
+	void Init( MorphFormat_t format, const char *pDebugName );
+	bool Bind( IMorphMgrRenderContext *pRenderContext );
+	MorphFormat_t GetMorphFormat() const;
 
 	// Other public methods
 	bool RenderMorphWeights( IMatRenderContext *pRenderContext, int nRenderId, int nWeightCount, const MorphWeight_t* pWeights );
@@ -208,10 +210,12 @@ private:
 	typedef std::vector< MorphSegment_t > MorphSegmentList_t;
 	typedef std::vector< MorphQuad_t > MorphQuadList_t;
 
+public:
+	// Called by m_Regenerator
+	void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pRect );
+
 private:
-	// Inherited from ITextureRegenerator
-	virtual void RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture, Rect_t *pRect );
-	virtual void Release() {}
+	ITextureRegenerator m_Regenerator{ *this };
 
 	// Packs all morph data in the dictionary into a vertex texture layout
 	void PackMorphData( );
@@ -314,6 +318,9 @@ private:
 };
 
 
+#include "facade/imorph.inl"
+#include "facade/imorphinternal.inl"
+
 //-----------------------------------------------------------------------------
 // Render context for morphing. Only is used to determine
 // where in the morph accumulator to put the texture.
@@ -339,29 +346,29 @@ public:
 //-----------------------------------------------------------------------------
 // Morph manager class
 //-----------------------------------------------------------------------------
-class CMorphMgr : public IMorphMgr
+class CMorphMgr
 {
 public:
 	CMorphMgr();
 
 	// Methods of IMorphMgr
-	virtual bool ShouldAllocateScratchTextures();
-	virtual void AllocateScratchTextures();
-	virtual void FreeScratchTextures();
-	virtual void AllocateMaterials();
-	virtual void FreeMaterials();
-	virtual ITextureInternal *MorphAccumulator();
-	virtual ITextureInternal *MorphWeights();
-	virtual IMorphInternal *CreateMorph();
-	virtual void DestroyMorph( IMorphInternal *pMorphData );
-	virtual int MaxHWMorphBatchCount() const;
-	virtual void BeginMorphAccumulation( IMorphMgrRenderContext *pIRenderContext );
-	virtual void EndMorphAccumulation( IMorphMgrRenderContext *pIRenderContext );
-	virtual void AccumulateMorph( IMorphMgrRenderContext *pIRenderContext, IMorph* pMorph, int nMorphCount, const MorphWeight_t* pWeights );
-	virtual void AdvanceFrame();
-	virtual bool GetMorphAccumulatorTexCoord( IMorphMgrRenderContext *pRenderContext, Vector2D *pTexCoord, IMorph *pMorph, int nVertex );
-	virtual IMorphMgrRenderContext *AllocateRenderContext();
-	virtual void FreeRenderContext( IMorphMgrRenderContext *pRenderContext );
+	bool ShouldAllocateScratchTextures();
+	void AllocateScratchTextures();
+	void FreeScratchTextures();
+	void AllocateMaterials();
+	void FreeMaterials();
+	ITextureInternal *MorphAccumulator();
+	ITextureInternal *MorphWeights();
+	IMorphInternal *CreateMorph();
+	void DestroyMorph( IMorphInternal *pMorphData );
+	int MaxHWMorphBatchCount() const;
+	void BeginMorphAccumulation( IMorphMgrRenderContext *pIRenderContext );
+	void EndMorphAccumulation( IMorphMgrRenderContext *pIRenderContext );
+	void AccumulateMorph( IMorphMgrRenderContext *pIRenderContext, IMorph* pMorph, int nMorphCount, const MorphWeight_t* pWeights );
+	void AdvanceFrame();
+	bool GetMorphAccumulatorTexCoord( IMorphMgrRenderContext *pRenderContext, Vector2D *pTexCoord, IMorph *pMorph, int nVertex );
+	IMorphMgrRenderContext *AllocateRenderContext();
+	void FreeRenderContext( IMorphMgrRenderContext *pRenderContext );
 
 	// Other public methods
 public:
@@ -427,7 +434,12 @@ private:
 // Singleton
 //-----------------------------------------------------------------------------
 static CMorphMgr s_MorphMgr;
-IMorphMgr *g_pMorphMgr = &s_MorphMgr;
+
+// IMorphMgr is a stateless facade; its members, defined below, forward to s_MorphMgr.
+static IMorphMgr s_MorphMgrFacade;
+IMorphMgr *g_pMorphMgr = &s_MorphMgrFacade;
+static CMorphMgr &MorphMgrImpl() { return s_MorphMgr; }
+#include "facade/imorphmgr.inl"
 
 
 
@@ -876,7 +888,7 @@ void CMorph::PackMorphData( )
 	{
 		if ( m_pMorphTexture[i] )
 		{
-			m_pMorphTexture[i]->SetTextureRegenerator( this );
+			m_pMorphTexture[i]->SetTextureRegenerator( &m_Regenerator );
 			m_pMorphTexture[i]->Download();
 		}
 	}

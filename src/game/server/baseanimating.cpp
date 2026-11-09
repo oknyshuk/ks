@@ -3,8 +3,6 @@
 
 // Purpose: Base class for all animating characters and objects.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -53,7 +51,6 @@ import ks.tier1;
 #include "datacache/idatacache.h"
 #include "smoke_trail.h"
 #include "collisionutils.h"
-#include "toolframework/itoolframework.h"
 
 ConVar ai_sequence_debug( "ai_sequence_debug", "0" );
 
@@ -122,21 +119,21 @@ CBaseAnimating::~CBaseAnimating()
 	InvalidateMdlCache();
 }
 
-void CBaseAnimating::Precache()
+void CBaseAnimating::Precache_Impl()
 {
 	// Anything derived from this class can potentially burn - true, but do we want it to!
 	PrecacheParticleSystem( "burning_character" );
 
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 //-----------------------------------------------------------------------------
 // Activate!
 //-----------------------------------------------------------------------------
-void CBaseAnimating::Activate()
+void CBaseAnimating::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	SetLightingOrigin( m_iszLightingOrigin );
 	SetLightingOriginRelative( m_iszLightingOriginRelative );
 
@@ -146,13 +143,13 @@ void CBaseAnimating::Activate()
 //-----------------------------------------------------------------------------
 // Force our lighting origin to be trasmitted
 //-----------------------------------------------------------------------------
-void CBaseAnimating::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
+void CBaseAnimating::SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways )
 {
 	// Are we already marked for transmission?
 	if ( (*pInfo->m_pTransmitEdict)[ entindex() ] )
 		return;
 
-	BaseClass::SetTransmit( pInfo, bAlways );
+	BaseClass::SetTransmit_Impl( pInfo, bAlways );
 	
 	// Force our lighting entities to be sent too.
 	if ( m_hLightingOrigin )
@@ -167,9 +164,9 @@ void CBaseAnimating::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CBaseAnimating::OnRestore()
+void CBaseAnimating::OnRestore_Impl()
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	if ( m_nSequence != -1 && GetModelPtr() && !IsValidSequence( m_nSequence ) )
 	{
@@ -184,9 +181,9 @@ void CBaseAnimating::OnRestore()
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void CBaseAnimating::Spawn()
+void CBaseAnimating::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 //-----------------------------------------------------------------------------
@@ -427,7 +424,7 @@ int CBaseAnimating::SelectWeightedSequence ( Activity activity, int curSequence 
 int CBaseAnimating::SelectWeightedSequenceFromModifiers( Activity activity, const ActivityModifierSym_t *pActivityModifiers, int iModifierCount )
 {
 	contract_assert( activity != ACT_INVALID );
-	return GetModelPtr()->SelectWeightedSequenceFromModifiers( activity, pActivityModifiers, iModifierCount );
+	return ::SelectWeightedSequenceFromModifiers( GetModelPtr(), activity, pActivityModifiers, iModifierCount );
 }
 
 //=========================================================
@@ -1434,7 +1431,7 @@ void CBaseAnimating::UpdateStepOrigin()
 // Purpose: Returns the origin to use for model rendering
 //-----------------------------------------------------------------------------
 
-Vector CBaseAnimating::GetStepOrigin( void ) const 
+Vector CBaseAnimating::GetStepOrigin_Impl( void ) const 
 { 
 	Vector tmp = GetLocalOrigin();
 	tmp.z += m_flEstIkOffset;
@@ -1445,7 +1442,7 @@ Vector CBaseAnimating::GetStepOrigin( void ) const
 // Purpose: Returns the origin to use for model rendering
 //-----------------------------------------------------------------------------
 
-QAngle CBaseAnimating::GetStepAngles( void ) const
+QAngle CBaseAnimating::GetStepAngles_Impl( void ) const
 {
 	// TODO: Add in body lean
 	return GetLocalAngles();
@@ -1515,7 +1512,7 @@ void CBaseAnimating::CalculateIKLocks( float currentTime )
 
 					if (!trace.startsolid)
 					{
-						if (trace.DidHitWorld())
+						if (TraceDidHitWorld( trace ))
 						{
 							pTarget->SetPosWithNormalOffset( trace.endpos, trace.plane.normal );
 							pTarget->SetNormal( trace.plane.normal );
@@ -1544,9 +1541,9 @@ void CBaseAnimating::CalculateIKLocks( float currentTime )
 // Purpose: Clear out animation states that are invalidated with Teleport
 //-----------------------------------------------------------------------------
 
-void CBaseAnimating::Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts )
+void CBaseAnimating::Teleport_Impl( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts )
 {
-	BaseClass::Teleport( newPosition, newAngles, newVelocity, bUseSlowHighAccuracyContacts );
+	BaseClass::Teleport_Impl( newPosition, newAngles, newVelocity, bUseSlowHighAccuracyContacts );
 	if (m_pIk)
 	{
 		m_pIk->ClearTargets( );
@@ -2484,7 +2481,7 @@ bool CBaseAnimating::HasMovement( int iSequence )
 // Purpose: 
 // Input  : *szModelName - 
 //-----------------------------------------------------------------------------
-void CBaseAnimating::SetModel( const char *szModelName )
+void CBaseAnimating::SetModel_Impl( const char *szModelName )
 {
 	MDLCACHE_CRITICAL_SECTION();
 
@@ -2653,7 +2650,7 @@ void CBaseAnimating::InvalidateBoneCache( void )
 	Studio_InvalidateBoneCacheIfNotMatching( m_boneCacheHandle, -1.0f );
 }
 
-bool CBaseAnimating::TestCollision( const Ray_t &ray, unsigned int fContentsMask, trace_t& tr )
+bool CBaseAnimating::TestCollision_Impl( const Ray_t &ray, unsigned int fContentsMask, trace_t& tr )
 {
 	IPhysicsObject *pPhysObject = VPhysicsGetObject();
 	// Return a special case for scaled physics objects
@@ -2682,7 +2679,7 @@ bool CBaseAnimating::TestCollision( const Ray_t &ray, unsigned int fContentsMask
 	return false;
 }
 
-bool CBaseAnimating::TestHitboxes( const Ray_t &ray, unsigned int fContentsMask, trace_t& tr )
+bool CBaseAnimating::TestHitboxes_Impl( const Ray_t &ray, unsigned int fContentsMask, trace_t& tr )
 {
 	CStudioHdr *pStudioHdr = GetModelPtr( );
 	if (!pStudioHdr)
@@ -2777,15 +2774,15 @@ float CBaseAnimating::GetBoneController ( int iController )
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
-void CBaseAnimating::GetVelocity(Vector *vVelocity, AngularImpulse *vAngVelocity) 
+void CBaseAnimating::GetVelocity_Impl(Vector *vVelocity, AngularImpulse *vAngVelocity) 
 {
 	if ( GetMoveType() == MOVETYPE_VPHYSICS )
 	{
-		BaseClass::GetVelocity(vVelocity,vAngVelocity);
+		BaseClass::GetVelocity_Impl(vVelocity,vAngVelocity);
 	}
 	else if ( !(GetFlags() & FL_ONGROUND) )
 	{
-		BaseClass::GetVelocity(vVelocity,vAngVelocity);
+		BaseClass::GetVelocity_Impl(vVelocity,vAngVelocity);
 	}
 	else
 	{
@@ -2865,9 +2862,9 @@ void CBaseAnimating::GetSkeleton( CStudioHdr *pStudioHdr, BoneVector pos[], Bone
 	boneSetup.CalcBoneAdj( pos, q, GetEncodedControllerArray() );
 }
 
-int CBaseAnimating::DrawDebugTextOverlays(void) 
+int CBaseAnimating::DrawDebugTextOverlays_Impl(void) 
 {
-	int text_offset = BaseClass::DrawDebugTextOverlays();
+	int text_offset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -3342,9 +3339,9 @@ Activity CBaseAnimating::GetSequenceActivity( int iSequence )
 	return (Activity)::GetSequenceActivity( GetModelPtr(), iSequence );
 }
 
-void CBaseAnimating::ModifyOrAppendCriteria( AI_CriteriaSet& set )
+void CBaseAnimating::ModifyOrAppendCriteria_Impl( AI_CriteriaSet& set )
 {
-	BaseClass::ModifyOrAppendCriteria( set );
+	BaseClass::ModifyOrAppendCriteria_Impl( set );
 
 	// TODO
 	// Append any animation state parameters here

@@ -5,11 +5,10 @@
 #include "GameEventListener.h"
 #include "usercmd.h"
 
-class CViewSetup;
 class C_BaseEntity;
 class C_BasePlayer;
 
-class C_HLTVCamera : CGameEventListener
+class C_HLTVCamera : public CGameEventListener
 {
 public:
 	C_HLTVCamera();

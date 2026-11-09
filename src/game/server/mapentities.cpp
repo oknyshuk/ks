@@ -3,8 +3,6 @@
 
 // Purpose: Controls the loading, parsing and creation of the entities from the BSP.
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -40,7 +38,6 @@ import ks.math;
 #include "stringregistry.h"
 #include "datacache/imdlcache.h"
 #include "world.h"
-#include "toolframework/iserverenginetools.h"
 #include "cs_gamerules.h"
 #include "weapon_csbase.h"
 
@@ -65,7 +62,7 @@ CBaseEntity *CreateEntityByName( const char *className, int iForceEdictIndex, bo
 	if ( !pNetwork )
 		return nullptr;
 
-	CBaseEntity *pEntity = pNetwork->GetBaseEntity();
+	CBaseEntity *pEntity = EntityCast<CBaseEntity>( pNetwork->GetBaseEntity() );
 	contract_assert( pEntity );
 	if ( bNotify )
 	{
@@ -330,7 +327,6 @@ CMapEntitySpawner::CMapEntitySpawner()
 	m_nEntities = 0;
 	m_pSpawnMapData = new HierarchicalSpawnMapData_t[NUM_ENT_ENTRIES];
 	m_pSpawnList = new HierarchicalSpawn_t[NUM_ENT_ENTRIES];
-	m_bFoundryMode = false;
 }
 
 CMapEntitySpawner::~CMapEntitySpawner()
@@ -343,9 +339,6 @@ void CMapEntitySpawner::AddEntity( CBaseEntity *pEntity, const char *pCurMapData
 {
 	if (pEntity->IsTemplate())
 	{
-		if ( m_bFoundryMode )
-			Templates_RemoveByHammerID( pEntity->GetHammerID() );
-
 		// It's a template entity. Squirrel away its keyvalue text so that we can
 		// recreate the entity later via a spawner. pMapData points at the '}'
 		// so we must add one to include it in the string.
@@ -360,7 +353,6 @@ void CMapEntitySpawner::AddEntity( CBaseEntity *pEntity, const char *pCurMapData
 	// To 
 	if ( dynamic_cast<CWorld*>( pEntity ) )
 	{
-		contract_assert( !m_bFoundryMode );
 		CVProfScope _( "MapEntity_ParseAllEntities_SpawnWorld", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 		pEntity->m_iParent = NULL_STRING;	// don't allow a parent on the first entity (worldspawn)
@@ -534,12 +526,6 @@ void MapEntity_ParseAllEntities(const char *pMapData, IMapEntityFilter *pFilter,
 	CMapEntitySpawner spawner;
 
 	char szTokenBuffer[MAPKEY_MAXLENGTH];
-
-	// Allow the tools to spawn different things
-	if ( serverenginetools )
-	{
-		pMapData = serverenginetools->GetEntityData( pMapData );
-	}
 
 	//  Loop through all entities in the map data, creating each.
 	for ( ; true; pMapData = MapEntity_SkipToNextEntity(pMapData, szTokenBuffer) )

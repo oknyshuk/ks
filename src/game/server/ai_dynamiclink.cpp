@@ -6,8 +6,6 @@
 //				They update the state of the actual links.  Allows us to save
 //				a lot of memory by not making all links into entities
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -25,7 +23,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -436,9 +433,9 @@ CAI_Link *CAI_DynamicLink::FindLink()
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-int CAI_DynamicLink::ObjectCaps()
+int CAI_DynamicLink::ObjectCaps_Impl()
 {
-	int caps = BaseClass::ObjectCaps();
+	int caps = BaseClass::ObjectCaps_Impl();
 
 	if ( m_bNotSaved )
 		caps |= FCAP_DONT_SAVE;
@@ -594,7 +591,7 @@ IMPLEMENT_REFLECT_DATAMAP( CAI_RadialLinkController )
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-void CAI_RadialLinkController::Spawn()
+void CAI_RadialLinkController::Spawn_Impl()
 {
 	SetSolid( SOLID_NONE );
 	AddEffects( EF_NODRAW );
@@ -602,9 +599,9 @@ void CAI_RadialLinkController::Spawn()
 
 //---------------------------------------------------------
 //---------------------------------------------------------
-void CAI_RadialLinkController::Activate()
+void CAI_RadialLinkController::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	m_bAtRest = false;
 	m_vecAtRestOrigin = vec3_invalid;

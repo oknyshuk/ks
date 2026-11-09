@@ -35,8 +35,6 @@ import ks.vstdlib;
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "materialsystem/materialsystem_config.h"
 #include "gl_rsurf.h"
-#include "avi/iavi.h"
-#include "avi/ibik.h"
 #include "materialsystem/itexture.h"
 #include "Overlay.h"
 #include "r_decal.h"
@@ -264,22 +262,22 @@ public:
 	bool			Map_GetRenderInfoAllocated( void );
 	void			Map_SetRenderInfoAllocated( bool allocated );
 
-	virtual void	Map_LoadDisplacements( model_t *pModel, bool bRestoring );
+	void	Map_LoadDisplacements( model_t *pModel, bool bRestoring );
 
 	// Validate version/header of a .bsp file
 	bool			Map_IsValid( char const *mapname, bool bQuiet = false );
 
-	virtual void	RecomputeSurfaceFlags( model_t *mod );
+	void	RecomputeSurfaceFlags( model_t *mod );
 
-	virtual void	Studio_ReloadModels( ReloadType_t reloadType );
+	void	Studio_ReloadModels( ReloadType_t reloadType );
 
 	void			Print( void );
 
 	// Is a model loaded?
-	virtual bool	IsLoaded( const model_t *mod );
+	bool	IsLoaded( const model_t *mod );
 
-	virtual bool	LastLoadedMapHasHDRLighting(void);
-	virtual bool	LastLoadedMapHasLightmapAlphaData( void );
+	bool	LastLoadedMapHasHDRLighting(void);
+	bool	LastLoadedMapHasLightmapAlphaData( void );
 	
 	void			DumpVCollideStats();
 
@@ -293,24 +291,24 @@ public:
 
 	void			UnloadModel( model_t *pModel );
 
-	virtual void	ReloadFilesInList( IFileList *pFilesToReload );
+	void	ReloadFilesInList( IFileList *pFilesToReload );
 
 
 	// Dynamic model loading
-	virtual void	UpdateDynamicModels() { InternalUpdateDynamicModels(false); }
-	virtual void	FlushDynamicModels() { InternalUpdateDynamicModels(true); }
-	virtual void	ForceUnloadNonClientDynamicModels();
-	virtual model_t *GetDynamicModel( const char *name, bool bClientOnly );
-	virtual model_t	*GetDynamicCombinedModel( const char *name, bool bClientOnly );
-	virtual void	UpdateDynamicCombinedModel( model_t *pModel, MDLHandle_t Handle, bool bClientSide );
-	virtual bool	SetCombineModels( model_t* pModel, const std::vector< SCombinerModelInput_t > &vecModelsToCombine );
-	virtual bool	FinishCombinedModel( model_t *pModel, CombinedModelLoadedCallback pFunc, void *pUserData );
-	virtual bool	IsDynamicModelLoading( model_t *pModel );
-	virtual void	AddRefDynamicModel( model_t *pModel, bool bClientSideRef );
-	virtual void	ReleaseDynamicModel( model_t *pModel, bool bClientSideRef );
-	virtual bool	RegisterModelLoadCallback( model_t *pModel, IModelLoadCallback *pCallback, bool bCallImmediatelyIfLoaded );
-	virtual void	UnregisterModelLoadCallback( model_t *pModel, IModelLoadCallback *pCallback );
-	virtual void	Client_OnServerModelStateChanged( model_t *pModel, bool bServerLoaded );
+	void	UpdateDynamicModels() { InternalUpdateDynamicModels(false); }
+	void	FlushDynamicModels() { InternalUpdateDynamicModels(true); }
+	void	ForceUnloadNonClientDynamicModels();
+	model_t *GetDynamicModel( const char *name, bool bClientOnly );
+	model_t	*GetDynamicCombinedModel( const char *name, bool bClientOnly );
+	void	UpdateDynamicCombinedModel( model_t *pModel, MDLHandle_t Handle, bool bClientSide );
+	bool	SetCombineModels( model_t* pModel, const std::vector< SCombinerModelInput_t > &vecModelsToCombine );
+	bool	FinishCombinedModel( model_t *pModel, CombinedModelLoadedCallback pFunc, void *pUserData );
+	bool	IsDynamicModelLoading( model_t *pModel );
+	void	AddRefDynamicModel( model_t *pModel, bool bClientSideRef );
+	void	ReleaseDynamicModel( model_t *pModel, bool bClientSideRef );
+	bool	RegisterModelLoadCallback( model_t *pModel, IModelLoadCallback *pCallback, bool bCallImmediatelyIfLoaded );
+	void	UnregisterModelLoadCallback( model_t *pModel, IModelLoadCallback *pCallback );
+	void	Client_OnServerModelStateChanged( model_t *pModel, bool bServerLoaded );
 	void			DebugPrintDynamicModels();
 	void			DebugCombinerInfo( );
 
@@ -318,16 +316,16 @@ public:
 	byte			*GetLightstyles( model_t *pModel );
 	void			AllocateLightstyles( model_t *pModel, byte *pStyles, int nStyleCount );
 
-	virtual void	UpdateViewWeaponModelCache( const char **ppWeaponModels, int nWeaponModels );
-	virtual void	TouchWorldWeaponModelCache( const char **ppWeaponModels, int nWeaponModels );
+	void	UpdateViewWeaponModelCache( const char **ppWeaponModels, int nWeaponModels );
+	void	TouchWorldWeaponModelCache( const char **ppWeaponModels, int nWeaponModels );
 	void			DumpWeaponModelCache( bool bViewModelsOnly );
-	virtual bool	IsModelInWeaponCache( const model_t *pModel );
-	virtual void	EvictAllWeaponsFromModelCache( bool bLoadingComplete );
-	virtual bool	IsViewWeaponModelResident( const model_t *pModel );
+	bool	IsModelInWeaponCache( const model_t *pModel );
+	void	EvictAllWeaponsFromModelCache( bool bLoadingComplete );
+	bool	IsViewWeaponModelResident( const model_t *pModel );
 	bool			ProcessWeaponModelCacheOperations();
 
 // Internal types
-private:
+public:
 	// TODO, flag these and allow for UnloadUnreferencedModels to check for allocation type
 	//  so we don't have to flush all of the studio models when we free the hunk
 	enum
@@ -337,7 +335,7 @@ private:
 	};
 
 // Internal methods
-private:
+public:
 	// Set reference flags and load model if it's not present already
 	model_t		*LoadModel( model_t	*model, REFERENCETYPE *referencetype );
 	// Unload models ( won't unload referenced models if checkreferences is true )
@@ -383,7 +381,7 @@ private:
 	void		RestoreWeaponModel( WeaponModelCache_t::iterator nCacheIndex );
 	
 	// Internal data
-private:
+public:
 	enum 
 	{
 		MAX_KNOWN_MODELS = 1024,
@@ -405,7 +403,7 @@ private:
 public: // HACKHACK
 	worldbrushdata_t	m_worldBrushData;
 
-private:
+public:
 	// local base name of current loading model
 	// generally used for debugging spew where only the name is desired, not the disk path
 	char				m_szBaseName[64];
@@ -459,6 +457,9 @@ private:
 	std::vector< compatibility_path_t >	m_vecSzCompatibilityPaths;
 
 };
+
+#include "facade/imodelloader.inl"
+
 
 // Expose interface
 static CModelLoader g_ModelLoader;
@@ -3194,10 +3195,10 @@ void Mod_TouchAllData( model_t *pModel, int nServerCount )
 class CMDLCacheNotify : public IMDLCacheNotify
 {
 public:
-	virtual void OnDataLoaded( MDLCacheDataType_t type, MDLHandle_t handle );
-	virtual void OnCombinerPreCache( MDLHandle_t OldHandle, MDLHandle_t NewHandle );
-	virtual void OnDataUnloaded( MDLCacheDataType_t type, MDLHandle_t handle );
-	virtual bool ShouldSupressLoadWarning( MDLHandle_t handle );
+	void OnDataLoaded( MDLCacheDataType_t type, MDLHandle_t handle );
+	void OnCombinerPreCache( MDLHandle_t OldHandle, MDLHandle_t NewHandle );
+	void OnDataUnloaded( MDLCacheDataType_t type, MDLHandle_t handle );
+	bool ShouldSupressLoadWarning( MDLHandle_t handle );
 
 private:
 	void ComputeModelFlags( model_t* mod, MDLHandle_t handle );
@@ -3206,6 +3207,16 @@ private:
 	void SetBoundsFromStudioHdr( model_t *pModel, MDLHandle_t handle );
 };
 static CMDLCacheNotify s_MDLCacheNotify;
+
+// The IMDLCacheNotify members forward to CMDLCacheNotify
+void IMDLCacheNotify::OnDataLoaded( MDLCacheDataType_t type, MDLHandle_t handle )
+{ static_cast<CMDLCacheNotify*>(this)->OnDataLoaded( type, handle ); }
+void IMDLCacheNotify::OnCombinerPreCache( MDLHandle_t OldHandle, MDLHandle_t NewHandle )
+{ static_cast<CMDLCacheNotify*>(this)->OnCombinerPreCache( OldHandle, NewHandle ); }
+void IMDLCacheNotify::OnDataUnloaded( MDLCacheDataType_t type, MDLHandle_t handle )
+{ static_cast<CMDLCacheNotify*>(this)->OnDataUnloaded( type, handle ); }
+bool IMDLCacheNotify::ShouldSupressLoadWarning( MDLHandle_t handle )
+{ return static_cast<CMDLCacheNotify*>(this)->ShouldSupressLoadWarning( handle ); }
 
 //-----------------------------------------------------------------------------
 // Computes model flags
@@ -3914,18 +3925,15 @@ model_t	*CModelLoader::LoadModel( model_t *mod, REFERENCETYPE *pReferencetype )
 //-----------------------------------------------------------------------------
 // Purpose: Creates the name of the sprite
 //-----------------------------------------------------------------------------
-static void BuildSpriteLoadName( const char *pName, char *pOut, int outLen, bool &bIsAVI, bool &bIsBIK )
+static void BuildSpriteLoadName( const char *pName, char *pOut, int outLen )
 {
 	// If it's a .vmt and they put a path in there, then use the path.
 	// Otherwise, use the old method of prepending the sprites directory.
 	const char *pExt = V_GetFileExtension( pName );
-	bIsAVI = !V_stricmp( pExt, "avi" );
-	bIsBIK = !V_stricmp( pExt, "bik" );
 	bool bIsVMT = !V_stricmp( pExt, "vmt" );
-	if ( ( bIsAVI || bIsBIK || bIsVMT ) && ( std::strchr( pName, '/' ) || strchr( pName, '\\' ) ) )
+	if ( bIsVMT && ( std::strchr( pName, '/' ) || strchr( pName, '\\' ) ) )
 	{
 		// The material system cannot handle a prepended "materials" dir
-		// Keep .avi extensions on the material to load avi-based materials
 		if ( bIsVMT )
 		{
 			const char *pNameStart = pName;
@@ -5053,62 +5061,23 @@ void CModelLoader::Map_UnloadModel( model_t *mod )
 //-----------------------------------------------------------------------------
 // Computes dimensions + frame count of a material 
 //-----------------------------------------------------------------------------
-static void GetSpriteInfo( const char *pName, bool bIsAVI, bool bIsBIK, int &nWidth, int &nHeight, int &nFrameCount )
+static void GetSpriteInfo( const char *pName, int &nWidth, int &nHeight, int &nFrameCount )
 {
 	nFrameCount = 1;
 	nWidth = nHeight = 1;
 
-	// FIXME: The reason we are putting logic related to AVIs here,
-	// logic which is duplicated in the client DLL related to loading sprites,
-	// is that this code gets run on dedicated servers also.
-	IMaterial *pMaterial = nullptr;
-	AVIMaterial_t hAVIMaterial = AVIMATERIAL_INVALID; 
-	BIKMaterial_t hBIKMaterial = BIKMATERIAL_INVALID; 
-	if ( bIsAVI )
+	IMaterial *pMaterial = GL_LoadMaterial( pName, TEXTURE_GROUP_OTHER );
+	if ( pMaterial )
 	{
-		hAVIMaterial = avi->CreateAVIMaterial( pName, pName, "GAME" );
-		avi->GetFrameSize( hAVIMaterial, &nWidth, &nHeight );
-		nFrameCount = avi->GetFrameCount( hAVIMaterial );
-		if ( hAVIMaterial != AVIMATERIAL_INVALID )
-		{
-			pMaterial = avi->GetMaterial( hAVIMaterial );
-		}
-	}
-	else if ( bIsBIK )
-	{
-		hBIKMaterial = bik->CreateMaterial( pName, pName, "GAME" );
-		if (hBIKMaterial != BIKMATERIAL_INVALID )
-		{
-			bik->GetFrameSize( hBIKMaterial, &nWidth, &nHeight );
-			nFrameCount = bik->GetFrameCount( hBIKMaterial );
-			pMaterial = bik->GetMaterial( hBIKMaterial );
-		}
-	}
-	else
-	{
-		pMaterial = GL_LoadMaterial( pName, TEXTURE_GROUP_OTHER );
-		if ( pMaterial )
-		{
-			// Store off our source height, width, frame count
-			nWidth = pMaterial->GetMappingWidth();
-			nHeight = pMaterial->GetMappingHeight();
-			nFrameCount = pMaterial->GetNumAnimationFrames();
-		}
+		// Store off our source height, width, frame count
+		nWidth = pMaterial->GetMappingWidth();
+		nHeight = pMaterial->GetMappingHeight();
+		nFrameCount = pMaterial->GetNumAnimationFrames();
 	}
 
 	if ( pMaterial == g_materialEmpty )
 	{
 		DevMsg( "Missing sprite material %s\n", pName );
-	}
-
-	if ( hAVIMaterial != AVIMATERIAL_INVALID )
-	{
-		avi->DestroyAVIMaterial( hAVIMaterial );
-	}
-
-	if ( hBIKMaterial != BIKMATERIAL_INVALID )
-	{
-		bik->DestroyMaterial( hBIKMaterial );
 	}
 }
 
@@ -5146,9 +5115,8 @@ void CModelLoader::Sprite_LoadModel( model_t *mod )
 
 	// Figure out the real load name..
 	char loadName[MAX_PATH];
-	bool bIsAVI, bIsBIK;
-	BuildSpriteLoadName( mod->szPathName, loadName, MAX_PATH, bIsAVI, bIsBIK );
-	GetSpriteInfo( loadName, bIsAVI, bIsBIK, mod->sprite.width, mod->sprite.height, mod->sprite.numframes );
+	BuildSpriteLoadName( mod->szPathName, loadName, MAX_PATH );
+	GetSpriteInfo( loadName, mod->sprite.width, mod->sprite.height, mod->sprite.numframes );
 
 #ifndef DEDICATED
 	if ( g_ClientDLL && mod->sprite.sprite )
@@ -5168,8 +5136,7 @@ void CModelLoader::Sprite_UnloadModel( model_t *mod )
 	mod->nLoadFlags &= ~FMODELLOADER_LOADED;
 
 	char loadName[MAX_PATH];
-	bool bIsAVI, bIsBIK;
-	BuildSpriteLoadName( mod->szPathName, loadName, sizeof( loadName ), bIsAVI, bIsBIK );
+	BuildSpriteLoadName( mod->szPathName, loadName, sizeof( loadName ) );
 
 	IMaterial *mat = materials->FindMaterial( loadName, TEXTURE_GROUP_OTHER );
 	if ( !IsErrorMaterial( mat ) )

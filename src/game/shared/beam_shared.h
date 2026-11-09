@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
 
 #include "baseentity_shared.h"
 #include "baseplayer_shared.h"
@@ -83,18 +82,18 @@ public:
 
 	CBeam();
 
-	virtual void SetModel( const char *szModelName );
+	KS_VIRTUAL void SetModel_Impl( const char *szModelName );
 
-	void	Spawn( void );
-	void	Precache( void );
+	void	Spawn_Impl( void );
+	void	Precache_Impl( void );
 #if !defined( CLIENT_DLL )
-	int		ObjectCaps( void );
-	void	SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways );
-	int		UpdateTransmitState( void );
-	int		ShouldTransmit( const CCheckTransmitInfo *pInfo );
+	int		ObjectCaps_Impl( void );
+	void	SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways );
+	int		UpdateTransmitState_Impl( void );
+	int		ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo );
 #endif
 
-	virtual int DrawDebugTextOverlays(void);
+	KS_VIRTUAL int DrawDebugTextOverlays_Impl(void);
 
 	// These functions are here to show the way beams are encoded as entities.
 	// Encoding beams as entities simplifies their management in the client/server architecture
@@ -145,7 +144,7 @@ public:
 	int GetStartAttachment() const;
 	int GetEndAttachment() const;
 
-	virtual const Vector &WorldSpaceCenter( void ) const;
+	KS_VIRTUAL const Vector &WorldSpaceCenter_Impl( void ) const;
 
 	int GetTexture( void );
 	int GetHaloTexture( void ) const;
@@ -217,9 +216,6 @@ public:
 		return false;
 	}
 
-	virtual void					GetToolRecordingState( KeyValues *msg );
-	void RestoreToToolRecordedState( KeyValues *pKV );
-
 // Beam Data Elements
 private:
 	// Computes the bounding box of a beam local to the origin of the beam
@@ -279,12 +275,12 @@ private:
 //-----------------------------------------------------------------------------
 // Inline methods 
 //-----------------------------------------------------------------------------
-inline int CBeam::ObjectCaps( void )
+inline int CBeam::ObjectCaps_Impl( void )
 { 
 	int flags = 0;
 	if ( HasSpawnFlags( SF_BEAM_TEMPORARY ) )
 		flags = FCAP_DONT_SAVE;
-	return (BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | flags; 
+	return (BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION) | flags; 
 }
 #endif
 
@@ -310,7 +306,7 @@ inline void CBeam::SetEndPos( const Vector &pos )
 }
 	 
  // center point of beam
-inline const Vector &CBeam::WorldSpaceCenter( void ) const 
+inline const Vector &CBeam::WorldSpaceCenter_Impl( void ) const 
 {
 	Vector &vecResult = AllocTempVector();
 	VectorAdd( GetAbsStartPos(), GetAbsEndPos(), vecResult );

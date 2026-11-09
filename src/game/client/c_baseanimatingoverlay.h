@@ -5,8 +5,7 @@
 #include "reflect_annotations.h"
 
 #include "c_baseanimating.h"
-#include "toolframework/itoolframework.h"
-import std;
+#include "toolframework/itoolentity.h"
 
 // For shared code.
 #define CBaseAnimatingOverlay C_BaseAnimatingOverlay

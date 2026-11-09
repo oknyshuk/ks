@@ -25,8 +25,6 @@
 // our definition
 #include "baseviewport.h"
 #include <filesystem.h>
-import ks.tier1;
-import std;
 
 static IViewPort *s_pFullscreenViewportInterface;
 static IViewPort *s_pViewportInterfaces[ MAX_SPLITSCREEN_PLAYERS ];

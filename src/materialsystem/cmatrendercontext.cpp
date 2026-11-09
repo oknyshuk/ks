@@ -98,8 +98,8 @@ int	CMatRenderContextBase::sm_nInitializeCount = 0;
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
-CMatRenderContextBase::CMatRenderContextBase() :
-	m_pMaterialSystem( nullptr ), m_MatrixMode( NUM_MATRIX_MODES )
+CMatRenderContextBase::CMatRenderContextBase( MatRenderContextKind kind ) :
+	IMatRenderContextInternal( kind ), m_iRefs( 1 ), m_pMaterialSystem( nullptr ), m_MatrixMode( NUM_MATRIX_MODES )
 {
 	int i;
 
@@ -528,7 +528,7 @@ void CMatRenderContextBase::PerspectiveOffCenterX( double flFovX, double flAspec
 void CMatRenderContextBase::PickMatrix( int x, int y, int nWidth, int nHeight )
 {
 	int vx, vy, vwidth, vheight;
-	GetViewport( vx, vy, vwidth, vheight );
+	IMatRenderContext::GetViewport( vx, vy, vwidth, vheight );
 
 	// Compute the location of the pick region in projection space...
 	float px = 2.0 * (float)(x - vx) / (float)vwidth - 1;
@@ -601,7 +601,7 @@ void CMatRenderContextBase::RecomputeViewState()
 
 	// FIXME: Cache this off to make it less expensive?
 	matrix3x4_t viewMatrix;
-	GetMatrix( MATERIAL_VIEW, &viewMatrix );
+	IMatRenderContext::GetMatrix( MATERIAL_VIEW, &viewMatrix );
 	m_vecViewOrigin.x = 
 		-( viewMatrix[0][3] * viewMatrix[0][0] + 
 		viewMatrix[1][3] * viewMatrix[1][0] + 
@@ -673,7 +673,7 @@ void CMatRenderContextBase::ReleaseRenderData()
 	contract_assert( sm_nRenderLockCount >= 0 );
 	if ( sm_nRenderLockCount == 0 )
 	{
-		OnRenderDataUnreferenced();
+		IMatRenderContextInternal::OnRenderDataUnreferenced();
 		// Keep track of the current allocation point for the current render data stack
 		// in case the render context switches from CMatRenderContext to CMatQueuedRenderContext
 		// Note that both render context mode write to the same render data stack
@@ -714,7 +714,7 @@ void CMatRenderContextBase::SetHeightClipMode( enum MaterialHeightClipMode_t hei
 	if( m_HeightClipMode != heightClipMode  )
 	{
 		m_HeightClipMode = heightClipMode;
-		UpdateHeightClipUserClipPlane();
+		IMatRenderContextInternal::UpdateHeightClipUserClipPlane();
 		/*if ( HardwareConfig()->MaxUserClipPlanes() >= 1 && !HardwareConfig()->UseFastClipping())
 		{
 		UpdateHeightClipUserClipPlane();			
@@ -731,7 +731,7 @@ void CMatRenderContextBase::SetHeightClipZ( float z )
 	if( z != m_HeightClipZ )
 	{
 		m_HeightClipZ = z;
-		UpdateHeightClipUserClipPlane();
+		IMatRenderContextInternal::UpdateHeightClipUserClipPlane();
 	}
 
 	// FIXME!  : Need to move user clip plane support back to pre-dx9 cards (all of the pixel shaders
@@ -752,7 +752,7 @@ bool CMatRenderContextBase::EnableClipping( bool bEnable )
 	if( bEnable != m_bEnableClipping )
 	{
 		m_bEnableClipping = bEnable;
-		ApplyCustomClipPlanes();		
+		IMatRenderContextInternal::ApplyCustomClipPlanes();		
 
 		return !bEnable;
 	}
@@ -785,7 +785,7 @@ void CMatRenderContextBase::PushRenderTargetAndViewport( )
 	// Necessary to push the stack top onto itself; realloc could happen otherwise
 	m_RenderTargetStack.reserve( std::ssize( m_RenderTargetStack ) + 1 );
 	m_RenderTargetStack.push_back( m_RenderTargetStack.back() );
-	CommitRenderTargetAndViewport();
+	IMatRenderContextInternal::CommitRenderTargetAndViewport();
 }
 
 
@@ -804,7 +804,7 @@ void CMatRenderContextBase::PushRenderTargetAndViewport( ITexture *pTexture )
 	// Just blindly push the data on the stack with flags indicating full bounds
 	RenderTargetStackElement_t element = { {pTexture, nullptr, nullptr, nullptr}, nullptr, 0, 0, -1, -1 };
 	m_RenderTargetStack.push_back( element );
-	CommitRenderTargetAndViewport();
+	IMatRenderContextInternal::CommitRenderTargetAndViewport();
 }
 
 
@@ -830,7 +830,7 @@ void CMatRenderContextBase::PushRenderTargetAndViewport( ITexture *pTexture, ITe
 	// Just blindly push the data on the stack
 	RenderTargetStackElement_t element = { {pTexture, nullptr, nullptr, nullptr}, pDepthTexture, nViewX, nViewY, nViewW, nViewH };
 	m_RenderTargetStack.push_back( element );
-	CommitRenderTargetAndViewport();
+	IMatRenderContextInternal::CommitRenderTargetAndViewport();
 }
 
 
@@ -847,11 +847,11 @@ void CMatRenderContextBase::PopRenderTargetAndViewport( void )
 		return;
 	}
 
-	Flush();
+	IMatRenderContext::Flush();
 
 	// Remove the top of stack
 	m_RenderTargetStack.pop_back();
-	CommitRenderTargetAndViewport();
+	IMatRenderContextInternal::CommitRenderTargetAndViewport();
 }
 
 void CMatRenderContextBase::RecomputeViewProjState()
@@ -861,8 +861,8 @@ void CMatRenderContextBase::RecomputeViewProjState()
 		VMatrix viewMatrix, projMatrix;
 
 		// FIXME: Should consider caching this upon change for projection or view matrix.
-		GetMatrix( MATERIAL_VIEW, &viewMatrix );
-		GetMatrix( MATERIAL_PROJECTION, &projMatrix );
+		IMatRenderContext::GetMatrix( MATERIAL_VIEW, &viewMatrix );
+		IMatRenderContext::GetMatrix( MATERIAL_PROJECTION, &projMatrix );
 		m_viewProjMatrix = projMatrix * viewMatrix;
 		m_bDirtyViewProjState = false;
 	}
@@ -905,7 +905,7 @@ float CMatRenderContextBase::ComputePixelDiameterOfSphere( const Vector& vecAbsO
 		clipPos2.y *= 1000;
 	}
 	int vx, vy, vwidth, vheight;
-	GetViewport( vx, vy, vwidth, vheight );
+	IMatRenderContext::GetViewport( vx, vy, vwidth, vheight );
 
 	// The divide-by-two here is because y goes from -1 to 1 in projection space
 	return vheight * fabs( clipPos2.y - clipPos1.y ) / 2.0f;
@@ -924,7 +924,7 @@ Vector CMatRenderContextBase::GetToneMappingScaleLinear( void )
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-CMatRenderContext::CMatRenderContext()
+CMatRenderContext::CMatRenderContext() : CMatRenderContextBase( MatRenderContextKind::Hardware )
 {
 	g_FrameNum = 0;
 	m_pBatchIndices = nullptr;

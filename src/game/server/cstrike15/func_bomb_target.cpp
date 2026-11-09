@@ -3,8 +3,6 @@
 
 // Purpose: Bomb target area
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -50,7 +48,7 @@ CBombTarget::CBombTarget( void )
 	m_hInstructorHint = nullptr;
 }
 
-void CBombTarget::Spawn()
+void CBombTarget::Spawn_Impl()
 {
 	InitTrigger();
 	SetTouch( &CBombTarget::BombTargetTouch );
@@ -156,7 +154,7 @@ void CBombTarget::OnBombDefused( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 // Purpose: A generic target entity that gets replicated to the client for displaying a hint for the CS bomb targets
 //-----------------------------------------------------------------------------
-void CInfoInstructorHintBombTargetA::Spawn( void )
+void CInfoInstructorHintBombTargetA::Spawn_Impl( void )
 {
 	VisibilityMonitor_AddEntity( this, 5000.0f, nullptr, nullptr );
 }
@@ -168,7 +166,7 @@ LINK_ENTITY_TO_CLASS( info_bomb_target_hint_A, CInfoInstructorHintBombTargetA );
 //-----------------------------------------------------------------------------
 // Purpose: A generic target entity that gets replicated to the client for displaying a hint for the CS bomb targets
 //-----------------------------------------------------------------------------
-void CInfoInstructorHintBombTargetB::Spawn( void )
+void CInfoInstructorHintBombTargetB::Spawn_Impl( void )
 {
 	VisibilityMonitor_AddEntity( this, 5000.0f, nullptr, nullptr );
 }

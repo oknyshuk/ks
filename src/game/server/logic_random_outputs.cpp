@@ -4,8 +4,6 @@
 // Purpose: When triggered, will attempt to fire off each of its outputs.  Each output
 // has its own chance of firing.
 
-import std;
-import ks.math;
 #include "edict.h"
 #include "iserverentity.h"
 #include "shareddefs.h"
@@ -46,7 +44,7 @@ CLogicRandomOutputs::CLogicRandomOutputs(void)
 //-----------------------------------------------------------------------------
 // Purpose: Read in the chance of firing each output
 //-----------------------------------------------------------------------------
-bool CLogicRandomOutputs::KeyValue( const char *szKeyName, const char *szValue )
+bool CLogicRandomOutputs::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if ( szValue && szValue[0] )
 	{
@@ -60,15 +58,15 @@ bool CLogicRandomOutputs::KeyValue( const char *szKeyName, const char *szValue )
 		}
 	}
 
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 //------------------------------------------------------------------------------
 // Kickstarts a think if we have OnSpawn connections.
 //------------------------------------------------------------------------------
-void CLogicRandomOutputs::Activate()
+void CLogicRandomOutputs::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	
 	if ( m_OnSpawn.NumberOfElements() > 0)
 	{
@@ -81,7 +79,7 @@ void CLogicRandomOutputs::Activate()
 // If we have OnSpawn connections, this is called shortly after spawning to
 // fire the OnSpawn output.
 //-----------------------------------------------------------------------------
-void CLogicRandomOutputs::Think()
+void CLogicRandomOutputs::Think_Impl()
 {
 	// Fire an output when we spawn. This is used for self-starting an entity
 	// template -- since the logic_random_outputs is inside the template, it gets all the

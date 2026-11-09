@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "const.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"
@@ -424,7 +422,7 @@ bool C_LocalTempEntity::Frame( float frametime, int framenumber )
 				// Make sure it didn't bump into itself... (?!?)
 				if  ( 
 					(trace.fraction != 1) && 
-						( (trace.DidHitWorld()) || 
+						( (TraceDidHitWorld( trace )) || 
 						  (trace.Ent<CBaseEntity>() != ClientEntityList().GetEnt(clientIndex)) ) 
 					)
 				{
@@ -525,7 +523,7 @@ bool C_LocalTempEntity::Frame( float frametime, int framenumber )
 			else if ( flags & FTENT_ATTACHTOTARGET)
 			{
 				// If we've hit the world, just stop moving
-				if ( trace.DidHitWorld() && !( trace.surface.flags & SURF_SKY ) )
+				if ( TraceDidHitWorld( trace ) && !( trace.surface.flags & SURF_SKY ) )
 				{
 					m_vecTempEntVelocity = vec3_origin;
 					m_vecTempEntAcceleration = vec3_origin;

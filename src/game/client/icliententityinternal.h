@@ -9,7 +9,6 @@
 // Forward declarations
 //-----------------------------------------------------------------------------
 
-class ClientClass;
 
 
 //-----------------------------------------------------------------------------
@@ -17,4 +16,3 @@ class ClientClass;
 //-----------------------------------------------------------------------------
 
 typedef CBaseHandle ClientEntityHandle_t;
-typedef unsigned short SpatialPartitionHandle_t;

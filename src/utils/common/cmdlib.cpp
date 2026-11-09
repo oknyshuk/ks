@@ -5,6 +5,8 @@
 // cmdlib.c
 // -----------------------
 import std;
+import ks.core;
+import ks.math;
 import ks.tier1;
 #include "cmdlib.h"
 #include "filesystem_helpers.h"

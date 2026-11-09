@@ -73,60 +73,60 @@ struct ShadowDecalRenderInfo_t
 class IShadowMgrInternal : public IShadowMgr
 {
 public:
-	virtual void LevelInit( int nSurfCount ) = 0;
-	virtual void LevelShutdown() = 0;
+	void LevelInit( int nSurfCount );
+	void LevelShutdown();
 
 	// This surface has been rendered; and we'll want to render the shadows
 	// on this surface
-	virtual void AddShadowsOnSurfaceToRenderList( ShadowDecalHandle_t decalHandle ) = 0;
+	void AddShadowsOnSurfaceToRenderList( ShadowDecalHandle_t decalHandle );
 
 	// This will render all shadows that were previously added using
 	// AddShadowsOnSurfaceToRenderList. If there's a model to world transform
 	// for the shadow receiver, then send it in!
 	// NOTE: This draws both shadows and projected textures.
-	virtual void RenderProjectedTextures( IMatRenderContext *pRenderContext, VMatrix const* pModelToWorld = 0 ) = 0;
+	void RenderProjectedTextures( IMatRenderContext *pRenderContext, VMatrix const* pModelToWorld = 0 );
 
 	// NOTE: This draws shadows
-	virtual void RenderShadows( IMatRenderContext *pRenderContext, VMatrix const* pModelToWorld = 0 ) = 0;
+	void RenderShadows( IMatRenderContext *pRenderContext, VMatrix const* pModelToWorld = 0 );
 
 	// NOTE: This draws flashlights
-	virtual void RenderFlashlights( bool bDoMasking, bool bDoSimpleProjections, VMatrix const* pModelToWorld = 0 ) = 0;
+	void RenderFlashlights( bool bDoMasking, bool bDoSimpleProjections, VMatrix const* pModelToWorld = 0 );
 
 	// Clears the list of shadows to render 
-	virtual void ClearShadowRenderList() = 0;
+	void ClearShadowRenderList();
 
 	// Projects + clips shadows
 	// count + ppPosition describe an array of pointers to vertex positions
 	// of the unclipped shadow
 	// ppOutVertex is pointed to the head of an array of pointers to
 	// clipped vertices the function returns the number of clipped vertices
-	virtual int ProjectAndClipVertices( ShadowHandle_t handle, int count, 
-		Vector** ppPosition, ShadowVertex_t*** ppOutVertex ) = 0;
+	int ProjectAndClipVertices( ShadowHandle_t handle, int count, 
+		Vector** ppPosition, ShadowVertex_t*** ppOutVertex );
 
 	// Computes information for rendering
-	virtual void ComputeRenderInfo( ShadowDecalRenderInfo_t* pInfo, ShadowHandle_t handle ) const = 0;
+	void ComputeRenderInfo( ShadowDecalRenderInfo_t* pInfo, ShadowHandle_t handle ) const;
 
 	// Shadow state...
-	virtual unsigned short InvalidShadowIndex( ) = 0;
-	virtual void SetModelShadowState( ModelInstanceHandle_t instance ) = 0;
+	unsigned short InvalidShadowIndex( );
+	void SetModelShadowState( ModelInstanceHandle_t instance );
 
-	virtual void SetNumWorldMaterialBuckets( int numMaterialSortBins ) = 0;
+	void SetNumWorldMaterialBuckets( int numMaterialSortBins );
 
-	virtual void DrawFlashlightDecals( IMatRenderContext *pRenderContext, int sortGroup, bool bDoMasking, float flFade = 1.0f ) = 0;
+	void DrawFlashlightDecals( IMatRenderContext *pRenderContext, int sortGroup, bool bDoMasking, float flFade = 1.0f );
 
-	virtual void DrawFlashlightDecalsOnSurfaceList( IMatRenderContext *pRenderContext, SurfaceHandle_t *pList, int listCount, bool bDoMasking ) = 0;
+	void DrawFlashlightDecalsOnSurfaceList( IMatRenderContext *pRenderContext, SurfaceHandle_t *pList, int listCount, bool bDoMasking );
 
-	virtual void DrawFlashlightOverlays( IMatRenderContext *pRenderContext, int nSortGroup, bool bDoMasking ) = 0;
+	void DrawFlashlightOverlays( IMatRenderContext *pRenderContext, int nSortGroup, bool bDoMasking );
 
-	virtual void DrawFlashlightDepthTexture( ) = 0;
+	void DrawFlashlightDepthTexture( );
 
-	virtual void DrawFlashlightDecalsOnDisplacements( IMatRenderContext *pRenderContext, int sortGroup, CDispInfo **visibleDisps, int nVisibleDisps, bool bDoMasking ) = 0;
+	void DrawFlashlightDecalsOnDisplacements( IMatRenderContext *pRenderContext, int sortGroup, CDispInfo **visibleDisps, int nVisibleDisps, bool bDoMasking );
 
-	virtual void SetFlashlightStencilMasks( bool bDoMasking ) = 0;
-	virtual bool ModelHasShadows( ModelInstanceHandle_t instance ) = 0;
+	void SetFlashlightStencilMasks( bool bDoMasking );
+	bool ModelHasShadows( ModelInstanceHandle_t instance );
 
-	virtual int ProjectAndClipVerticesEx( ShadowHandle_t handle, int count, 
-		Vector** ppPosition, ShadowVertex_t*** ppOutVertex, ShadowClipState_t& clip ) = 0;
+	int ProjectAndClipVerticesEx( ShadowHandle_t handle, int count, 
+		Vector** ppPosition, ShadowVertex_t*** ppOutVertex, ShadowClipState_t& clip );
 };
 
 

@@ -23,17 +23,10 @@ public:
 
 	//IMatchSystem
 public:
-	virtual IPlayerManager * GetPlayerManager();
+	IPlayerManager * GetPlayerManager();
 
-	virtual IMatchVoice * GetMatchVoice();
+	IMatchVoice * GetMatchVoice();
 
-	virtual IServerManager * GetUserGroupsServerManager();
-
-	virtual ISearchManager * CreateGameSearchManager( KeyValues *pParams );
-
-	virtual IDatacenter * GetDatacenter();
-
-	virtual IDlcManager * GetDlcManager();
 };
 
 extern CMatchSystem *g_pMatchSystem;

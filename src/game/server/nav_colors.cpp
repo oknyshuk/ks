@@ -4,8 +4,6 @@
 // Central point for defining colors and drawing routines for Navigation Mesh edit mode
 // Author: Matthew Campbell, 2004
 
-import std;
-import ks.core;
 #include "string_t.h"
 #include "predictable_entity.h"
 #include "ndebugoverlay.h"

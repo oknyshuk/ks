@@ -271,9 +271,12 @@ int SortInfoToLightmapPage( int sortID )
 
 #ifndef DEDICATED
 
-class CWorldRenderList : public CRefCounted1<IWorldRenderList>
+class CWorldRenderList : public IWorldRenderList, public CRefCounted<CWorldRenderList>
 {
 public:
+	using CRefCounted<CWorldRenderList>::AddRef;
+	using CRefCounted<CWorldRenderList>::Release;
+
 	CWorldRenderList()
 	{
 	}
@@ -310,7 +313,7 @@ public:
 		}
 	}
 
-	virtual bool OnFinalRelease()
+	bool OnFinalRelease()
 	{
 		Reset();
 		g_Pool.put( this );
@@ -452,7 +455,20 @@ public:
 	static ks::reuse_pool<CWorldRenderList> g_Pool;
 };
 
+#include "facade/iworldrenderlist.inl"
+
+
 ks::reuse_pool<CWorldRenderList> CWorldRenderList::g_Pool;
+
+int IWorldRenderList::AddRef()
+{
+	return static_cast< CWorldRenderList * >( this )->AddRef();
+}
+
+int IWorldRenderList::Release()
+{
+	return static_cast< CWorldRenderList * >( this )->Release();
+}
 
 IWorldRenderList *AllocWorldRenderList()
 {
@@ -3619,10 +3635,11 @@ void R_SetFogVolumeState( int fogVolume, bool useHeightFog )
 
 
 //-----------------------------------------------------------------------------
-// Job for building the world rendering list
+// Work of the job for building the world rendering list; it is run by a CJob
+// that owns it (see R_BuildWorldLists below).
 //-----------------------------------------------------------------------------
 
-class CBuildWorldListsJob : public CJob
+class CBuildWorldListsJob
 {
 public:
 
@@ -3644,9 +3661,9 @@ public:
 		bool bViewerInSolidSpace,
 		const Vector& modelOrigin );
 
-private:
+	JobStatus_t			Run();
 
-	virtual JobStatus_t	DoExecute();
+private:
 
 	void				R_RecursiveWorldNode( CWorldRenderList *pRenderList, mnode_t *node );
 	// Fast path for rendering top-views
@@ -3724,7 +3741,7 @@ CBuildWorldListsJob::CBuildWorldListsJob(
 	std::memcpy( m_RenderAreaBits, pRenderAreaBits, sizeof(m_RenderAreaBits) );
 }
 
-JobStatus_t CBuildWorldListsJob::DoExecute()
+JobStatus_t CBuildWorldListsJob::Run()
 {
 	if ( !m_bDrawTopView )
 	{
@@ -4357,7 +4374,7 @@ void R_BuildWorldLists( IWorldRenderList *pRenderListIn, WorldListInfo_t* pInfo,
 		g_ClientDLL->CacheFrustumData( g_Frustum, g_AreaFrustum );
 
 		// TODO get frustum, aera frustums volume culler from g_viewBuilder
-		CBuildWorldListsJob* pJob = new CBuildWorldListsJob( 
+		std::unique_ptr<CBuildWorldListsJob> pWork = std::make_unique<CBuildWorldListsJob>( 
 			pRenderList,
 			pInfo,
 			bShadowDepth,
@@ -4375,6 +4392,7 @@ void R_BuildWorldLists( IWorldRenderList *pRenderListIn, WorldListInfo_t* pInfo,
 			g_bViewerInSolidSpace,
 			modelorg );
 
+		CJob* pJob = new CJob( [pWork = std::move( pWork )]() { return pWork->Run(); } );
 		g_ClientDLL->QueueBuildWorldListJob( pJob );
 
 
@@ -4795,20 +4813,23 @@ public:
 	CBrushSurface( SurfaceHandle_t surfID );
 
 	// Computes texture coordinates + lightmap coordinates given a world position
-	virtual void ComputeTextureCoordinate( const Vector& worldPos, Vector2D& texCoord );
-	virtual void ComputeLightmapCoordinate( const Vector& worldPos, Vector2D& lightmapCoord );
+	void ComputeTextureCoordinate( const Vector& worldPos, Vector2D& texCoord );
+	void ComputeLightmapCoordinate( const Vector& worldPos, Vector2D& lightmapCoord );
 
 	// Gets the vertex data for this surface
-	virtual int  GetVertexCount() const;
-	virtual void GetVertexData( BrushVertex_t* pVerts );
+	int  GetVertexCount() const;
+	void GetVertexData( BrushVertex_t* pVerts );
 
 	// Gets at the material properties for this surface
-	virtual IMaterial* GetMaterial();
+	IMaterial* GetMaterial();
 
-private:
+public:
 	SurfaceHandle_t m_SurfaceID;
 	SurfaceCtx_t m_Ctx;
 };
+
+#include "facade/ibrushsurface.inl"
+
 
 
 //-----------------------------------------------------------------------------
@@ -5648,6 +5669,9 @@ public:
 	int ListLeavesInBox( const Vector& mins, const Vector& maxs, unsigned short *pList, int listMax );
 	int ListLeavesInSphereWithFlagSet( int *pLeafsInSphere, const Vector& vecCenter, float flRadius, int nLeafCount, const uint16 *pLeafs, int nLeafStride, int nFlagsCheck );
 };
+
+#include "facade/ispatialquery.inl"
+
 
 //-----------------------------------------------------------------------------
 // Singleton accessor

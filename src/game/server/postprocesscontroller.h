@@ -29,8 +29,8 @@ public:
 	virtual ~CPostProcessController();
 
 	// Parse data from a map file
-	virtual void Activate();
-	virtual int UpdateTransmitState();
+	void Activate_Impl();
+	int UpdateTransmitState_Impl();
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "SetFadeTime", .type = FIELD_FLOAT } ]] void InputSetFadeTime(inputdata_t &data);
@@ -48,7 +48,7 @@ public:
 	void InputTurnOn(inputdata_t &data);
 	void InputTurnOff(inputdata_t &data);
 
-	void Spawn( void );
+	void Spawn_Impl( void );
 
 	bool IsMaster( void ) const { return HasSpawnFlags( SF_FOG_MASTER ); }
 
@@ -79,7 +79,7 @@ public:
 
 	virtual void LevelInitPreEntity();
 	virtual void LevelInitPostEntity();
-	virtual void FireGameEvent( IGameEvent *pEvent );
+	void FireGameEvent( IGameEvent *pEvent );
 	CPostProcessController *GetMasterPostProcessController( void )			{ return m_hMasterController; }
 
 private:

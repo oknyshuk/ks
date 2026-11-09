@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "edict.h"
 #include "eiface.h"
 #include "iserverentity.h"
@@ -66,7 +64,7 @@ SmokeTrail::SmokeTrail()
 //-----------------------------------------------------------------------------
 // Parse data from a map file
 //-----------------------------------------------------------------------------
-bool SmokeTrail::KeyValue( const char *szKeyName, const char *szValue ) 
+bool SmokeTrail::KeyValue_Impl( const char *szKeyName, const char *szValue ) 
 {
 	if ( FStrEq( szKeyName, "startcolor" ) )
 	{
@@ -90,7 +88,7 @@ bool SmokeTrail::KeyValue( const char *szKeyName, const char *szValue )
 		return true;
 	}
 
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 
@@ -311,9 +309,9 @@ SporeExplosion::SporeExplosion( void )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void SporeExplosion::Spawn( void )
+void SporeExplosion::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	m_bEmit = false;
 }
@@ -363,7 +361,7 @@ IMPLEMENT_REFLECT_SERVERCLASS( CFireTrail, DT_FireTrail )
 
 LINK_ENTITY_TO_CLASS( env_fire_trail, CFireTrail );
 
-void CFireTrail::Precache( void )
+void CFireTrail::Precache_Impl( void )
 {
 	PrecacheMaterial( "sprites/flamelet1" );
 	PrecacheMaterial( "sprites/flamelet2" );
@@ -454,7 +452,7 @@ DustTrail::DustTrail()
 //-----------------------------------------------------------------------------
 // Parse data from a map file
 //-----------------------------------------------------------------------------
-bool DustTrail::KeyValue( const char *szKeyName, const char *szValue ) 
+bool DustTrail::KeyValue_Impl( const char *szKeyName, const char *szValue ) 
 {
 	if ( FStrEq( szKeyName, "color" ) )
 	{
@@ -470,7 +468,7 @@ bool DustTrail::KeyValue( const char *szKeyName, const char *szValue )
 		return true;
 	}
 
-	return BaseClass::KeyValue( szKeyName, szValue );
+	return BaseClass::KeyValue_Impl( szKeyName, szValue );
 }
 
 

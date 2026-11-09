@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -15,7 +13,6 @@ import std;
 #include "gamerules.h"
 #include "reflect_recvtable.h"
 #include "c_point_camera.h"
-#include "toolframework/itoolframework.h"
 #include "toolframework_client.h"
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_PointCamera, DT_PointCamera, CPointCamera )

@@ -9,15 +9,15 @@ class CMatchNetworkMsgControllerBase : public IMatchNetworkMsgController
 	// Methods of IMatchNetworkMsgController
 public:
 	// To determine host Quality-of-Service
-	virtual MM_QOS_t GetQOS();
+	MM_QOS_t GetQOS();
 
-	virtual KeyValues * GetActiveServerGameDetails( KeyValues *pRequest );
+	KeyValues * GetActiveServerGameDetails( KeyValues *pRequest );
 
-	virtual KeyValues * UnpackGameDetailsFromQOS( MM_GameDetails_QOS_t const *pvQosReply );
+	KeyValues * UnpackGameDetailsFromQOS( MM_GameDetails_QOS_t const *pvQosReply );
 
-	virtual void PackageGameDetailsForQOS( KeyValues *pSettings, ks::byte_writer &buf );
+	void PackageGameDetailsForQOS( KeyValues *pSettings, ks::byte_writer &buf );
 
-	virtual KeyValues * PackageGameDetailsForReservation( KeyValues *pSettings );
+	KeyValues * PackageGameDetailsForReservation( KeyValues *pSettings );
 
 public:
 	CMatchNetworkMsgControllerBase();

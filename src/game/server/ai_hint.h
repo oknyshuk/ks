@@ -7,7 +7,6 @@
 #include "reflect_annotations.h"
 
 #include "ai_initutils.h"
-import std;
 
 //Flags for FindHintNode
 inline constexpr auto bits_HINT_NODE_NONE = 0x00000000;
@@ -322,13 +321,20 @@ public:
 	bool				IsInNodeFOV( CBaseEntity *pOther );
 
 private:
-	void				Spawn( void );
-	virtual void		Activate();
-	virtual void		UpdateOnRemove( void );
-	int					DrawDebugTextOverlays(void);
-	virtual int			ObjectCaps( void ) { return (BaseClass::ObjectCaps() & ~FCAP_ACROSS_TRANSITION); }
-	virtual void		OnRestore();
-	bool				IsViewable( void );
+	public: void				Spawn_Impl( void );
+	private:
+	public: void		Activate_Impl();
+	private:
+	public: void		UpdateOnRemove_Impl( void );
+	private:
+	public: int					DrawDebugTextOverlays_Impl(void);
+	private:
+	public: int			ObjectCaps_Impl( void ) { return (BaseClass::ObjectCaps_Impl() & ~FCAP_ACROSS_TRANSITION); }
+	private:
+	public: void		OnRestore_Impl();
+	private:
+	public: bool				IsViewable_Impl( void );
+	private:
 
 	// Input handlers
 	[[= ks::reflect::Input{ .name = "EnableHint", .type = FIELD_VOID } ]] void				InputEnableHint( inputdata_t &inputdata );

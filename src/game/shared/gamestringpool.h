@@ -6,7 +6,6 @@
 //			consolodating duplicates. The memory is freed on behalf of clients
 //			at level transition. Strings are of type string_t.
 
-import std;
 #include "string_t.h"
 
 class IGameSystem;

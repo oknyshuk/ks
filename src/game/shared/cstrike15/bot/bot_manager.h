@@ -4,8 +4,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-import std;
-import ks.math;
 #include "util_shared.h"
 #include "player.h"
 
@@ -13,9 +11,6 @@ extern float g_BotUpkeepInterval;					///< duration between bot upkeeps
 extern float g_BotUpdateInterval;					///< duration between bot updates
 const int g_BotUpdateSkipCount = 2;					///< number of upkeep periods to skip update
 
-struct edict_t;
-class CCommand;
-class CNavArea;
 class CBasePlayer;
 class CBaseEntity;
 
@@ -73,23 +68,16 @@ class CBotManager
 {
 public:
 	CBotManager();
-	virtual ~CBotManager();
+	~CBotManager();
 
-	CBasePlayer *AllocateAndBindBotEntity( edict_t *ed );			///< allocate the appropriate entity for the bot and bind it to the given edict
-	virtual CBasePlayer *AllocateBotEntity( void ) = 0;				///< factory method to allocate the appropriate entity for the bot 
+	// CCSBotManager (the only bot manager) provides AllocateBotEntity(), ClientDisconnect(), ClientCommand(),
+	// ServerActivate(), ServerDeactivate(), ServerCommand(), RestartRound(), StartFrame() and GetPlayerPriority().
+	// Use TheCSBots() to reach them.
 
-	virtual void ClientDisconnect( CBaseEntity *entity ) = 0;
-	virtual bool ClientCommand( CBasePlayer *player, const CCommand &args ) = 0;
+	static void SetPlayerEdictForNextBot( edict_t *ed )	{ CBasePlayer::s_PlayerEdict = ed; }	///< sets the edict the next bot entity binds to; call before constructing it
 
-	virtual void ServerActivate( void ) = 0;
-	virtual void ServerDeactivate( void ) = 0;
-	virtual bool ServerCommand( const char * pcmd ) = 0;
-
-	virtual void RestartRound( void );							///< (EXTEND) invoked when a new round begins
-	virtual void StartFrame( void );							///< (EXTEND) called each frame
-
-	virtual unsigned int GetPlayerPriority( CBasePlayer *player ) const = 0;	///< return priority of player (0 = max pri)
-	
+	void RestartRoundBase( void );								///< invoked by CCSBotManager::RestartRound()
+	void StartFrameBase( void );								///< invoked by CCSBotManager::StartFrame()
 
 	void AddGrenade( CBaseGrenade *grenade );					///< add an active grenade to the bot's awareness
 	void RemoveGrenade( CBaseGrenade *grenade );				///< the grenade entity in the world is going away
@@ -154,12 +142,6 @@ private:
 	IntervalTimer m_frameTimer;									///< for measuring each frame's duration
 };
 
-
-inline CBasePlayer *CBotManager::AllocateAndBindBotEntity( edict_t *ed )
-{
-	CBasePlayer::s_PlayerEdict = ed;
-	return AllocateBotEntity();
-}
 
 inline int CBotManager::GetDebugMessageCount( void ) const
 {

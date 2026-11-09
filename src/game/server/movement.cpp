@@ -3,8 +3,6 @@
 
 // Purpose: MOVEMENT ENTITIES TEST
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -88,8 +85,8 @@ class CPathKeyFrame : public CLogicalEntity
 public:
 	DECLARE_CLASS( CPathKeyFrame, CLogicalEntity );
 
-	void Spawn( void );
-	void Activate( void );
+	void Spawn_Impl( void );
+	void Activate_Impl( void );
 	void Link( void );
 
 	Vector m_Origin;
@@ -125,7 +122,7 @@ IMPLEMENT_REFLECT_DATAMAP( CPathKeyFrame )
 //-----------------------------------------------------------------------------
 // Purpose: Converts inputed euler angles to internal angle format (quaternions)
 //-----------------------------------------------------------------------------
-void CPathKeyFrame::Spawn( void )
+void CPathKeyFrame::Spawn_Impl( void )
 {
 	m_Origin = GetLocalOrigin();
 	m_Angles = GetLocalAngles();
@@ -136,9 +133,9 @@ void CPathKeyFrame::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: Adds the keyframe into the path after all the other keys have spawned
 //-----------------------------------------------------------------------------
-void CPathKeyFrame::Activate( void )
+void CPathKeyFrame::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 	
 	Link();
 
@@ -285,15 +282,15 @@ class CBaseMoveBehavior : public CPathKeyFrame
 public:
 	DECLARE_CLASS( CBaseMoveBehavior, CPathKeyFrame );
 
-	void Spawn( void );
-	void Activate( void );
-	void MoveDone( void );
+	void Spawn_Impl( void );
+	void Activate_Impl( void );
+	void MoveDone_Impl( void );
 	float SetObjectPhysicsVelocity( float moveTime );
 
 	// methods
 	virtual bool StartMoving( int direction );
 	virtual void StopMoving( void );
-	virtual bool IsMoving( void );
+	bool IsMoving_Impl( void );
 
 	// derived classes should override this to get notification of arriving at new keyframes
 //	virtual void ArrivedAtKeyFrame( CPathKeyFrame * ) {}
@@ -327,7 +324,7 @@ LINK_ENTITY_TO_CLASS( move_keyframed, CBaseMoveBehavior );
 IMPLEMENT_REFLECT_DATAMAP( CBaseMoveBehavior )
 
 
-void CBaseMoveBehavior::Spawn( void )
+void CBaseMoveBehavior::Spawn_Impl( void )
 {
 	m_pCurrentKeyFrame = this;
 	m_flTimeIntoFrame = 0;
@@ -337,12 +334,12 @@ void CBaseMoveBehavior::Spawn( void )
 	m_Origin = GetLocalOrigin();
 	m_Angles = GetLocalAngles();
 
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
-void CBaseMoveBehavior::Activate( void )
+void CBaseMoveBehavior::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	SetMoveDoneTime( 0.5 );	// start moving in 0.2 seconds time
 
@@ -390,7 +387,7 @@ bool CBaseMoveBehavior::IsAtSequenceEnd( void )
 // Purpose: 
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-bool CBaseMoveBehavior::IsMoving( void )
+bool CBaseMoveBehavior::IsMoving_Impl( void )
 {
 	if ( m_iDirection != 0 )
 		return true;
@@ -567,7 +564,7 @@ void CBaseMoveBehavior::StopMoving( void )
 //-----------------------------------------------------------------------------
 // Purpose: We have just arrived at a key, move onto the next keyframe
 //-----------------------------------------------------------------------------
-void CBaseMoveBehavior::MoveDone( void )
+void CBaseMoveBehavior::MoveDone_Impl( void )
 {
 	// if we're just a base then keep playing the anim
 	if ( !stricmp(STRING(m_iClassname), "move_keyframed") )
@@ -581,7 +578,7 @@ void CBaseMoveBehavior::MoveDone( void )
 		}
 	}
 
-	BaseClass::MoveDone();
+	BaseClass::MoveDone_Impl();
 }
 
 //-----------------------------------------------------------------------------

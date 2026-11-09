@@ -15,7 +15,7 @@ class IBaseFileSystem;
 class Color;
 class CKeyValuesTokenReader;
 class KeyValues;
-class IKeyValuesDumpContext;
+class CKeyValuesDumpContext;
 typedef void * FileHandle_t;
 class CKeyValuesGrowableStringTable;
 
@@ -285,7 +285,7 @@ public:
 	bool ProcessResolutionKeys( const char *pResString );
 
 	// Dump keyvalues recursively into a dump context
-	bool Dump( IKeyValuesDumpContext *pDump, int nIndentLevel = 0 );
+	bool Dump( CKeyValuesDumpContext *pDump, int nIndentLevel = 0 );
 
 	// Merge operations describing how two keyvalues can be combined
 	enum MergeKeyValuesOp_t
@@ -467,47 +467,50 @@ inline bool  KeyValues::IsEmpty( int keySymbol )
 }
 
 //
-// KeyValuesDumpContext and generic implementations
+// KeyValuesDumpContext
 //
 
-class IKeyValuesDumpContext
+// Writes a KeyValues tree as indented text; every piece of text goes to fnWriteText.
+class CKeyValuesDumpContext
 {
 public:
-	virtual bool KvBeginKey( KeyValues *pKey, int nIndentLevel ) = 0;
-	virtual bool KvWriteValue( KeyValues *pValue, int nIndentLevel ) = 0;
-	virtual bool KvEndKey( KeyValues *pKey, int nIndentLevel ) = 0;
+	typedef std::function_ref< bool( char const *szText ) > WriteTextFn_t;
+
+	// With nMinDeveloperLevel >= 0 the dump is skipped (and Dump() returns false) while the
+	// "developer" convar is below that level.
+	CKeyValuesDumpContext( WriteTextFn_t fnWriteText, int nMinDeveloperLevel = -1 )
+		: m_fnWriteText( fnWriteText ), m_nMinDeveloperLevel( nMinDeveloperLevel ) {}
+
+	bool KvBeginKey( KeyValues *pKey, int nIndentLevel );
+	bool KvWriteValue( KeyValues *pValue, int nIndentLevel );
+	bool KvEndKey( KeyValues *pKey, int nIndentLevel );
+
+	bool KvWriteIndent( int nIndentLevel );
+	bool KvWriteText( char const *szText ) { return m_fnWriteText( szText ); }
+
+private:
+	WriteTextFn_t m_fnWriteText;
+	int m_nMinDeveloperLevel;
 };
 
-class IKeyValuesDumpContextAsText : public IKeyValuesDumpContext
-{
-public:
-	virtual bool KvBeginKey( KeyValues *pKey, int nIndentLevel );
-	virtual bool KvWriteValue( KeyValues *pValue, int nIndentLevel );
-	virtual bool KvEndKey( KeyValues *pKey, int nIndentLevel );
-
-public:
-	virtual bool KvWriteIndent( int nIndentLevel );
-	virtual bool KvWriteText( char const *szText ) = 0;
-};
-
-class CKeyValuesDumpContextAsDevMsg : public IKeyValuesDumpContextAsText
-{
-public:
-	// Overrides developer level to dump in DevMsg, zero to dump as Msg
-	CKeyValuesDumpContextAsDevMsg( int nDeveloperLevel = 1 ) : m_nDeveloperLevel( nDeveloperLevel ) {}
-
-public:
-	virtual bool KvBeginKey( KeyValues *pKey, int nIndentLevel );
-	virtual bool KvWriteText( char const *szText );
-
-protected:
-	int m_nDeveloperLevel;
-};
-
+// nDeveloperLevel overrides the developer level to dump in DevMsg, zero to dump as Msg
 inline bool KeyValuesDumpAsDevMsg( KeyValues *pKeyValues, int nIndentLevel = 0, int nDeveloperLevel = 1 )
 {
-	CKeyValuesDumpContextAsDevMsg ctx( nDeveloperLevel );
+	auto writeText = [nDeveloperLevel]( char const *szText )
+	{
+		if ( nDeveloperLevel > 0 )
+		{
+			DevMsg( "%s", szText );
+		}
+		else
+		{
+			Msg( "%s", szText );
+		}
+		return true;
+	};
+	CKeyValuesDumpContext ctx( writeText, nDeveloperLevel );
 	return pKeyValues->Dump( &ctx, nIndentLevel );
 }
+
 
 }

@@ -105,7 +105,7 @@ class CDllDemandLoader
 {
 public:
 						CDllDemandLoader( char const *pchModuleName );
-	virtual				~CDllDemandLoader();
+	~CDllDemandLoader();
 	CreateInterfaceFn	GetFactory();
 	void				Unload();
 

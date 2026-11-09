@@ -7,33 +7,33 @@
 #include "vjolt_object.h"
 #include "vjolt_environment.h"
 
-class JoltPhysicsShadowController final : public IPhysicsShadowController, public IJoltPhysicsController
+class JoltPhysicsShadowController final : public IPhysicsShadowController
 {
 public:
 	JoltPhysicsShadowController( JoltPhysicsObject *pObject, bool allowTranslation, bool allowRotation );
-	~JoltPhysicsShadowController() override;
+	~JoltPhysicsShadowController();
 
-	void Update( const Vector &position, const QAngle &angles, float timeOffset ) override;
-	void MaxSpeed( float maxSpeed, float maxAngularSpeed ) override;
-	void StepUp( float height ) override;
+	void Update( const Vector &position, const QAngle &angles, float timeOffset );
+	void MaxSpeed( float maxSpeed, float maxAngularSpeed );
+	void StepUp( float height );
 	
-	void SetTeleportDistance( float teleportDistance ) override;
-	bool AllowsTranslation() override;
-	bool AllowsRotation() override;
+	void SetTeleportDistance( float teleportDistance );
+	bool AllowsTranslation();
+	bool AllowsRotation();
 
-	void SetPhysicallyControlled( bool isPhysicallyControlled ) override;
-	bool IsPhysicallyControlled() override;
-	void GetLastImpulse( Vector *pOut ) override;
-	void UseShadowMaterial( bool bUseShadowMaterial ) override;
-	void ObjectMaterialChanged( int materialIndex ) override;
+	void SetPhysicallyControlled( bool isPhysicallyControlled );
+	bool IsPhysicallyControlled();
+	void GetLastImpulse( Vector *pOut );
+	void UseShadowMaterial( bool bUseShadowMaterial );
+	void ObjectMaterialChanged( int materialIndex );
 
-	float GetTargetPosition( Vector *pPositionOut, QAngle *pAnglesOut ) override;
+	float GetTargetPosition( Vector *pPositionOut, QAngle *pAnglesOut );
 	
-	float GetTeleportDistance() override;
-	void GetMaxSpeed( float *pMaxSpeedOut, float *pMaxAngularSpeedOut ) override;
+	float GetTeleportDistance();
+	void GetMaxSpeed( float *pMaxSpeedOut, float *pMaxAngularSpeedOut );
 	
 	// IJoltPhysicsController
-	void OnPreSimulate( float flDeltaTime ) override;
+	void OnPreSimulate( float flDeltaTime );
 
 private:
 	JoltPhysicsObject *m_pObject = nullptr;

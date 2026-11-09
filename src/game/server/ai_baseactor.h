@@ -90,16 +90,16 @@ public:
 
 	virtual void			StudioFrameAdvance();
 
-	virtual void			Precache();
+	void			Precache_Impl();
 
-	virtual void			SetModel( const char *szModelName );
+	void			SetModel_Impl( const char *szModelName );
 
 	virtual	bool			StartSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event, CChoreoActor *actor, CBaseEntity *pTarget );
 	virtual bool			ProcessSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event );
 	virtual	bool			ClearSceneEvent( CSceneEventInfo *info, bool fastKill, bool canceled );
 	virtual bool			CheckSceneEventCompletion( CSceneEventInfo *info, float currenttime, CChoreoScene *scene, CChoreoEvent *event );
 
-	Vector					EyePosition( );
+	Vector					EyePosition_Impl( );
 	virtual Vector			HeadDirection2D( void );
 	virtual Vector			HeadDirection3D( void );
 	virtual Vector			EyeDirection2D( void );
@@ -202,7 +202,7 @@ public:
 
 public:
 	//---------------------------------
-	virtual void			Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts = true );
+	void			Teleport_Impl( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts = true );
 	void					InvalidateBoneCache( void );
 
 	DECLARE_DATADESC();

@@ -41,6 +41,8 @@ enum VPhysicsGameFlags : uint32
 
 class JoltPhysicsContactListener final : public JPH::ContactListener
 {
+	friend class IPhysicsCollisionData;	// forwards to JoltPhysicsCollisionData
+
 public:
 	JoltPhysicsContactListener( JPH::PhysicsSystem &physicsSystem )
 		: m_PhysicsSystem( physicsSystem )
@@ -510,17 +512,17 @@ private:
 		{
 		}
 
-		void GetSurfaceNormal( Vector &out ) override
+		void GetSurfaceNormal( Vector &out )
 		{
 			out = m_CollisionData.m_SurfaceNormal;
 		}
 
-		void GetContactPoint( Vector &out ) override
+		void GetContactPoint( Vector &out )
 		{
 			out = m_CollisionData.m_ContactPoint;
 		}
 
-		void GetContactSpeed( Vector &out ) override
+		void GetContactSpeed( Vector &out )
 		{
 			out = m_CollisionData.m_ContactSpeed;
 		}

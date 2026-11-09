@@ -3,8 +3,6 @@
 
 // Purpose: Spawn, think, and touch functions for trains, etc.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -63,8 +61,9 @@ class [[= ks::reflect::KeyFrom<"m_flLip", ks::reflect::Key{ .name = "lip" } >{} 
 
 public:
 	~CBasePlatTrain();
-	bool KeyValue( const char *szKeyName, const char *szValue );
-	void Precache( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	void Precache_Impl( void );
 
 	// This is done to fix spawn flag collisions between this class and a derived class
 	virtual bool IsTogglePlat( void ) { return (m_spawnflags & SF_PLAT_TOGGLE) ? true : false; }
@@ -87,7 +86,7 @@ public:
 IMPLEMENT_REFLECT_DATAMAP( CBasePlatTrain )
 
 
-bool CBasePlatTrain::KeyValue( const char *szKeyName, const char *szValue )
+bool CBasePlatTrain::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "rotation"))
 	{
@@ -95,7 +94,7 @@ bool CBasePlatTrain::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
@@ -134,7 +133,7 @@ void CBasePlatTrain::StopMovingSound()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBasePlatTrain::Precache( void )
+void CBasePlatTrain::Precache_Impl( void )
 {
 	//Fill in a default value if necessary
 	UTIL_ValidateSoundName( m_NoiseMoving, "Plat.DefaultMoving" );
@@ -151,12 +150,12 @@ class CFuncPlat : public CBasePlatTrain
 {
 	DECLARE_CLASS( CFuncPlat, CBasePlatTrain );
 public:
-	void Spawn( void );
-	void Precache( void );
-	bool CreateVPhysics();
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	bool CreateVPhysics_Impl();
 	void Setup( void );
 
-	virtual void Blocked( CBaseEntity *pOther );
+	void Blocked_Impl( CBaseEntity *pOther );
 	void PlatUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	void	CallGoDown( void ) { GoDown(); }
@@ -192,11 +191,12 @@ class CPlatTrigger : public CBaseEntity
 {
 	DECLARE_CLASS( CPlatTrigger, CBaseEntity );
 public:
-	virtual int	ObjectCaps( void ) { return BaseClass::ObjectCaps() | FCAP_DONT_SAVE; }
+	int	ObjectCaps_Impl( void ) { return BaseClass::ObjectCaps_Impl() | FCAP_DONT_SAVE; }
 	void SpawnInsideTrigger( CFuncPlat *pPlatform );
-	void Touch( CBaseEntity *pOther );
+	void Touch_Impl( CBaseEntity *pOther );
 	CFuncPlat *m_pPlatform;
 };
+KS_ENTITY_UNSAVED_CLASS( CPlatTrigger )
 
 void CFuncPlat::Setup( void )
 {
@@ -242,9 +242,9 @@ void CFuncPlat::Setup( void )
 }
 
 
-void CFuncPlat::Precache( )
+void CFuncPlat::Precache_Impl( )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 	
 	if ( IsTogglePlat() == false )
 	{
@@ -254,7 +254,7 @@ void CFuncPlat::Precache( )
 }
 
 
-void CFuncPlat::Spawn( )
+void CFuncPlat::Spawn_Impl( )
 {
 	Setup();
 	Precache();
@@ -275,7 +275,7 @@ void CFuncPlat::Spawn( )
 	CreateVPhysics();
 }
 
-bool CFuncPlat::CreateVPhysics()
+bool CFuncPlat::CreateVPhysics_Impl()
 {
 	VPhysicsInitShadow( false, false );
 	return true;
@@ -324,7 +324,7 @@ void CPlatTrigger::SpawnInsideTrigger( CFuncPlat *pPlatform )
 //
 // When the platform's trigger field is touched, the platform ???
 //
-void CPlatTrigger::Touch( CBaseEntity *pOther )
+void CPlatTrigger::Touch_Impl( CBaseEntity *pOther )
 {
 	// Ignore touches by non-players
 	if ( !pOther->IsPlayer() )
@@ -502,7 +502,7 @@ void CFuncPlat::HitTop( void )
 //-----------------------------------------------------------------------------
 // Purpose: Called when we are blocked.
 //-----------------------------------------------------------------------------
-void CFuncPlat::Blocked( CBaseEntity *pOther )
+void CFuncPlat::Blocked_Impl( CBaseEntity *pOther )
 {
 	DevMsg( 2, "%s Blocked by %s\n", GetClassname(), pOther->GetClassname() );
 
@@ -531,7 +531,7 @@ class CFuncPlatRot : public CFuncPlat
 {
 	DECLARE_CLASS( CFuncPlatRot, CFuncPlat );
 public:
-	void Spawn( void );
+	void Spawn_Impl( void );
 	void SetupRotation( void );
 
 	virtual void	GoUp( void );
@@ -570,9 +570,9 @@ void CFuncPlatRot::SetupRotation( void )
 }
 
 
-void CFuncPlatRot::Spawn( void )
+void CFuncPlatRot::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	SetupRotation();
 }
 
@@ -635,14 +635,14 @@ class CFuncTrain : public CBasePlatTrain
 {
 	DECLARE_CLASS( CFuncTrain, CBasePlatTrain );
 public:
-	void Spawn( void );
-	void Precache( void );
-	void Activate( void );
-	void OnRestore( void );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
+	void Activate_Impl( void );
+	void OnRestore_Impl( void );
 
 	void SetupTarget( void );
-	void Blocked( CBaseEntity *pOther );
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Blocked_Impl( CBaseEntity *pOther );
+	void Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	void Wait( void );
 	void Next( void );
@@ -677,7 +677,7 @@ IMPLEMENT_REFLECT_DATAMAP( CFuncTrain )
 // Purpose: Handles a train being blocked by an entity.
 // Input  : pOther - What was hit.
 //-----------------------------------------------------------------------------
-void CFuncTrain::Blocked( CBaseEntity *pOther )
+void CFuncTrain::Blocked_Impl( CBaseEntity *pOther )
 {
 	if ( gpGlobals->curtime < m_flNextBlockTime )
 		return;
@@ -689,7 +689,7 @@ void CFuncTrain::Blocked( CBaseEntity *pOther )
 }
 
 
-void CFuncTrain::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CFuncTrain::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	//If we've been waiting to be retriggered, move to the next destination
 	if ( m_spawnflags & SF_TRAIN_WAIT_RETRIGGER )
@@ -866,9 +866,9 @@ void CFuncTrain::Next( void )
 //-----------------------------------------------------------------------------
 // Purpose: Called after all the entities spawn.
 //-----------------------------------------------------------------------------
-void CFuncTrain::Activate( void )
+void CFuncTrain::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	// Not yet active, so teleport to first target
 	if ( m_activated == false )
@@ -926,7 +926,7 @@ void CFuncTrain::SetupTarget( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CFuncTrain::Spawn( void )
+void CFuncTrain::Spawn_Impl( void )
 {
 	Precache();
 	
@@ -962,15 +962,15 @@ void CFuncTrain::Spawn( void )
 }
 
 
-void CFuncTrain::Precache( void )
+void CFuncTrain::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 
-void CFuncTrain::OnRestore( void )
+void CFuncTrain::OnRestore_Impl( void )
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 
 	// Are we moving?
 	if ( IsMoving() )
@@ -1092,9 +1092,9 @@ CFuncTrackTrain::CFuncTrackTrain()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CFuncTrackTrain::DrawDebugTextOverlays( void )
+int CFuncTrackTrain::DrawDebugTextOverlays_Impl( void )
 {
-	int nOffset = BaseClass::DrawDebugTextOverlays();
+	int nOffset = BaseClass::DrawDebugTextOverlays_Impl();
 
 	if (m_debugOverlays & OVERLAY_TEXT_BIT) 
 	{
@@ -1117,9 +1117,9 @@ int CFuncTrackTrain::DrawDebugTextOverlays( void )
 }
 
 
-void CFuncTrackTrain::DrawDebugGeometryOverlays()
+void CFuncTrackTrain::DrawDebugGeometryOverlays_Impl()
 {
-	BaseClass::DrawDebugGeometryOverlays();
+	BaseClass::DrawDebugGeometryOverlays_Impl();
 	if (m_debugOverlays & OVERLAY_BBOX_BIT) 
 	{
 		NDebugOverlay::Box( GetAbsOrigin(), -Vector(4,4,4),Vector(4,4,4), 255, 0, 255, 0, 0);
@@ -1133,7 +1133,7 @@ void CFuncTrackTrain::DrawDebugGeometryOverlays()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CFuncTrackTrain::KeyValue( const char *szKeyName, const char *szValue )
+bool CFuncTrackTrain::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "volume"))
 	{
@@ -1142,7 +1142,7 @@ bool CFuncTrackTrain::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
@@ -1264,7 +1264,7 @@ void CFuncTrackTrain::InputToggle( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 // Purpose: Handles player use so players can control the speed of the train.
 //-----------------------------------------------------------------------------
-void CFuncTrackTrain::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CFuncTrackTrain::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	// player +USE
 	if ( useType == USE_SET )
@@ -1571,7 +1571,7 @@ static CBaseEntity *FindPhysicsBlockerForHierarchy( CBaseEntity *pParentEntity )
 // Purpose: Called when we are blocked by another entity.
 // Input  : pOther - 
 //-----------------------------------------------------------------------------
-void CFuncTrackTrain::Blocked( CBaseEntity *pOther )
+void CFuncTrackTrain::Blocked_Impl( CBaseEntity *pOther )
 {
 	// Blocker is on-ground on the train
 	if ( ( pOther->GetFlags() & FL_ONGROUND ) && pOther->GetGroundEntity() == this )
@@ -2469,7 +2469,7 @@ void CFuncTrackTrain::SetControls( CBaseEntity *pControls )
 //-----------------------------------------------------------------------------
 // Purpose: Returns true if the entity's origin is within the controls region.
 //-----------------------------------------------------------------------------
-bool CFuncTrackTrain::OnControls( CBaseEntity *pTest )
+bool CFuncTrackTrain::OnControls_Impl( CBaseEntity *pTest )
 {
 	Vector offset = pTest->GetLocalOrigin() - GetLocalOrigin();
 
@@ -2595,9 +2595,9 @@ void CFuncTrackTrain::NearestPath( void )
 	}
 }
 
-void CFuncTrackTrain::OnRestore( void )
+void CFuncTrackTrain::OnRestore_Impl( void )
 {
-	BaseClass::OnRestore();
+	BaseClass::OnRestore_Impl();
 	if ( !m_ppath )
 	{
 		NearestPath();
@@ -2618,7 +2618,7 @@ CFuncTrackTrain *CFuncTrackTrain::Instance( edict_t *pent )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CFuncTrackTrain::Spawn( void )
+void CFuncTrackTrain::Spawn_Impl( void )
 {
 	if ( m_maxSpeed == 0 )
 	{
@@ -2680,7 +2680,7 @@ void CFuncTrackTrain::Spawn( void )
 }
 
 
-bool CFuncTrackTrain::CreateVPhysics( void )
+bool CFuncTrackTrain::CreateVPhysics_Impl( void )
 {
 	VPhysicsInitShadow( false, false );
 	return true;
@@ -2690,7 +2690,7 @@ bool CFuncTrackTrain::CreateVPhysics( void )
 //-----------------------------------------------------------------------------
 // Purpose: Precaches the train sounds.
 //-----------------------------------------------------------------------------
-void CFuncTrackTrain::Precache( void )
+void CFuncTrackTrain::Precache_Impl( void )
 {
 	if (m_flVolume == 0.0)
 	{
@@ -2721,17 +2721,17 @@ void CFuncTrackTrain::Precache( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CFuncTrackTrain::UpdateOnRemove()
+void CFuncTrackTrain::UpdateOnRemove_Impl()
 {
 	SoundStop();
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
-void CFuncTrackTrain::MoveDone()
+void CFuncTrackTrain::MoveDone_Impl()
 {
 	m_lastBlockPos.Init();
 	m_lastBlockTick = -1;
-	BaseClass::MoveDone();
+	BaseClass::MoveDone_Impl();
 }
 
 
@@ -2744,7 +2744,7 @@ class CFuncTrainControls : public CBaseEntity
 {
 	DECLARE_CLASS( CFuncTrainControls, CBaseEntity );
 public:
-	void Spawn( void );
+	void Spawn_Impl( void );
 	void Find( void );
 
 };
@@ -2775,7 +2775,7 @@ void CFuncTrainControls::Find( void )
 }
 
 
-void CFuncTrainControls::Spawn( void )
+void CFuncTrainControls::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	SetMoveType( MOVETYPE_NONE );
@@ -2807,20 +2807,20 @@ class CFuncTrackChange : public CFuncPlatRot
 {
 	DECLARE_CLASS( CFuncTrackChange, CFuncPlatRot );
 public:
-	void Spawn( void );
-	void Precache( void );
+	void Spawn_Impl( void );
+	void Precache_Impl( void );
 
 //	virtual void	Blocked( void );
 	virtual void	GoUp( void );
 	virtual void	GoDown( void );
 
-	void			Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void			Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void			Find( void );
 	TRAIN_CODE		EvaluateTrain( CPathTrack *pcurrent );
 	void			UpdateTrain( QAngle &dest );
 	virtual void	HitBottom( void );
 	virtual void	HitTop( void );
-	void			Touch( CBaseEntity *pOther );
+	void			Touch_Impl( CBaseEntity *pOther );
 	virtual void	UpdateAutoTargets( int toggleState );
 	virtual	bool	IsTogglePlat( void ) { return true; }
 
@@ -2848,7 +2848,7 @@ LINK_ENTITY_TO_CLASS( func_trackchange, CFuncTrackChange );
 IMPLEMENT_REFLECT_DATAMAP( CFuncTrackChange )
 
 
-void CFuncTrackChange::Spawn( void )
+void CFuncTrackChange::Spawn_Impl( void )
 {
 	Setup();
 	if ( FBitSet( m_spawnflags, SF_TRACK_DONT_MOVE ) )
@@ -2878,16 +2878,16 @@ void CFuncTrackChange::Spawn( void )
 }
 
 
-void CFuncTrackChange::Precache( void )
+void CFuncTrackChange::Precache_Impl( void )
 {
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	PrecacheScriptSound( "FuncTrackChange.Blocking" );
 }
 
 
 // UNDONE: Filter touches before re-evaluating the train.
-void CFuncTrackChange::Touch( CBaseEntity *pOther )
+void CFuncTrackChange::Touch_Impl( CBaseEntity *pOther )
 {
 }
 
@@ -3095,7 +3095,7 @@ void CFuncTrackChange::UpdateAutoTargets( int toggleState )
 }
 
 
-void CFuncTrackChange::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CFuncTrackChange::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	if ( m_toggle_state != TS_AT_TOP && m_toggle_state != TS_AT_BOTTOM )
 		return;
@@ -3170,7 +3170,7 @@ class CFuncTrackAuto : public CFuncTrackChange
 {
 	DECLARE_CLASS( CFuncTrackAuto, CFuncTrackChange );
 public:
-	void			Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void			Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	virtual void	UpdateAutoTargets( int toggleState );
 	[[= ks::reflect::Input{ .name = "Trigger", .type = FIELD_VOID } ]] void			TriggerTrackChange( inputdata_t &inputdata );
 
@@ -3261,7 +3261,7 @@ void CFuncTrackAuto::TriggerTrackChange ( inputdata_t &inputdata )
 }
 
 
-void CFuncTrackAuto::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CFuncTrackAuto::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	CPathTrack *pTarget;
 

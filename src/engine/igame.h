@@ -5,39 +5,38 @@
 class IGame
 {
 public:
-	virtual			~IGame( void ) { }
 
-	virtual	bool	Init( void *pvInstance ) = 0;
-	virtual bool	Shutdown( void ) = 0;
+	bool	Init( void *pvInstance );
+	bool	Shutdown( void );
 
-	virtual bool	CreateGameWindow( void ) = 0;
-	virtual void	DestroyGameWindow( void ) = 0;
+	bool	CreateGameWindow( void );
+	void	DestroyGameWindow( void );
 
 	// This is used in edit mode to specify a particular game window (created by hammer)
-	virtual void	SetGameWindow( void* hWnd ) = 0;
+	void	SetGameWindow( void* hWnd );
 
 	// This is used in edit mode to override the default wnd proc associated w/
 	// the game window specified in SetGameWindow. 
-	virtual bool	InputAttachToGameWindow() = 0;
-	virtual void	InputDetachFromGameWindow() = 0;
+	bool	InputAttachToGameWindow();
+	void	InputDetachFromGameWindow();
 
-	virtual void	PlayStartupVideos( void ) = 0;
+	void	PlayStartupVideos( void );
 
-	virtual void*	GetMainWindow( void ) = 0;
-	virtual void**	GetMainWindowAddress( void ) = 0;
-	virtual void	GetDesktopInfo( int &width, int &height, int &refreshrate ) = 0;
+	void*	GetMainWindow( void );
+	void**	GetMainWindowAddress( void );
+	void	GetDesktopInfo( int &width, int &height, int &refreshrate );
 
-	virtual void	SetWindowXY( int x, int y ) = 0;
-	virtual void	SetWindowSize( int w, int h ) = 0;
+	void	SetWindowXY( int x, int y );
+	void	SetWindowSize( int w, int h );
 
-	virtual void	GetWindowRect( int *x, int *y, int *w, int *h ) = 0;
+	void	GetWindowRect( int *x, int *y, int *w, int *h );
 
 	// Not Alt-Tabbed away
-	virtual bool	IsActiveApp( void ) = 0;
+	bool	IsActiveApp( void );
 
-	virtual void	DispatchAllStoredGameMessages() = 0;
+	void	DispatchAllStoredGameMessages();
 
-	virtual void    OnScreenSizeChanged( int nOldWidth, int nOldHeight ) = 0;
+	void    OnScreenSizeChanged( int nOldWidth, int nOldHeight );
 };
 
 extern IGame *game;

@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 2008 Valve Corporation
 
-import ks.tier1;
 #include "vscript/ivscript.h"
-import std;
 #include "vscript_shared.h"
 
 bool VScriptServerReplaceClosures( const char *pszScriptName, HSCRIPT hScope, bool bWarnMissing = false );

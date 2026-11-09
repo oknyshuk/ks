@@ -19,8 +19,8 @@ public:
 public:
 	CHEGrenadeProjectile() {}
 
-	virtual void Spawn();
-	virtual void Precache();
+	KS_VIRTUAL void Spawn_Impl();
+	KS_VIRTUAL void Precache_Impl();
 	virtual void BounceSound( void );
 	virtual void Detonate();
 	virtual const char *GetParticleSystemName( int pointContents, surfacedata_t *pdata );

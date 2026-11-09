@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -125,7 +122,7 @@ public:
 	}
 
 	// Make sure clients get all the spray entities in the same order
-	virtual int UpdateTransmitState() { return SetTransmitState( FL_EDICT_ALWAYS ); }
+	int UpdateTransmitState_Impl() { return SetTransmitState( FL_EDICT_ALWAYS ); }
 
 	DECLARE_SERVERCLASS();
 

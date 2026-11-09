@@ -8,36 +8,7 @@ import ks.vstdlib;
 #include "cdll_int.h"
 
 //-----------------------------------------------------------------------------
-//
-// implementation of IUniformRandomStream
-//
+// The client and the game draw from the library's global uniform stream, the same one the
+// Random*() functions use.
 //-----------------------------------------------------------------------------
-class CEngineUniformRandomStream : public IUniformRandomStream
-{
-public:
-	// Sets the seed of the random number generator
-	void	SetSeed( int iSeed )
-	{
-		// Never call this from the client or game!
-		contract_assert( 0 );
-	}
-
-	// Generates random numbers
-	float	RandomFloat( float flMinVal = 0.0f, float flMaxVal = 1.0f )
-	{
-		return ::RandomFloat( flMinVal, flMaxVal );
-	}
-
-	float	RandomFloatExp( float flMinVal = 0.0f, float flMaxVal = 1.0f, float flExponent = 1.0f )
-	{
-		return ::RandomFloatExp( flMinVal, flMaxVal, flExponent );
-	}
-
-	int		RandomInt( int iMinVal, int iMaxVal )
-	{
-		return ::RandomInt( iMinVal, iMaxVal );
-	}
-};
-
-static CEngineUniformRandomStream s_EngineRandomStream;
-static InterfaceReg s_Reg_CEngineUniformRandomStream_IUniformRandomStream( []() -> void * { return static_cast<IUniformRandomStream *>( &s_EngineRandomStream ); }, VENGINE_CLIENT_RANDOM_INTERFACE_VERSION );;
+static InterfaceReg s_Reg_GlobalUniformRandomStream( []() -> void * { return &GlobalUniformRandomStream(); }, VENGINE_CLIENT_RANDOM_INTERFACE_VERSION );

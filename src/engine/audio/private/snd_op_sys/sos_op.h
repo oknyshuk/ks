@@ -5,6 +5,7 @@
 import std;
 #include "sos_system.h"
 #include "snd_channels.h"
+#include "sos_op_list.h"
 
 // Externs the logging channel
 extern LoggingChannelID_t LOG_SND_OPERATORS;;
@@ -71,6 +72,7 @@ classname::classname() \
 
 
 #define SOS_END_OPERATOR_CONSTRUCTOR( classname, operatorstring ) \
+	m_Kind = SosOperatorKind::classname; \
 	g_pSoundOperatorSystem->m_vOperatorCollection.emplace(operatorstring, this ); \
 } \
 classname g_##classname;
@@ -79,12 +81,12 @@ classname g_##classname;
 #define SOS_HEADER_DESC( classname ) \
 public: \
 	classname(); \
-	virtual void	SetDefaults( void *pVoidMem ) const ; \
-	virtual std::size_t	GetSize() const { return sizeof( classname##_t ); } \
-	virtual void	Execute( void *pVoidMem, channel_t *pChannel, CScratchPad *pScratchPad, CSosOperatorStack *pStack, int nOpIndex ) const ; \
-	virtual void	Print( void *pVoidMem, CSosOperatorStack *pStack, int nOpIndex, int nLevel ) const ; \
-	virtual void    OpHelp( ) const ; \
-	virtual void	ParseKV( CSosOperatorStack *pStack, void *pVoidMem, KeyValues *pParamKV ) const ; \
+	void	SetDefaults( void *pVoidMem ) const ; \
+	std::size_t	GetSize() const { return sizeof( classname##_t ); } \
+	void	Execute( void *pVoidMem, channel_t *pChannel, CScratchPad *pScratchPad, CSosOperatorStack *pStack, int nOpIndex ) const ; \
+	void	Print( void *pVoidMem, CSosOperatorStack *pStack, int nOpIndex, int nLevel ) const ; \
+	void    OpHelp( ) const ; \
+	void	ParseKV( CSosOperatorStack *pStack, void *pVoidMem, KeyValues *pParamKV ) const ; \
 
 
 
@@ -107,7 +109,6 @@ class CSosOperator
 public:
 
 							CSosOperator();
-	virtual					~CSosOperator() { } ;
 	int						GetOutputOffset( const char *pOutputName ) const;
 	// Proposal to optimize this:
 	// For each InputData_t, we store a function pointer to handle the resolution.
@@ -126,16 +127,14 @@ public:
 	int						BaseParseHasArrayIndice( const char *pParamString ) const;
 	void					SetBaseDefaults( void *pVoidMem ) const;
 
-	virtual void			SetDefaults( void *pVoidMem ) const = 0;
-	virtual std::size_t			GetSize() const = 0;
-	virtual void			Execute( void *pVoidMem, channel_t *pChannel, CScratchPad *pScratchPad, CSosOperatorStack *pStack, int nOpIndex ) const = 0;
-	virtual void			Print( void *pVoidMem, CSosOperatorStack *pStack, int nOpIndex, int nLevel ) const = 0;
-	virtual void			OpHelp( ) const = 0;
-	virtual void			ParseKV( CSosOperatorStack *pStack, void *pVoidMem, KeyValues *pParamKV ) const = 0;
+	// SetDefaults, GetSize, Execute, Print, OpHelp and ParseKV are defined by every operator class
+	// (SOS_HEADER_DESC); SosOps calls the one of the operator's kind. StackInit and StackShutdown
+	// are the defaults of operators that do not define their own.
+	void					StackInit( void *pVoidMem, CSosOperatorStack *pStack, int nOpIndex );
+	void					StackShutdown( void *pVoidMem, CSosOperatorStack *pStack, int nOpIndex );
 
-	virtual void            StackInit( void *pVoidMem, CSosOperatorStack *pStack, int nOpIndex );
-	virtual void			StackShutdown( void *pVoidMem, CSosOperatorStack *pStack, int nOpIndex );
-
+	// which operator class this is: what SosOps dispatches on (set by the class' constructor)
+	SosOperatorKind			m_Kind;
 
 protected:
 public:
@@ -162,4 +161,17 @@ public:
 
 	ks::idict< int > m_vInputMap;	// name -> index in m_vInputs
 	std::vector< InputData_t > m_vInputs;
+};
+
+
+//-----------------------------------------------------------------------------
+// Dispatch over the closed set of sound operators: SosOps::<entry>( pOp, ... ) calls the member of
+// that name of the operator's class (sos_op_dispatch.cpp).
+//-----------------------------------------------------------------------------
+struct SosOps
+{
+#define KS_SOS_OP_DECLARE_ENTRY( Ret, Name, Const, Params, Args ) \
+	static Ret Name( KS_SOS_OP_SIGNATURE( Const, KS_SOS_OP_UNPAREN Params ) );
+	KS_SOS_OP_ENTRIES( KS_SOS_OP_DECLARE_ENTRY )
+#undef KS_SOS_OP_DECLARE_ENTRY
 };

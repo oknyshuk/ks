@@ -35,9 +35,20 @@ struct tokencache_t
 //-----------------------------------------------------------------------------
 // Interface for materials used only within the material system
 //-----------------------------------------------------------------------------
+// The material implementations; every material is created as exactly one of them. IMaterial and
+// IMaterialInternal forward each call to the implementation named by the kind (imaterialdispatch.cpp).
+enum class MaterialKind : unsigned char
+{
+	Standard,		// CMaterial
+	SubRect,		// CMaterialSubRect
+	QueueFriendly,	// CMaterial_QueueFriendly: wraps a CMaterial
+};
+
 class IMaterialInternal : public IMaterial
 {
 public:
+	MaterialKind Kind() const { return m_Kind; }
+
 	// class factory methods
 	static IMaterialInternal* CreateMaterial( char const* pMaterialName, const char *pTextureGroupName, KeyValues *pKeyValues = nullptr );
 	static void DestroyMaterial( IMaterialInternal* pMaterial );
@@ -48,115 +59,119 @@ public:
 	static void DestroyMaterialSubRect( IMaterialInternal* pMaterial );
 
 	// refcount
-	virtual int		GetReferenceCount( ) const = 0;
+	int		GetReferenceCount( ) const;
 
 	// enumeration id
-	virtual void	SetEnumerationID( int id ) = 0;
+	void	SetEnumerationID( int id );
 
 	// White lightmap methods
-	virtual void	SetNeedsWhiteLightmap( bool val ) = 0;
-	virtual bool	GetNeedsWhiteLightmap( ) const = 0;
+	void	SetNeedsWhiteLightmap( bool val );
+	bool	GetNeedsWhiteLightmap( ) const;
 
 	// load/unload 
-	virtual void	Uncache( bool bPreserveVars = false ) = 0;
-	virtual void	Precache() = 0;
+	void	Uncache( bool bPreserveVars = false );
+	void	Precache();
 	// If supplied, pKeyValues and pPatchKeyValues should come from LoadVMTFile()
-	virtual bool	PrecacheVars( KeyValues *pKeyValues = nullptr, KeyValues *pPatchKeyValues = nullptr, std::vector< FileNameHandle_t > *pIncludes = nullptr ) = 0;
+	bool	PrecacheVars( KeyValues *pKeyValues = nullptr, KeyValues *pPatchKeyValues = nullptr, std::vector< FileNameHandle_t > *pIncludes = nullptr );
 
 	// reload all textures used by this materals
-	virtual void	ReloadTextures() = 0;
+	void	ReloadTextures();
 	
 	// lightmap pages associated with this material
-	virtual void	SetMinLightmapPageID( int pageID ) = 0;
-	virtual void	SetMaxLightmapPageID( int pageID ) = 0;;
-	virtual int		GetMinLightmapPageID( ) const = 0;
-	virtual int		GetMaxLightmapPageID( ) const = 0;
+	void	SetMinLightmapPageID( int pageID );
+	void	SetMaxLightmapPageID( int pageID );;
+	int		GetMinLightmapPageID( ) const;
+	int		GetMaxLightmapPageID( ) const;
 
-	virtual IShader *GetShader() const = 0;
-	virtual IMaterialVar** GetVars()  { return nullptr; }
+	IShader *GetShader() const;
+	IMaterialVar** GetVars();
 
 	// Can we use it?
-	virtual bool	IsPrecached( ) const = 0;
-	virtual bool	IsPrecachedVars() const = 0;
+	bool	IsPrecached( ) const;
+	bool	IsPrecachedVars() const;
 
 	// main draw method
-	virtual CBasePerMaterialContextData **GetContextData( int modulationFlags ) { return nullptr; }
+	CBasePerMaterialContextData **GetContextData( int modulationFlags );
 
-	virtual StateSnapshot_t	GetSnapshotId( int modulation, int renderPass ) { return (StateSnapshot_t)-1; } 
-	virtual unsigned char* GetInstanceCommandBuffer( int modulation ) { return nullptr; }
-	virtual void	DrawMesh( VertexCompressionType_t vertexCompression, bool bIsAlphaModulating, bool bUsingPreTessPatches ) = 0;
+	StateSnapshot_t	GetSnapshotId( int modulation, int renderPass ); 
+	unsigned char* GetInstanceCommandBuffer( int modulation );
+	void	DrawMesh( VertexCompressionType_t vertexCompression, bool bIsAlphaModulating, bool bUsingPreTessPatches );
 
 	// Gets the vertex format
-	virtual VertexFormat_t GetVertexFormat() const = 0;
-	virtual VertexFormat_t GetVertexUsage() const = 0;
+	VertexFormat_t GetVertexFormat() const;
+	VertexFormat_t GetVertexUsage() const;
 
 	// Performs a debug trace on this material
-	virtual bool PerformDebugTrace() const = 0;
+	bool PerformDebugTrace() const;
 
 	// Can we override this material in debug?
-	virtual bool NoDebugOverride() const = 0;
+	bool NoDebugOverride() const;
 
 	// Should we draw?
-	virtual void ToggleSuppression() = 0;
+	void ToggleSuppression();
 
 	// Are we suppressed?
-	virtual bool IsSuppressed() const = 0;
+	bool IsSuppressed() const;
 
 	// Should we debug?
-	virtual void ToggleDebugTrace() = 0;
+	void ToggleDebugTrace();
 
 	// Do we use fog?
-	virtual bool UseFog() const = 0;
+	bool UseFog() const;
 
 	// Adds a material variable to the material
-	virtual void AddMaterialVar( IMaterialVar *pMaterialVar ) = 0;
+	void AddMaterialVar( IMaterialVar *pMaterialVar );
 
 	// Gets the renderstate
-	virtual ShaderRenderState_t *GetRenderState() = 0;
+	ShaderRenderState_t *GetRenderState();
 
 	// Was this manually created (not read from a file?)
-	virtual bool IsManuallyCreated() const = 0;
+	bool IsManuallyCreated() const;
 
-	virtual bool NeedsFixedFunctionFlashlight() const = 0;
+	bool NeedsFixedFunctionFlashlight() const;
 
-	virtual bool IsUsingVertexID() const = 0;
+	bool IsUsingVertexID() const;
 
 	// Identifies a material mounted through the preload path
-	virtual void MarkAsPreloaded( bool bSet ) = 0;
-	virtual bool IsPreloaded() const = 0;
+	void MarkAsPreloaded( bool bSet );
+	bool IsPreloaded() const;
 
 	// Conditonally increments the refcount
-	virtual void ArtificialAddRef( void ) = 0;
-	virtual void ArtificialRelease( void ) = 0;
+	void ArtificialAddRef( void );
+	void ArtificialRelease( void );
 
-	virtual void			ReportVarChanged( IMaterialVar *pVar ) = 0;
-	virtual uint32			GetChangeID() const = 0;
-	virtual uint32			GetChangeTimestamp()  const { return 0; }
+	void			ReportVarChanged( IMaterialVar *pVar );
+	uint32			GetChangeID() const;
+	uint32			GetChangeTimestamp()  const;
 
-	virtual bool			IsTranslucentInternal( float fAlphaModulation ) const = 0;
+	bool			IsTranslucentInternal( float fAlphaModulation ) const;
 
 	//Is this the queue friendly or realtime version of the material?
-	virtual bool IsRealTimeVersion( void ) const = 0;
+	bool IsRealTimeVersion( void ) const;
 
-	virtual void ClearContextData( void )
-	{
-	}
+	void ClearContextData( void );
 
 	//easy swapping between the queue friendly and realtime versions of the material
-	virtual IMaterialInternal *GetRealTimeVersion( void ) = 0;
-	virtual IMaterialInternal *GetQueueFriendlyVersion( void ) = 0;	
+	IMaterialInternal *GetRealTimeVersion( void );
+	IMaterialInternal *GetQueueFriendlyVersion( void );	
 
-	virtual void PrecacheMappingDimensions( void ) = 0;
-	virtual void FindRepresentativeTexture( void ) = 0;
+	void PrecacheMappingDimensions( void );
+	void FindRepresentativeTexture( void );
 
 	// These are used when a new whitelist is passed in. First materials to be reloaded are flagged, then they are reloaded.
-	virtual void DecideShouldReloadFromWhitelist( IFileList *pFileList ) = 0;
-	virtual void ReloadFromWhitelistIfMarked() = 0;
+	void DecideShouldReloadFromWhitelist( IFileList *pFileList );
+	void ReloadFromWhitelistIfMarked();
 
-	virtual void CompactMaterialVars() = 0;
+	void CompactMaterialVars();
 
 	// Are any of the proxies attached to this material callable from the queued thread?
-	virtual bool HasQueueFriendlyProxies() const = 0;
+	bool HasQueueFriendlyProxies() const;
+
+protected:
+	explicit IMaterialInternal( MaterialKind kind ) : m_Kind( kind ) {}
+
+private:
+	MaterialKind m_Kind;
 };
 
 extern void InsertKeyValues( KeyValues& dst, KeyValues& src, bool bCheckForExistence );

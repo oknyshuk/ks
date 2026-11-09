@@ -20,29 +20,28 @@ enum PlayerContactState_t
 class IPhysicsPlayerController
 {
 public:
-	virtual ~IPhysicsPlayerController( void ) {}
 
-	virtual void Update( const Vector &position, const Vector &velocity, float secondsToArrival, bool onground, IPhysicsObject *ground ) = 0;
-	virtual void SetEventHandler( IPhysicsPlayerControllerEvent *handler ) = 0;
-	virtual bool IsInContact( void ) = 0;
-	virtual void MaxSpeed( const Vector &maxVelocity ) = 0;
+	void Update( const Vector &position, const Vector &velocity, float secondsToArrival, bool onground, IPhysicsObject *ground );
+	void SetEventHandler( IPhysicsPlayerControllerEvent *handler );
+	bool IsInContact( void );
+	void MaxSpeed( const Vector &maxVelocity );
 
 	// allows game code to change collision models
-	virtual void SetObject( IPhysicsObject *pObject ) = 0;
+	void SetObject( IPhysicsObject *pObject );
 	// UNDONE: Refactor this and shadow controllers into a single class/interface through IPhysicsObject
-	virtual int GetShadowPosition( Vector *position, QAngle *angles ) = 0;
-	virtual void StepUp( float height ) = 0;
-	virtual void Jump() = 0;
-	virtual void GetShadowVelocity( Vector *velocity ) = 0;
-	virtual IPhysicsObject *GetObject() = 0;
-	virtual void GetLastImpulse( Vector *pOut ) = 0;
+	int GetShadowPosition( Vector *position, QAngle *angles );
+	void StepUp( float height );
+	void Jump();
+	void GetShadowVelocity( Vector *velocity );
+	IPhysicsObject *GetObject();
+	void GetLastImpulse( Vector *pOut );
 
-	virtual void SetPushMassLimit( float maxPushMass ) = 0;
-	virtual void SetPushSpeedLimit( float maxPushSpeed ) = 0;
+	void SetPushMassLimit( float maxPushMass );
+	void SetPushSpeedLimit( float maxPushSpeed );
 	
-	virtual float GetPushMassLimit() = 0;
-	virtual float GetPushSpeedLimit() = 0;
-	virtual bool WasFrozen() = 0;
+	float GetPushMassLimit();
+	float GetPushSpeedLimit();
+	bool WasFrozen();
 	// returns bitfield e.g. 0 (no contacts), 1 (has physics contact), 2 (contact matching nGameFlags), 3 (both 1 & 2)
-	virtual uint32 GetContactState( uint16 nGameFlags ) = 0;
+	uint32 GetContactState( uint16 nGameFlags );
 };

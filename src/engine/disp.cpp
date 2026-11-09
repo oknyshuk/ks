@@ -35,6 +35,7 @@ import std;
 #include "disp_tesselate.h"
 #include "shadowmgr.h"
 #include "debugoverlay.h"
+#include "facade/idispinfo.inl"
 
 //-----------------------------------------------------------------------------
 // Globals.

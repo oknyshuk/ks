@@ -27,14 +27,14 @@ InitReturnVal_t CMatchTitle::Init()
 {
 	if ( IGameEventManager2 *mgr = g_pMatchExtensions->GetIGameEventManager2() )
 	{
-		mgr->AddListener( this, "server_pre_shutdown", false );
-		mgr->AddListener( this, "game_newmap", false );
-		mgr->AddListener( this, "finale_start", false );
-		mgr->AddListener( this, "round_start", false );
-		mgr->AddListener( this, "round_end", false );
-		mgr->AddListener( this, "difficulty_changed", false );
-		mgr->AddListener( this, "player_connect", false );
-		mgr->AddListener( this, "player_disconnect", false );
+		mgr->AddListener( this, GameEventCallback_t( std::cw<&CMatchTitle::FireGameEvent>, this ), "server_pre_shutdown", false );
+		mgr->AddListener( this, GameEventCallback_t( std::cw<&CMatchTitle::FireGameEvent>, this ), "game_newmap", false );
+		mgr->AddListener( this, GameEventCallback_t( std::cw<&CMatchTitle::FireGameEvent>, this ), "finale_start", false );
+		mgr->AddListener( this, GameEventCallback_t( std::cw<&CMatchTitle::FireGameEvent>, this ), "round_start", false );
+		mgr->AddListener( this, GameEventCallback_t( std::cw<&CMatchTitle::FireGameEvent>, this ), "round_end", false );
+		mgr->AddListener( this, GameEventCallback_t( std::cw<&CMatchTitle::FireGameEvent>, this ), "difficulty_changed", false );
+		mgr->AddListener( this, GameEventCallback_t( std::cw<&CMatchTitle::FireGameEvent>, this ), "player_connect", false );
+		mgr->AddListener( this, GameEventCallback_t( std::cw<&CMatchTitle::FireGameEvent>, this ), "player_disconnect", false );
 	}
 
 
@@ -222,11 +222,6 @@ void CMatchTitle::OnEvent( KeyValues *pEvent )
 //
 //
 
-int CMatchTitle::GetEventDebugID( void )
-{
-	return EVENT_DEBUG_ID_INIT;
-}
-
 void CMatchTitle::FireGameEvent( IGameEvent *pIGameEvent )
 {
 	// Parse the game event
@@ -321,3 +316,6 @@ void CMatchTitle::FireGameEvent( IGameEvent *pIGameEvent )
 		}
 	}
 }
+
+//-----------------------------------------------------------------------------
+#include "../facade/imatchtitle.inl"

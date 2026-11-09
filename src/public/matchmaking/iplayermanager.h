@@ -14,17 +14,17 @@ public:
 	// GetLocalPlayer
 	//	returns a local player interface for a given controller index
 	//
-	virtual IPlayerLocal * GetLocalPlayer( int iController ) = 0;
+	IPlayerLocal * GetLocalPlayer( int iController );
 
 	//
 	// GetFriend
 	//	returns player interface to the given friend or NULL if friend not found or not available
 	//
-	virtual IPlayerFriend * GetFriendByXUID( XUID xuid ) = 0;
+	IPlayerFriend * GetFriendByXUID( XUID xuid );
 
 	//
 	// FindPlayer
 	//	returns player interface by player's XUID or NULL if player not found or not available
 	//
-	virtual IPlayer * FindPlayer( XUID xuid ) = 0;
+	IPlayer * FindPlayer( XUID xuid );
 };

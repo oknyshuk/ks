@@ -68,9 +68,9 @@ public: // IConnectionlessPacketHandler interface:
 
 public: // CBaseClientState overrides:
 	void Disconnect(bool bShowMainMenu);
-	virtual void ConnectionStart( INetChannel *chan ) override;
-	virtual void ConnectionStop() override;
-	virtual void FullConnect( const ns_address &adr, int nEncryptionKey ) override;
+	void ConnectionStart( INetChannel *chan );
+	void ConnectionStop();
+	void FullConnect( const ns_address &adr, int nEncryptionKey );
 	bool SetSignonState ( int state, int count, const ks::net::CNETMsg_SignonState *msg );
 	void PacketStart(int incoming_sequence, int outgoing_acknowledged);
 	void PacketEnd( void );
@@ -116,26 +116,26 @@ public: // CBaseClientState overrides:
 
 public: // IServerMessageHandlers
 	
-	virtual bool NETMsg_Tick( const ks::net::CNETMsg_Tick& msg ) override;
-	virtual bool NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg ) override;
+	bool NETMsg_Tick( const ks::net::CNETMsg_Tick& msg );
+	bool NETMsg_StringCmd( const ks::net::CNETMsg_StringCmd& msg );
 
-	virtual bool SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg ) override;
-	virtual bool SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg ) override;
-	virtual bool SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg ) override;
-	virtual bool SVCMsg_VoiceInit( const ks::net::CSVCMsg_VoiceInit& msg ) override;
-	virtual bool SVCMsg_VoiceData( const ks::net::CSVCMsg_VoiceData& msg ) override;
-	virtual bool SVCMsg_FixAngle( const ks::net::CSVCMsg_FixAngle& msg ) override;
-	virtual bool SVCMsg_Prefetch( const ks::net::CSVCMsg_Prefetch& msg ) override;
-	virtual bool SVCMsg_CrosshairAngle( const ks::net::CSVCMsg_CrosshairAngle& msg ) override;
-	virtual bool SVCMsg_BSPDecal( const ks::net::CSVCMsg_BSPDecal& msg ) override;
-	virtual bool SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage& msg ) override;
-	virtual bool SVCMsg_PaintmapData( const ks::net::CSVCMsg_PaintmapData& msg ) override;
-	virtual bool SVCMsg_GameEvent( const ks::net::CSVCMsg_GameEvent& msg ) override;
-	virtual bool SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities& msg ) override;
-	virtual bool SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntities &msg ) override;
-	virtual bool SVCMsg_Sounds( const ks::net::CSVCMsg_Sounds& msg ) override;
-	virtual bool SVCMsg_EntityMsg( const ks::net::CSVCMsg_EntityMsg& msg ) override;
-	virtual bool SVCMsg_HltvReplay( const ks::net::CSVCMsg_HltvReplay &msg );
+	bool SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg );
+	bool SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg );
+	bool SVCMsg_SetPause( const ks::net::CSVCMsg_SetPause& msg );
+	bool SVCMsg_VoiceInit( const ks::net::CSVCMsg_VoiceInit& msg );
+	bool SVCMsg_VoiceData( const ks::net::CSVCMsg_VoiceData& msg );
+	bool SVCMsg_FixAngle( const ks::net::CSVCMsg_FixAngle& msg );
+	bool SVCMsg_Prefetch( const ks::net::CSVCMsg_Prefetch& msg );
+	bool SVCMsg_CrosshairAngle( const ks::net::CSVCMsg_CrosshairAngle& msg );
+	bool SVCMsg_BSPDecal( const ks::net::CSVCMsg_BSPDecal& msg );
+	bool SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage& msg );
+	bool SVCMsg_PaintmapData( const ks::net::CSVCMsg_PaintmapData& msg );
+	bool SVCMsg_GameEvent( const ks::net::CSVCMsg_GameEvent& msg );
+	bool SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities& msg );
+	bool SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntities &msg );
+	bool SVCMsg_Sounds( const ks::net::CSVCMsg_Sounds& msg );
+	bool SVCMsg_EntityMsg( const ks::net::CSVCMsg_EntityMsg& msg );
+	bool SVCMsg_HltvReplay( const ks::net::CSVCMsg_HltvReplay &msg );
 
 	CNetMessageBinder m_SVCMsgHltvReplay;
 
@@ -270,7 +270,7 @@ public:
 	int m_nHltvReplaySlowdownBeginAt;
 	int m_nHltvReplaySlowdownEndAt;
 	float m_flHltvReplaySlowdownRate;
-private:
+public:
 	
 	// Note: This is only here for backwards compatibility. If it is set to something other than NULL,
 	// then we'll copy its contents into m_chAreaBits in UpdateAreaBits_BackwardsCompatible.

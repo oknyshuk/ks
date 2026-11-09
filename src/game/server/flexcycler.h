@@ -19,10 +19,10 @@ public:
 
 	CFlexCycler() { m_iszSentence = NULL_STRING; m_sentence = 0; }
 	void GenericCyclerSpawn(char *szModel, Vector vecMin, Vector vecMax);
-	virtual int	ObjectCaps( void ) { return (BaseClass::ObjectCaps() | FCAP_IMPULSE_USE); }
-	int OnTakeDamage( const CTakeDamageInfo &info );
-	void Spawn( void );
-	void Think( void );
+	int	ObjectCaps_Impl( void ) { return (BaseClass::ObjectCaps_Impl() | FCAP_IMPULSE_USE); }
+	int OnTakeDamage_Impl( const CTakeDamageInfo &info );
+	void Spawn_Impl( void );
+	void Think_Impl( void );
 
 	virtual void ProcessSceneEvents( void );
 
@@ -54,5 +54,5 @@ class CGenericFlexCycler : public CFlexCycler
 public:
 	DECLARE_CLASS( CGenericFlexCycler, CFlexCycler );
 
-	void Spawn( void ) { GenericCyclerSpawn( (char *)STRING( GetModelName() ), Vector(-16, -16, 0), Vector(16, 16, 72) ); }
+	void Spawn_Impl( void ) { GenericCyclerSpawn( (char *)STRING( GetModelName() ), Vector(-16, -16, 0), Vector(16, 16, 72) ); }
 };

@@ -4,8 +4,6 @@
 // Purpose: Responsible for drawing the scene
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "string_t.h"
 #include "predictable_entity.h"
 #include "cdll_util.h"
@@ -152,7 +150,7 @@ static float GetSkyboxFogStart( bool ignoreOverride = false );
 static float GetSkyboxFogEnd( bool ignoreOverride = false );
 static float GetSkyboxFogMaxDensity( bool ignoreOverride = false );
 static void GetSkyboxFogColor( float *pColor, bool ignoreOverride = false, bool ignoreHDRColorScale = false );
-static void FogOverrideCallback( IConVar *pConVar, char const *pOldString, float flOldValue );
+static void FogOverrideCallback( ConVar *pConVar, char const *pOldString, float flOldValue );
 static ConVar fog_override( "fog_override", "0", FCVAR_CHEAT, "Overrides the map's fog settings (-1 populates fog_ vars with map's values)", FogOverrideCallback );
 // set any of these to use the maps fog
 static ConVar fog_start( "fog_start", "-1", FCVAR_CHEAT );
@@ -167,7 +165,7 @@ static ConVar fog_enableskybox( "fog_enableskybox", "1", FCVAR_CHEAT );
 static ConVar fog_maxdensity( "fog_maxdensity", "-1", FCVAR_CHEAT );
 static ConVar fog_hdrcolorscale( "fog_hdrcolorscale", "-1", FCVAR_CHEAT );
 static ConVar fog_hdrcolorscaleskybox( "fog_hdrcolorscaleskybox", "-1", FCVAR_CHEAT );
-static void FogOverrideCallback( IConVar *pConVar, char const *pOldString, float flOldValue )
+static void FogOverrideCallback( ConVar *pConVar, char const *pOldString, float flOldValue )
 {
 	C_BasePlayer *localPlayer = C_BasePlayer::GetLocalPlayer();
 	if ( !localPlayer )
@@ -394,7 +392,7 @@ static int ComputeSimpleWorldModelDrawFlags()
 // Describes a pruned set of leaves to be rendered this view. Reference counted
 // because potentially shared by a number of views
 //-----------------------------------------------------------------------------
-struct ClientWorldListInfo_t : public CRefCounted1<WorldListInfo_t>
+struct ClientWorldListInfo_t : public WorldListInfo_t, public CRefCounted<ClientWorldListInfo_t>
 {
 	ClientWorldListInfo_t() 
 	{ 
@@ -411,9 +409,9 @@ struct ClientWorldListInfo_t : public CRefCounted1<WorldListInfo_t>
 	// using m_pOriginalLeafIndex[ remapped leaf index ] == actual leaf index
 	uint16 *m_pOriginalLeafIndex;
 
-private:
-	virtual bool OnFinalRelease();
+	bool OnFinalRelease();
 
+private:
 	bool m_bPooledAlloc;
 	static ks::reuse_pool<ClientWorldListInfo_t> gm_Pool;
 };
@@ -1242,7 +1240,7 @@ void CViewRender::DrawRenderablesInList( CViewModelRenderablesList::RenderGroups
 
 		// Non-view models wanting to render in view model list...
 		contract_assert( pRenderable->ShouldDraw() );
-		m_pCurrentlyDrawingEntity = pRenderable->GetIClientUnknown()->GetBaseEntity();
+		m_pCurrentlyDrawingEntity = EntityCast<C_BaseEntity>( pRenderable->GetIClientUnknown()->GetBaseEntity() );
 		int nDrawFlags = STUDIO_RENDER | flags;
 		nDrawFlags |= renderGroups[i].m_InstanceData.m_bTwoPass ? STUDIO_TWOPASS : 0;
 		pRenderable->DrawModel( nDrawFlags, renderGroups[i].m_InstanceData );
@@ -1729,6 +1727,7 @@ static bool IsThirdPersonOverview( void )
 //-----------------------------------------------------------------------------
 // Purpose: Renders world and all entities, etc.
 //-----------------------------------------------------------------------------
+extern void UpdateClientRenderableInPVSStatus();
 void CViewRender::ViewDrawScene( bool bDrew3dSkybox, SkyboxVisibility_t nSkyboxVisible, const CViewSetup &view, 
 								int nClearFlags, view_id_t viewID, bool bDrawViewModel, int baseDrawFlags, ViewCustomVisibility_t *pCustomVisibility )
 {
@@ -3932,19 +3931,20 @@ void CRendering3dView::ReleaseLists()
 //
 //-----------------------------------------------------------------------------
 
-class SetupRenderablesListJob : public CJob
+// The work of the job that builds the renderables list (see CRendering3dView::SetupRenderablesList)
+class SetupRenderablesListJob
 {
 public:
 	explicit SetupRenderablesListJob( const SetupRenderInfo_t &info ) : m_SetupInfo( info ) {}
 
-private:
+	JobStatus_t	Run();
 
-	virtual JobStatus_t	DoExecute();
+private:
 
 	SetupRenderInfo_t m_SetupInfo;
 };
 
-JobStatus_t	SetupRenderablesListJob::DoExecute()
+JobStatus_t	SetupRenderablesListJob::Run()
 {
 	ClientLeafSystem()->BuildRenderablesList( m_SetupInfo );
 	return JOB_OK;
@@ -4003,7 +4003,7 @@ void CRendering3dView::SetupRenderablesList( int viewID, bool bFastEntityRenderi
 	setupInfo.m_flRenderDistSq *= setupInfo.m_flRenderDistSq;
 
 	
-	SetupRenderablesListJob *pJob = new SetupRenderablesListJob( setupInfo );
+	CJob *pJob = new CJob( [pWork = std::make_unique<SetupRenderablesListJob>( setupInfo )]() { return pWork->Run(); } );
 	g_viewBuilder.QueueBuildRenderablesListJob( pJob );
 	pJob->Release();
 }
@@ -4018,7 +4018,6 @@ void CRendering3dView::BuildWorldRenderLists( bool bDrawEntities, int iForceView
 	CVProfScope _( "BuildWorldRenderLists", 0, "World Render Setup", false, BUDGETFLAG_OTHER );
 
     // @MULTICORE (toml 8/18/2006): to address....
-	extern void UpdateClientRenderableInPVSStatus();
 	UpdateClientRenderableInPVSStatus();
 
 	contract_assert( !m_pWorldRenderList && !m_pWorldListInfo );
@@ -4081,21 +4080,22 @@ void CRendering3dView::BuildWorldRenderLists_Epilogue( bool bShadowDepth )
 // Purpose: Computes the actual world list info based on the render flags
 //-----------------------------------------------------------------------------
 
-class PruneWorldListInfoJob : public CJob
+// The work of the job that prunes the world list info (see CRendering3dView::PruneWorldListInfo)
+class PruneWorldListInfoJob
 {
 public:
 
 	PruneWorldListInfoJob( int buildViewID, int drawFlags ) : m_nBuildViewID( buildViewID ), m_DrawFlags( drawFlags ) {}
 
-private:
+	JobStatus_t	Run();
 
-	virtual JobStatus_t	DoExecute();
+private:
 
 	int		m_nBuildViewID;
 	int		m_DrawFlags;
 };
 
-JobStatus_t	PruneWorldListInfoJob::DoExecute()
+JobStatus_t	PruneWorldListInfoJob::Run()
 {
 	ClientWorldListInfo_t *pWorldListInfo = g_viewBuilder.GetClientWorldListInfoElement( m_nBuildViewID );
 
@@ -4156,7 +4156,7 @@ void CRendering3dView::PruneWorldListInfo()
 		return;
 	}
 
-	PruneWorldListInfoJob *pJob = new PruneWorldListInfoJob( g_viewBuilder.GetBuildViewID(), m_DrawFlags );
+	CJob *pJob = new CJob( [pWork = std::make_unique<PruneWorldListInfoJob>( g_viewBuilder.GetBuildViewID(), m_DrawFlags )]() { return pWork->Run(); } );
 	g_viewBuilder.QueueBuildWorldListJob( pJob );
 	pJob->Release();
 
@@ -4506,7 +4506,7 @@ static inline void DrawRenderable( IClientRenderable *pEnt, int flags, const Ren
 		else if ( !bShadowDepth ) // in shadow-depth pass, this step is unnecessary
 			DrawClippedDepthBox( pEnt, pRenderClipPlane );
 		contract_assert( view->GetCurrentlyDrawingEntity() == nullptr );
-		view->SetCurrentlyDrawingEntity( pEnt->GetIClientUnknown()->GetBaseEntity() );
+		view->SetCurrentlyDrawingEntity( EntityCast<C_BaseEntity>( pEnt->GetIClientUnknown()->GetBaseEntity() ) );
 		pEnt->DrawModel( flags, instance );
 		view->SetCurrentlyDrawingEntity( nullptr );
 
@@ -4516,7 +4516,7 @@ static inline void DrawRenderable( IClientRenderable *pEnt, int flags, const Ren
 	else
 	{
 		contract_assert( view->GetCurrentlyDrawingEntity() == nullptr );
-		view->SetCurrentlyDrawingEntity( pEnt->GetIClientUnknown()->GetBaseEntity() );
+		view->SetCurrentlyDrawingEntity( EntityCast<C_BaseEntity>( pEnt->GetIClientUnknown()->GetBaseEntity() ) );
 		if( bShadowDepth )
 			flags |= DF_SHADOW_DEPTH_MAP;
 		pEnt->DrawModel( flags, instance );
@@ -4846,7 +4846,7 @@ void CRendering3dView::DrawOpaqueRenderables( IMatRenderContext *pRenderContext,
 				}
 
 				IClientUnknown *pUnknown = itEntity->m_pRenderable->GetIClientUnknown();
-				C_BaseEntity *pEntity = pUnknown->GetBaseEntity();
+				C_BaseEntity *pEntity = EntityCast<C_BaseEntity>( pUnknown->GetBaseEntity() );
 				
 				if ( pEntity && pEntity->IsNPC() )
 				{
@@ -7676,12 +7676,11 @@ void CConcurrentViewBuilder::QueueBuildWorldListJob( CJob* pJob )
 			CConcurrentViewData* pViewData = &m_viewData[m_buildViewID];
 			if ( !pViewData->m_pBuildWorldListJob )
 			{
-				pViewData->m_pBuildWorldListJob = new SequentialJobs( pJob );
+				pViewData->m_pBuildWorldListJob = SequentialJobs::Create( pJob );
 			}
 			else
 			{
-				SequentialJobs* pSeqJob = (SequentialJobs *)pViewData->m_pBuildWorldListJob;
-				pSeqJob->AddJob( pJob );
+				SequentialJobs::AddJob( pViewData->m_pBuildWorldListJob, pJob );
 			}
 		}
 		else
@@ -7765,7 +7764,7 @@ void CConcurrentViewBuilder::QueueBuildRenderablesListJob( CJob* pJob )
 		{
 			if ( pViewData->m_bWaitForWorldList )
 			{
-				CFunctorJob *pWaitJob = new CFunctorJob( CreateFunctor( this, &CConcurrentViewBuilder::InternalWaitForBuildWorldListJob, m_buildViewID ) );
+				CJob *pWaitJob = new CJob( CreateFunctor( this, &CConcurrentViewBuilder::InternalWaitForBuildWorldListJob, m_buildViewID ) );
 				AddToSequentialJobs( pWaitJob );
 				pWaitJob->Release();
 			}
@@ -7806,7 +7805,7 @@ void CConcurrentViewBuilder::FlushBuildRenderablesListJob( void )
 		{
 			// Wait for the current job to finish before executing pending jobs
 			// Use a job to wait so that the main thread can keep running
-			CFunctorJob *pJob = new CFunctorJob( CreateFunctor(this, &CConcurrentViewBuilder::WaitForCurrentSequentialJobAndRunPending ) );
+			CJob *pJob = new CJob( CreateFunctor(this, &CConcurrentViewBuilder::WaitForCurrentSequentialJobAndRunPending ) );
 			AddJobToThreadPool( pJob );
 			pJob->Release();
 		}
@@ -7834,9 +7833,9 @@ void CConcurrentViewBuilder::AddToSequentialJobs( CJob* pJob )
 {
 	if ( !m_pPendingSeqJobs )
 	{
-		m_pPendingSeqJobs = new SequentialJobs();
+		m_pPendingSeqJobs = SequentialJobs::Create();
 	}
-	m_pPendingSeqJobs->AddJob( pJob );
+	SequentialJobs::AddJob( m_pPendingSeqJobs, pJob );
 }
 
 void CConcurrentViewBuilder::TryRunSequentialJobs( void )
@@ -7883,12 +7882,17 @@ void CConcurrentViewBuilder::AddJobToThreadPool( CJob* pJob )
 	g_pThreadPool->AddJob( pJob );
 }
 
-CConcurrentViewBuilder::SequentialJobs::SequentialJobs( CJob* pJob /* = NULL */ )
+CJob* CConcurrentViewBuilder::SequentialJobs::Create( CJob* pJob /* = NULL */ )
 {
+	std::unique_ptr<SequentialJobs> pWork = std::make_unique<SequentialJobs>();
+	SequentialJobs *pRawWork = pWork.get();
+	CJob *pSeqJob = new CJob( [pWork = std::move( pWork )]() { return pWork->Run(); } );
+	pSeqJob->SetUserData( pRawWork );
 	if ( pJob )
 	{
-		AddJob( pJob );
+		AddJob( pSeqJob, pJob );
 	}
+	return pSeqJob;
 }
 
 CConcurrentViewBuilder::SequentialJobs::~SequentialJobs()
@@ -7899,13 +7903,14 @@ CConcurrentViewBuilder::SequentialJobs::~SequentialJobs()
 	}
 }
 
-void CConcurrentViewBuilder::SequentialJobs::AddJob( CJob* pJob )
+void CConcurrentViewBuilder::SequentialJobs::AddJob( CJob* pSeqJob, CJob* pJob )
 {
-	m_jobs.push_back( pJob );
+	SequentialJobs *pWork = static_cast<SequentialJobs *>( pSeqJob->GetUserData() );
+	pWork->m_jobs.push_back( pJob );
 	InlineAddRef( pJob );
 }
 
-JobStatus_t CConcurrentViewBuilder::SequentialJobs::DoExecute()
+JobStatus_t CConcurrentViewBuilder::SequentialJobs::Run()
 {
 	for ( int i = 0; i < std::ssize( m_jobs ); i++ )
 	{

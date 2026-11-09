@@ -2,15 +2,19 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 #include "client_class.h"
 #include "shareddefs.h"
 #include "ai_activity.h"
 
-class CStudioHdr;
+// The overloads below must not hide the shared ones.
+using ::LoopingLerp;
+using ::LoopingLerp_Hermite;
+using ::Lerp;
+using ::Lerp_Hermite;
+using ::Lerp_Clamp;
+
 
 #ifdef CLIENT_DLL
 class C_BaseAnimatingOverlay;

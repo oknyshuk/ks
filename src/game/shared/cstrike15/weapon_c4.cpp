@@ -5,10 +5,7 @@
 #include "rocketui/rmlui.h"
 #elif defined(GAME_DLL)
 #endif
-import std;
-import ks.core;
 #if defined(CLIENT_DLL)
-import ks.tier1;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -22,7 +19,6 @@ import ks.tier1;
 #include "cdll_client_int.h"
 #include "debugoverlay_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "vphysics_interface.h"
 #include "edict.h"
 #include "eiface.h"
@@ -164,9 +160,9 @@ IMPLEMENT_REFLECT_PREDMAP( CPlantedC4 );
 		RemoveControlPanels();
 	}
 
-	void CPlantedC4::Spawn()
+	void CPlantedC4::Spawn_Impl()
 	{
-		BaseClass::Spawn();
+		BaseClass::Spawn_Impl();
 
 		SetMoveType( MOVETYPE_NONE );
 		SetSolid( SOLID_NONE );
@@ -202,19 +198,19 @@ IMPLEMENT_REFLECT_PREDMAP( CPlantedC4 );
 		VisibilityMonitor_AddEntity( this, 600.0f, nullptr, nullptr );
 	}
 
-	int CPlantedC4::UpdateTransmitState()
+	int CPlantedC4::UpdateTransmitState_Impl()
 	{
 		return SetTransmitState( FL_EDICT_FULLCHECK );
 	}
 
-	int CPlantedC4::ShouldTransmit( const CCheckTransmitInfo *pInfo )
+	int CPlantedC4::ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo )
 	{
 		// Terrorists always need this object for the radar
 		// Everybody needs it for hiding the round timer and showing the planted C4 scenario icon
 		return FL_EDICT_ALWAYS;
 	}
 
-	void CPlantedC4::Precache()
+	void CPlantedC4::Precache_Impl()
 	{
 		PrecacheModel( "models/weapons/w_c4_planted.mdl" ); // old, unused
 		PrecacheModel( PLANTED_C4_MODEL );
@@ -244,13 +240,13 @@ IMPLEMENT_REFLECT_PREDMAP( CPlantedC4 );
 	{
 	}
 
-	void CPlantedC4::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
+	void CPlantedC4::SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways )
 	{
 		// Are we already marked for transmission?
 		if ( (*pInfo->m_pTransmitEdict)[ entindex() ] )
 			return;
 
-		BaseClass::SetTransmit( pInfo, bAlways );
+		BaseClass::SetTransmit_Impl( pInfo, bAlways );
 	}
 
 	CPlantedC4* CPlantedC4::ShootSatchelCharge( CCSPlayer *pevOwner, Vector vecStart, QAngle vecAngles )
@@ -893,7 +889,7 @@ IMPLEMENT_REFLECT_PREDMAP( CPlantedC4 );
 
 	
 	// For CTs to defuse the c4
-	void CPlantedC4::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+	void CPlantedC4::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 	{
 		//Can't defuse if its already defused or if it has blown up (or training)
 		if( !IsBombActive() || m_flC4Blow < gpGlobals->curtime || mp_c4_cannot_be_defused.GetBool() == true )
@@ -1136,9 +1132,9 @@ CC4::~CC4()
 {
 }
 
-void CC4::Spawn()
+void CC4::Spawn_Impl()
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 
 	//Don't allow players to shoot the C4 around
 	SetCollisionGroup( COLLISION_GROUP_DEBRIS );
@@ -1198,9 +1194,9 @@ void CC4::WeaponReset( void )
 		BaseClass::OnDataChanged( type );
 	}
 
-	void CC4::UpdateOnRemove( void )
+	void CC4::UpdateOnRemove_Impl( void )
 	{
-		BaseClass::UpdateOnRemove();
+		BaseClass::UpdateOnRemove_Impl();
 	}
 
 	void CC4::ClientThink( void )
@@ -1284,7 +1280,7 @@ void CC4::WeaponReset( void )
 
 #else
 
-void CC4::PhysicsTouchTriggers(const Vector *pPrevAbsOrigin)
+void CC4::PhysicsTouchTriggers_Impl(const Vector *pPrevAbsOrigin)
 {
 	// Normally items like ammo or weapons aren't expected to touch other triggers, but C4 is a special case
 	edict_t *pEntity = edict();
@@ -1307,7 +1303,7 @@ void CC4::PhysicsTouchTriggers(const Vector *pPrevAbsOrigin)
 
 #ifdef GAME_DLL
 	
-	void CC4::Think()
+	void CC4::Think_Impl()
 	{
 		//If the bomb is held by an alive player standing on the ground, then we can use this
 		//position as the last known valid position to respawn the bomb if it gets reset.
@@ -1348,12 +1344,12 @@ void CC4::PhysicsTouchTriggers(const Vector *pPrevAbsOrigin)
 		}
 	}
 
-	unsigned int CC4::PhysicsSolidMaskForEntity( void ) const
+	unsigned int CC4::PhysicsSolidMaskForEntity_Impl( void ) const
 	{
-		return BaseClass::PhysicsSolidMaskForEntity() | CONTENTS_PLAYERCLIP;
+		return BaseClass::PhysicsSolidMaskForEntity_Impl() | CONTENTS_PLAYERCLIP;
 	}
 
-	void CC4::Precache()
+	void CC4::Precache_Impl()
 	{
 		PrecacheScriptSound( "c4.disarmfinish" );
 		PrecacheScriptSound( "c4.explode" );
@@ -1366,15 +1362,15 @@ void CC4::PhysicsTouchTriggers(const Vector *pPrevAbsOrigin)
 		PrecacheParticleSystem( "c4_train_ground_effect" );
 		PrecacheScriptSound( "tr.C4Explode" );
 
-		BaseClass::Precache();
+		BaseClass::Precache_Impl();
 	}
 
-	int CC4::UpdateTransmitState()
+	int CC4::UpdateTransmitState_Impl()
 	{
 		return SetTransmitState( FL_EDICT_FULLCHECK );
 	}
 
-	int CC4::ShouldTransmit( const CCheckTransmitInfo *pInfo )
+	int CC4::ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo )
 	{
 		CBasePlayer *pPlayer = ToBasePlayer( CBaseEntity::Instance( pInfo->m_pClientEnt ) );
 		if ( pPlayer && pPlayer->GetTeamNumber() == TEAM_CT )

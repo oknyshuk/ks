@@ -4,7 +4,6 @@
 
 // Anyone requesting model combines needs to derive from this to get completion callbacks.
 
-import std;
 #include "datacache/imdlcache.h"
 
 class IModelCombinerRequesterInterface

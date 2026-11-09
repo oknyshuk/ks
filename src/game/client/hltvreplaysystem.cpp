@@ -2,8 +2,6 @@
 // Copyright (c) Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.tier1;
-import std;
 #include "predictable_entity.h"
 #include "cdll_util.h"
 #include "util_shared.h"
@@ -103,12 +101,12 @@ void CHltvReplaySystem::StopHltvReplay()
 }
 
 
+extern bool g_bForceCLPredictOff;
 void CHltvReplaySystem::OnHltvReplay( const ks::net::CSVCMsg_HltvReplay  &msg )
 {
 	int nNewReplayDelay = msg.delay;
 	DevMsg( "%.2f OnHltvReplay %s\n", gpGlobals->curtime, nNewReplayDelay ? "START" : "END" );
 
-	extern bool g_bForceCLPredictOff;
 	g_bForceCLPredictOff = ( nNewReplayDelay != 0 );
 
 	static int s_nReplayLayerIndex = engine->GetMixLayerIndex( "ReplayLayer" );

@@ -14,7 +14,6 @@ export import :progress;
 export import :cmdline;
 export import :minidump;
 export import :mem;
-export import :memvirt;
 export import :constants;
 export import :sysinfo;
 export import :console;

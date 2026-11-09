@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2004 Valve Corporation
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -44,7 +42,7 @@ IMPLEMENT_REFLECT_SERVERCLASS( CEnvDOFController, DT_EnvDOFController )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvDOFController::Spawn( void )
+void CEnvDOFController::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 	SetMoveType( MOVETYPE_NONE );
@@ -53,9 +51,9 @@ void CEnvDOFController::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CEnvDOFController::Activate( void )
+void CEnvDOFController::Activate_Impl( void )
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	// Find our target entity and hold on to it
 	m_hFocusTarget = gEntList.FindEntityByName( nullptr, m_strFocusTargetName );
@@ -71,7 +69,7 @@ void CEnvDOFController::Activate( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-int CEnvDOFController::UpdateTransmitState()
+int CEnvDOFController::UpdateTransmitState_Impl()
 {
 	return SetTransmitState( FL_EDICT_ALWAYS );
 }

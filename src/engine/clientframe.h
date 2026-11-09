@@ -17,7 +17,10 @@ public:
 	CClientFrame( void );
 	CClientFrame( int tickcount );
 	CClientFrame( CFrameSnapshot *pSnapshot );
-	virtual ~CClientFrame();
+	~CClientFrame();
+
+	// Deletes the frame as the class it really is (CClientFrame or CHLTVFrame, see netdispatch.cpp)
+	void DeleteThis();
 	void Init( CFrameSnapshot *pSnapshot );
 	void Init( int tickcount );
 
@@ -25,7 +28,7 @@ public:
 	inline CFrameSnapshot*	GetSnapshot() const { return m_pSnapshot; };
 	void					SetSnapshot( CFrameSnapshot *pSnapshot );
 	void					CopyFrame( CClientFrame &frame );
-	virtual bool		IsMemPoolAllocated() { return true; }
+	bool				IsMemPoolAllocated() { return !m_bHltvFrame; }
 
 public:
 
@@ -38,6 +41,9 @@ public:
 	std::bitset<MAX_EDICTS>	transmit_entity; // if bit n is set, entity n will be send to client
 	std::bitset<MAX_EDICTS>	*from_baseline;	// if bit n is set, this entity was send as update from baseline
 	std::bitset<MAX_EDICTS>	*transmit_always; // if bit is set, don't do PVS checks before sending (HLTV only)
+
+protected:
+	bool				m_bHltvFrame = false;	// the object is a CHLTVFrame
 
 private:
 
@@ -52,7 +58,7 @@ class CClientFrameManager
 {
 public:
 	CClientFrameManager(void)  : m_ClientFramePool( MAX_CLIENT_FRAMES, ks::fixed_pool::grow::slow ) {	m_Frames = nullptr; }
-	virtual ~CClientFrameManager(void) { DeleteClientFrames(-1); }
+	~CClientFrameManager(void) { DeleteClientFrames(-1); }
 
 	int				AddClientFrame( CClientFrame *pFrame ); // returns current count
 	CClientFrame	*GetClientFrame( int nTick, bool bExact = true );

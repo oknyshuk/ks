@@ -3,8 +3,6 @@
 
 // Purpose: Frequently used global functions.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -41,7 +38,7 @@ import ks.tier1;
 #include "globals.h"
 
 // Landmark class
-void CPointEntity::Spawn( void )
+void CPointEntity::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
 //	UTIL_SetSize(this, vec3_origin, vec3_origin);
@@ -53,12 +50,12 @@ class CNullEntity : public CBaseEntity
 public:
 	DECLARE_CLASS( CNullEntity, CBaseEntity );
 
-	void Spawn( void );
+	void Spawn_Impl( void );
 };
 
 
 // Null Entity, remove on startup
-void CNullEntity::Spawn( void )
+void CNullEntity::Spawn_Impl( void )
 {
 	UTIL_Remove( this );
 }
@@ -69,7 +66,7 @@ class CBaseDMStart : public CPointEntity
 public:
 	DECLARE_CLASS( CBaseDMStart, CPointEntity );
 
-	bool IsTriggered( CBaseEntity *pEntity );
+	bool IsTriggered_Impl( CBaseEntity *pEntity );
 
 	DECLARE_DATADESC();
 
@@ -84,9 +81,9 @@ IMPLEMENT_REFLECT_DATAMAP( CBaseDMStart )
 // These are the new entry points to entities. 
 LINK_ENTITY_TO_CLASS(info_player_deathmatch,CBaseDMStart);
 LINK_ENTITY_TO_CLASS(info_player_start,CPointEntity);
-LINK_ENTITY_TO_CLASS(info_landmark,CPointEntity);
+LINK_ENTITY_TO_CLASS_ALIAS(info_landmark,CPointEntity);
 
-bool CBaseDMStart::IsTriggered( CBaseEntity *pEntity )
+bool CBaseDMStart::IsTriggered_Impl( CBaseEntity *pEntity )
 {
 	bool master = UTIL_IsMasterTriggered( m_Master, pEntity );
 
@@ -175,12 +172,12 @@ CBaseToggle::CBaseToggle()
 //-----------------------------------------------------------------------------
 // Purpose: Returns the velocity imparted to players standing on us.
 //-----------------------------------------------------------------------------
-void CBaseToggle::GetGroundVelocityToApply( Vector &vecGroundVel )
+void CBaseToggle::GetGroundVelocityToApply_Impl( Vector &vecGroundVel )
 {
 	vecGroundVel = GetLocalVelocity();
 }
 
-bool CBaseToggle::KeyValue( const char *szKeyName, const char *szValue )
+bool CBaseToggle::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "lip"))
 	{
@@ -199,7 +196,7 @@ bool CBaseToggle::KeyValue( const char *szKeyName, const char *szValue )
 		m_flMoveDistance = std::atof(szValue);
 	}
 	else
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 
 	return true;
 }
@@ -240,7 +237,7 @@ void CBaseToggle::LinearMove( const Vector &vecDest, float flSpeed )
 }
 
 
-void CBaseToggle::MoveDone( void )
+void CBaseToggle::MoveDone_Impl( void )
 {
 	switch ( m_movementType )
 	{
@@ -252,7 +249,7 @@ void CBaseToggle::MoveDone( void )
 		break;
 	}
 	m_movementType = MOVE_TOGGLE_NONE;
-	BaseClass::MoveDone();
+	BaseClass::MoveDone_Impl();
 }
 //-----------------------------------------------------------------------------
 // Purpose: After moving, set origin to exact final destination, call "move done" function.
@@ -266,7 +263,7 @@ void CBaseToggle::LinearMoveDone( void )
 
 
 // DVS TODO: obselete, remove?
-bool CBaseToggle::IsLockedByMaster( void )
+bool CBaseToggle::IsLockedByMaster_Impl( void )
 {
 	if (m_sMaster != NULL_STRING && !UTIL_IsMasterTriggered(m_sMaster, m_hActivator))
 		return true;

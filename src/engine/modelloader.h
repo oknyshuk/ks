@@ -58,103 +58,103 @@ public:
 	};
 
 	// Start up modelloader subsystem
-	virtual void		Init( void ) = 0;
-	virtual void		Shutdown( void ) = 0;
+	void		Init( void );
+	void		Shutdown( void );
 
 	// Look up name for model
-	virtual const char *GetName( const model_t *model ) = 0;
+	const char *GetName( const model_t *model );
 
 	// Check for extra data, reload studio model if needed
-	virtual void		*GetExtraData( model_t *model ) = 0;
+	void		*GetExtraData( model_t *model );
 
 	// Get disk size for model
-	virtual int			GetModelFileSize( const char *name ) = 0;
+	int			GetModelFileSize( const char *name );
 
 	// Finds the model, and loads it if it isn't already present.  Updates reference flags
-	virtual model_t		*GetModelForName( const char *name, REFERENCETYPE referencetype ) = 0;
-	virtual model_t		*ReferenceModel( const char *name, REFERENCETYPE referencetype ) = 0;
+	model_t		*GetModelForName( const char *name, REFERENCETYPE referencetype );
+	model_t		*ReferenceModel( const char *name, REFERENCETYPE referencetype );
 	// Unmasks the referencetype field for the model
-	virtual void		UnreferenceModel( model_t *model, REFERENCETYPE referencetype ) = 0;
+	void		UnreferenceModel( model_t *model, REFERENCETYPE referencetype );
 	// Unmasks the specified reference type across all models
-	virtual void		UnreferenceAllModels( REFERENCETYPE referencetype ) = 0;
+	void		UnreferenceAllModels( REFERENCETYPE referencetype );
 
 	// For any models with referencetype blank, frees all memory associated with the model
 	//  and frees up the models slot
-	virtual void		UnloadUnreferencedModels( void ) = 0;
-	virtual void		PurgeUnusedModels( void ) = 0;
+	void		UnloadUnreferencedModels( void );
+	void		PurgeUnusedModels( void );
 
-	virtual void		UnMountCompatibilityPaths( void ) = 0;
-	virtual void		AddCompatibilityPath( const char *szNewCompatibilityPath ) = 0;
+	void		UnMountCompatibilityPaths( void );
+	void		AddCompatibilityPath( const char *szNewCompatibilityPath );
 
 	// On the client only, there is some information that is computed at the time we are just
 	//  about to render the map the first time.  If we don't change/unload the map, then we
 	//  shouldn't have to recompute it each time we reconnect to the same map
-	virtual bool		Map_GetRenderInfoAllocated( void ) = 0;
-	virtual void		Map_SetRenderInfoAllocated( bool allocated ) = 0;
+	bool		Map_GetRenderInfoAllocated( void );
+	void		Map_SetRenderInfoAllocated( bool allocated );
 
 	// Load all the displacements for rendering. Set bRestoring to true if we're recovering from an alt+tab.
-	virtual void		Map_LoadDisplacements( model_t *model, bool bRestoring ) = 0;
+	void		Map_LoadDisplacements( model_t *model, bool bRestoring );
 
 	// Print which models are in the cache/known
-	virtual void		Print( void ) = 0;
+	void		Print( void );
 
 	// Validate version/header of a .bsp file
-	virtual bool		Map_IsValid( char const *pBaseMapName, bool bQuiet = false ) = 0;
+	bool		Map_IsValid( char const *pBaseMapName, bool bQuiet = false );
 
 	// Recomputes surface flags
-	virtual void		RecomputeSurfaceFlags( model_t *mod ) = 0;
+	void		RecomputeSurfaceFlags( model_t *mod );
 
 	// Reloads all models
-	virtual void		Studio_ReloadModels( ReloadType_t reloadType ) = 0;
+	void		Studio_ReloadModels( ReloadType_t reloadType );
 
 	// Is a model loaded?
-	virtual bool		IsLoaded( const model_t *mod ) = 0;
+	bool		IsLoaded( const model_t *mod );
 
-	virtual bool		LastLoadedMapHasHDRLighting( void ) = 0;
+	bool		LastLoadedMapHasHDRLighting( void );
 
-	virtual bool		LastLoadedMapHasLightmapAlphaData( void ) = 0;
+	bool		LastLoadedMapHasLightmapAlphaData( void );
 
 	// See CL_HandlePureServerWhitelist for what this is for.
-	virtual void		ReloadFilesInList( IFileList *pFilesToReload ) = 0;
+	void		ReloadFilesInList( IFileList *pFilesToReload );
 
 	// Called by app system once per frame to poll and update dynamic models
-	virtual void		UpdateDynamicModels() = 0;
+	void		UpdateDynamicModels();
 
 	// Called by server and client engine code to flush unreferenced dynamic models
-	virtual void		FlushDynamicModels() = 0;
+	void		FlushDynamicModels();
 
 	// Called by server and client engine code to flush unreferenced dynamic models
-	virtual void		ForceUnloadNonClientDynamicModels() = 0;
+	void		ForceUnloadNonClientDynamicModels();
 
 	// Called by client code to load dynamic models, instead of GetModelForName.
-	virtual model_t		*GetDynamicModel( const char *name, bool bClientOnly ) = 0;
-	virtual model_t		*GetDynamicCombinedModel( const char *name, bool bClientOnly ) = 0;
-	virtual void		UpdateDynamicCombinedModel( model_t *pModel, MDLHandle_t Handle, bool bClientSide ) = 0;
+	model_t		*GetDynamicModel( const char *name, bool bClientOnly );
+	model_t		*GetDynamicCombinedModel( const char *name, bool bClientOnly );
+	void		UpdateDynamicCombinedModel( model_t *pModel, MDLHandle_t Handle, bool bClientSide );
 
-	virtual bool		SetCombineModels( model_t *pModel, const std::vector< SCombinerModelInput_t > &vecModelsToCombine ) = 0;
-	virtual bool		FinishCombinedModel( model_t *pModel, CombinedModelLoadedCallback pFunc, void *pUserData = nullptr ) = 0;
+	bool		SetCombineModels( model_t *pModel, const std::vector< SCombinerModelInput_t > &vecModelsToCombine );
+	bool		FinishCombinedModel( model_t *pModel, CombinedModelLoadedCallback pFunc, void *pUserData = nullptr );
 
 	// Called by client code to query dynamic model state
-	virtual bool		IsDynamicModelLoading( model_t *pModel ) = 0;
+	bool		IsDynamicModelLoading( model_t *pModel );
 
 	// Called by client code to refcount dynamic models
-	virtual void		AddRefDynamicModel( model_t *pModel, bool bClientSideRef ) = 0;
-	virtual void		ReleaseDynamicModel( model_t *pModel, bool bClientSideRef ) = 0;
+	void		AddRefDynamicModel( model_t *pModel, bool bClientSideRef );
+	void		ReleaseDynamicModel( model_t *pModel, bool bClientSideRef );
 
 	// Called by client code
-	virtual bool		RegisterModelLoadCallback( model_t *pModel, IModelLoadCallback *pCallback, bool bCallImmediatelyIfLoaded = true ) = 0;
+	bool		RegisterModelLoadCallback( model_t *pModel, IModelLoadCallback *pCallback, bool bCallImmediatelyIfLoaded = true );
 
 	// Called by client code or IModelLoadCallback destructor
-	virtual void		UnregisterModelLoadCallback( model_t *pModel, IModelLoadCallback *pCallback ) = 0;
+	void		UnregisterModelLoadCallback( model_t *pModel, IModelLoadCallback *pCallback );
 
 	// Called by client engine code when server indicates that a model has finished loading or has been unloaded
-	virtual void		Client_OnServerModelStateChanged( model_t *pModel, bool bServerLoaded ) = 0;
+	void		Client_OnServerModelStateChanged( model_t *pModel, bool bServerLoaded );
 
-	virtual void		UpdateViewWeaponModelCache( const char **ppWeaponModels, int nWeaponModels ) = 0;
-	virtual void		TouchWorldWeaponModelCache( const char **ppWeaponModels, int nWeaponModels ) = 0;
-	virtual bool		IsModelInWeaponCache( const model_t *pModel ) = 0;
-	virtual void		EvictAllWeaponsFromModelCache( bool bLoadingComplete ) = 0;
-	virtual bool		IsViewWeaponModelResident( const model_t *pModel ) = 0;
+	void		UpdateViewWeaponModelCache( const char **ppWeaponModels, int nWeaponModels );
+	void		TouchWorldWeaponModelCache( const char **ppWeaponModels, int nWeaponModels );
+	bool		IsModelInWeaponCache( const model_t *pModel );
+	void		EvictAllWeaponsFromModelCache( bool bLoadingComplete );
+	bool		IsViewWeaponModelResident( const model_t *pModel );
 };
 
 extern IModelLoader *modelloader;

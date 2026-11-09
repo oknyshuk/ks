@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
 #include "reflect_annotations.h"
 
-import std;
 #include "shareddefs.h"
 #include "util.h"
 #include "predictable_entity.h"
@@ -41,13 +39,14 @@ public:
 
 	CParticleSystem( void );
 
-	virtual void Precache( void );
-	virtual void Spawn( void );
-	virtual void Activate( void );
-	virtual int  UpdateTransmitState(void);
-	virtual int	 ObjectCaps( void );
-	virtual bool KeyValue( const char *szKeyName, const char *szValue );
-	virtual bool GetKeyValue( const char *szKeyName, char *szValue, int iMaxLen );
+	void Precache_Impl( void );
+	void Spawn_Impl( void );
+	void Activate_Impl( void );
+	int  UpdateTransmitState_Impl(void);
+	int	 ObjectCaps_Impl( void );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+	bool GetKeyValue_Impl( const char *szKeyName, char *szValue, int iMaxLen );
 
 	void		StartParticleSystem( void );
 	void		StopParticleSystem( int nStopType = STOP_NORMAL );

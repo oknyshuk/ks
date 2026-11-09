@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -58,7 +56,7 @@ CTesla::CTesla()
 }
 
 
-void CTesla::Spawn()
+void CTesla::Spawn_Impl()
 {
 	if ( m_iszSpriteName.Get() == NULL_STRING )
 	{
@@ -66,23 +64,23 @@ void CTesla::Spawn()
 	}
 
 	Precache();
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 }
 
 
-void CTesla::Activate()
+void CTesla::Activate_Impl()
 {
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	SetThink( &CTesla::ShootArcThink );
 	SetupForNextArc();
 }
 
 
-void CTesla::Precache()
+void CTesla::Precache_Impl()
 {
 	PrecacheModel( STRING(m_iszSpriteName.Get()) );
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	PrecacheScriptSound( STRING( m_SoundName.Get() ) );
 }

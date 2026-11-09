@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -72,7 +70,7 @@ CAI_Expresser *CFlexExpresser::CreateExpresser( void )
 }
 
 // does not call to base class spawn.
-void CFlexExpresser::Spawn( void )
+void CFlexExpresser::Spawn_Impl( void )
 {
 	const char *szModel = (char *)STRING( GetModelName() );
 	if (!szModel || !*szModel)
@@ -119,7 +117,7 @@ void CFlexExpresser::Spawn( void )
 	CreateExpresser();
 }
 
-void CFlexExpresser::Think( void )
+void CFlexExpresser::Think_Impl( void )
 {
 	SetNextThink( gpGlobals->curtime + 0.1f );
 
@@ -221,15 +219,15 @@ void CFlexExpresser::InputSpeakResponseConcept( inputdata_t &inputdata )
 
 // does nothing. It's important that it does nothing because if it 
 // calls through to base class and tries to flinch, it will crash.
-int CFlexExpresser::OnTakeDamage( const CTakeDamageInfo &info )
+int CFlexExpresser::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	return 0;
 }
 
 
-IResponseSystem *CFlexExpresser::GetResponseSystem( void )
+IResponseSystem *CFlexExpresser::GetResponseSystem_Impl( void )
 {
-	return BaseClass::GetResponseSystem();
+	return BaseClass::GetResponseSystem_Impl();
 }
 
 // because nothing inherits from CFlexExpresser, we can just check classname.

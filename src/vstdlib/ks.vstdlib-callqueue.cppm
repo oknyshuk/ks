@@ -15,9 +15,8 @@ export extern "C++" {
 //
 // void QueueCall( <function>, [args1, [arg2,]...]
 // void QueueCall( <object>, <function>, [args1, [arg2,]...]
-// void QueueRefCall( <object>, <<function>, [args1, [arg2,]...]
 //
-// DERIVED_TYPE must provide "void QueueFunctorInternal( CFunctor *pFunctor )".
+// DERIVED_TYPE must provide "template <typename F> void QueueFunctorInternal( F &&f )".
 //-----------------------------------------------------
 template <typename DERIVED_TYPE>
 class CCallQueueMethods
@@ -40,28 +39,17 @@ public:
 	{
 		static_cast<DERIVED_TYPE *>( this )->QueueFunctorInternal( CreateFunctor( pObject, pfnProxied, std::forward<ARGS>(args)... ) );
 	}
-
-	template <typename OBJECT_TYPE_PTR, typename RET_TYPE, typename FUNCTION_CLASS, typename... PARAMS, typename... ARGS>
-	void QueueRefCall( OBJECT_TYPE_PTR pObject, RET_TYPE ( FUNCTION_CLASS::*pfnProxied )( PARAMS... ), ARGS &&... args )
-	{
-		static_cast<DERIVED_TYPE *>( this )->QueueFunctorInternal( CreateRefCountingFunctor( pObject, pfnProxied, std::forward<ARGS>(args)... ) );
-	}
-
-	template <typename OBJECT_TYPE_PTR, typename RET_TYPE, typename FUNCTION_CLASS, typename... PARAMS, typename... ARGS>
-	void QueueRefCall( OBJECT_TYPE_PTR pObject, RET_TYPE ( FUNCTION_CLASS::*pfnProxied )( PARAMS... ) const, ARGS &&... args )
-	{
-		static_cast<DERIVED_TYPE *>( this )->QueueFunctorInternal( CreateRefCountingFunctor( pObject, pfnProxied, std::forward<ARGS>(args)... ) );
-	}
 };
 
 //-----------------------------------------------------
-
-template <typename QUEUE_TYPE = CTSQueue<CFunctor *> >
-class CCallQueueT : public CCallQueueMethods< CCallQueueT<QUEUE_TYPE> >
+// Thread-safe queue of calls, run on demand (optionally spread over a thread pool)
+//-----------------------------------------------------
+class CCallQueue : public CCallQueueMethods<CCallQueue>
 {
 public:
-	friend class CCallQueueMethods< CCallQueueT<QUEUE_TYPE> >;
-	CCallQueueT()
+	friend class CCallQueueMethods<CCallQueue>;
+
+	CCallQueue()
 		: m_bNoQueue( false )
 	{
 	}
@@ -102,7 +90,7 @@ public:
 		while ( m_queue.PopItem( &pFunctor ) && pFunctor != nullptr )
 		{
 			(*pFunctor)();
-			pFunctor->Release();
+			delete pFunctor;
 		}
 
 	}
@@ -127,14 +115,8 @@ public:
 		else
 		{
 			int *pDummy = nullptr;
-			ParallelProcess( pPool, pDummy, nNumThreads, this, &CCallQueueT<>::ExecuteWrapper );
+			ParallelProcess( pPool, pDummy, nNumThreads, this, &CCallQueue::ExecuteWrapper );
 		}
-	}
-
-	void QueueFunctor( CFunctor *pFunctor )
-	{
-		contract_assert( pFunctor );
-		QueueFunctorInternal( RetAddRef( pFunctor ) );
 	}
 
 	void Flush()
@@ -145,7 +127,7 @@ public:
 
 		while ( m_queue.PopItem( &pFunctor ) && pFunctor != nullptr )
 		{
-			pFunctor->Release();
+			delete pFunctor;
 		}
 	}
 
@@ -155,56 +137,170 @@ protected:
 		CallQueued();
 	}
 
-	void QueueFunctorInternal( CFunctor *pFunctor )
+	template <typename F>
+	void QueueFunctorInternal( F &&f )
 	{
 		if ( !m_bNoQueue )
 		{
-			m_queue.PushItem( pFunctor );
+			m_queue.PushItem( new CFunctor( std::forward<F>( f ) ) );
 		}
 		else
 		{
-			(*pFunctor)();
-			pFunctor->Release();
+			f();
 		}
 	}
 
 private:
-	QUEUE_TYPE m_queue;
+	CTSQueue<CFunctor *> m_queue;
 	bool m_bNoQueue;
-	unsigned m_nCurSerialNumber;
-	unsigned m_nBreakSerialNumber;
-};
-
-class CCallQueue : public CCallQueueT<>
-{
 };
 
 //-----------------------------------------------------
-// Optional interface that can be bound to concrete CCallQueue
+// Single-threaded call queue backed by a bump allocator. Both the queued calls and
+// whatever the caller copies in with Copy()/CopyArray() live in the allocator, which
+// is recycled in one go once the queue has been run. All calls are made, in order,
+// after the last one was added.
+//
+// A queued call's bound arguments are destroyed right after it has run (or, if the
+// queue is flushed, when it is discarded), exactly like an owning functor.
 //-----------------------------------------------------
-
 class ICallQueue : public CCallQueueMethods<ICallQueue>
 {
 public:
 	friend class CCallQueueMethods<ICallQueue>;
-	void QueueFunctor( CFunctor *pFunctor )
+
+	std::size_t GetMemoryUsed()
 	{
-		// [mhansen] If we grab an extra reference here then this functor never gets released.
-		// That usually isn't too bad because the memory the functor is allocated in is cleared and
-		// reused every frame.  But, if the functor contains a CUtlDataEnvelope with more than
-		// 4 bytes of data it allocates its own memory and, in that case, we need the destructor to
-		// be called to free it.  So, we don't want to grab the "extra" reference here.
-		// The net result should be that after this call the pFunctor has a ref count of 1 (which
-		// is held by the functor it gets nested in, which is stuck in the call queue) and after it
-		// is executed the owning functor is destructed which causes it to release the reference
-		// and this functor is then freed.  This happens in imatersysteminternal.h:112 where the
-		// destructor is called explictly for the owning functor: pFunctor->~CFunctor();
-		//QueueFunctorInternal( RetAddRef( pFunctor ) );
-		QueueFunctorInternal( pFunctor );
+		return m_Allocator.GetUsed();
+	}
+
+	int Count() const
+	{
+		int i = 0;
+		Elem_t *pCurrent = m_pHead;
+		while ( pCurrent )
+		{
+			i++;
+			pCurrent = pCurrent->pNext;
+		}
+		return i;
+	}
+
+	template <typename T>
+	T &Copy( T &item )
+	{
+		T *pCopy = (T *)m_Allocator.Alloc( sizeof(T) );
+		std::memcpy( pCopy, &item, sizeof(T) );
+		return *pCopy;
+	}
+
+	template <typename T>
+	T *CopyArray( T *p, int n )
+	{
+		T *pCopy = (T *)m_Allocator.Alloc( sizeof(T) * n );
+		std::memcpy( (void *)pCopy, p, sizeof(T) * n );
+		return pCopy;
+	}
+
+	template <const char *>
+	const char *Copy( const char *psz )
+	{
+		int len = V_strlen( psz );
+		char *pCopy = (char *)m_Allocator.Alloc( len + 1 );
+		std::memcpy( pCopy, psz, len + 1 );
+		return pCopy;
+
+	}
+
+	void CallQueued()
+	{
+		if ( !m_pHead )
+		{
+			return;
+		}
+
+		Elem_t *pCurrent = m_pHead;
+		while ( pCurrent )
+		{
+			pCurrent->fn();
+			Elem_t *pNext = pCurrent->pNext;
+			std::destroy_at( pCurrent );
+			pCurrent = pNext;
+		}
+		m_Allocator.FreeAll( false );
+		m_pHead = m_pTail = nullptr;
+	}
+
+	void Flush()
+	{
+		if ( !m_pHead )
+		{
+			return;
+		}
+
+		Elem_t *pCurrent = m_pHead;
+		while ( pCurrent )
+		{
+			Elem_t *pNext = pCurrent->pNext;
+			std::destroy_at( pCurrent );
+			pCurrent = pNext;
+		}
+
+		m_Allocator.FreeAll( false );
+		m_pHead = m_pTail = nullptr;
 	}
 
 protected:
-	virtual void QueueFunctorInternal( CFunctor *pFunctor ) = 0;
+	ICallQueue()
+		: m_pHead( nullptr ), m_pTail( nullptr )
+	{
+	}
+
+	template <typename F>
+	void QueueFunctorInternal( F &&f )
+	{
+		typedef std::remove_cvref_t<F> Call_t;
+		static_assert( alignof( Call_t ) <= 16, "queued calls are bump allocated with 16 byte alignment" );
+
+		Call_t *pCall = new ( m_Allocator.Alloc( sizeof(Call_t) ) ) Call_t( std::forward<F>( f ) );
+		Elem_t *pNew = new ( m_Allocator.Alloc( sizeof(Elem_t) ) ) Elem_t{ nullptr, CFunctor( CArenaCall<Call_t>( pCall ) ) };
+		if ( m_pTail )
+		{
+			m_pTail->pNext = pNew;
+			m_pTail = pNew;
+		}
+		else
+		{
+			m_pHead = m_pTail = pNew;
+		}
+	}
+
+	CMemoryStack m_Allocator;
+
+private:
+	// Refers to a call living in the bump allocator; destroys it (but does not free the memory).
+	template <typename CALL_TYPE>
+	class CArenaCall
+	{
+	public:
+		explicit CArenaCall( CALL_TYPE *pCall ) : m_pCall( pCall ) {}
+		CArenaCall( CArenaCall &&src ) noexcept : m_pCall( std::exchange( src.m_pCall, nullptr ) ) {}
+		~CArenaCall() { if ( m_pCall ) std::destroy_at( m_pCall ); }
+
+		void operator()() { (*m_pCall)(); }
+
+	private:
+		CALL_TYPE *m_pCall;
+	};
+
+	struct Elem_t
+	{
+		Elem_t *pNext;
+		CFunctor fn;
+	};
+
+	Elem_t *m_pHead;
+	Elem_t *m_pTail;
 };
 
 }

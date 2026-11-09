@@ -12,12 +12,12 @@ class INetChannel;
 class IQueuedPacketSender
 {
 public:
-	virtual bool Setup() = 0;
-	virtual void Shutdown() = 0;
-	virtual bool IsRunning() = 0;
-	virtual void ClearQueuedPacketsForChannel( INetChannel *pChan ) =  0;
-	virtual void QueuePacket( INetChannel *pChan, SOCKET s, const char  *buf, int len, const ns_address &to, uint32 msecDelay ) = 0;
-	virtual bool HasQueuedPackets( const INetChannel *pChan ) const = 0;
+	bool Setup();
+	void Shutdown();
+	bool IsRunning();
+	void ClearQueuedPacketsForChannel( INetChannel *pChan );
+	void QueuePacket( INetChannel *pChan, SOCKET s, const char  *buf, int len, const ns_address &to, uint32 msecDelay );
+	bool HasQueuedPackets( const INetChannel *pChan ) const;
 };
 
 extern IQueuedPacketSender *g_pQueuedPackedSender;

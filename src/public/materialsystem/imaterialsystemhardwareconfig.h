@@ -44,12 +44,6 @@ enum VertexCompressionType_t
 };
 
 
-// use DEFCONFIGMETHOD to define time-critical methods that we want to make just return constants
-// on the 360, so that the checks will happen at compile time. Not all methods are defined this way
-// - just the ones that I perceive as being called often in the frame interval.
-#define DEFCONFIGMETHOD( ret_type, method, xbox_return_value )	\
-virtual ret_type method const = 0;
-
 //-----------------------------------------------------------------------------
 // Shadow filter types
 // Important notes: These enums directly correspond to combo indices.
@@ -106,116 +100,116 @@ enum CSMShaderMode_t
 class IMaterialSystemHardwareConfig
 {
 public:
-	virtual int	 GetFrameBufferColorDepth() const = 0;
-	virtual int  GetSamplerCount() const = 0;
-	virtual bool HasSetDeviceGammaRamp() const = 0;
-	DEFCONFIGMETHOD( bool, SupportsStaticControlFlow(), true );
-	virtual VertexCompressionType_t SupportsCompressedVertices() const = 0;
-	virtual int  MaximumAnisotropicLevel() const = 0;	// 0 means no anisotropic filtering
-	virtual int  MaxTextureWidth() const = 0;
-	virtual int  MaxTextureHeight() const = 0;
-	virtual int	 TextureMemorySize() const = 0;
-	virtual bool SupportsMipmappedCubemaps() const = 0;
+	int	 GetFrameBufferColorDepth() const;
+	int  GetSamplerCount() const;
+	bool HasSetDeviceGammaRamp() const;
+	bool SupportsStaticControlFlow() const;
+	VertexCompressionType_t SupportsCompressedVertices() const;
+	int  MaximumAnisotropicLevel() const;	// 0 means no anisotropic filtering
+	int  MaxTextureWidth() const;
+	int  MaxTextureHeight() const;
+	int	 TextureMemorySize() const;
+	bool SupportsMipmappedCubemaps() const;
 
-	virtual int	 NumVertexShaderConstants() const = 0;
-	virtual int	 NumPixelShaderConstants() const = 0;
-	virtual int	 MaxNumLights() const = 0;
-	virtual int	 MaxTextureAspectRatio() const = 0;
-	virtual int	 MaxVertexShaderBlendMatrices() const = 0;
-	virtual int	 MaxUserClipPlanes() const = 0;
-	virtual bool UseFastClipping() const = 0;
+	int	 NumVertexShaderConstants() const;
+	int	 NumPixelShaderConstants() const;
+	int	 MaxNumLights() const;
+	int	 MaxTextureAspectRatio() const;
+	int	 MaxVertexShaderBlendMatrices() const;
+	int	 MaxUserClipPlanes() const;
+	bool UseFastClipping() const;
 
 	// This here should be the major item looked at when checking for compat
 	// from anywhere other than the material system	shaders
-	DEFCONFIGMETHOD( int, GetDXSupportLevel(), 98 );
-	virtual const char *GetShaderDLLName() const = 0;
+	int GetDXSupportLevel() const;
+	const char *GetShaderDLLName() const;
 
-	virtual bool ReadPixelsFromFrontBuffer() const = 0;
+	bool ReadPixelsFromFrontBuffer() const;
 
 	// Are dx dynamic textures preferred?
-	virtual bool PreferDynamicTextures() const = 0;
+	bool PreferDynamicTextures() const;
 
-	DEFCONFIGMETHOD( bool, SupportsHDR(), true );
+	bool SupportsHDR() const;
 
-	virtual bool NeedsAAClamp() const = 0;
-	virtual bool NeedsATICentroidHack() const = 0;
+	bool NeedsAAClamp() const;
+	bool NeedsATICentroidHack() const;
 
 	// This is the max dx support level supported by the card
-	virtual int	 GetMaxDXSupportLevel() const = 0;
+	int	 GetMaxDXSupportLevel() const;
 
 	// Does the card specify fog color in linear space when sRGBWrites are enabled?
-	virtual bool SpecifiesFogColorInLinearSpace() const = 0;
+	bool SpecifiesFogColorInLinearSpace() const;
 
 	// Does the card support sRGB reads/writes?
-	DEFCONFIGMETHOD( bool, SupportsSRGB(), true );
-	DEFCONFIGMETHOD( bool, FakeSRGBWrite(), false );
-	DEFCONFIGMETHOD( bool, CanDoSRGBReadFromRTs(), true );
+	bool SupportsSRGB() const;
+	bool FakeSRGBWrite() const;
+	bool CanDoSRGBReadFromRTs() const;
 
-	virtual bool SupportsGLMixedSizeTargets() const = 0;
+	bool SupportsGLMixedSizeTargets() const;
 
-	virtual bool IsAAEnabled() const = 0;	// Is antialiasing being used?
+	bool IsAAEnabled() const;	// Is antialiasing being used?
 
 	// NOTE: Anything after this was added after shipping HL2.
-	virtual int GetVertexSamplerCount() const = 0;
-	virtual int GetMaxVertexTextureDimension() const = 0;
+	int GetVertexSamplerCount() const;
+	int GetMaxVertexTextureDimension() const;
 
-	virtual int  MaxTextureDepth() const = 0;
+	int  MaxTextureDepth() const;
 
-	virtual HDRType_t GetHDRType() const = 0;
-	virtual HDRType_t GetHardwareHDRType() const = 0;
+	HDRType_t GetHDRType() const;
+	HDRType_t GetHardwareHDRType() const;
 
-	virtual bool SupportsStreamOffset() const = 0;
+	bool SupportsStreamOffset() const;
 
-	virtual int StencilBufferBits() const = 0;
-	virtual int MaxViewports() const = 0;
+	int StencilBufferBits() const;
+	int MaxViewports() const;
 
-	virtual void OverrideStreamOffsetSupport( bool bOverrideEnabled, bool bEnableSupport ) = 0;
+	void OverrideStreamOffsetSupport( bool bOverrideEnabled, bool bEnableSupport );
 
-	virtual ShadowFilterMode_t GetShadowFilterMode( bool bForceLowQualityShadows, bool bPS30 ) const = 0;
+	ShadowFilterMode_t GetShadowFilterMode( bool bForceLowQualityShadows, bool bPS30 ) const;
 
-	virtual int NeedsShaderSRGBConversion() const = 0;
+	int NeedsShaderSRGBConversion() const;
 
-	DEFCONFIGMETHOD( bool, UsesSRGBCorrectBlending(), false );
+	bool UsesSRGBCorrectBlending() const;
 
-	virtual bool HasFastVertexTextures() const = 0;
-	virtual int MaxHWMorphBatchCount() const = 0;
+	bool HasFastVertexTextures() const;
+	int MaxHWMorphBatchCount() const;
 
-	virtual bool SupportsHDRMode( HDRType_t nHDRMode ) const = 0;
+	bool SupportsHDRMode( HDRType_t nHDRMode ) const;
 
-	virtual bool GetHDREnabled( void ) const = 0;
-	virtual void SetHDREnabled( bool bEnable ) = 0;
+	bool GetHDREnabled( void ) const;
+	void SetHDREnabled( bool bEnable );
 
-	virtual bool SupportsBorderColor( void ) const = 0;
-	virtual bool SupportsFetch4( void ) const = 0;
+	bool SupportsBorderColor( void ) const;
+	bool SupportsFetch4( void ) const;
 
-	virtual float GetShadowDepthBias() const = 0;
-	virtual float GetShadowSlopeScaleDepthBias() const = 0;
+	float GetShadowDepthBias() const;
+	float GetShadowSlopeScaleDepthBias() const;
 
-	virtual bool PreferZPrepass() const = 0;
+	bool PreferZPrepass() const;
 
-	virtual bool SuppressPixelShaderCentroidHackFixup() const = 0;
-	virtual bool PreferTexturesInHWMemory() const = 0;
-	virtual bool PreferHardwareSync() const = 0;
-	virtual bool ActualHasFastVertexTextures() const = 0;
+	bool SuppressPixelShaderCentroidHackFixup() const;
+	bool PreferTexturesInHWMemory() const;
+	bool PreferHardwareSync() const;
+	bool ActualHasFastVertexTextures() const;
 
-	virtual bool SupportsShadowDepthTextures( void ) const = 0;
-	virtual ImageFormat GetShadowDepthTextureFormat( void ) const = 0;
-	virtual ImageFormat GetHighPrecisionShadowDepthTextureFormat( void ) const = 0;
-	virtual ImageFormat GetNullTextureFormat( void ) const = 0;
-	virtual int	GetMinDXSupportLevel() const = 0;
-	virtual bool IsUnsupported() const = 0;
+	bool SupportsShadowDepthTextures( void ) const;
+	ImageFormat GetShadowDepthTextureFormat( void ) const;
+	ImageFormat GetHighPrecisionShadowDepthTextureFormat( void ) const;
+	ImageFormat GetNullTextureFormat( void ) const;
+	int	GetMinDXSupportLevel() const;
+	bool IsUnsupported() const;
 
-	virtual float GetLightMapScaleFactor() const = 0;
+	float GetLightMapScaleFactor() const;
 
-	virtual bool SupportsCascadedShadowMapping() const = 0;
-	virtual CSMQualityMode_t GetCSMQuality() const = 0;
-	virtual bool SupportsBilinearPCFSampling() const = 0;
-	virtual CSMShaderMode_t GetCSMShaderMode( CSMQualityMode_t nQualityLevel ) const = 0;
-	virtual bool GetCSMAccurateBlending( void ) const = 0;
-	virtual void SetCSMAccurateBlending( bool bEnable ) = 0;
+	bool SupportsCascadedShadowMapping() const;
+	CSMQualityMode_t GetCSMQuality() const;
+	bool SupportsBilinearPCFSampling() const;
+	CSMShaderMode_t GetCSMShaderMode( CSMQualityMode_t nQualityLevel ) const;
+	bool GetCSMAccurateBlending( void ) const;
+	void SetCSMAccurateBlending( bool bEnable );
 
-	virtual bool SupportsResolveDepth() const = 0;
-	virtual bool HasFullResolutionDepthTexture() const = 0;
+	bool SupportsResolveDepth() const;
+	bool HasFullResolutionDepthTexture() const;
 
 	// Backward compat for stdshaders
 #if defined ( STDSHADER_DBG_DLL_EXPORT ) || defined( STDSHADER_DX9_DLL_EXPORT )

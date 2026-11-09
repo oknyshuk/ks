@@ -5,14 +5,13 @@
 
 
 
-#include "rocketui/rmlui.h"
-import ks.tier1;
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 import std;
-#include "predictable_entity.h"
-#include "cdll_util.h"
-#include "util_shared.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
+import ks.core;
+import ks.math;
+import ks.tier1;
 #include "tier2/tier2.h"
 #include "cmdlib.h"
 #include "scriplib.h"

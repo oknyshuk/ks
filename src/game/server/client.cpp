@@ -3,8 +3,6 @@
 
 // Purpose: client/server game specific stuff
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -19,7 +17,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -614,7 +611,7 @@ void CPointClientCommand::InputCommand( inputdata_t& inputdata )
 	else
 	{
 		// In multiplayer, send it back to the activator
-		CBasePlayer *player = dynamic_cast< CBasePlayer * >( inputdata.pActivator );
+		CBasePlayer *player = entity_cast<CBasePlayer>( inputdata.pActivator );
 		if ( player )
 		{
 			pClient = player->edict();
@@ -1704,6 +1701,7 @@ static int DescribeGroundList( CBaseEntity *ent )
 	return c - 1;
 }
 
+extern int groundlinksallocated;
 void CC_GroundList_f(const CCommand &args)
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
@@ -1728,7 +1726,6 @@ void CC_GroundList_f(const CCommand &args)
 			linkCount += DescribeGroundList( ent );
 		}
 
-		extern int groundlinksallocated;
 		contract_assert( linkCount == groundlinksallocated );
 
 		Msg( "--- %i links\n", groundlinksallocated );

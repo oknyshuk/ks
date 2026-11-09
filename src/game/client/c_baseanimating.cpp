@@ -2,8 +2,6 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rocketui/rmlui.h"
-import ks.vstdlib;
-import std;
 #include "const.h"
 #include "string_t.h"
 #include "predictable_entity.h"
@@ -52,7 +50,6 @@ import std;
 #include "soundinfo.h"
 #include "shaderapi/ishaderapi.h"
 #include "tools/bonelist.h"
-#include "toolframework/itoolframework.h"
 #include "gamestringpool.h"
 #include "engine/ivdebugoverlay.h"
 #include "jigglebones.h"
@@ -108,7 +105,7 @@ mstudioevent_t *GetEventIndexForSequence( mstudioseqdesc_t &seqdesc );
 C_EntityDissolve *DissolveEffect( C_BaseAnimating *pTarget, float flTime );
 C_EntityFlame *FireEffect( C_BaseAnimating *pTarget, C_BaseEntity *pServerFire, float *flScaleEnd, float *flTimeStart, float *flTimeEnd );
 bool NPC_IsImportantNPC( C_BaseAnimating *pAnimating );
-void VCollideWireframe_ChangeCallback( IConVar *pConVar, char const *pOldString, float flOldValue );
+void VCollideWireframe_ChangeCallback( ConVar *pConVar, char const *pOldString, float flOldValue );
 
 ConVar vcollide_wireframe( "vcollide_wireframe", "0", FCVAR_CHEAT, "Render physics collision models in wireframe", VCollideWireframe_ChangeCallback );
 ConVar enable_skeleton_draw( "enable_skeleton_draw", "0", FCVAR_CHEAT, "Render skeletons in wireframe" );
@@ -991,7 +988,7 @@ CStudioHdr *C_BaseAnimating::OnNewModel()
 			SetIdentityMatrix( m_CachedBoneData[i] );
 		}
 	}
-	m_BoneAccessor.Init( this, m_CachedBoneData.data() ); // Always call this in case the studiohdr_t has changed.
+	m_BoneAccessor.Init( m_CachedBoneData.data() ); // Always call this in case the studiohdr_t has changed.
 
 	// Free any IK data
 	if (m_pIk)
@@ -3750,11 +3747,6 @@ void C_BaseAnimating::DoAnimationEvents( CStudioHdr *pStudioHdr )
 
 	// If we're invisible, don't draw the muzzle flash
 	bool bIsInvisible = !IsVisibleToAnyPlayer() && !IsViewModel() && !IsMenuModel();
-	if ( bIsInvisible && !clienttools->IsInRecordingMode() )
-		return;
-
-
-	// If we're invisible, don't process animation events.
 	if ( bIsInvisible )
 		return;
 
@@ -6369,7 +6361,7 @@ int C_BaseAnimating::SelectWeightedSequenceFromModifiers( Activity activity, con
 {
 	contract_assert( activity != ACT_INVALID );
 	contract_assert( GetModelPtr() );
-	return GetModelPtr()->SelectWeightedSequenceFromModifiers( activity, pActivityModifiers, iModifierCount );
+	return ::SelectWeightedSequenceFromModifiers( GetModelPtr(), activity, pActivityModifiers, iModifierCount );
 }
 
 //=========================================================
@@ -6774,7 +6766,7 @@ private:
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_BoneFollower, DT_BoneFollower, CBoneFollower )
 
-void VCollideWireframe_ChangeCallback( IConVar *pConVar, char const *pOldString, float flOldValue )
+void VCollideWireframe_ChangeCallback( ConVar *pConVar, char const *pOldString, float flOldValue )
 {
 	for ( C_BaseEntity *pEntity = ClientEntityList().FirstBaseEntity(); pEntity; pEntity = ClientEntityList().NextBaseEntity(pEntity) )
 	{

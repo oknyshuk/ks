@@ -5,8 +5,6 @@
 //			with the OnFoundEntity output.
 //-----------------------------------------------------------------------------
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "edict.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -50,7 +47,8 @@ enum EntFinderMethod_t
 
 class CPointEntityFinder : public CBaseEntity
 {
-	void Activate( void );
+	public: void Activate_Impl( void );
+	private:
 
 	DECLARE_CLASS( CPointEntityFinder, CBaseEntity );
 
@@ -82,7 +80,7 @@ LINK_ENTITY_TO_CLASS( point_entity_finder, CPointEntityFinder );
 IMPLEMENT_REFLECT_DATAMAP( CPointEntityFinder )
 
 
-void CPointEntityFinder::Activate( void )
+void CPointEntityFinder::Activate_Impl( void )
 {
 	// Get the filter, if it exists.
 	if (m_iFilterName != NULL_STRING)
@@ -90,7 +88,7 @@ void CPointEntityFinder::Activate( void )
 		m_hFilter = dynamic_cast<CBaseFilter *>(gEntList.FindEntityByName( nullptr, m_iFilterName ));
 	}
 
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 }
 
 

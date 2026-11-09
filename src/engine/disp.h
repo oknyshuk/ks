@@ -27,31 +27,31 @@ class CDispInfo : public IDispInfo, public CDispUtilsHelper
 {
 // IDispInfo overrides.
 public:
-	virtual				~CDispInfo();
+	~CDispInfo();
 
-	virtual void		GetIntersectingSurfaces( GetIntersectingSurfaces_Struct *pStruct );
-	virtual void		RenderWireframeInLightmapPage( int pageId );
+	void		GetIntersectingSurfaces( GetIntersectingSurfaces_Struct *pStruct );
+	void		RenderWireframeInLightmapPage( int pageId );
 	
-	virtual void		GetBoundingBox( Vector& bbMin, Vector& bbMax );
+	void		GetBoundingBox( Vector& bbMin, Vector& bbMax );
 
-	virtual void		SetParent( SurfaceHandle_t surfID );
-	virtual SurfaceHandle_t GetParent(); // returns surfID
+	void		SetParent( SurfaceHandle_t surfID );
+	SurfaceHandle_t GetParent(); // returns surfID
 
 	// add the dlights on this surface to the lightmap buffer for updload
-	virtual void		AddDynamicLights( dlight_t *pLights, unsigned int lightMask );
+	void		AddDynamicLights( dlight_t *pLights, unsigned int lightMask );
 	// compute which dlights affect this surface
-	virtual unsigned int ComputeDynamicLightMask( dlight_t *pLights );
+	unsigned int ComputeDynamicLightMask( dlight_t *pLights );
 
-	virtual DispDecalHandle_t	NotifyAddDecal( decal_t *pDecal, float flSize );
-	virtual void				NotifyRemoveDecal( DispDecalHandle_t h );
-	virtual DispShadowHandle_t	AddShadowDecal( ShadowHandle_t shadowHandle );
-	virtual void				RemoveShadowDecal( DispShadowHandle_t handle );
+	DispDecalHandle_t	NotifyAddDecal( decal_t *pDecal, float flSize );
+	void				NotifyRemoveDecal( DispDecalHandle_t h );
+	DispShadowHandle_t	AddShadowDecal( ShadowHandle_t shadowHandle );
+	void				RemoveShadowDecal( DispShadowHandle_t handle );
 
 	// Compute shadow fragments for a particular shadow
-	virtual bool		ComputeShadowFragments( DispShadowHandle_t h, int& vertexCount, int& indexCount );
+	bool		ComputeShadowFragments( DispShadowHandle_t h, int& vertexCount, int& indexCount );
 
-	virtual bool		GetTag();
-	virtual void		SetTag();
+	bool		GetTag();
+	void		SetTag();
 	
 public:
 
@@ -95,10 +95,10 @@ public:
 // CDispUtilsHelper implementation.
 public:
 
-	virtual const CPowerInfo*		GetPowerInfo() const;
-	virtual CDispNeighbor*			GetEdgeNeighbor( int index );
-	virtual CDispCornerNeighbors*	GetCornerNeighbors( int index );
-	virtual CDispUtilsHelper*		GetDispUtilsByIndex( int index );
+	const CPowerInfo*		GetPowerInfo() const;
+	CDispNeighbor*			GetEdgeNeighbor( int index );
+	CDispCornerNeighbors*	GetCornerNeighbors( int index );
+	CDispUtilsHelper*		GetDispUtilsByIndex( int index );
 
 
 // Initialization functions.
@@ -183,7 +183,7 @@ public:
 	void GenerateDecalFragments( CVertIndex const &nodeIndex, 
 		int iNodeBitIndex, unsigned short decalHandle, CDispDecalBase *pDispDecal );
 
-private:
+public:
 	// Initializes node AABB tree
 	void UpdateNodeBoundingBoxes();
 	void UpdateNodeBoundingBoxes_R( CVertIndex const &nodeIndex, int iNodeBitIndex, int iLevel );

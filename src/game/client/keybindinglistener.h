@@ -5,7 +5,6 @@
 
 #include "inputsystem/ButtonCode.h"
 
-enum ButtonCode_t;
 
 class IKeyBindingListener
 {

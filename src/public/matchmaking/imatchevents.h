@@ -4,14 +4,16 @@
 
 import ks.tier1;
 
-class IMatchEventsSink
-{
-public:
-	virtual void OnEvent( KeyValues *pEvent ) {}
-	
-	//
-	// List of events
-	//
+import std;
+
+// A handler of match events. Whoever listens to the events subscribes with a handler (typically
+// `[this]( KeyValues *pEvent ) { OnEvent( pEvent ); }`) under an owner key (typically `this`) and
+// unsubscribes with the same key; the subscription owns the handler.
+using MatchEventHandler_t = std::move_only_function< void( KeyValues * ) >;
+
+//
+// List of events
+//
 
 /*
 	"OnSysStorageDevicesChanged"
@@ -200,49 +202,17 @@ public:
 								actions are confirmed by user, storage devices are mounted, etc.
 */
 
-};
-
+// Non-virtual facade: the only implementation is the matchmaking framework's CMatchEventsSubscription.
 class IMatchEventsSubscription
 {
 public:
-	virtual void Subscribe( IMatchEventsSink *pSink ) = 0;
-	virtual void Unsubscribe( IMatchEventsSink *pSink ) = 0;
+	// Subscribing again with the same owner adds a reference (the first handler stays);
+	// every Subscribe needs a matching Unsubscribe.
+	void Subscribe( const void *pOwner, MatchEventHandler_t handler );
+	void Unsubscribe( const void *pOwner );
 
-	virtual void BroadcastEvent( KeyValues *pEvent ) = 0;
+	void BroadcastEvent( KeyValues *pEvent );
 
-	virtual void RegisterEventData( KeyValues *pEventData ) = 0;
-	virtual KeyValues * GetEventData( char const *szEventDataKey ) = 0;
-};
-
-
-//
-// Renamer for the match events event-handler function
-// Usage:
-// 	class MyClass : public CMatchEventsSinkFn< MyClass >
-// 	{
-// 	public:
-// 		MyClass() : MatchEventsSinkFnClass( &MyClass::HandleMatchSinkEvent ) {}
-// 		void HandleMatchSinkEvent( KeyValues *pEvent );
-// 	};
-//
-
-template < typename TDerived >
-class CMatchEventsSinkFn : public IMatchEventsSink
-{
-protected:
-	typedef TDerived DerivedClass;
-	typedef void ( TDerived::*PFnDerivedHandler_t )( KeyValues *pEvent );
-	typedef CMatchEventsSinkFn< TDerived > MatchEventsSinkFnClass;
-
-protected:
-	explicit CMatchEventsSinkFn( PFnDerivedHandler_t pfn ) : m_pfnDerived( pfn ) {}
-
-public:
-	virtual void OnEvent( KeyValues *pEvent )
-	{
-		( static_cast< TDerived * >( this )->*m_pfnDerived )( pEvent );
-	}
-
-private:
-	PFnDerivedHandler_t m_pfnDerived;
+	void RegisterEventData( KeyValues *pEventData );
+	KeyValues * GetEventData( char const *szEventDataKey );
 };

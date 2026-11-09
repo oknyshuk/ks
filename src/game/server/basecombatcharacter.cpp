@@ -3,8 +3,6 @@
 
 // Purpose: Base combat character with no AI
 
-import std;
-import ks.tier1;
 #include "vphysics_interface.h"
 #include "const.h"
 #include "edict.h"
@@ -20,7 +18,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "networkvar.h"
 #include "sharedvar.h"
 #include "baseentity_shared.h"
@@ -144,7 +141,7 @@ void *SendProxy_SendBaseCombatCharacterLocalDataTable( const SendProp *pProp, co
 	{
 		if ( pBCC->IsPlayer() )
 		{
-			pRecipients->SetOnly( pBCC->entindex() - 1 );
+			SendProxyRecipients_SetOnly( pRecipients,  pBCC->entindex() - 1 );
 		}
 		else
 		{
@@ -155,7 +152,7 @@ void *SendProxy_SendBaseCombatCharacterLocalDataTable( const SendProp *pProp, co
 				CBaseCombatCharacter *pDriver = pVehicle->GetPassenger();
 				if ( pDriver != nullptr )
 				{
-					pRecipients->SetOnly( pDriver->entindex() - 1 );
+					SendProxyRecipients_SetOnly( pRecipients,  pDriver->entindex() - 1 );
 				}
 			}
 		}
@@ -172,7 +169,7 @@ void *SendProxy_SendBaseCombatCharacterNonLocalDataTable( const SendProp *pProp,
 	{
 		if ( pBCC->IsPlayer() )
 		{
-			pRecipients->ExcludeOnly( pBCC->entindex() - 1 );
+			SendProxyRecipients_ExcludeOnly( pRecipients,  pBCC->entindex() - 1 );
 		}
 	}
 	return ( void * )pVarData;
@@ -252,14 +249,14 @@ static std::map<std::pair<CBaseEntity *, CBaseEntity *>, VisibilityCacheEntry_t>
 const std::size_t VIS_CACHE_MAX_ENTRIES = 0xFFFF;
 const float VIS_CACHE_ENTRY_LIFE = .090;
 
-bool CBaseCombatCharacter::FVisible( CBaseEntity *pEntity, int traceMask, CBaseEntity **ppBlocker )
+bool CBaseCombatCharacter::FVisible_Impl( CBaseEntity *pEntity, int traceMask, CBaseEntity **ppBlocker )
 {
 	CVProfScope _( "CBaseCombatCharacter::FVisible", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
 	if ( traceMask != MASK_BLOCKLOS || !ShouldUseVisibilityCache() || pEntity == this
 		 )
 	{
-		return BaseClass::FVisible( pEntity, traceMask, ppBlocker );
+		return BaseClass::FVisible_Impl( pEntity, traceMask, ppBlocker );
 	}
 
 	std::pair<CBaseEntity *, CBaseEntity *> cacheKey;
@@ -310,7 +307,7 @@ bool CBaseCombatCharacter::FVisible( CBaseEntity *pEntity, int traceMask, CBaseE
 		}
 		else
 		{
-			return BaseClass::FVisible( pEntity, traceMask, ppBlocker );
+			return BaseClass::FVisible_Impl( pEntity, traceMask, ppBlocker );
 		}
 	}
 
@@ -320,7 +317,7 @@ bool CBaseCombatCharacter::FVisible( CBaseEntity *pEntity, int traceMask, CBaseE
 		ppBlocker = &pBlocker;
 	}
 
-	bool bResult = BaseClass::FVisible( pEntity, traceMask, ppBlocker );
+	bool bResult = BaseClass::FVisible_Impl( pEntity, traceMask, ppBlocker );
 
 	if ( !bResult )
 	{
@@ -495,9 +492,9 @@ CBaseCombatCharacter::~CBaseCombatCharacter( void )
 //-----------------------------------------------------------------------------
 // Purpose: Put the combat character into the environment
 //-----------------------------------------------------------------------------
-void CBaseCombatCharacter::Spawn( void )
+void CBaseCombatCharacter::Spawn_Impl( void )
 {
-	BaseClass::Spawn();
+	BaseClass::Spawn_Impl();
 	
 	SetBlocksLOS( false );
 	m_aliveTimer.Start();
@@ -519,11 +516,11 @@ void CBaseCombatCharacter::Spawn( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseCombatCharacter::Precache()
+void CBaseCombatCharacter::Precache_Impl()
 {
 	CVProfScope _( "CBaseCombatCharacter::Precache", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 
 	PrecacheScriptSound( "BaseCombatCharacter.CorpseGib" );
 	PrecacheScriptSound( "BaseCombatCharacter.StopWeaponSounds" );
@@ -544,7 +541,7 @@ void CBaseCombatCharacter::Precache()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CBaseCombatCharacter::UpdateOnRemove( void )
+void CBaseCombatCharacter::UpdateOnRemove_Impl( void )
 {
 	int i;
 	// Make sure any weapons I didn't drop get removed.
@@ -568,7 +565,7 @@ void CBaseCombatCharacter::UpdateOnRemove( void )
 	RemoveAllWearables();
 
 	// Chain at end to mimic destructor unwind order
-	BaseClass::UpdateOnRemove();
+	BaseClass::UpdateOnRemove_Impl();
 }
 
 
@@ -1184,9 +1181,9 @@ bool CBaseCombatCharacter::BecomeRagdoll( const CTakeDamageInfo &info, const Vec
 Killed
 ============
 */
-void CBaseCombatCharacter::Event_Killed( const CTakeDamageInfo &info )
+extern ConVar npc_vphysics;
+void CBaseCombatCharacter::Event_Killed_Impl( const CTakeDamageInfo &info )
 {
-	extern ConVar npc_vphysics;
 
 	// Advance life state to dying
 	m_lifeState = LIFE_DYING;
@@ -1960,12 +1957,12 @@ void CBaseCombatCharacter::RemoveWeaponOnPlayer( CBaseCombatWeapon *pWeapon )
 }
 
 // take health
-int CBaseCombatCharacter::TakeHealth (float flHealth, int bitsDamageType)
+int CBaseCombatCharacter::TakeHealth_Impl (float flHealth, int bitsDamageType)
 {
 	if (!m_takedamage)
 		return 0;
 	
-	return BaseClass::TakeHealth(flHealth, bitsDamageType);
+	return BaseClass::TakeHealth_Impl(flHealth, bitsDamageType);
 }
 
 
@@ -1985,7 +1982,7 @@ When a NPC is poisoned via an arrow etc it takes all the poison damage at once.
 GLOBALS ASSUMED SET:  g_iSkillLevel
 ============
 */
-int CBaseCombatCharacter::OnTakeDamage( const CTakeDamageInfo &info )
+int CBaseCombatCharacter::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 {
 	int retVal = 0;
 
@@ -2223,13 +2220,13 @@ Vector CBaseCombatCharacter::BodyDirection3D( void )
 }
 
 
-void CBaseCombatCharacter::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
+void CBaseCombatCharacter::SetTransmit_Impl( CCheckTransmitInfo *pInfo, bool bAlways )
 {
 	// Skip this work if we're already marked for transmission.
 	if ( (*pInfo->m_pTransmitEdict)[ entindex() ] )
 		return;
 
-	BaseClass::SetTransmit( pInfo, bAlways );
+	BaseClass::SetTransmit_Impl( pInfo, bAlways );
 
 	bool bLocalPlayer = ( pInfo->m_pClientEnt == edict() );
 	if ( IsPlayer() && !bLocalPlayer )
@@ -2853,10 +2850,10 @@ int CBaseCombatCharacter::GiveAmmo( int iCount, const char *szName, bool bSuppre
 
 ConVar	phys_stressbodyweights( "phys_stressbodyweights", "5.0" );
 // disabled stress damage to save CPU, none of the NPCs really use it and the player has a different codepath
-void CBaseCombatCharacter::VPhysicsUpdate( IPhysicsObject *pPhysics )
+void CBaseCombatCharacter::VPhysicsUpdate_Impl( IPhysicsObject *pPhysics )
 {
 	ApplyStressDamage( pPhysics, false );
-	BaseClass::VPhysicsUpdate( pPhysics );
+	BaseClass::VPhysicsUpdate_Impl( pPhysics );
 }
 
 float CBaseCombatCharacter::CalculatePhysicsStressDamage( vphysics_objectstress_t *pStressOut, IPhysicsObject *pPhysics )
@@ -2911,7 +2908,7 @@ const impactdamagetable_t &CBaseCombatCharacter::GetPhysicsImpactDamageTable( vo
 ConVar	phys_impactforcescale( "phys_impactforcescale", "1.0" ); 
 ConVar	phys_upimpactforcescale( "phys_upimpactforcescale", "0.375" ); 
 
-void CBaseCombatCharacter::VPhysicsShadowCollision( int index, gamevcollisionevent_t *pEvent )
+void CBaseCombatCharacter::VPhysicsShadowCollision_Impl( int index, gamevcollisionevent_t *pEvent )
 {
 	int otherIndex = !index;
 	CBaseEntity *pOther = pEvent->pEntities[otherIndex];
@@ -3380,12 +3377,12 @@ void CBaseCombatCharacter::OnNavAreaRemoved( CNavArea *removedArea )
 //-----------------------------------------------------------------------------
 // Purpose: Changing team, maintain associated data
 //-----------------------------------------------------------------------------
-void CBaseCombatCharacter::ChangeTeam( int iTeamNum )
+void CBaseCombatCharacter::ChangeTeam_Impl( int iTeamNum )
 {
 	// old team member no longer in the nav mesh
 	ClearLastKnownArea();
 
-	BaseClass::ChangeTeam( iTeamNum );
+	BaseClass::ChangeTeam_Impl( iTeamNum );
 }
 
 

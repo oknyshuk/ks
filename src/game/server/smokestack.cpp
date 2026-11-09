@@ -3,8 +3,6 @@
 
 // Purpose: Implements the server side of a steam jet particle system entity.
 
-import std;
-import ks.math;
 #include "edict.h"
 #include "eiface.h"
 #include "iserverentity.h"
@@ -70,7 +68,7 @@ CSmokeStack::~CSmokeStack()
 }
 
 
-void CSmokeStack::Spawn( void )
+void CSmokeStack::Spawn_Impl( void )
 {
 	if ( m_InitialState )
 	{
@@ -79,7 +77,7 @@ void CSmokeStack::Spawn( void )
 }
 
 
-void CSmokeStack::Activate()
+void CSmokeStack::Activate_Impl()
 {
 	DetectInSkybox();
 
@@ -113,7 +111,7 @@ void CSmokeStack::Activate()
 	m_AmbientLight.m_vColor.GetForModify() /= 255.0f;
 	m_DirLight.m_vColor.GetForModify() /= 255.0f;
 
-	BaseClass::Activate();
+	BaseClass::Activate_Impl();
 
 	// Legacy support..
 	if ( m_iMaterialModel == -1 )
@@ -121,7 +119,7 @@ void CSmokeStack::Activate()
 }
 
 
-bool CSmokeStack::KeyValue( const char *szKeyName, const char *szValue )
+bool CSmokeStack::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if( stricmp( szKeyName, "Wind" ) == 0 )
 	{
@@ -179,16 +177,16 @@ bool CSmokeStack::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 }
 
 
-void CSmokeStack::Precache()
+void CSmokeStack::Precache_Impl()
 {
 	m_iMaterialModel = PrecacheModel( STRING( m_strMaterialModel ) );
 	
-	BaseClass::Precache();
+	BaseClass::Precache_Impl();
 }
 
 

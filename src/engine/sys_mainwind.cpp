@@ -57,7 +57,7 @@ class CGame : public IGame
 {
 public:
 					CGame( void );
-	virtual			~CGame( void );
+	~CGame( void );
 
 	bool			Init( void *pvInstance );
 	bool			Shutdown( void );
@@ -87,14 +87,14 @@ public:
 	void			SetCanPostActivateEvents( bool bEnable );
 	bool			CanPostActivateEvents();
 
-	virtual void    OnScreenSizeChanged( int nOldWidth, int nOldHeight );
+	void    OnScreenSizeChanged( int nOldWidth, int nOldHeight );
 
 public:
 	void			SetMainWindow( HWND window );
 	void			SetActiveApp( bool active );
 	// plays a video file and waits until completed. Can be interrupted by user input.
-	virtual void	PlayVideoListAndWait( const char *szVideoFileList, bool bNeedHealthWarning = false );
-	virtual void	PlayVideoAndWait(const char *filename, bool bNeedHealthWarning = false);
+	void	PlayVideoListAndWait( const char *szVideoFileList, bool bNeedHealthWarning = false );
+	void	PlayVideoAndWait(const char *filename, bool bNeedHealthWarning = false);
 
 // Message handlers.
 public:
@@ -107,14 +107,14 @@ public:
 	void	DispatchInputEvent( const InputEvent_t &event );
 
 	// Dispatch all the queued up messages.
-	virtual void	DispatchAllStoredGameMessages();
+	void	DispatchAllStoredGameMessages();
 
 	InputContextHandle_t GetInputContext() { return m_hInputContext; }
 
-private:
+public:
 	void			AppActivate( bool fActive );
 
-private:
+public:
 	void AttachToWindow();
 	void DetachFromWindow();
 
@@ -135,6 +135,9 @@ private:
 	void			UpdateDesktopInformation( HWND hWnd );
 	InputContextHandle_t m_hInputContext;
 };
+
+#include "facade/igame.inl"
+
 
 static CGame g_Game;
 IGame *game = ( IGame * )&g_Game;

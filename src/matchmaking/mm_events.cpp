@@ -22,12 +22,22 @@ CMatchEventsSubscription *g_pMatchEventsSubscription = &g_MatchEventsSubscriptio
 // Implementation
 //
 
-void CMatchEventsSubscription::Subscribe( IMatchEventsSink *pSink )
+int CMatchEventsSubscription::FindSink( const void *pOwner ) const
 {
-	if ( !pSink )
+	for ( int i = 0; i < std::ssize( m_arrSinks ); ++ i )
+	{
+		if ( m_arrSinks[ i ].m_pOwner == pOwner )
+			return i;
+	}
+	return -1;
+}
+
+void CMatchEventsSubscription::Subscribe( const void *pOwner, MatchEventHandler_t handler )
+{
+	if ( !pOwner )
 		return;
 
-	int idx = ks::find_index( m_arrSinks, pSink );
+	int idx = FindSink( pOwner );
 	if ( ks::is_valid_index( m_arrSinks, idx ) )
 	{
 		contract_assert( ks::is_valid_index( m_arrRefCount, idx ) );
@@ -37,19 +47,19 @@ void CMatchEventsSubscription::Subscribe( IMatchEventsSink *pSink )
 	}
 	else
 	{
-		m_arrSinks.push_back( pSink );
+		m_arrSinks.push_back( { pOwner, std::make_shared< MatchEventHandler_t >( std::move( handler ) ) } );
 		m_arrRefCount.push_back( 1 );
 		
 		contract_assert( std::ssize( m_arrSinks ) == std::ssize( m_arrRefCount ) );
 	}
 }
 
-void CMatchEventsSubscription::Unsubscribe( IMatchEventsSink *pSink )
+void CMatchEventsSubscription::Unsubscribe( const void *pOwner )
 {
-	if ( !pSink )
+	if ( !pOwner )
 		return;
 
-	int idx = ks::find_index( m_arrSinks, pSink );
+	int idx = FindSink( pOwner );
 	contract_assert( ks::is_valid_index( m_arrSinks, idx ) );
 	if ( !ks::is_valid_index( m_arrSinks, idx ) )
 		return;
@@ -129,13 +139,13 @@ void CMatchEventsSubscription::BroadcastEvent( KeyValues *pEvent )
 		  ++ m_arrIteratorsOutstanding.back() )
 	{
 		int i = m_arrIteratorsOutstanding.back();
-		IMatchEventsSink *pSink = m_arrSinks[ i ];
+		std::shared_ptr< MatchEventHandler_t > pHandler = m_arrSinks[ i ].m_pHandler;
 		
 		contract_assert( ks::is_valid_index( m_arrRefCount, i ) );
 		contract_assert( m_arrRefCount[i] > 0 );
-		contract_assert( pSink );
+		contract_assert( pHandler );
 
-		pSink->OnEvent( pEvent );
+		( *pHandler )( pEvent );
 	}
 	m_arrIteratorsOutstanding.resize( m_arrIteratorsOutstanding.size() - 1 );
 
@@ -211,3 +221,6 @@ KeyValues * CMatchEventsSubscription::GetEventData( char const *szEventDataKey )
 
 	return nullptr;
 }
+
+//-----------------------------------------------------------------------------
+#include "facade/imatcheventssubscription.inl"

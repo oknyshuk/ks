@@ -10,6 +10,7 @@ import ks.vstdlib;
 #include "soundchars.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "tier2/tier2.h"
+#include "appframework/apptiers.h"
 #include "datacache/iresourceaccesscontrol.h"
 
 inline constexpr const char *MANIFEST_FILE = "scripts/game_sounds_manifest.txt";
@@ -68,48 +69,14 @@ int	CSoundEmitterSystemBase::InvalidIndex() const
 	return -1;
 }
 
-//-----------------------------------------------------------------------------
-//
-// implementation of IUniformRandomStream
-//
-//-----------------------------------------------------------------------------
-class CSoundEmitterUniformRandomStream : public IUniformRandomStream
-{
-public:
-	// Sets the seed of the random number generator
-	void	SetSeed( int iSeed )
-	{
-		// Never call this from the client or game!
-		contract_assert( 0 );
-	}
-
-	// Generates random numbers
-	float	RandomFloat( float flMinVal = 0.0f, float flMaxVal = 1.0f )
-	{
-		return ::RandomFloat( flMinVal, flMaxVal );
-	}
-
-	int		RandomInt( int iMinVal, int iMaxVal )
-	{
-		return ::RandomInt( iMinVal, iMaxVal );
-	}
-
-	float	RandomFloatExp( float flMinVal = 0.0f, float flMaxVal = 1.0f, float flExponent = 1.0f )
-	{
-		return ::RandomFloatExp( flMinVal, flMaxVal, flExponent );
-	}
-
-};
-
-static CSoundEmitterUniformRandomStream g_RandomStream;
-IUniformRandomStream *randomStream = &g_RandomStream;
+CUniformRandomStream *randomStream = &GlobalUniformRandomStream();
 
 //-----------------------------------------------------------------------------
 // Connect, disconnect
 //-----------------------------------------------------------------------------
 bool CSoundEmitterSystemBase::Connect( CreateInterfaceFn factory )
 {
-	if ( !BaseClass::Connect( factory ) )
+	if ( !AppSystemTier2Connect( factory ) )
 		return false;
 
 	if ( !g_pFullFileSystem )
@@ -124,7 +91,7 @@ bool CSoundEmitterSystemBase::Connect( CreateInterfaceFn factory )
 
 void CSoundEmitterSystemBase::Disconnect()
 {
-	BaseClass::Disconnect();
+	AppSystemTier2Disconnect();
 }
 
 
@@ -164,7 +131,7 @@ InitReturnVal_t CSoundEmitterSystemBase::Init()
 	if ( m_nInitCount > 1 )
 		return INIT_OK;
 
-	InitReturnVal_t nRetVal = BaseClass::Init();
+	InitReturnVal_t nRetVal = AppSystemTier1Init();
 	if ( nRetVal != INIT_OK )
 		return nRetVal;
 
@@ -183,7 +150,7 @@ void CSoundEmitterSystemBase::Shutdown()
 		return;
 
 	ShutdownSounds();
-	BaseClass::Shutdown();
+	AppSystemTier1Shutdown();
 }
 
 
@@ -1919,3 +1886,9 @@ void CSoundEmitterSystemBase::Flush()
 
 CSoundEmitterSystemBase g_SoundEmitterSystemBase;
 static InterfaceReg s_Reg_CSoundEmitterSystemBase_ISoundEmitterSystemBase( []() -> void * { return static_cast<ISoundEmitterSystemBase *>( &g_SoundEmitterSystemBase ); }, SOUNDEMITTERSYSTEM_INTERFACE_VERSION );;
+
+
+//-----------------------------------------------------------------------------
+// The ISoundEmitterSystemBase members forward to CSoundEmitterSystemBase
+//-----------------------------------------------------------------------------
+#include "facade/isoundemittersystembase.inl"

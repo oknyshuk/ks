@@ -22,8 +22,8 @@ class CFuncNavBlocker : public CBaseEntity
 	DECLARE_CLASS( CFuncNavBlocker, CBaseEntity );
 
 public:
-	void Spawn();
-	virtual void UpdateOnRemove( void );
+	void Spawn_Impl();
+	void UpdateOnRemove_Impl( void );
 
 	[[= ks::reflect::Input{ .name = "BlockNav", .type = FIELD_VOID } ]] void InputBlockNav( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "UnblockNav", .type = FIELD_VOID } ]] void InputUnblockNav( inputdata_t &inputdata );
@@ -45,7 +45,7 @@ public:
 		return m_isBlockingNav[ teamNumber ];
 	}
 
-	int DrawDebugTextOverlays( void );
+	int DrawDebugTextOverlays_Impl( void );
 
 	bool operator()( CNavArea *area );	// functor that blocks areas in our extent
 

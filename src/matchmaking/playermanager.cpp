@@ -155,3 +155,6 @@ void PlayerManager::OnEvent( KeyValues *pEvent )
 		}
 	}
 }
+
+//-----------------------------------------------------------------------------
+#include "facade/iplayermanager.inl"

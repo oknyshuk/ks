@@ -3,6 +3,7 @@
 
 import ks.vstdlib;
 #include "paint.h"
+#include "materialsystem/facade/ipaintmapdatamanager.inl"
 #include "materialsystem/imaterial.h"
 #include "pixelwriter.h"
 #include "gl_model_private.h"

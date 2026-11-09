@@ -14,12 +14,12 @@ public:
 	CSPSharedMemory( void ) : m_pMemory(nullptr), m_Size(0), m_iRefCount(0) { };
 	~CSPSharedMemory( void );
 
-	virtual bool	Init( std::size_t iSize ); //Initial implementation assumes the size is fixed/hardcoded
-	virtual uint8 *	Base( void );
-	virtual std::size_t	Size( void );
+	bool	Init( std::size_t iSize ); //Initial implementation assumes the size is fixed/hardcoded
+	uint8 *	Base( void );
+	std::size_t	Size( void );
 
-	virtual void	AddRef( void );
-	virtual void	Release( void );
+	void	AddRef( void );
+	void	Release( void );
 
 	
 	std::string m_Name;
@@ -28,6 +28,9 @@ public:
 	std::size_t m_Size;
 	unsigned int m_iRefCount;
 };
+
+#include "facade/ispsharedmemory.inl"
+
 
 CSPSharedMemory::~CSPSharedMemory( void )
 {

@@ -220,22 +220,22 @@ class CVoxelTree
 public:
 	// constructor, destructor
 	CVoxelTree();
-	virtual ~CVoxelTree();
+	~CVoxelTree();
 
 	// Inherited from ISpatialPartition
-	virtual void Init(  CSpatialPartition *pOwner, int iTree, const Vector& worldmin, const Vector& worldmax );
+	void Init(  CSpatialPartition *pOwner, int iTree, const Vector& worldmin, const Vector& worldmax );
 
-	virtual void ElementMoved( SpatialPartitionHandle_t handle, const Vector& mins, const Vector& maxs );
-	virtual void EnumerateElementsInBox( SpatialPartitionListMask_t listMask, const Vector& mins, const Vector& maxs, bool coarseTest, IPartitionEnumerator* pIterator );
-	virtual void EnumerateElementsInSphere( SpatialPartitionListMask_t listMask, const Vector& origin, float radius, bool coarseTest, IPartitionEnumerator* pIterator );
-	virtual void EnumerateElementsAlongRay( SpatialPartitionListMask_t listMask, const Ray_t& ray, bool coarseTest, IPartitionEnumerator* pIterator );
-	virtual void EnumerateElementsAtPoint( SpatialPartitionListMask_t listMask, const Vector& pt, bool coarseTest, IPartitionEnumerator* pIterator );
+	void ElementMoved( SpatialPartitionHandle_t handle, const Vector& mins, const Vector& maxs );
+	void EnumerateElementsInBox( SpatialPartitionListMask_t listMask, const Vector& mins, const Vector& maxs, bool coarseTest, IPartitionEnumerator* pIterator );
+	void EnumerateElementsInSphere( SpatialPartitionListMask_t listMask, const Vector& origin, float radius, bool coarseTest, IPartitionEnumerator* pIterator );
+	void EnumerateElementsAlongRay( SpatialPartitionListMask_t listMask, const Ray_t& ray, bool coarseTest, IPartitionEnumerator* pIterator );
+	void EnumerateElementsAtPoint( SpatialPartitionListMask_t listMask, const Vector& pt, bool coarseTest, IPartitionEnumerator* pIterator );
 
-	virtual void RenderAllObjectsInTree( float flTime );
-	virtual void RenderObjectsInPlayerLeafs( const Vector &vecPlayerMin, const Vector &vecPlayerMax, float flTime );
+	void RenderAllObjectsInTree( float flTime );
+	void RenderObjectsInPlayerLeafs( const Vector &vecPlayerMin, const Vector &vecPlayerMax, float flTime );
 
-	virtual void ReportStats( const char *pFileName );
-	virtual void DrawDebugOverlays();
+	void ReportStats( const char *pFileName );
+	void DrawDebugOverlays();
 
 	EntityInfo_t &EntityInfo( SpatialPartitionHandle_t hPartition );
 	CLeafList &LeafList();
@@ -272,7 +272,7 @@ public:
 	// Purpose:
 	void ComputeSweptRayBounds( const Ray_t &ray, const Vector &vecStartMin, const Vector &vecStartMax, Vector *pVecMin, Vector *pVecMax );
 
-private:
+public:
 
 	int									m_nLevelCount;
 	CVoxelHash*							m_pVoxelHash;
@@ -302,61 +302,61 @@ public:
 	};
 
 	// Inherited from ISpatialPartition
-	virtual void Init( const Vector& worldmin, const Vector& worldmax );
+	void Init( const Vector& worldmin, const Vector& worldmax );
 	void Shutdown( void );
 
-	virtual SpatialPartitionHandle_t CreateHandle( IHandleEntity *pHandleEntity );
-	virtual SpatialPartitionHandle_t CreateHandle( IHandleEntity *pHandleEntity, SpatialPartitionListMask_t listMask, const Vector& mins, const Vector& maxs ); 
-	virtual void DestroyHandle( SpatialPartitionHandle_t handle );
+	SpatialPartitionHandle_t CreateHandle( IHandleEntity *pHandleEntity );
+	SpatialPartitionHandle_t CreateHandle( IHandleEntity *pHandleEntity, SpatialPartitionListMask_t listMask, const Vector& mins, const Vector& maxs ); 
+	void DestroyHandle( SpatialPartitionHandle_t handle );
 
-	virtual void Insert( SpatialPartitionListMask_t listMask, SpatialPartitionHandle_t handle );
-	virtual void Remove( SpatialPartitionListMask_t listMask, SpatialPartitionHandle_t handle );
-	virtual void RemoveAndInsert( SpatialPartitionListMask_t removeMask, SpatialPartitionListMask_t insertMask, SpatialPartitionHandle_t handle );
-	virtual void Remove( SpatialPartitionHandle_t handle );
+	void Insert( SpatialPartitionListMask_t listMask, SpatialPartitionHandle_t handle );
+	void Remove( SpatialPartitionListMask_t listMask, SpatialPartitionHandle_t handle );
+	void RemoveAndInsert( SpatialPartitionListMask_t removeMask, SpatialPartitionListMask_t insertMask, SpatialPartitionHandle_t handle );
+	void Remove( SpatialPartitionHandle_t handle );
 
-	virtual SpatialTempHandle_t HideElement( SpatialPartitionHandle_t handle );
-	virtual void UnhideElement( SpatialPartitionHandle_t handle, SpatialTempHandle_t tempHandle );
+	SpatialTempHandle_t HideElement( SpatialPartitionHandle_t handle );
+	void UnhideElement( SpatialPartitionHandle_t handle, SpatialTempHandle_t tempHandle );
 
-	virtual void InstallQueryCallback( IPartitionQueryCallback *pCallback );
-	virtual void RemoveQueryCallback( IPartitionQueryCallback *pCallback );
+	void InstallQueryCallback( IPartitionQueryCallback *pCallback );
+	void RemoveQueryCallback( IPartitionQueryCallback *pCallback );
 
-	virtual void SuppressLists( SpatialPartitionListMask_t nListMask, bool bSuppress );
-	virtual SpatialPartitionListMask_t GetSuppressedLists( void );
+	void SuppressLists( SpatialPartitionListMask_t nListMask, bool bSuppress );
+	SpatialPartitionListMask_t GetSuppressedLists( void );
 
-	virtual void RenderLeafsForRayTraceStart( float flTime )	{ }
-	virtual void RenderLeafsForRayTraceEnd( void )				{ }
-	virtual void RenderLeafsForHullTraceStart( float flTime )	{ }
-	virtual void RenderLeafsForHullTraceEnd( void )				{ }
-	virtual void RenderLeafsForBoxStart( float flTime )			{ }
-	virtual void RenderLeafsForBoxEnd( void )					{ }
-	virtual void RenderLeafsForSphereStart( float flTime )		{ }
-	virtual void RenderLeafsForSphereEnd( void )				{ }
+	void RenderLeafsForRayTraceStart( float flTime )	{ }
+	void RenderLeafsForRayTraceEnd( void )				{ }
+	void RenderLeafsForHullTraceStart( float flTime )	{ }
+	void RenderLeafsForHullTraceEnd( void )				{ }
+	void RenderLeafsForBoxStart( float flTime )			{ }
+	void RenderLeafsForBoxEnd( void )					{ }
+	void RenderLeafsForSphereStart( float flTime )		{ }
+	void RenderLeafsForSphereEnd( void )				{ }
 
-	virtual void RenderObjectsInBox( const Vector &vecMin, const Vector &vecMax, float flTime );
-	virtual void RenderObjectsInSphere( const Vector &vecCenter, float flRadius, float flTime );
-	virtual void RenderObjectsAlongRay( const Ray_t& ray, float flTime );
+	void RenderObjectsInBox( const Vector &vecMin, const Vector &vecMax, float flTime );
+	void RenderObjectsInSphere( const Vector &vecCenter, float flRadius, float flTime );
+	void RenderObjectsAlongRay( const Ray_t& ray, float flTime );
 
-	virtual void ElementMoved( SpatialPartitionHandle_t handle, const Vector& mins, const Vector& maxs );
-	virtual void EnumerateElementsInBox( SpatialPartitionListMask_t listMask, const Vector& mins, const Vector& maxs, bool coarseTest, IPartitionEnumerator* pIterator );
-	virtual void EnumerateElementsInSphere( SpatialPartitionListMask_t listMask, const Vector& origin, float radius, bool coarseTest, IPartitionEnumerator* pIterator );
-	virtual void EnumerateElementsAlongRay( SpatialPartitionListMask_t listMask, const Ray_t& ray, bool coarseTest, IPartitionEnumerator* pIterator );
-	virtual void EnumerateElementsAtPoint( SpatialPartitionListMask_t listMask, const Vector& pt, bool coarseTest, IPartitionEnumerator* pIterator );
+	void ElementMoved( SpatialPartitionHandle_t handle, const Vector& mins, const Vector& maxs );
+	void EnumerateElementsInBox( SpatialPartitionListMask_t listMask, const Vector& mins, const Vector& maxs, bool coarseTest, IPartitionEnumerator* pIterator );
+	void EnumerateElementsInSphere( SpatialPartitionListMask_t listMask, const Vector& origin, float radius, bool coarseTest, IPartitionEnumerator* pIterator );
+	void EnumerateElementsAlongRay( SpatialPartitionListMask_t listMask, const Ray_t& ray, bool coarseTest, IPartitionEnumerator* pIterator );
+	void EnumerateElementsAtPoint( SpatialPartitionListMask_t listMask, const Vector& pt, bool coarseTest, IPartitionEnumerator* pIterator );
 
-	virtual void RenderAllObjectsInTree( float flTime );
-	virtual void RenderObjectsInPlayerLeafs( const Vector &vecPlayerMin, const Vector &vecPlayerMax, float flTime );
-	virtual void ReportStats( const char *pFileName );
-	virtual void DrawDebugOverlays();
+	void RenderAllObjectsInTree( float flTime );
+	void RenderObjectsInPlayerLeafs( const Vector &vecPlayerMin, const Vector &vecPlayerMax, float flTime );
+	void ReportStats( const char *pFileName );
+	void DrawDebugOverlays();
 
 	// Gets entity info (for enumerations).
 	EntityInfo_t &EntityInfo( SpatialPartitionHandle_t hPartition );
 
-	virtual void InsertIntoTree( SpatialPartitionHandle_t hPartition, const Vector& mins, const Vector& maxs );
-	virtual void RemoveFromTree( SpatialPartitionHandle_t hPartition );
+	void InsertIntoTree( SpatialPartitionHandle_t hPartition, const Vector& mins, const Vector& maxs );
+	void RemoveFromTree( SpatialPartitionHandle_t hPartition );
 
 	CVoxelTree * VoxelTree( SpatialPartitionListMask_t listMask );
 	CVoxelTree * VoxelTreeForHandle( SpatialPartitionHandle_t handle );
 
-protected:
+public:
 	void UpdateListMask( SpatialPartitionHandle_t hPartition, uint16 nListMask );
 	// Invokes the pre-query callbacks.
 	void InvokeQueryCallbacks( SpatialPartitionListMask_t listMask, bool = false );
@@ -404,14 +404,14 @@ protected:
 		EntityInfo_t &operator[]( SpatialPartitionHandle_t h )	{ return m_Entries[h]; }
 		int Count() const							{ return m_nCount; }
 
-	private:
+	public:
 		std::vector< EntityInfo_t > m_Entries;
 		std::vector< uint8 > m_bLive;
 		std::vector< SpatialPartitionHandle_t > m_Free;
 		int m_nCount;
 	};
 
-private:
+public:
 	CHandleList												m_aHandles;  								// Stores all unique elements (1 per entity in tree).
 	std::recursive_mutex										m_HandlesMutex;
 
@@ -423,6 +423,9 @@ private:
 	// Debug!
 	SpatialPartitionListMask_t								m_nSuppressedListMask;
 };
+
+#include "facade/ispatialpartition.inl"
+
 
 //-----------------------------------------------------------------------------
 // Spatial partition inline methods

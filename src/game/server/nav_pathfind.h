@@ -6,8 +6,6 @@
 // Path-finding mechanisms using the Navigation Mesh
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
-import std;
-import ks.math;
 #include "nav_area.h"
 
 extern int g_DebugPathfindCounter;
@@ -565,21 +563,16 @@ void SearchSurroundingAreas( CNavArea *startArea, const Vector &startPos, Functo
 
 //--------------------------------------------------------------------------------------------------------------
 /**
- * Derive your own custom search functor from this interface method for use with SearchSurroundingAreas below.
+ * Derive your own custom search functor from this base for use with SearchSurroundingAreas below.
+ * The derived functor must provide
+ *   bool operator() ( CNavArea *area, CNavArea *priorArea, float travelDistanceSoFar )
+ * which performs a user-defined action on area.  Return 'false' to end the search (ie: you found what you were looking for)
  */
 class ISearchSurroundingAreasFunctor
 {
 public:
-	virtual ~ISearchSurroundingAreasFunctor() { }
-
-	/**
-	 * Perform user-defined action on area.
-	 * Return 'false' to end the search (ie: you found what you were looking for)
-	 */
-	virtual bool operator() ( CNavArea *area, CNavArea *priorArea, float travelDistanceSoFar ) = 0;
-
 	// return true if 'adjArea' should be included in the ongoing search
-	virtual bool ShouldSearch( CNavArea *adjArea, CNavArea *currentArea, float travelDistanceSoFar ) 
+	bool ShouldSearch( CNavArea *adjArea, CNavArea *currentArea, float travelDistanceSoFar ) 
 	{
 		return !adjArea->IsBlocked( TEAM_ANY );
 	}
@@ -587,7 +580,7 @@ public:
 	/**
 	 * Collect adjacent areas to continue the search by calling 'IncludeInSearch' on each
 	 */
-	virtual void IterateAdjacentAreas( CNavArea *area, CNavArea *priorArea, float travelDistanceSoFar ) 
+	void IterateAdjacentAreas( CNavArea *area, CNavArea *priorArea, float travelDistanceSoFar ) 
 	{
 		// search adjacent outgoing connections
 		for( int dir=0; dir<NUM_DIRECTIONS; ++dir )
@@ -606,7 +599,7 @@ public:
 	}
 
 	// Invoked after the search has completed
-	virtual void PostSearch( void ) { }
+	void PostSearch( void ) { }
 
 	// consider 'area' in upcoming search steps
 	void IncludeInSearch( CNavArea *area, CNavArea *priorArea ) 
@@ -643,7 +636,8 @@ public:
  * Do a breadth-first search starting from 'startArea' and continuing outward based on
  * adjacent areas that pass the given filter
  */
-inline void SearchSurroundingAreas( CNavArea *startArea, ISearchSurroundingAreasFunctor &func )
+template < typename Functor >
+inline void SearchSurroundingAreas( CNavArea *startArea, Functor &func )
 {
 	if ( startArea )
 	{

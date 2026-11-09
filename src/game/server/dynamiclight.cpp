@@ -3,8 +3,6 @@
 
 // Purpose: Dynamic light.
 
-import std;
-import ks.tier1;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -22,7 +20,6 @@ import ks.tier1;
 #include "takedamageinfo.h"
 #include "touchlink.h"
 #include "groundlink.h"
-#include "base_transmit_proxy.h"
 #include "soundflags.h"
 #include "networkvar.h"
 #include "sharedvar.h"
@@ -54,9 +51,10 @@ class [[= ks::reflect::NetTable{ .name = "DT_DynamicLight" } ]]
 public:
 	DECLARE_CLASS( CDynamicLight, CBaseEntity );
 
-	void Spawn( void );
+	void Spawn_Impl( void );
 	void DynamicLightThink( void );
-	bool KeyValue( const char *szKeyName, const char *szValue );
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
 
 	DECLARE_SERVERCLASS();
 	DECLARE_DATADESC();
@@ -88,7 +86,7 @@ IMPLEMENT_REFLECT_SERVERCLASS( CDynamicLight, DT_DynamicLight )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CDynamicLight::KeyValue( const char *szKeyName, const char *szValue )
+bool CDynamicLight::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if ( FStrEq( szKeyName, "_light" ) )
 	{
@@ -112,7 +110,7 @@ bool CDynamicLight::KeyValue( const char *szKeyName, const char *szValue )
 	}
 	else
 	{
-		return BaseClass::KeyValue( szKeyName, szValue );
+		return BaseClass::KeyValue_Impl( szKeyName, szValue );
 	}
 
 	return true;
@@ -157,7 +155,7 @@ void CDynamicLight::InputToggle( inputdata_t &inputdata )
 //------------------------------------------------------------------------------
 // Purpose :
 //------------------------------------------------------------------------------
-void CDynamicLight::Spawn( void )
+void CDynamicLight::Spawn_Impl( void )
 {
 	Precache();
 	SetSolid( SOLID_NONE );

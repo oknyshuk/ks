@@ -12,11 +12,11 @@ import std;
 #include "matchmaking/iplayer.h"
 #include "matchmaking/iplayermanager.h"
 
-class PlayerManager: public IPlayerManager, public IMatchEventsSink
+class PlayerManager: public IPlayerManager
 {
 public :
 	PlayerManager();
-	virtual ~PlayerManager();
+	~PlayerManager();
 
 	//IPlayerManager
 public:
@@ -24,23 +24,23 @@ public:
 	// GetLocalPlayer
 	//	returns a local player interface for a given controller index
 	//
-	virtual IPlayerLocal * GetLocalPlayer( int iController );
+	IPlayerLocal * GetLocalPlayer( int iController );
 
 	//
 	// GetFriend
 	//	returns player interface to the given friend or NULL if friend not found or not available
 	//
-	virtual IPlayerFriend * GetFriendByXUID( XUID xuid );
+	IPlayerFriend * GetFriendByXUID( XUID xuid );
 
 	//
 	// FindPlayer
 	//	returns player interface by player's XUID or NULL if friend not found or not available
 	//
-	virtual IPlayer * FindPlayer( XUID xuid );
+	IPlayer * FindPlayer( XUID xuid );
 
-	// IMatchEventsSink
+	// Match events
 public:
-	virtual void OnEvent( KeyValues *pEvent );
+	void OnEvent( KeyValues *pEvent );
 };
 
 
