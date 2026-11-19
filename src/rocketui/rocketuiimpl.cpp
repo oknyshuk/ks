@@ -500,12 +500,17 @@ void *RocketUIImpl::RecordMenu() {
 // Replay (RENDER thread): execute a recorded list on the device, then free it.
 // FreeList also drains the release graveyard for finished frames. cmdList may
 // be nullptr (nothing recorded) -> just a no-op free.
+// RocketUI draws on the raw D3D9 device, behind the shader API's state cache. The HUD
+// and menu replays run back to back in the 2D pass, with no material system draw in
+// between, so one reset after the menu replay (which the view issues every frame)
+// re-syncs the cache for the whole frame.
 void RocketUIImpl::RenderHUDFrame(void *cmdList) {
   RocketRenderD3D9 &r = RocketRenderD3D9::m_Instance;
   if (cmdList && m_pDevice && m_bDeviceActive) {
     r.BeginFrame();
     r.Replay(cmdList);
     r.EndFrame();
+    m_bDeviceDirty = true;
   }
   r.FreeList(cmdList);
 }
@@ -516,9 +521,13 @@ void RocketUIImpl::RenderMenuFrame(void *cmdList) {
     r.BeginFrame();
     r.Replay(cmdList);
     r.EndFrame();
-    m_pShaderAPI->ResetRenderState(false);
+    m_bDeviceDirty = true;
   }
   r.FreeList(cmdList);
+  if (m_bDeviceDirty) {
+    m_pShaderAPI->ResetRenderState(false);
+    m_bDeviceDirty = false;
+  }
 }
 
 bool RocketUIImpl::ReloadDocuments() {

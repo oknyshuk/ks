@@ -30,6 +30,7 @@ protected:
   // False between a device-lost notification and the following device reset;
   // UI rendering is skipped while lost (see RenderHUDFrame/RenderMenuFrame).
   bool m_bDeviceActive;
+  bool m_bDeviceDirty = false; // RocketUI drew on the raw device since the last shader API reset
 
   ILauncherMgr *m_pLauncherMgr;
   IShaderDeviceMgr *m_pShaderDeviceMgr;
