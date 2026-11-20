@@ -7,7 +7,12 @@
 #include <squirrel.h>
 #include <sqstdblob.h>
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.threadtools;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 #include "sqrdbg.h"
 #include "sqdbgserver.h"
 

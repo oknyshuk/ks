@@ -17,7 +17,9 @@
 
 import std;
 
-import ks.tier1;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 #include "download_internal.h"
 
 

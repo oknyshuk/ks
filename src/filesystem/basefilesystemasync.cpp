@@ -13,7 +13,24 @@
 //			operation.
 
 import std;
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.random;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
+import ks.tier1.refcount;
+import ks.tier1.strtools;
+import ks.vstdlib.jobthread;
 #include "basefilesystem.h"
 
 // VCR mode for now is handled by not running async.  This is primarily for

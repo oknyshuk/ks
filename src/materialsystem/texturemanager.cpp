@@ -2,7 +2,23 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.commandbuffer;
+import ks.tier1.convar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
+import ks.tier1.strtools;
+import ks.tier1.text_reader;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 #include "materialsystem_global.h"
 #include "shaderapi/ishaderapi.h"
 #include "materialsystem/materialsystem_config.h"

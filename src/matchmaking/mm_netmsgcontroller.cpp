@@ -222,3 +222,13 @@ KeyValues * CMatchNetworkMsgControllerBase::PackageGameDetailsForReservation( Ke
 
 //-----------------------------------------------------------------------------
 #include "facade/imatchnetworkmsgcontroller.inl"
+import ks.core.dbg;
+import ks.math.mathlib;
+import ks.tier1.byte_reader;
+import ks.tier1.byte_writer;
+import ks.tier1.convar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;

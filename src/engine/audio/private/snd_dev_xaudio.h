@@ -5,7 +5,8 @@
 import std;
 
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 
 #include "tier2/riff.h"
 #include "sound.h"

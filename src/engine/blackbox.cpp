@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2008 Valve Corporation
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.fmtstr;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.strtools;
 #include "blackbox.h"
 #include "cmd.h"
 import std;

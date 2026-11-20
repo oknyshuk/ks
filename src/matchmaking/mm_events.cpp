@@ -224,3 +224,7 @@ KeyValues * CMatchEventsSubscription::GetEventData( char const *szEventDataKey )
 
 //-----------------------------------------------------------------------------
 #include "facade/imatcheventssubscription.inl"
+import ks.core.threadtools;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;

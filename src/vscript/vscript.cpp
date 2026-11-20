@@ -2,7 +2,13 @@
 // Copyright (c) 2008 Valve Corporation
 
 import std;
-import ks.vstdlib;
+import ks.core.random;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 #include "vscript/ivscript.h"
 #include "appframework/apptiers.h"
 #include "languages/squirrel/vsquirrel/vsquirrel.h"

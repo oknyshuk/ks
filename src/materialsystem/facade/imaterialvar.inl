@@ -1,3 +1,5 @@
+import ks.core.basetypes;
+import ks.math.vmatrix;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 //

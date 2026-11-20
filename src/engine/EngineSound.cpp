@@ -3,7 +3,8 @@
 //
 // IEngineSound: dispatch on the kind of the implementation (server / client).
 
-import ks.core;
+import ks.platform;
+import ks.simd;
 #include "engine/IEngineSound.h"
 import std;
 #include "enginesoundimpl.h"

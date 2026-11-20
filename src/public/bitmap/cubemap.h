@@ -5,7 +5,12 @@
 // Purpose: a class for performing cube-mapped spherical sample lookups.
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 template<class T, int RES> struct CCubeMap
 {

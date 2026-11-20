@@ -3,7 +3,10 @@
 // Copyright (c) 2005-2008 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.keyvalues;
 #include "shaderapi/IShaderDevice.h"
 
 

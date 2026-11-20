@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 #include "BaseVSShader.h"
 import std;
 

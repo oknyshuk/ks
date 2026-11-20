@@ -5,6 +5,7 @@
 #include "dmxloader/dmxelement.h"
 #include "dmxloader/dmxattribute.h"
 import std;
+import ks.core.vprof;
 
 //-----------------------------------------------------------------------------
 //

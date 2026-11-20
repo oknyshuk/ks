@@ -2,10 +2,14 @@
 // Copyright (c) 2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:generichash;
+export module ks.tier1.generichash;
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
 
 export extern "C++" {
 

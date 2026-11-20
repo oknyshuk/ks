@@ -7,7 +7,8 @@
 //			clients' voice streams.
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 
 inline constexpr const char *INTERFACEVERSION_VOICESERVER = "VoiceServer002";
 

@@ -5,7 +5,40 @@ import std;
 
 
 
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.color;
+import ks.core.dbg;
+import ks.core.logging;
+import ks.core.memalloc;
+import ks.core.perfstats;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.cvar;
+import ks.tier1.filename_table;
+import ks.tier1.functors;
+import ks.tier1.iappsystem;
+import ks.tier1.iconvar;
+import ks.tier1.icvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.refcount;
+import ks.tier1.strtools;
+import ks.tier1.tier1;
+import ks.tier1.vector_ops;
+import ks.vstdlib.jobthread;
 #include "tier2/tier2.h"
 #include "bitmap/imageformat.h"
 #include "bitmap/tgawriter.h"

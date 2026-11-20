@@ -4,7 +4,13 @@
 
 // Purpose: sheet code for particles and other sprite functions
 
-import ks.math;
+import ks.core.basetypes;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "tier2/fileutils.h"
 import std;
 

@@ -3,10 +3,10 @@
 // Purpose: - defines the type fltx4 - Avoid cyclic includion.
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:fltx4;
+export module ks.math.fltx4;
 
 import std;
-import ks.core;
+import ks.platform;
 import ks.simd;
 
 export extern "C++" {

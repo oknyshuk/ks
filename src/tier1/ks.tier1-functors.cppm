@@ -2,13 +2,15 @@
 // Copyright (c) 2006 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:functors;
+export module ks.tier1.functors;
 
 import std;
-import ks.math;
-export import :refcount;
-export import :strtools;
-export import :envelope;
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.refcount;
+export import ks.tier1.strtools;
+export import ks.tier1.envelope;
 
 export extern "C++" {
 

@@ -2,9 +2,19 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.core;
-import ks.math;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.numeric;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.createinterface;
 #include "dt_send.h"
 #include "networkvar.h"
 

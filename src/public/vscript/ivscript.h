@@ -1,3 +1,22 @@
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.byte_writer;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.strtools;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 2008 Valve Corporation
 
@@ -71,9 +90,7 @@
 #ifndef IVSCRIPT_H
 #define IVSCRIPT_H
 
-import ks.core;
 #include "datamap.h"
-import ks.tier1;
 import std;
 
 namespace ks { class byte_writer; class byte_reader; }
@@ -514,7 +531,7 @@ private:
 // 
 //-----------------------------------------------------------------------------
 
-// The script class descriptor macros (BEGIN_SCRIPTDESC, ...) are in vscript_game.h.
+// The script class descriptor macros (BEGIN_SCRIPTDESC, ...) are in each game side's vscript_game.cppm.
 
 //-----------------------------------------------------------------------------
 // 
@@ -795,7 +812,7 @@ public:
 
 };
 
-// The script scope helper (CScriptScope) is in vscript_game.h.
+// The script scope helper (CScriptScope) is in each game side's vscript_game.cppm.
 
 //-----------------------------------------------------------------------------
 // Script function proxy support

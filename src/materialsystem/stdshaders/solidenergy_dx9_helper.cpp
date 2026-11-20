@@ -13,6 +13,8 @@
 	#include "solidenergy_ps30.inc"
 
 #include "shaderlib/commandbuilder.h"
+import ks.core.basetypes;
+import ks.tier1.convar;
 
 void InitParamsSolidEnergy( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, SolidEnergyVars_t &info )
 {

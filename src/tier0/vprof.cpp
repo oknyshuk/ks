@@ -3,7 +3,18 @@
 
 // Purpose: Real-Time Hierarchical Profiling
 
-import ks.core;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.time;
+import ks.core.tslist;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.icvar;
 
 // First include standard libraries
 import std;

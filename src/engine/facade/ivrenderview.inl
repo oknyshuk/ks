@@ -1,3 +1,11 @@
+import ks.core.basetypes;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vmatrix;
+import ks.math.volumeculler;
+import ks.tier1.exprevaluator;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 //

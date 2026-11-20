@@ -2,7 +2,11 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #define DISABLE_PROTECTED_THINGS
-import ks.tier1;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.checksum_crc;
 #include "togl/rendermechanism.h"
 #include "TransitionTable.h"
 #include "shaderapidx8.h"

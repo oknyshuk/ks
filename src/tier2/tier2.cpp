@@ -6,6 +6,9 @@
 #include <tier2/tier2.h>
 #include "tier2/resourceprecacher.h"
 #include "resourcesystem/iresourcesystem.h"
+import ks.core.types;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 
 //-----------------------------------------------------------------------------
 // These tier2 libraries must be set by any users of this library.

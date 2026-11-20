@@ -2,10 +2,13 @@
 // Copyright (c) 2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.vstdlib:vcover;
+export module ks.vstdlib.vcover;
 
 import std;
-import ks.tier1;
+import ks.core.dbg;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 
 export extern "C++" {
 

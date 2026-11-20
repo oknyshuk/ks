@@ -5,7 +5,12 @@
 
 import std;
 
-import ks.tier1;
+import ks.core.numeric;
+import ks.math.mathlib;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 #include "sound.h"
 
 void DbReferenceChanged( ConVar *var, const char *pOldValue, float flOldValue );

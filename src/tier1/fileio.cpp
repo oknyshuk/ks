@@ -8,7 +8,19 @@
 
 
 import std;
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.appinstance;
+import ks.tier1.fileio;
+import ks.tier1.keyvalues;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
+import ks.vstdlib.vstrtools;
 
 // Linux hasn't got a good AIO library that we have found yet, so lets punt for now
 

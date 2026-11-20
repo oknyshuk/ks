@@ -5,7 +5,13 @@
 // Purpose: Defines game-specific data
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
 
 //-----------------------------------------------------------------------------
 // This enumerations defines all the four-CC codes for the client lump names

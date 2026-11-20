@@ -5,6 +5,8 @@
 // Purpose: Included by networkvar.h
 
 #include "networkvar.h"
+import ks.math.compressed_vector;
+import ks.math.vector;
 
 // This is the normal case.. you've got a SendPropVector to match your CNetworkVector
 #define CNetworkVector( name, ... ) CNetworkVectorInternal( Vector, name, NetworkStateChanged, CNetworkVectorBase __VA_OPT__(,) __VA_ARGS__ )
@@ -29,13 +31,11 @@
 // version but you might want it to trigger changes in derived classes that do network that variable.
 //
 #define CNetworkVectorForDerived( name, ... ) \
-	virtual void NetworkStateChanged_##name() {} \
-	virtual void NetworkStateChanged_##name( void *pVar ) {} \
+	NETWORK_VAR_FOR_DERIVED_HOOK( name ) \
 	CNetworkVectorInternal( Vector, name, NetworkStateChanged_##name, CNetworkVectorBase __VA_OPT__(,) __VA_ARGS__ )
 		
 #define CNetworkVectorXYZForDerived( name, ... ) \
-	virtual void NetworkStateChanged_##name() {} \
-	virtual void NetworkStateChanged_##name( void *pVar ) {} \
+	NETWORK_VAR_FOR_DERIVED_HOOK( name ) \
 	CNetworkVectorInternal( Vector, name, NetworkStateChanged_##name, CNetworkVectorXYZBase __VA_OPT__(,) __VA_ARGS__ )
 
 

@@ -1,3 +1,8 @@
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.polyhedron;
+import ks.math.vector;
+import ks.tier1.interfaces;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 //

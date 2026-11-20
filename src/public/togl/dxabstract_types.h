@@ -3,6 +3,7 @@
 // Copyright (c) 1996-2012 Valve Corporation
 
 #include "togl/d3d9_prelude.h"
+import ks.core.platform;
 
 #define TOGL_INTERFACE
 #define TOGL_OVERLOAD

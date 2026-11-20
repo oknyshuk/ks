@@ -16,6 +16,9 @@
 #include "vjolt_internal_listeners.h"
 #include "vphysics_interface.h"
 #include "vphysics/constraints.h"
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
 
 enum constraintType_t
 {

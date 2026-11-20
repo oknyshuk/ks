@@ -42,7 +42,11 @@
 #include <Jolt/Physics/Vehicle/VehicleCollisionTester.h>
 #include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
 import std;
-import ks.tier1;
+import ks.core.logging;
+import ks.platform;
+import ks.simd;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 #include "compat/branch_overrides.h"
 #include "vcollide_parse.h"
 #include "vphysics/collision_set.h"

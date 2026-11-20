@@ -1,7 +1,27 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_writer;
+import ks.tier1.checksum_crc;
+import ks.tier1.checksum_md5;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.map_ops;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.tier1.vector_ops;
 #include "vpklib/packedstore.h"
 #include "packedstore_internal.h"
 #include "tier2/fileutils.h"

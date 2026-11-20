@@ -5,7 +5,26 @@
 
 import std;
 
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.exprevaluator;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.intern_pool;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
+import ks.tier1.utlstring;
+import ks.vstdlib.vstrtools;
 #include "filesystem.h"
 
 #include "localize/ilocalize.h"

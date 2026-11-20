@@ -5,7 +5,15 @@
 // net.h -- Half-Life's interface to the networking layer
 // For banning IP addresses (or allowing private games)
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.netadr;
+import ks.tier1.ns_address;
 #include "common.h"
 import std;
 #include "inetchannel.h"

@@ -3,7 +3,13 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "iclientunknown.h"
 #include "client_render_handle.h"
 #include "engine/ivmodelrender.h"

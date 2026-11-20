@@ -5,7 +5,8 @@
 // Purpose: Define the IVoiceCodec interface.
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 
 inline constexpr auto BYTES_PER_SAMPLE = 2;
 

@@ -4,7 +4,11 @@
 import std;
 
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.platform;
+import ks.simd;
+import ks.tier1.intern_pool;
+import ks.tier1.keyvalues;
 
 #include "filesystem.h"
 

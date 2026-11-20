@@ -1,3 +1,6 @@
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
 #ifndef _SQ_DBGSERVER_H_
 #define _SQ_DBGSERVER_H_
 
@@ -5,7 +8,6 @@
 #define MAX_MSG_LEN 2049
 
 #include <ctype.h>
-import ks.core;
 import ks.platform;
 
 // sqobject.h defines type(obj) as a function-like macro. This header used to replace it with an

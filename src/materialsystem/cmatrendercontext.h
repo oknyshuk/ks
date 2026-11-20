@@ -2,7 +2,24 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 2005 Valve Corporation
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.lightdesc;
+import ks.math.mathlib;
+import ks.math.polyhedron;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vector4d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.iappsystem;
+import ks.tier1.interfaces;
+import ks.tier1.memstack;
+import ks.tier1.refcount;
+import ks.vstdlib.callqueue;
 import std;
 #include "materialsystem_global.h"
 #include "materialsystem/imaterialsystem.h"

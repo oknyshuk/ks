@@ -3,7 +3,25 @@
 #include "raytrace.h"
 #include <filesystem_tools.h>
 #include <cmdlib.h>
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.tslist;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.lightdesc;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.byte_writer;
+import ks.tier1.convar;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 import std;
 
 

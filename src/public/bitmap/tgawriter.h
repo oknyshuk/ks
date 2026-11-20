@@ -3,7 +3,14 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_writer;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 #include "bitmap/imageformat.h" //ImageFormat enum definition
 
 namespace ks { class byte_writer; }

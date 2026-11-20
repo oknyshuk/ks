@@ -3,7 +3,13 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.exprevaluator;
 class CViewSetup;
 
 extern Frustum_t g_Frustum;

@@ -8,6 +8,9 @@
 #include "character_ps30.inc"
 
 #include "../materialsystem_global.h"
+import ks.core.basetypes;
+import ks.math.mathlib;
+import ks.tier1.interfaces;
 
 //#define CHARACTER_LIMIT_LIGHTS_WITH_PHONGWARP 1
 

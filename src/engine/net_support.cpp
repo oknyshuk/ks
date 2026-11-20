@@ -13,6 +13,18 @@ import std;
 #include "host_cmd.h"
 #include "net.h"
 #include "proto_oob.h"
+import ks.core.cmdline;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.tier1.bitbuf;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.netadr;
+import ks.tier1.ns_address;
+import ks.tier1.strtools;
+import ks.tier1.tier1;
 
 CNetSupportImpl::CNetSupportImpl()
 {

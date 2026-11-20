@@ -1,3 +1,6 @@
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 //

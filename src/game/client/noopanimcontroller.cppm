@@ -1,0 +1,972 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 oknyshuk
+
+module;
+#include "isaverestore.h"
+#include "reflect.h"
+#include "reflect_datamap.h"
+#include "reflect_predmap.h"
+#include "dt_recv.h"
+#include "dt_utlvector_common.h"
+#include "reflect_recvtable.h"
+module ks.client:noopanimcontroller;
+
+import :iinput;
+import :baseentity;
+import ks.tier1.reflect_wirevar;
+import std;
+import ks.core.vprof;
+import ks.core.basetypes;
+import ks.math.compressed_vector;
+import ks.math.ssequaternion;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.createinterface;
+import ks.tier1.registry;
+
+class CNoopAnimController
+{
+public:
+	void StartAnimationSequence( const char * ) {}
+	void StartAnimationSequence( const char *, bool ) {}
+	void StopAnimationSequence( const char * ) {}
+	void UpdateAnimations( float ) {}
+	void CancelAllAnimations() {}
+	void RunAllAnimationsToCompletion() {}
+	void RunAnimationCommand( ... ) {}
+	float GetAnimationSequenceLength( const char * ) { return 0.0f; }
+};
+
+// One typedescription_t builder, shared by the datamap emitter (server) and the prediction
+// emitter (client). Nothing here reaches for entityoutput.h or predictable_entity.h, so both
+// sides can include it.
+
+namespace ksr
+{
+using namespace ::ks::reflect;
+
+struct FieldDesc
+{
+	fieldtype_t type = FIELD_VOID;
+	const char *name = nullptr;
+	const char *external = nullptr;
+	int         offset = 0;
+	int         bytes  = 0;
+	int         count  = 1;
+	short       flags  = 0;
+	float       tolerance = 0.f;
+	ISaveRestoreOps *ops = nullptr;
+	inputfunc_t input = nullptr;
+	// The nested map an embedded entry points at: DEFINE_EMBEDDED, DEFINE_PRED_TYPEDESCRIPTION.
+	datamap_t  *td = nullptr;
+};
+
+// The macros are aggregate initialisers that stop early and leave the trailing members to
+// static zero-initialisation. These land in a heap vector, so every one has to be set.
+inline typedescription_t MakeField( const FieldDesc &d )
+{
+	typedescription_t t = {};
+	t.fieldType        = d.type;
+	t.fieldName        = d.name;
+	t.fieldOffset      = d.offset;
+	t.fieldSize        = static_cast<unsigned short>( d.count );
+	t.flags            = d.flags;
+	t.externalName     = d.external;
+	t.pSaveRestoreOps  = d.ops;
+	t.inputFunc        = ToInputStorage( d.input );
+	t.td               = d.td;
+	t.fieldSizeInBytes = d.bytes;
+	t.override_field   = nullptr;
+	t.override_count   = 0;
+	t.fieldTolerance   = d.tolerance;
+	return t;
+}
+
+} // namespace ksr
+
+// Emits datamap entries for annotated members. Unlike SendProp there is no factory to call --
+// the DEFINE_* macros are aggregate initialisers -- so the emitter builds typedescription_t
+// directly and byte-identity is a straight field comparison.
+//
+// One Key annotation covers both kinds, because which kind it is *is* derivable: a member
+// whose type derives from CBaseEntityOutput is an output (DEFINE_OUTPUT), anything else is a
+// keyfield (DEFINE_KEYFIELD). The map name is the only thing that cannot be derived.
+
+// Outputs are server-side entity I/O, so on the client this stays incomplete and
+// derives_from answers false for every member -- which is correct, not a degradation.
+class CBaseEntityOutput;
+
+extern ISaveRestoreOps *eventFuncs;	// the save/restore ops of entity outputs (server)
+
+namespace ksr::dmap
+{
+using namespace ::ks::reflect;
+
+consteval bool is_output_type( std::meta::info t )
+{
+	// An array of outputs is still outputs: DEFINE_OUTPUT( m_Output[0], ... ) names one element of
+	// a COutputEvent[8], and the array type itself derives from nothing.
+	return derives_from( std::meta::remove_extent( std::meta::remove_cv( t ) ), ^^CBaseEntityOutput );
+}
+
+consteval bool is_output( std::meta::info m )
+{
+	return is_output_type( std::meta::type_of( m ) );
+}
+
+template <std::meta::info M, std::size_t Base = 0>
+consteval FieldDesc desc_of( const Key &k )
+{
+	const std::meta::info t = std::meta::type_of( M );
+
+	FieldDesc d;
+	d.name     = intern( std::meta::identifier_of( M ) );
+	d.external = k.name.empty() ? intern( std::meta::identifier_of( M ) ) : intern( k.name );
+	// Keyfields index the member itself, so the offset carries no networkvar flags.
+	d.offset   = static_cast<int>( Base + byte_offset_of( M ) );
+	d.bytes    = static_cast<int>( std::meta::size_of( t ) );
+
+	if ( is_output( M ) )
+	{
+		d.type  = FIELD_CUSTOM;
+		d.flags = FTYPEDESC_OUTPUT | FTYPEDESC_SAVE | FTYPEDESC_KEY;
+		// DEFINE_OUTPUT stops at pSaveRestoreOps, so fieldSizeInBytes stays 0.
+		d.bytes = 0;
+		// One element of an output array, each with its own map name.
+		if ( k.index >= 0 )
+			d.offset += k.index * static_cast<int>( array_element_size( t ) );
+	}
+	else
+	{
+		d.type  = tag_of( M );
+		d.flags = FTYPEDESC_KEY | FTYPEDESC_SAVE;
+		if ( k.input )  d.flags |= FTYPEDESC_INPUT;
+		// DEFINE_GLOBAL_KEYFIELD is DEFINE_KEYFIELD plus this one flag.
+		if ( k.global ) d.flags |= FTYPEDESC_GLOBAL;
+		if ( k.index >= 0 )
+		{
+			// One element of an array: the entry describes the element, at its own offset. The
+			// array has to be reached through unwrap -- CNetworkArray holds it as m_Value[count],
+			// and remove_extent on the wrapper yields the wrapper, whose size is the whole array.
+			const std::meta::info e = std::meta::remove_extent( unwrap( t ) );
+			d.type   = k.as != FIELD_VOID ? k.as : tag_of_type( std::meta::remove_cv( e ) );
+			d.bytes  = static_cast<int>( std::meta::size_of( e ) );
+			d.offset += k.index * static_cast<int>( std::meta::size_of( e ) );
+			d.count  = 1;
+		}
+		else if ( is_array_member( t ) )
+		{
+			d.count = static_cast<int>( array_extent_of( t ) );
+		}
+	}
+	return d;
+}
+
+consteval FieldDesc desc_from( std::meta::info m, const Key &k, int offset, const name_t &path )
+{
+	const std::meta::info t = std::meta::type_of( m );
+
+	FieldDesc d;
+	// The macro stringifies the whole member expression, so the path *is* the fieldName.
+	d.name     = intern( path );
+	d.external = k.name.empty() ? intern( std::meta::identifier_of( m ) ) : intern( k.name );
+	d.offset   = offset;
+	d.bytes    = static_cast<int>( std::meta::size_of( t ) );
+
+	if ( is_output( m ) )
+	{
+		d.type  = FIELD_CUSTOM;
+		d.flags = FTYPEDESC_OUTPUT | FTYPEDESC_SAVE | FTYPEDESC_KEY;
+		d.bytes = 0;
+	}
+	else
+	{
+		// A path leaf lives in a shared struct, so it cannot carry a member-level As; the
+		// refinement is stated on the annotation instead.
+		d.type  = k.as != FIELD_VOID ? k.as : tag_of( m );
+		d.flags = FTYPEDESC_KEY | FTYPEDESC_SAVE;
+		if ( k.input )  d.flags |= FTYPEDESC_INPUT;
+		if ( k.global ) d.flags |= FTYPEDESC_GLOBAL;
+	}
+	return d;
+}
+
+// eventFuncs is not a constant expression, so the output ops pointer is attached at runtime.
+typedescription_t make_field( const FieldDesc &d, bool output );
+
+// DEFINE_INPUTFUNC stops after inputFunc, so fieldSizeInBytes and the offset stay 0. The
+// function pointer itself is attached at the call site, where the reflection can be spliced.
+// Input is repeatable, so the annotation is passed in rather than looked up.
+template <std::meta::info F>
+consteval FieldDesc input_desc_of( const Input &in )
+{
+
+	FieldDesc d;
+	d.type     = in.type;
+	d.name     = intern( std::meta::identifier_of( F ) );
+	d.external = in.name.empty() ? intern( std::meta::identifier_of( F ) ) : intern( in.name );
+	d.flags    = FTYPEDESC_INPUT;
+	return d;
+}
+
+template <class C>
+std::vector<typedescription_t> &fields()
+{
+	static std::vector<typedescription_t> out = []
+	{
+		std::vector<typedescription_t> v;
+		// Key is repeatable, so a member contributes one entry per annotation.
+		template for ( constexpr auto m : members<Key, C> )
+			template for ( constexpr auto k : std::define_static_array( all<Key>( m ) ) )
+				v.push_back( make_field( desc_of<m, flattened_offset( ^^C, m )>( k ), is_output( m ) ) );
+
+		// Entries reached through a dotted path, named at class level.
+		template for ( constexpr auto ann : std::define_static_array( key_from_annotations( ^^C ) ) )
+		{
+			constexpr auto args = std::define_static_array( std::meta::template_arguments_of( ann ) );
+			constexpr auto path = std::meta::extract<name_t>( args[0] );
+			constexpr auto ref  = require_member( ^^C, path );
+			constexpr Key  k    = std::meta::extract<Key>( args[1] );
+			v.push_back( make_field( desc_from( ref.member, k, static_cast<int>( ref.offset ), path ),
+			                         is_output( ref.member ) ) );
+		}
+
+		// An empty datamap is not an empty array, exactly as for prediction. BEGIN_DATADESC_GUTS
+		// opens the array with a dummy { FIELD_VOID, 0, ... } "so you can define empty tables" and
+		// END_DATADESC reports dataNumFields = 1 for it; only when there *are* entries does it skip
+		// past the dummy. 18 classes declare a datadesc purely to take their place in the baseMap
+		// chain, and this is the faithful reproduction of one.
+		if ( v.empty() )
+			v.push_back( typedescription_t{} );
+		return v;
+	}();
+	return out;
+}
+
+} // namespace ksr::dmap
+
+// Replaces the legacy BEGIN_DATADESC/END_DATADESC emitters, which are gone. The two definitions
+// are what BEGIN_DATADESC provided; the map is filled in a static initializer, which is when the
+// legacy DataMapInit ran, so the timing is unchanged. m_DataMap is reached through unchecked
+// reflection because DECLARE_DATADESC leaves it in whatever access section the class happens to be
+// in -- usually private. The base map is taken from bases_of for the same reason, rather than from
+// the class's BaseClass typedef, which is private in some classes.
+
+// For a class of a shared library: the library defines the (empty) m_DataMap, the game that
+// uses the class fills it in.
+#define IMPLEMENT_REFLECT_DATAMAP_FILL( className )                                               \
+	namespace className##_ReflectDataDescInit                                                     \
+	{                                                                                             \
+		static datamap_t &Map() { return [: ks::reflect::static_member_of(                         \
+		    ^^className, "m_DataMap" ) :]; }                                                       \
+		static const bool g_filled = []                                                         \
+		{                                                                                         \
+			auto &f = ksr::dmap::fields<className>();                                     \
+			Map().dataDesc      = f.data();                                                       \
+			Map().dataNumFields = (int)f.size();                                                   \
+			return true;                                                                           \
+		}();                                                                                     \
+	}
+
+// The base-less mirror: BEGIN_SIMPLE_DATADESC / BEGIN_DATADESC_NO_BASE both have no base to walk.
+
+// BEGIN_SIMPLE_DATADESC_ is the one form that walks a named base *without* defining the virtual
+// GetDataDescMap() -- so it is neither _SIMPLE (no base) nor _NO_BASE (which does define the
+// virtual). baseMap is assigned here because the legacy BEGIN_DATADESC_GUTS assigned it too.
+
+// BEGIN_DATADESC_NO_BASE differs from BEGIN_SIMPLE_DATADESC by one thing: it still defines the
+// virtual GetDataDescMap() override, because a class reached with DECLARE_DATADESC() (rather than
+// DECLARE_SIMPLE_DATADESC(), which does not declare it at all) needs one. Omitting it left that
+// virtual's key-function homing without a definition, and the linker reported the whole vtable
+// missing rather than one function: undefined symbol: _ZTV24CFourWheelVehiclePhysics.
+
+#undef IMPLEMENT_REFLECT_DATAMAP_FILL
+
+// Emits prediction descriptor entries for members carrying Pred. Client-only, like the
+// prediction system itself. DEFINE_PRED_FIELD names no external string, so unlike the datamap
+// nothing here needs a name -- only the flags and tolerance, which are the two things that
+// genuinely cannot be derived.
+
+namespace ksr::pred
+{
+using namespace ::ks::reflect;
+
+// An embedded entry: the member's type has a prediction map of its own, which is what
+// DEFINE_PRED_TYPEDESCRIPTION names. The flags are the macro's own, and it sets no size.
+consteval bool is_embedded_map( std::meta::info m )
+{
+	return tag_of( m ) == FIELD_EMBEDDED
+	       && has_static_member( unwrap( std::meta::type_of( m ) ), "m_PredMap" );
+}
+
+template <std::meta::info M, std::size_t Base = 0>
+consteval FieldDesc desc_of()
+{
+	const std::meta::info t = std::meta::type_of( M );
+	const Pred p = get<Pred>( M );
+
+	FieldDesc d;
+	d.type      = tag_of( M );
+	d.name      = intern( std::meta::identifier_of( M ) );
+	d.external  = nullptr;
+	d.offset    = static_cast<int>( Base + byte_offset_of( M ) );
+	d.bytes     = static_cast<int>( std::meta::size_of( t ) );
+	d.flags     = static_cast<short>( p.flags );
+	d.tolerance = p.tolerance;
+	if ( is_array_member( t ) ) d.count = static_cast<int>( array_extent_of( t ) );
+	if ( is_embedded_map( M ) )
+	{
+		d.flags = FTYPEDESC_SAVE | FTYPEDESC_KEY;
+		d.bytes = 0;
+	}
+	return d;
+}
+
+// One entry for a member named by a class-level PredFrom<>, whose offset is relative to the
+// predicting class rather than the declaring one.
+consteval FieldDesc desc_from( std::meta::info m, Pred p, int offset )
+{
+	const std::meta::info t = std::meta::type_of( m );
+
+	FieldDesc d;
+	d.type      = tag_of( m );
+	d.name      = intern( std::meta::identifier_of( m ) );
+	d.offset    = offset;
+	d.bytes     = static_cast<int>( std::meta::size_of( t ) );
+	d.flags     = static_cast<short>( p.flags );
+	d.tolerance = p.tolerance;
+	if ( is_array_member( t ) ) d.count = static_cast<int>( array_extent_of( t ) );
+	return d;
+}
+
+template <class C>
+std::vector<typedescription_t> &fields()
+{
+	static std::vector<typedescription_t> out = []
+	{
+		std::vector<typedescription_t> v;
+		template for ( constexpr auto m : members<Pred, C> )
+		{
+			if constexpr ( is_embedded_map( m ) )
+			{
+				FieldDesc d = desc_of<m, flattened_offset( ^^C, m )>();
+				d.td = &[: static_member_of( unwrap( std::meta::type_of( m ) ), "m_PredMap" ) :];
+				v.push_back( MakeField( d ) );
+			}
+			else
+			{
+				v.push_back( MakeField( desc_of<m, flattened_offset( ^^C, m )>() ) );
+			}
+		}
+		// Members declared in a base that this class predicts itself. Order is not observable, so
+		// these are simply appended.
+		template for ( constexpr auto ann : std::define_static_array( pred_from_annotations( ^^C ) ) )
+		{
+			constexpr auto args = std::define_static_array( std::meta::template_arguments_of( ann ) );
+			constexpr auto ref  = require_member( ^^C, std::meta::extract<name_t>( args[0] ) );
+			v.push_back( MakeField( desc_from( ref.member, std::meta::extract<Pred>( args[1] ),
+			                                   static_cast<int>( ref.offset ) ) ) );
+		}
+		// An empty prediction map is not an empty array. END_PREDICTION_DATA keeps the dummy
+		// entry the macro opens with -- "so you can define empty tables" -- and reports
+		// dataNumFields = 1 rather than 0, so the faithful reproduction is that one field.
+		if ( v.empty() )
+			v.push_back( typedescription_t{} );
+		return v;
+	}();
+	return out;
+}
+
+} // namespace ksr::pred
+
+// Replaces BEGIN_PREDICTION_DATA / END_PREDICTION_DATA. m_PredMap is public -- DECLARE_PREDICTABLE
+// opens with `public:` -- so unlike the datamap it can be named directly. BaseClass resolves here
+// because the initialiser of a static data member is in its class's scope, which is how the macro
+// this replaces spelled it too.
+
+// Emits a RecvTable for an annotated client class, from the same Net annotation the send
+// emitter reads. Derives the arguments and calls the existing RecvPropXXX factories, so
+// byte-identity reduces to argument derivation.
+//
+// RecvProp carries no bit count, range or networkvar flags -- the receive side takes those
+// from the matching send prop -- so the annotation is read for its name override and flags
+// only, and a client member needs no bits stated.
+
+namespace ksr::recv
+{
+using namespace ::ks::reflect;
+
+// The receive half of a string-named sub-table prop. A SubTable<>'s Table argument is `auto`,
+// so the send side names &DT_X::g_SendTable and this side &DT_X::g_RecvTable; each emitter takes
+// only the annotations carrying its own pointer type.
+consteval std::vector<std::meta::info> recv_sub_tables( std::meta::info cls, bool at_head )
+{
+	std::vector<std::meta::info> out;
+	for ( auto t : sub_tables( cls, at_head ) )
+		if ( std::meta::remove_cv( std::meta::type_of( std::meta::template_arguments_of( t )[1] ) )
+		     == ^^RecvTable * )
+			out.push_back( t );
+	return out;
+}
+
+enum class PropKind
+{
+	Int, Float, Time, Vector, VectorXY, Bool, EHandle, String,
+	Table,       // RecvPropDataTable
+	Array,       // RecvPropArray3, which takes its element prop by value
+	ArrayInner,  // InternalRecvPropArray, whose element prop is a sibling in the table
+	UtlVector,   // RecvPropUtlVector, which also takes its element prop by value
+};
+
+// Everything a RecvProp factory needs, as plain data. The table is described at compile time and
+// make_prop turns one description into one engine prop at load time; RecvProp itself cannot be the
+// compile-time artifact, because a reflection constant cannot hold a non-structural type.
+struct PropDesc
+{
+	const char *name  = nullptr;
+	PropKind    kind  = PropKind::Int;
+	int         offset = 0;
+	int         size   = 0;
+	int         flags  = 0;
+	int         elements = 1;
+	int         stride   = 0;
+	RecvVarProxyFn proxy = nullptr;   // from a Proxy<F> annotation
+
+	// Table. Reached through a thunk because the three ways to name one differ in kind: a base
+	// class's m_pClassRecvTable is read at load time, an embedded class's is &table<T>(), and a
+	// SubTable<> annotation carries the pointer as a constant.
+	RecvTable *(*subtable)() = nullptr;
+	DataTableRecvVarProxyFn tableProxy = nullptr;
+
+	ArrayLengthRecvProxyFn lenProxy = nullptr;   // ArrayInner
+	WireVecOps             vec;                  // UtlVector
+	int                    max      = 0;         // UtlVector: nMaxElements
+
+	// Array and UtlVector take their element prop by value, so the element is one more descriptor
+	// in the same array and this is its index; `nested` keeps it out of the table's own props.
+	int  elem   = -1;
+	bool nested = false;
+};
+
+// A prop that receives a sub-table. Unlike SendPropDataTable, the recv factory's default proxy
+// carries no extra flag, so naming DataTableRecvProxy_StaticDataTable explicitly is the same as
+// omitting it.
+constexpr PropDesc table_prop( const char *name, int offset, int flags,
+                               RecvTable *(*get)(), DataTableRecvVarProxyFn proxy )
+{
+	PropDesc d;
+	d.kind       = PropKind::Table;
+	d.name       = name;
+	d.offset     = offset;
+	d.flags      = flags;
+	d.subtable   = get;
+	d.tableProxy = proxy;
+	return d;
+}
+
+template <std::meta::info St>
+consteval PropDesc sub_table_prop()
+{
+	constexpr auto sa = std::define_static_array( std::meta::template_arguments_of( St ) );
+	constexpr RecvTable *pTable = std::meta::extract<RecvTable *>( sa[1] );
+	return table_prop( intern( std::meta::extract<name_t>( sa[0] ) ), 0, 0,
+	                   +[]() -> RecvTable * { return pTable; },
+	                   extract_fn<DataTableRecvVarProxyFn>( sa[2] ) );
+}
+
+consteval PropKind kind_of_tag( fieldtype_t tag, std::meta::info payload, std::meta::info where )
+{
+	switch ( tag )
+	{
+	case FIELD_FLOAT:            return PropKind::Float;
+	case FIELD_TIME:             return PropKind::Time;
+	case FIELD_BOOLEAN:          return PropKind::Bool;
+	case FIELD_EHANDLE:          return PropKind::EHandle;
+	case FIELD_EMBEDDED:         return PropKind::Table;
+	// RecvPropQAngles is a #define for RecvPropVector, so both land here.
+	case FIELD_VECTOR:
+	case FIELD_POSITION_VECTOR:  return PropKind::Vector;
+	case FIELD_INTEGER:
+	case FIELD_SHORT:
+	case FIELD_CHARACTER:
+	case FIELD_INTEGER64:
+	case FIELD_COLOR32:
+	case FIELD_MODELINDEX:
+	case FIELD_TICK:             return PropKind::Int;
+	default:
+		throw std::meta::exception( "no recv-prop kind for this field tag", where );
+	}
+}
+
+consteval PropKind element_kind_of( std::meta::info m )
+{
+	// The encoding overrides the element type as well: CTimeline receives its int array
+	// m_nValueCounts with RecvPropFloat, one element at a time.
+	if ( get<Net>( m ).enc == WireEnc::Float ) return PropKind::Float;
+	if ( get<Net>( m ).enc == WireEnc::Int ) return PropKind::Int;
+	if ( get<Net>( m ).enc == WireEnc::String ) return PropKind::String;
+	const std::meta::info elem = std::meta::remove_extent( unwrap( std::meta::type_of( m ) ) );
+	return kind_of_tag( tag_of_type( elem ), elem, m );
+}
+
+consteval PropKind kind_of_member( std::meta::info m, const Net &n )
+{
+	const std::meta::info t = std::meta::type_of( m );
+
+	if ( n.index >= 0 )
+	{
+		if ( n.enc == WireEnc::Int ) return PropKind::Int;
+		if ( n.enc == WireEnc::Float ) return PropKind::Float;
+		// A real array's element follows the element's own type -- m_uchFrontColor[i] is one byte,
+		// PropKind::Int, not a float lane. A Vector or QAngle component is not addressable as a real C
+		// array, and the receive side has no angle kind, so that case is simply PropKind::Float.
+		if ( is_array_member( t ) ) return element_kind_of( m );
+		return PropKind::Float;
+	}
+	if ( is_string_member( t ) ) return PropKind::String;
+	// One element of an array member is a scalar prop of the element type.
+	if ( n.elem >= 0 && is_array_member( t ) ) return element_kind_of( m );
+	if ( is_array_member( t ) )  return PropKind::Array;
+	// WireEnc::Int does matter: DT_AnimTimeMustBeFirst receives the float m_flAnimTime with RecvPropInt,
+	// and a float prop would decode a different type off the wire. And the reverse, WireEnc::Float.
+	if ( n.enc == WireEnc::Int ) return PropKind::Int;
+	if ( n.enc == WireEnc::Float ) return PropKind::Float;
+	if ( n.enc == WireEnc::VectorXY ) return PropKind::VectorXY;
+	return kind_of_tag( tag_of( m ), unwrap( t ), m );
+}
+
+// A shared class carries one Net annotation for both directions, and the send side fills in the
+// wire encoding. Those flags describe how a value is packed, which is the sender's business: the
+// legacy RecvProp for such a member passes no flags at all, so applying them here made every
+// DT_EnvWindShared int come out 0x1 against a legacy 0x0. Flags about receive-side behaviour
+// (SPROP_PROXY_ALWAYS_YES, SPROP_CHANGES_OFTEN, ...) are kept.
+constexpr int SEND_ONLY_FLAGS =
+	SPROP_UNSIGNED | SPROP_COORD | SPROP_NOSCALE | SPROP_ROUNDDOWN | SPROP_ROUNDUP |
+	SPROP_NORMAL | SPROP_COORD_MP | SPROP_COORD_MP_LOWPRECISION | SPROP_COORD_MP_INTEGRAL |
+	SPROP_CELL_COORD | SPROP_CELL_COORD_LOWPRECISION | SPROP_CELL_COORD_INTEGRAL | SPROP_VARINT |
+	// A send-side ordering hint: 53 legacy send props set it and no recv prop does.
+	SPROP_CHANGES_OFTEN;
+
+// One entry from a member reflection plus explicit wire parameters, for a From<> entry whose
+// offset is relative to the receiving class rather than the declaring one.
+// One component of a Vector or QAngle, as RECVINFO( m_vecViewOffset[0] ) spells it. The recv
+// compare is keyed by name, so unlike the send side the order these are emitted in does not matter.
+consteval const char *indexed_name( std::meta::info m, Net n )
+{
+	const std::string_view id = n.wire.empty() ? std::meta::identifier_of( m )
+	                                           : std::string_view( n.wire.data );
+	return indexed_wire_name( m, id, n.index );
+}
+
+consteval int component_size( std::meta::info t )
+{
+	// A real array's stride is its own element size; a Vector or QAngle has no C array to ask, so
+	// it is always three float-sized components.
+	if ( is_array_member( t ) ) return (int)array_element_size( t );
+	return (int)( std::meta::size_of( unwrap( t ) ) / 3 );
+}
+
+template <std::meta::info M>
+consteval PropDesc desc_from( Net n, int offset, RecvVarProxyFn proxy )
+{
+	const std::meta::info t = std::meta::type_of( M );
+
+	PropDesc d;
+	d.kind   = kind_of_member( M, n );
+	d.name   = n.index >= 0 ? indexed_name( M, n )
+	         : n.wire.empty() ? intern( std::meta::identifier_of( M ) ) : intern( n.wire );
+	d.offset = n.index >= 0 ? offset + n.index * component_size( t ) : offset;
+	d.flags  = n.flags & ~SEND_ONLY_FLAGS;
+	d.proxy  = proxy;
+	if ( n.index >= 0 )
+	{
+		d.size = component_size( t );
+	}
+	// An inherited member can be an array or a string as easily as a scalar, and its extent is
+	// read from the member either way. Leaving these unset is what forced From<> to refuse them.
+	else if ( d.kind == PropKind::Array || d.kind == PropKind::String )
+	{
+		d.elements = static_cast<int>( array_extent_of( t ) );
+		d.stride   = static_cast<int>( array_element_size( t ) );
+		d.size     = d.kind == PropKind::String ? d.elements : d.stride;
+	}
+	else
+	{
+		// An element prop is sized by the element, not by the whole array.
+		d.size = static_cast<int>( n.elem >= 0 ? array_element_size( t )
+		                                       : std::meta::size_of( t ) );
+	}
+	return d;
+}
+
+template <std::meta::info M, std::size_t Base = 0>
+consteval PropDesc desc_of()
+{
+	const std::meta::info t = std::meta::type_of( M );
+	constexpr Net n = get<Net>( M );
+
+	PropDesc d;
+	d.kind   = kind_of_member( M, n );
+	d.name   = n.index >= 0 ? indexed_name( M, n ) : external_name<Net>( M );
+	d.offset = static_cast<int>( Base + byte_offset_of( M ) );
+	d.flags  = n.flags & ~SEND_ONLY_FLAGS;
+	if constexpr ( has_proxy( M, WireSide::Recv ) )
+		d.proxy = std::meta::extract<RecvVarProxyFn>( proxy_arg_of( M, WireSide::Recv ) );
+
+	if ( d.kind == PropKind::Array || d.kind == PropKind::String )
+	{
+		d.elements = static_cast<int>( array_extent_of( t ) );
+		d.stride   = static_cast<int>( array_element_size( t ) );
+		d.size     = d.kind == PropKind::String ? d.elements : d.stride;
+	}
+	else
+	{
+		d.size = static_cast<int>( std::meta::size_of( t ) );
+		if ( n.index >= 0 ) d.size = component_size( t );
+	}
+	return d;
+}
+
+// One description to one engine prop. `all` resolves the element of an Array or a UtlVector,
+// which is a descriptor in the same array rather than something owned.
+RecvProp make_prop( const PropDesc &d, std::span<const PropDesc> all );
+
+// One CUtlVector prop. Everything consteval happens in the template arguments: an ordinary call
+// to a consteval function from the table lambda escalates the whole lambda to an immediate
+// function (P2564) and the table then fails to build.
+// One Send/RecvPropArray2 pair. Template arguments again, for the P2564 reason above.
+template <name_t ElemName, name_t ArrayName, int Count, int Stride, int Size,
+          Net N, auto ElemFn, auto LenFn>
+constexpr void push_bare_array( std::vector<PropDesc> &out )
+{
+	constexpr const char *en = intern( ElemName );
+	constexpr const char *an = intern( ArrayName );
+	// The element prop is a prop of the table itself; the array prop follows it.
+	PropDesc d;
+	d.name  = en;
+	d.kind  = N.enc == WireEnc::Float ? PropKind::Float : PropKind::Int;
+	d.offset = 0;
+	d.size  = Size;
+	d.flags = N.flags & ~SEND_ONLY_FLAGS;
+	d.proxy = ElemFn;
+	out.push_back( d );
+
+	PropDesc a;
+	a.kind     = PropKind::ArrayInner;
+	a.name     = an;
+	a.elements = Count;
+	a.stride   = Stride;
+	a.lenProxy = LenFn;
+	out.push_back( a );
+}
+
+template <class C, name_t Member, int Max, auto Table, auto Fn>
+constexpr void push_utl_vec( std::vector<PropDesc> &out )
+{
+	constexpr auto ref = require_member( ^^C, Member );
+	constexpr const char *nm = intern( Member );
+	constexpr int off = (int)ref.offset;
+	using Vec = typename [: std::meta::type_of( ref.member ) :];
+	using WV  = WireVec<Vec>;
+	// The element prop is unnamed and at offset 0 either way; a null Table means the elements are
+	// scalars, whose kind comes from the vector's element type (DT_SceneEntity holds EHANDLEs).
+	if constexpr ( Table == nullptr )
+	{
+		constexpr std::meta::info et = ^^typename WV::elem_type;
+		constexpr PropKind ek = kind_of_tag( tag_of_type( et ), et, ^^C );
+		PropDesc ed;
+		ed.kind   = ek;
+		ed.nested = true;
+		out.push_back( ed );
+	}
+	else
+	{
+		PropDesc ed;
+		ed.kind     = PropKind::Table;
+		ed.subtable = +[]() -> RecvTable * { return Table; };
+		ed.nested   = true;
+		out.push_back( ed );
+	}
+
+	PropDesc d;
+	d.kind     = PropKind::UtlVector;
+	d.name     = nm;
+	d.offset   = off;
+	d.size     = (int)sizeof( typename WV::elem_type );
+	d.vec      = WV::ops();
+	if ( Fn != nullptr )
+		d.vec.resize = (ResizeUtlVectorFn)Fn;
+	d.max      = Max;
+	d.elem     = (int)out.size() - 1;
+	out.push_back( d );
+}
+
+template <class C> RecvTable &table();
+
+// One member's contribution to a table. Both generators had their own copy of this and the send
+// side's copies had already drifted apart, so this is shared deliberately.
+template <std::meta::info M, std::size_t Base = 0>
+constexpr void push_member_prop( std::vector<PropDesc> &out )
+{
+	if constexpr ( !indexed_nets<M>( WireSide::Recv ).empty() )
+	{
+		template for ( constexpr auto n : std::define_static_array( indexed_nets<M>( WireSide::Recv ) ) )
+		{
+			PropDesc e = desc_of<M, Base>();
+			e.name   = indexed_name( M, n );
+			e.offset = (int)( Base + byte_offset_of( M ) ) + n.index * component_size(
+			    std::meta::type_of( M ) );
+			e.size   = component_size( std::meta::type_of( M ) );
+			out.push_back( e );
+		}
+		return;
+	}
+	constexpr PropDesc d = desc_of<M, Base>();
+	if constexpr ( d.kind == PropKind::Table )
+	{
+		using Sub = typename [: embedded_class_of( std::meta::type_of( M ) ) :];
+		out.push_back( table_prop( d.name, d.offset, d.flags,
+		                           +[]() -> RecvTable * { return &table<Sub>(); }, nullptr ) );
+	}
+	else if constexpr ( d.kind == PropKind::Array && get<Net>( M ).varlen )
+	{
+		// RecvPropArray == RecvPropVariableLengthArray: the element template is a real prop of the
+		// table. Unlike the send side it is named "m_arr[0]", which is what RECVINFO( m_arr[0] )
+		// stringifies to; the engine skips it anyway via IsInsideArray().
+		constexpr PropDesc elem = [] {
+			PropDesc e = desc_of<M, Base>();
+			e.kind = element_kind_of( M );
+			e.size = e.stride;
+			e.name = indexed_name( M, Net{ .index = 0 } );
+			return e;
+		}();
+		out.push_back( elem );
+
+		PropDesc a = d;
+		a.kind     = PropKind::ArrayInner;
+		a.offset   = 0;   // InternalRecvPropArray takes no offset
+		a.lenProxy = nullptr;
+		out.push_back( a );
+	}
+	else if constexpr ( d.kind == PropKind::Array )
+	{
+		constexpr PropDesc elem = [] {
+			PropDesc e = desc_of<M, Base>();
+			e.kind = element_kind_of( M );
+			e.size = e.stride;
+			return e;
+		}();
+		PropDesc a = d;
+		a.elem = (int)out.size();
+		PropDesc e = elem;
+		e.nested = true;
+		out.push_back( e );
+		out.push_back( a );
+	}
+	else
+	{
+		out.push_back( d );
+	}
+}
+
+// One table's descriptions become the engine's props, in order. A nested descriptor is the input
+// to the prop that owns it, never a prop of the table itself.
+inline std::vector<RecvProp> materialize( std::span<const PropDesc> all )
+{
+	std::vector<RecvProp> out;
+	out.reserve( all.size() );
+	for ( const PropDesc &d : all )
+		if ( !d.nested ) out.push_back( make_prop( d, all ) );
+	return out;
+}
+
+// A base's table pointer is private in some classes, which is why the legacy macro only reaches it
+// as a friend. Reflection with unchecked access reaches it without naming it, and handing out a
+// thunk keeps that out of the caller.
+template <class C>
+RecvTable *base_recv_table()
+{
+	constexpr std::meta::info m =
+	    static_member_of( base_with_static_member( ^^C, "m_pClassRecvTable" ), "m_pClassRecvTable" );
+	return [: m :];
+}
+
+// Every table's description, computed entirely at compile time. A class may receive several: the
+// primary table is the NetTable annotation no member singles out, and every member that names
+// another table belongs to that one instead. Only a primary table carries the base, the
+// string-named sub-tables and the props with no member behind them.
+//
+// The named tables used to be a second, smaller copy of this function; one builder is what stops
+// the pair drifting apart.
+template <class C, name_t Table = name_t{}, bool Primary = false>
+consteval std::vector<PropDesc> build_desc()
+{
+	std::vector<PropDesc> out;
+
+	// The base is taken from bases_of, and its table pointer through reflection: DECLARE_CLIENTCLASS
+	// leaves m_pClassRecvTable private in some classes.
+	if constexpr ( Primary && primary_net_table<C>().base )
+		out.push_back( table_prop( intern( std::string_view( "baseclass" ) ), 0, 0,
+		                           &base_recv_table<C>, DataTableRecvProxy_StaticDataTable ) );
+
+	// Sub-table props named by a wire string rather than by a member, at the head of the table.
+	if constexpr ( Primary )
+		template for ( constexpr auto st : std::define_static_array( recv_sub_tables( ^^C, true ) ) )
+			out.push_back( sub_table_prop<st>() );
+
+	// Send/RecvPropArray2 pairs, which have no member behind them.
+	template for ( constexpr auto ba : std::define_static_array( bare_arrays( ^^C ) ) )
+	{
+		constexpr auto aa = std::define_static_array( std::meta::template_arguments_of( ba ) );
+		push_bare_array<([: aa[0] :]), ([: aa[1] :]), ([: aa[2] :]), ([: aa[3] :]),
+		                ([: aa[4] :]), ([: aa[5] :]), ([: aa[6] :]), ([: aa[7] :])>( out );
+	}
+
+	// CUtlVector props.
+	template for ( constexpr auto uv : std::define_static_array( utl_vecs( ^^C, Table ) ) )
+	{
+		constexpr auto ua = std::define_static_array( std::meta::template_arguments_of( uv ) );
+		push_utl_vec<C, ([: ua[0] :]), ([: ua[1] :]), ([: ua[2] :]), ([: ua[3] :])>( out );
+	}
+
+	// Props named by a bare wire string with no member behind them.
+	if constexpr ( Primary )
+		template for ( constexpr auto bp : std::define_static_array( bare_props( ^^C ) ) )
+		{
+			constexpr auto ba = std::define_static_array( std::meta::template_arguments_of( bp ) );
+			constexpr Net  bn = std::meta::extract<Net>( ba[1] );
+			PropDesc d;
+			d.name   = intern( std::meta::extract<name_t>( ba[0] ) );
+			d.kind   = bn.enc == WireEnc::Int ? PropKind::Int : PropKind::Float;
+			d.offset = 0;
+			d.size   = kSizeofIgnore;
+			d.flags  = bn.flags & ~SEND_ONLY_FLAGS;
+			d.proxy  = extract_fn<RecvVarProxyFn>( ba[2] );
+			out.push_back( d );
+		}
+
+	// Only the members that do not single out another of the class's tables.
+	template for ( constexpr auto m : std::define_static_array( members_in<Table, C>( WireSide::Recv ) ) )
+		push_member_prop<m, flattened_offset( ^^C, m )>( out );
+
+	if constexpr ( Primary )
+		template for ( constexpr auto st : std::define_static_array( recv_sub_tables( ^^C, false ) ) )
+			out.push_back( sub_table_prop<st>() );
+
+	// Members declared in a base that this table receives itself. Order is not observable here --
+	// the decoder resolves by name -- so these are simply appended.
+	template for ( constexpr auto ann : std::define_static_array( from_annotations_in( ^^C, Table, WireSide::Recv ) ) )
+	{
+		constexpr FromEntry fe = from_entry( ann );
+		// A dotted path is the prop's wire name, as SENDINFO/RECVINFO stringify it.
+		constexpr auto ref  = require_member( ^^C, fe.name );
+		// A bracketed path resolved to one element; the Net has to say so, because the kind
+		// and the size are the element's, not the array's.
+		constexpr Net  n    = with_elem( wire_from_path( fe.net, fe.name ), ref.elem );
+		constexpr PropDesc d = desc_from<ref.member>( n, static_cast<int>( ref.offset ),
+		                                              extract_fn<RecvVarProxyFn>( fe.proxy ) );
+		if constexpr ( fe.table != std::meta::info{} )
+		{
+			// FromTable<>: use the named table rather than regenerating one.
+			static_assert( d.kind == PropKind::Table, "FromTable<> on a non-embedded member" );
+			constexpr RecvTable *pTable = std::meta::extract<RecvTable *>( fe.table );
+			out.push_back( table_prop( d.name, d.offset, d.flags,
+			                           +[]() -> RecvTable * { return pTable; }, nullptr ) );
+		}
+		else if constexpr ( d.kind == PropKind::Table )
+		{
+			// The embedded type must be migrated; an empty table is the one outcome worth refusing.
+			constexpr std::meta::info sub = embedded_class_of( std::meta::type_of( ref.member ) );
+			static_assert( has<NetTable>( sub ),
+			    "embedded member is neither migrated nor given its legacy sub-table" );
+			out.push_back( table_prop( d.name, d.offset, d.flags,
+			                           +[]() -> RecvTable * { return &table<typename [: sub :]>(); },
+			                           nullptr ) );
+		}
+		else if constexpr ( d.kind == PropKind::Array )
+		{
+			constexpr PropDesc elem = [&fe] {
+				PropDesc e = desc_from<ref.member>( n, static_cast<int>( ref.offset ),
+				                                    extract_fn<RecvVarProxyFn>( fe.proxy ) );
+				e.kind = element_kind_of( ref.member );
+				e.size = e.stride;
+				return e;
+			}();
+			PropDesc a = d;
+			a.elem = (int)out.size();
+			PropDesc e = elem;
+			e.nested = true;
+			out.push_back( e );
+			out.push_back( a );
+		}
+		else
+		{
+			out.push_back( d );
+		}
+	}
+	return out;
+}
+
+template <class C>
+inline constexpr std::span<const PropDesc> table_desc =
+    std::define_static_array( build_desc<C, name_t{}, true>() );
+
+template <class C, name_t Table = name_t{}>
+inline constexpr std::span<const PropDesc> table_desc_in =
+    std::define_static_array( build_desc<C, Table>() );
+
+template <class C>
+std::vector<RecvProp> &table_props()
+{
+	static std::vector<RecvProp> props = materialize( table_desc<C> );
+	return props;
+}
+
+template <class C, name_t Table = name_t{}>
+std::vector<RecvProp> &table_props_in()
+{
+	static std::vector<RecvProp> props = materialize( table_desc_in<C, Table> );
+	return props;
+}
+
+template <class C, name_t Table>
+RecvTable &table_in()
+{
+	static RecvTable t = [] {
+		auto &p = table_props_in<C, Table>();
+		return RecvTable( p.data(), static_cast<int>( p.size() ), intern( Table ) );
+	}();
+	return t;
+}
+
+template <class C>
+RecvTable &table()
+{
+	static RecvTable t = [] {
+		auto &p = table_props<C>();
+		return RecvTable( p.data(), static_cast<int>( p.size() ), table_name<C>() );
+	}();
+	return t;
+}
+
+} // namespace ksr::recv
+
+// Replaces IMPLEMENT_CLIENTCLASS_DT plus its prop list once the gate has proven the generated table
+// identical. Mirrors the legacy macro exactly: the dataTable::g_RecvTable global stays (the
+// ClientClass registration points at it, and the engine resolves props through it), the entity
+// factory is the same new-and-Init, and Construct runs in a static initializer as ClientClassInit
+// did. Defining m_pClassRecvTable out of line is allowed even where it is private -- only reading
+// it needs the unchecked reflection the gate uses.
+// A client event class: one static singleton rather than a per-entity allocation, and the factory
+// goes in the ClientClass's third slot, not its second. Temp entities use this for all 32 of their
+// tables, which is why it needs a macro of its own rather than a flag on the one above.
+// One of a class's *secondary* tables: the members that name it, rather than the class's own set.
+// CBaseCombatCharacter sends DT_BCCLocalPlayerExclusive and DT_BCCNonLocalPlayerExclusive besides
+// its own table, and each is a separate namespace global with no class registration behind it.
+// The client half of IMPLEMENT_REFLECT_TABLE; see the send emitter for why one name is
+// defined in both. INTERNAL_IMPLEMENT_CLIENTCLASS_PROLOGUE supplies everything but the table.
+
+// What the client registers, its InterfaceRegs and ConVars: `ConVar x( side_registry(), ... )`.
+ks::registry &side_registry();

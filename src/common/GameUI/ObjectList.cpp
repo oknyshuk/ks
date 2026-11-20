@@ -4,9 +4,10 @@
 // dgoodenough - malloc.h doesn't exist on PS3
 // PS3_BUILDFIX
 import std;
-import ks.core;
-import ks.math;
-import ks.tier1;
+import ks.core.memalloc;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
 #include "ObjectList.h"
 
 //#include "port.h"

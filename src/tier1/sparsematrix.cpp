@@ -2,7 +2,9 @@
 // Copyright (c) 1996-2006 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.sparsematrix;
 
 void CSparseMatrix::AdjustAllRowIndicesAfter( int nStartRow, int nDelta )
 {

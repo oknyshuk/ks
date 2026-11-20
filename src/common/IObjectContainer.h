@@ -1,4 +1,6 @@
 #pragma once
+import ks.math.ssequaternion;
+import ks.tier1.convar;
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 

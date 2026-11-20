@@ -5,7 +5,11 @@
 // Purpose: Engine crc routines
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.checksum_crc;
 #include "quakedef.h"
 
 bool CRC_File(CRC32_t *crcvalue, const char *pszFileName);

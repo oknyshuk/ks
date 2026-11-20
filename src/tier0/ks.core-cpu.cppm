@@ -5,7 +5,7 @@
 // original ran are gone; GetCPUFrequencyResults() reports "no data" (all zero) until something
 // measures again. See tier0/cpumonitoring.cpp.
 
-export module ks.core:cpu;
+export module ks.core.cpu;
 
 export struct CPUFrequencyResults
 {

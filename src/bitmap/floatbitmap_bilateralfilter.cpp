@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2006 Valve Corporation
 
-import ks.core;
+import ks.core.platform;
+import ks.core.progress;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.platform;
+import ks.simd;
 import std;
 #include "bitmap/floatbitmap.h"
 

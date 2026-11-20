@@ -1,4 +1,8 @@
 #pragma once
+import ks.core.basetypes;
+import ks.math.ssequaternion;
+import ks.tier1.map_ops;
+import ks.tier1.strtools;
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2009 Valve Corporation
 
@@ -86,9 +90,6 @@ T *CGenericClassmap< T >::CreateInstance( const char *mapname )
 
 		if ( !lookup->factory )
 		{
-#if defined( _DEBUG )
-			Msg( "No factory for %s/%s\n", lookup->GetMapName(), name.c_str() );
-#endif
 			continue;
 		}
 

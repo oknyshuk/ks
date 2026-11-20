@@ -3,7 +3,13 @@
 
 // Purpose: baseclientstate.cpp: implementation of the CBaseClientState class.
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.math.ssemath;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.convar_serverbounded;
+import ks.tier1.iconvar;
 #include "client.h"
 import std;
 

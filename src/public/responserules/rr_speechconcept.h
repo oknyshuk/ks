@@ -5,7 +5,9 @@
 // Purpose: Class data for an AI Concept, an atom of response-driven dialog.
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.intern_pool;
 
 #define RR_CONCEPTS_ARE_STRINGS 0
 

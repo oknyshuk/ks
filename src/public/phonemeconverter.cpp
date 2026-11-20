@@ -2,7 +2,10 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.core;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
 
 struct PhonemeMap_t
 {

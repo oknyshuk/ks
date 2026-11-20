@@ -9,6 +9,7 @@
 
 #include "decalmodulate_vs30.inc"
 #include "decalmodulate_ps30.inc"
+import ks.math.vector4d;
 
 DEFINE_FALLBACK_SHADER( DecalModulate, DecalModulate_DX9 )
 

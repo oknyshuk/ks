@@ -3,7 +3,13 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.math.mathlib;
+import ks.math.vector4d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
 class IMaterial;
 class ITexture;
 

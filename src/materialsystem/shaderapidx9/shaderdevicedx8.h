@@ -3,7 +3,14 @@
 // Copyright (c) 1996-2008 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 #include "shaderdevicebase.h"
 #include "shaderapidx8_global.h"
 #include "materialsystem/imaterialsystem.h"

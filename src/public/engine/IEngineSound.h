@@ -5,7 +5,10 @@
 // Purpose: Client-server neutral sound interface
 
 import std;
-import ks.tier1;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "soundflags.h"
 #include "irecipientfilter.h"
 #include "engine/SndInfo.h"

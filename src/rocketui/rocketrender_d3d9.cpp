@@ -18,6 +18,9 @@
 #include <d3d9.h>
 
 import std;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
 
 RocketRenderD3D9 RocketRenderD3D9::m_Instance;
 

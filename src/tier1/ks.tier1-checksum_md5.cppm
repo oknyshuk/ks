@@ -2,10 +2,12 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:checksum_md5;
+export module ks.tier1.checksum_md5;
 
 import std;
-import ks.math;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
 
 export extern "C++" {
 

@@ -6,6 +6,7 @@
 #include "emissive_scroll_blended_pass_helper.h"
 #include "cloak_blended_pass_helper.h"
 #include "flesh_interior_blended_pass_helper.h"
+import ks.core.basetypes;
 
 BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 	

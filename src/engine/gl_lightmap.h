@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
+import ks.math.bumpvects;
+import ks.math.mathlib;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
+import ks.vstdlib.callqueue;
 #include "surfacehandle.h"
 import std;
 #include "bspfile.h"

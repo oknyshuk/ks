@@ -2,10 +2,12 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:interface;
+export module ks.tier1.createinterface;
 
 import std;
-import ks.math;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
 
 export extern "C++" {
 
@@ -21,11 +23,15 @@ inline constexpr const char *CREATEINTERFACE_PROCNAME = "CreateInterface";
 typedef void* (*CreateInterfaceFn)(const char *pName, int *pReturnCode);
 typedef void* (*InstantiateInterfaceFn)();
 
-// Used internally to register classes.
+namespace ks { struct registry; }
+
+// Used internally to register classes: with the engine's registry, or with the given one (a game
+// side passes its own: side_registry()).
 class __attribute__(( visibility( "hidden" ) )) InterfaceReg
 {
 public:
 	InterfaceReg(InstantiateInterfaceFn fn, const char *pName);
+	InterfaceReg(ks::registry &registry, InstantiateInterfaceFn fn, const char *pName);
 
 public:
 	InstantiateInterfaceFn	m_CreateFn;

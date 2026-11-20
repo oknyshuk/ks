@@ -34,7 +34,7 @@ set_property(TARGET tier0 PROPERTY CXX_MODULE_STD ON)
 add_library(ks_core STATIC)
 target_sources(ks_core PUBLIC
     FILE_SET CXX_MODULES
-    FILES ks.core.cppm
+    FILES
           ks.core-basetypes.cppm
           ks.core-cache_hints.cppm
           ks.core-cmdline.cppm
@@ -55,7 +55,6 @@ target_sources(ks_core PUBLIC
           ks.core-perfstats.cppm
           ks.core-platform.cppm
           ks.core-platwindow.cppm
-          ks.core-prelude.cppm
           ks.core-random.cppm
           ks.core-progress.cppm
           ks.core-scratcharena.cppm

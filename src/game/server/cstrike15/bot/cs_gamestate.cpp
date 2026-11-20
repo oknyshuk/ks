@@ -1,14 +1,48 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
+module;
+#include "igameevents.h"
+module ks.server;
+
+import std;
+import ks.core.dbg;
+import ks.core.random;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
+import ks.tier1.reflect_wirevar;
+import :cstrike15.bot.bot;
+import :cstrike15.bot.cs_bot;
+import :cstrike15.cs_player;
+import :cstrike15.cs_playeranimstate;
+import :cstrike15.hostage.cs_simple_hostage;
+import :fish;
+import :nav_4;
+import :player;
+import :baseentity;
+import :sharedvar;
+import :vscript;
+import :cstrike15.cs_player_2;
+import :econ.econ_item_schema_minimal;
+import :entityutil;
+import ks.game.gamemovement;
+import ks.core.vprof;
+import ks.tier1.strtools;
+
+class CBasePlayer;
+class CCSBot;
+class CCSBotManager;
+class CHostage;
+class CNavArea;
+
+using namespace ::ks::reflect;
+
 // Purpose: Encapsulation of the current scenario/game state. Allows each bot imperfect knowledge.
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
-
-
-#include "cs_bot.h"
-#include "cs_gamestate.h"
-#include "cs_simple_hostage.h"
 
 //--------------------------------------------------------------------------------------------------------------
 CSGameState::CSGameState( CCSBot *owner )
@@ -88,7 +122,6 @@ void CSGameState::OnHostageRescuedAll( IGameEvent *event )
 	m_allHostagesRescued = true;
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Update game state based on events we have received
@@ -98,7 +131,6 @@ void CSGameState::OnRoundEnd( IGameEvent *event )
 	m_isRoundOver = true;
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Update game state based on events we have received
@@ -107,7 +139,6 @@ void CSGameState::OnRoundStart( IGameEvent *event )
 {
 	Reset();
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -127,7 +158,6 @@ void CSGameState::OnBombPlanted( IGameEvent *event )
 	}
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Update game state based on events we have received
@@ -138,7 +168,6 @@ void CSGameState::OnBombDefused( IGameEvent *event )
 	SetBombState( DEFUSED );
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Update game state based on events we have received
@@ -148,7 +177,6 @@ void CSGameState::OnBombExploded( IGameEvent *event )
 	// change state - the event is announced to everyone
 	SetBombState( EXPLODED );
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -253,7 +281,6 @@ bool CSGameState::IsAtPlantedBombsite( void ) const
 
 	return false;
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -377,7 +404,6 @@ bool CSGameState::IsBombsiteClear( int zoneIndex ) const
 
 	return false;
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -515,7 +541,6 @@ const Vector *CSGameState::GetRandomFreeHostagePosition( void ) const
 	return nullptr;
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * If we can see any of the positions where we think a hostage is, validate it
@@ -529,7 +554,6 @@ unsigned char CSGameState::ValidateHostagePositions( void )
 
 	const float validateInterval = 0.5f;
 	m_validateInterval.Start( validateInterval );
-
 
 	// check the status of hostages
 	unsigned char status = NO_CHANGE;
@@ -549,7 +573,7 @@ unsigned char CSGameState::ValidateHostagePositions( void )
 
 		// if we can see a hostage, update our knowledge of it
 		Vector pos = info->hostage->GetAbsOrigin() + Vector( 0, 0, HalfHumanHeight );
-		if (m_owner->IsVisible( pos, CHECK_FOV ))
+		if (m_owner->IsVisible( pos, true ))
 		{
 			if (info->hostage->IsAlive())
 			{
@@ -588,7 +612,7 @@ unsigned char CSGameState::ValidateHostagePositions( void )
 		// can't directly see this hostage
 		// check line of sight to where we think this hostage is, to see if we noticed that is has moved
 		pos = info->knownPos + Vector( 0, 0, HalfHumanHeight );
-		if (m_owner->IsVisible( pos, CHECK_FOV ))
+		if (m_owner->IsVisible( pos, true ))
 		{
 			// we can see where we thought the hostage was - verify it is still there and alive
 
@@ -636,7 +660,6 @@ unsigned char CSGameState::ValidateHostagePositions( void )
 	return status;
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Return the nearest visible free hostage
@@ -682,7 +705,6 @@ CHostage *CSGameState::GetNearestVisibleFreeHostage( void ) const
 
 	return close;
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -766,4 +788,171 @@ void CSGameState::AllHostagesGone( void )
 {
 	for( int i=0; i<m_hostageCount; ++i )
 		m_hostage[i].isValid = false;
+}
+
+// Purpose: dll-agnostic routines (no dll dependencies here)
+
+// Author: Matthew D. Campbell (matt@turtlerockstudios.com), 2003
+
+static char s_shared_token[ 1500 ];
+static char s_shared_quote = '\"';
+
+//--------------------------------------------------------------------------------------------------------------
+char * SharedVarArgs(const char *format, ...)
+{
+	std::va_list argptr;
+	const int BufLen = 1024;
+	const int NumBuffers = 4;
+	static char string[NumBuffers][BufLen];
+	static int curstring = 0;
+	
+	curstring = ( curstring + 1 ) % NumBuffers;
+
+	__builtin_va_start (argptr, format);
+	std::vsnprintf( string[curstring], BufLen, format, argptr );
+	__builtin_va_end (argptr);
+
+	return string[curstring];  
+}
+
+//--------------------------------------------------------------------------------------------------------------
+char * BufPrintf(char *buf, int& len, const char *fmt, ...)
+{
+	if (len <= 0)
+		return nullptr;
+
+	std::va_list argptr;
+
+	__builtin_va_start(argptr, fmt);
+	std::vsnprintf(buf, len, fmt, argptr);
+	__builtin_va_end(argptr);
+	// Make sure the buffer is null-terminated.
+	buf[ len - 1 ] = 0;
+
+	len -= std::strlen(buf);
+	return buf + std::strlen(buf);
+}
+
+//--------------------------------------------------------------------------------------------------------------
+// dgoodenough - PS3 needs this guy as well.
+// PS3_BUILDFIX
+//--------------------------------------------------------------------------------------------------------------
+const char * NumAsString( int val )
+{
+	const int BufLen = 16;
+	static char buf[BufLen];
+	int len = BufLen;
+	BufPrintf( buf, len, "%d", val );
+	return buf;
+}
+
+//--------------------------------------------------------------------------------------------------------
+/**
+ * Returns the token parsed by SharedParse()
+ */
+char *SharedGetToken( void )
+{
+	return s_shared_token;
+}
+
+//--------------------------------------------------------------------------------------------------------
+/**
+ * Returns the token parsed by SharedParse()
+ */
+void SharedSetQuoteChar( char c )
+{
+	s_shared_quote = c;
+}
+
+//--------------------------------------------------------------------------------------------------------
+/**
+ * Parse a token out of a string
+ */
+const char *SharedParse( const char *data )
+{
+	int             c;
+	int             len;
+	
+	len = 0;
+	s_shared_token[0] = 0;
+	
+	if (!data)
+		return nullptr;
+		
+// skip whitespace
+skipwhite:
+	while ( (c = *data) <= ' ')
+	{
+		if (c == 0)
+			return nullptr;                    // end of file;
+		data++;
+	}
+	
+// skip // comments
+	if (c=='/' && data[1] == '/')
+	{
+		while (*data && *data != '\n')
+			data++;
+		goto skipwhite;
+	}
+	
+// handle quoted strings specially
+	if (c == s_shared_quote)
+	{
+		data++;
+		while (1)
+		{
+			c = *data++;
+			if (c==s_shared_quote || !c)
+			{
+				s_shared_token[len] = 0;
+				return data;
+			}
+			s_shared_token[len] = c;
+			len++;
+		}
+	}
+
+// parse single characters
+	if (c=='{' || c=='}'|| c==')'|| c=='(' || c=='\'' || c == ',' )
+	{
+		s_shared_token[len] = c;
+		len++;
+		s_shared_token[len] = 0;
+		return data+1;
+	}
+
+// parse a regular word
+	do
+	{
+		s_shared_token[len] = c;
+		data++;
+		len++;
+		c = *data;
+	if (c=='{' || c=='}'|| c==')'|| c=='(' || c=='\'' || c == ',' )
+			break;
+	} while (c>32);
+	
+	s_shared_token[len] = 0;
+	return data;
+}
+
+//--------------------------------------------------------------------------------------------------------
+/**
+ * Returns true if additional data is waiting to be processed on this line
+ */
+bool SharedTokenWaiting( const char *buffer )
+{
+	const char *p;
+
+	p = buffer;
+	while ( *p && *p!='\n')
+	{
+		if ( !V_isspace( *p ) || V_isalnum( *p ) )
+			return true;
+
+		p++;
+	}
+
+	return false;
 }

@@ -5,7 +5,12 @@
 // Purpose: A higher level link library for general use in the game and tools.
 
 import std;
-import ks.math;
+import ks.core.color;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "datacache/imdlcache.h"
 #include "studio.h"
 #include "materialsystem/custommaterialowner.h"

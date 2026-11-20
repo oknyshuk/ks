@@ -4,7 +4,13 @@
 // Purpose: NetAdr.cpp: implementation of the CNetAdr class.
 
 import std;
-import ks.tier1;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.netadr;
+import ks.tier1.strtools;
 
 
 //////////////////////////////////////////////////////////////////////

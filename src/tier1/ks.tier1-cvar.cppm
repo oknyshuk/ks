@@ -2,15 +2,20 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:cvar;
+export module ks.tier1.cvar;
 
 import std;
-import ks.math;
-export import :iappsystem;
-export import :icvar;
-export import :convar;
-export import :byte_writer;
-export import :generichash;
+import ks.core.basetypes;
+import ks.core.color;
+import ks.core.tslist;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.iappsystem;
+export import ks.tier1.icvar;
+export import ks.tier1.convar;
+export import ks.tier1.byte_writer;
+export import ks.tier1.generichash;
 
 export extern "C++" {
 

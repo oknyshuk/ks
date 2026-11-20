@@ -3,7 +3,20 @@
 
 // Purpose: Utility methods for mdl files
 
-import ks.core;
+import ks.core.numeric;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.transform;
+import ks.math.vector;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.interfaces;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
 #include "tier3/mdlutils.h"
 #include "studio.h"
 #include "istudiorender.h"

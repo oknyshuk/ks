@@ -3,6 +3,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "materialsystem/imaterialsystemhardwareconfig.h"
+import ks.tier1.interfaces;
 
 //-----------------------------------------------------------------------------
 // Material system configuration

@@ -19,6 +19,8 @@
 #include "teeth_bump_ps30.inc"
 #include "teeth_flashlight_vs30.inc"
 #include "teeth_flashlight_ps30.inc"
+import ks.math.vector4d;
+import ks.math.vmatrix;
 
 DEFINE_FALLBACK_SHADER( Teeth, Teeth_DX9 )
 

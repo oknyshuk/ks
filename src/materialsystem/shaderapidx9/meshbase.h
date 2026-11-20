@@ -4,6 +4,8 @@
 
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
+import ks.core.basetypes;
+import ks.core.types;
 
 struct VertexStreamSpec_t;
 

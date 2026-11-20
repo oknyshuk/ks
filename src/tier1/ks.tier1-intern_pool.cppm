@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:intern_pool;
+export module ks.tier1.intern_pool;
 
 import std;
-import ks.math;
-export import :map_ops;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.map_ops;
 
 export extern "C++" {
 

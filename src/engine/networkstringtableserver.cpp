@@ -5,6 +5,7 @@
 #include "eiface.h"
 #include "server.h"
 #include "LocalNetworkBackdoor.h"
+import ks.tier1.createinterface;
 
 static CNetworkStringTableContainer s_NetworkStringTableServer;
 CNetworkStringTableContainer *networkStringTableContainerServer = &s_NetworkStringTableServer;

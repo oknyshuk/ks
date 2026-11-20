@@ -4,7 +4,14 @@
 // Purpose: generates 4 randum numbers in the range 0..1 quickly, using SIMD
 
 import std;
-import ks.math;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.platform;
+import ks.simd;
 
 // see knuth volume 3 for insight.
 

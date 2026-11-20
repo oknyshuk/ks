@@ -8,6 +8,12 @@ import std;
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/icompositetexturegenerator.h"
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.refcount;
 
 class IVisualsDataProcessor;
 class ITextureInternal;

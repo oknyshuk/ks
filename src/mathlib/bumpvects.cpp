@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
+import ks.math.bumpvects;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.transform;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 import std;
 
 // z is coming out of the face.

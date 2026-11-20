@@ -12,7 +12,13 @@
 #include "baseclient.h"
 #include "clientframe.h"
 #include <soundinfo.h>
-import ks.tier1;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.convar;
+import ks.tier1.strtools;
 import std;
 
 struct HltvReplayStats_t

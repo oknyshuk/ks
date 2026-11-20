@@ -5,7 +5,7 @@ module;
 
 #include <stdio.h>
 
-export module ks.core:wchartypes;
+export module ks.core.wchartypes;
 
 export extern "C++" {
 

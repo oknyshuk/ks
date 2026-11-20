@@ -3,7 +3,12 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.interfaces;
 #include "tier2/tier2.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "iclientrenderable.h"

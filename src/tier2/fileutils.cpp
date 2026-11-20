@@ -3,7 +3,14 @@
 
 // Purpose: Helper methods + classes for file access
 
-import ks.tier1;
+import ks.core.cmdline;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
 #include "tier2/fileutils.h"
 import std;
 #include "tier2/tier2.h"

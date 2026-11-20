@@ -1,7 +1,24 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2006 Valve Corporation
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.numeric;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.anorms;
+import ks.math.compressed_vector;
+import ks.math.lightdesc;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.fixed_pool;
+import ks.tier1.iconvar;
+import ks.tier1.interfaces;
 #include "quakedef.h"
 #include "lightcache.h"
 #include "cmodel_engine.h"

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.core;
+import ks.platform;
+import ks.simd;
+import ks.tier1.createinterface;
 #include "clientframe.h"
 #include "packed_entity.h"
 #include "framesnapshot.h"

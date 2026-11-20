@@ -8,7 +8,16 @@
 //		NOT BE THROWING AWAY ELEMENTS THAT ARE BEING READ.  NEED A FLAG IN DATACHUNK
 //		FOR WHETHER AN INSTANCE IS "IN USE," IE BEING READ TO WRITE TO A DEM FILE.
 
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_writer;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 #include "demobuffer.h"
 #include "filesystem.h"
 import std;

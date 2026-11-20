@@ -3,6 +3,10 @@
 // Copyright (c) 1996-2009 Valve Corporation
 
 #include "../mm_framework.h"
+import ks.core.threadtools;
+import ks.core.types;
+import ks.tier1.iappsystem;
+import ks.tier1.keyvalues;
 
 class CMatchTitle : public IMatchTitle
 {

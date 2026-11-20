@@ -6,7 +6,21 @@
 import std;
 
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.pfns;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.strtools;
 
 #include "sound.h"
 #include "soundservice.h"

@@ -1,6 +1,14 @@
-#pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
+
+#pragma once
+
+import std;
+import ks.core.basetypes;
+import ks.core.memalloc;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 
 // The class declaration helpers that do not depend on networkvar.h (which belongs to the game side
 // that includes it), so that code built once can use them.

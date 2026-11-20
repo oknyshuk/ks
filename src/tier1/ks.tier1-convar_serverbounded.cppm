@@ -2,11 +2,12 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:convar_serverbounded;
+export module ks.tier1.convar_serverbounded;
 
 import std;
-import ks.math;
-export import :convar;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.convar;
 
 export extern "C++" {
 

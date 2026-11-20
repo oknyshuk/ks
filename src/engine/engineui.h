@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
 
 // Purpose: Defines the interface that the GameUI dll exports
 

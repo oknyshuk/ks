@@ -7,6 +7,8 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "IObjectContainer.h"	// Added by ClassView
+import ks.math.ssequaternion;
+import ks.tier1.convar;
 
 class ObjectList : public IObjectContainer  
 {

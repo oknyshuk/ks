@@ -5,7 +5,12 @@
 // Purpose: provides an interface for dlls to query information about players from the game dll
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 struct edict_t;
 class CGlobalVars;

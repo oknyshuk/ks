@@ -3,7 +3,12 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.intern_pool;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
 
 #define INTERFACEVERSION_GAMEEVENTSMANAGER	"GAMEEVENTSMANAGER001"	// old game event manager, don't use it!
 #define INTERFACEVERSION_GAMEEVENTSMANAGER2	"GAMEEVENTSMANAGER002"	// new game event manager,

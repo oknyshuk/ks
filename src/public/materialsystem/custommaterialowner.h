@@ -5,7 +5,8 @@
 // Purpose: Provide interface to custom materials for entities that use them
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 #include "materialsystem/icustommaterial.h"
 
 class IMaterial;

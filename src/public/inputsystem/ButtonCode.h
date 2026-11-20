@@ -3,6 +3,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "inputsystem/InputEnums.h"
+import ks.core.basetypes;
 
 //-----------------------------------------------------------------------------
 // Button enum. "Buttons" are binary-state input devices (mouse buttons, keyboard keys)

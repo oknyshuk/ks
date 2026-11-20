@@ -6,6 +6,9 @@
 
 #include "engine/IEngineSound.h"
 #include "vox.h"
+import ks.core.dbg;
+import ks.math.compressed_vector;
+import ks.math.vector;
 
 extern float g_flReplaySoundFade;
 

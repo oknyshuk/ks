@@ -2,14 +2,16 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.core:memalloc;
+export module ks.core.memalloc;
 
 import std;
 import ks.platform;
-import :prelude;
-import :color;
-import :logging;
-import :dbg;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.core.color;
+import ks.core.logging;
+import ks.core.dbg;
 
 export extern "C++" {
 

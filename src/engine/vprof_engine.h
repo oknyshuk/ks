@@ -5,6 +5,7 @@
 // Purpose: Real-Time Hierarchical Profiling
 
 #include "igameserverdata.h"
+import ks.core.vprof;
 
 class IVProfExport;
 class CVProfile;

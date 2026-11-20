@@ -2,12 +2,15 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.core;
-import ks.math;
-import ks.tier1;
-#include "../game/shared/choreoscene.h"
-#include "../game/shared/choreoevent.h"
-#include "../game/shared/iscenetokenprocessor.h"
+import ks.core.dbg;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.characterset;
+import ks.tier1.strtools;
+#include "choreoscene.h"
+#include "choreoevent.h"
+#include "iscenetokenprocessor.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Helper for parsing scene data file

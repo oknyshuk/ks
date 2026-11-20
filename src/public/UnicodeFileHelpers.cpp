@@ -2,7 +2,15 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_writer;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 #include "UnicodeFileHelpers.h"
 
 //-----------------------------------------------------------------------------

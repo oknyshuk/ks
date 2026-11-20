@@ -3,6 +3,7 @@
 
 #include "quakedef.h"
 #include "precache.h"
+import ks.tier1.strtools;
 
 //-----------------------------------------------------------------------------
 // Purpose: Print out flag names

@@ -9,7 +9,12 @@
 #include "shaderlib/BaseShader.h"
 #include "shaderapifast.h"
 #include <renderparm.h>
-import ks.tier1;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
 import std;
 
 // Texture combining modes for combining base and detail/basetexture2

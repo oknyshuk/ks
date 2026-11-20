@@ -6,6 +6,8 @@
 
 #include "appframework/tier2app.h"
 #include "tier3/tier3.h"
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 
 //-----------------------------------------------------------------------------
 // The application object for apps that use tier3

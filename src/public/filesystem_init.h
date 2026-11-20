@@ -3,6 +3,9 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "filesystem.h"
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
 
 // If this option is on the command line, then filesystem_init won't bring up the vconfig
 // dialog even if FS_ERRORMODE_VCONFIG is used.

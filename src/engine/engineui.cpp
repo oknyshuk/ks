@@ -54,7 +54,25 @@
 // interface to expose vgui root panels
 #include <iengineui.h>
 import std;
-import ks.tier1;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.etwprof;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.cvar;
+import ks.tier1.iconvar;
+import ks.tier1.icvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.tier1.tokenset;
 import ks.desktop;
 
 #include "localize/ilocalize.h"

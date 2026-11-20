@@ -3,7 +3,8 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 
 // the command line param to tell dedicated server to restart 
 // if they are out of date

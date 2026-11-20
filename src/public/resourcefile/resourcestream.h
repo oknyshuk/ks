@@ -14,7 +14,16 @@
 //         rigid addressing, adding the base address is still virtually free.
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.polyhedron;
+import ks.math.ssemath;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 
 class CResourceStream;
 

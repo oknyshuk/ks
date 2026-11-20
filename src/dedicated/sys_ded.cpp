@@ -3,8 +3,21 @@
 // Copyright (c) 2026 oknyshuk
 
 
+#include <cstdio>
 import std;
-import ks.vstdlib;
+import ks.core.cmdline;
+import ks.core.logging;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.mathlib;
+import ks.platform;
+import ks.simd;
+import ks.tier1.cvar;
+import ks.tier1.icvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.strtools;
 #include "isys.h"
 #include "dedicated.h"
 #include "engine_hlds_api.h"

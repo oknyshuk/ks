@@ -6,7 +6,14 @@
 // Assumptions: caller should include all required headers before including mm_helpers.h
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.fmtstr;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 #include "matchmaking/imatchtitle.h"
 #include "matchmaking/iplayer.h"
 

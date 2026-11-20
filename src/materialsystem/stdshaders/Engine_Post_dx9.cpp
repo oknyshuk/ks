@@ -11,6 +11,9 @@
 #include "engine_post_ps20b.inc"
 
 #include "../materialsystem_global.h"
+import ks.core.basetypes;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 
 ConVar mat_screen_blur_override( "mat_screen_blur_override", "-1.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
 ConVar mat_depth_blur_focal_distance_override( "mat_depth_blur_focal_distance_override", "-1.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );

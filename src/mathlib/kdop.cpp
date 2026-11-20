@@ -2,7 +2,12 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 // get the kdop vectors for k=32
 #include "dopvectors.h"

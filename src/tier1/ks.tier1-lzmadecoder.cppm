@@ -2,10 +2,11 @@
 //	LZMA SDK 4.43 Copyright (c) 1999-2006 Igor Pavlov (2006-05-01)
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:lzmadecoder;
+export module ks.tier1.lzmadecoder;
 
 import std;
-import ks.math;
+import ks.platform;
+import ks.simd;
 
 export extern "C++" {
 

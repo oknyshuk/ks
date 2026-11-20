@@ -18,11 +18,17 @@
 #include "sqarray.h"
 #include "squserdata.h"
 #include "sqclass.h"
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.vprof;
+import ks.math.ssequaternion;
+import ks.platform;
+import ks.simd;
+import ks.tier1.map_ops;
 
 #ifdef DEBUG_SQSTRING_LEAKS
 #include <vector>
 import std;
-import ks.tier1;
 #endif
 
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)

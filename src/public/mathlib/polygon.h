@@ -4,7 +4,10 @@
 
 // Purpose: Utility functions for polygon simplification / convex decomposition.
 
-import ks.tier1;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 import std;
 
 //-----------------------------------------------------------------------------

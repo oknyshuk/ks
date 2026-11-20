@@ -9,6 +9,9 @@ import std;
 #include "sprite_vs20.inc"
 #include "sprite_ps20.inc"
 #include "sprite_ps20b.inc"
+import ks.core.dbg;
+import ks.core.platform;
+import ks.math.mathlib;
 
 // WARNING!  Change these in engine/SpriteGn.h if you change them here!
 constexpr auto SPR_VP_PARALLEL_UPRIGHT = 0;

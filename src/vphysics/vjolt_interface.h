@@ -11,7 +11,14 @@
 
 #include <Jolt/Jolt.h>
 import std;
-import ks.core;
+import ks.core.logging;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 #include "vphysics_interface.h"
 #include "vphysics/collision_set.h"
 #include "appframework/apptiers.h"

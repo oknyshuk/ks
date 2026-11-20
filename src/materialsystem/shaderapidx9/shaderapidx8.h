@@ -6,6 +6,7 @@
 #include "shaderapi/ishadershadow.h"
 #include "materialsystem/IShader.h"
 #include "locald3dtypes.h"
+import ks.math.vector4d;
 
 //-----------------------------------------------------------------------------
 // Vendor-specific defines

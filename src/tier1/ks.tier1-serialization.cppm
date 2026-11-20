@@ -2,14 +2,23 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:serialization;
+export module ks.tier1.serialization;
 
 import std;
-import ks.math;
-export import :utlvector;
-export import :byte_writer;
-export import :text_reader;
-export import :text_writer;
+import ks.core.basetypes;
+import ks.core.color;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vector4d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.utlvector;
+export import ks.tier1.byte_writer;
+export import ks.tier1.text_reader;
+export import ks.tier1.text_writer;
 
 export extern "C++" {
 

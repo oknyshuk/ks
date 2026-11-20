@@ -6,6 +6,7 @@
 #include "colorformatdx8.h"
 #include "bitmap/imageformat.h"
 #include "shaderdevicedx8.h"
+import ks.core.cmdline;
 
 //-----------------------------------------------------------------------------
 // Figures out what texture formats we support

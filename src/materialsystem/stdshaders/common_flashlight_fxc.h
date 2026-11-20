@@ -5,6 +5,9 @@
 // Purpose: Common pixel shader code specific to flashlights
 
 #include "common_ps_fxc.h"
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.vprof;
 
 // Superellipse soft clipping
 //

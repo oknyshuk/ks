@@ -6,7 +6,11 @@
 // a single file.
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.checksum_crc;
 
 #define SCENE_IMAGE_ID			MAKEID( 'V','S','I','F' )
 inline constexpr auto SCENE_IMAGE_VERSION = 3;

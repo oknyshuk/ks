@@ -53,7 +53,21 @@
 // Shape.h only forward declares the set behind Shape::VisitedShapes
 #include <Jolt/Core/UnorderedSet.h>
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.logging;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.tslist;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.polyhedron;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.strtools;
 
 #include "vjolt_parse.h"
 #include "vjolt_querymodel.h"

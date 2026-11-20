@@ -1,7 +1,9 @@
 #pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
-import ks.math;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 
 // Purpose: Shader system:
 //	The shader system makes a few fundamental assumptions about when

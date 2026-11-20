@@ -1,6 +1,12 @@
 
 import std;
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
+import ks.vstdlib.vstrtools;
 
 
 

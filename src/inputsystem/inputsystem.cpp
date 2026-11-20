@@ -3,7 +3,26 @@
 
 #include <SDL3/SDL.h>
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.platwindow;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iappsystem;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.map_ops;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
+import ks.vstdlib.vstrtools;
 import ks.desktop;
 #include "inputsystem.h"
 #include "key_translation.h"

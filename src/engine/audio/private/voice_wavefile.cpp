@@ -5,7 +5,10 @@
 
 #undef fopen
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
 #include "voice_wavefile.h"
 
 static unsigned long ReadDWord(std::FILE * fp) 

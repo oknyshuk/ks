@@ -4,7 +4,26 @@
 // Purpose: VProf engine integration
 
 import std;
-import ks.tier1;
+import ks.core.color;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.core.threadtools;
+import ks.core.tslist;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_writer;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.tier1.vector_ops;
 #include "sys.h"
 #include "vprof_engine.h"
 #include "sv_main.h"

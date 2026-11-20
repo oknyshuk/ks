@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
+import ks.core.dbg;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.quantize;
+import ks.platform;
+import ks.simd;
 
 import std;
 

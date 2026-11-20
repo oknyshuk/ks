@@ -2,7 +2,24 @@
 // Copyright (c) 1996-2008 Valve Corporation
 
 #define DISABLE_PROTECTED_THINGS
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.logging;
+import ks.core.microprofiler;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iappsystem;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.strtools;
+import ks.vstdlib.ikeyvaluessystem;
 import ks.desktop;
 #include "locald3dtypes.h"
 

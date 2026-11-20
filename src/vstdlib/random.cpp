@@ -3,7 +3,11 @@
 
 // Purpose: Random number generator
 
-import ks.vstdlib;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.random;
+import ks.platform;
+import ks.simd;
 import std;
 
 constexpr auto IA = 16807;

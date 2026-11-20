@@ -2,6 +2,10 @@
 
 
 #include "engine/ienginevoice.h"
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
 
 class CEngineVoiceStub : public IEngineVoice
 {

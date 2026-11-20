@@ -5,7 +5,10 @@
 // world.h
 
 import std;
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 struct edict_t;
 class ICollideable;

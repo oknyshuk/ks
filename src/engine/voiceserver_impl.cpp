@@ -61,6 +61,9 @@ public:
 };
 
 #include "facade/ivoiceserver.inl"
+import ks.core.dbg;
+import ks.tier1.convar;
+import ks.tier1.createinterface;
 
 
 

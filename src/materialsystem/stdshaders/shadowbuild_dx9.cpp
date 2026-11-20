@@ -3,7 +3,12 @@
 
 // Purpose: A shader that builds the shadow using render-to-texture
 
-import ks.tier1;
+import ks.math.vector4d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 #include "BaseVSShader.h"
 import std;
 

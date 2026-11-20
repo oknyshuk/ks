@@ -4,7 +4,17 @@
 // TODO:  Should all of this Map_Vis* stuff be an interface?
 //
 
-import ks.core;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 #include "quakedef.h"
 #include "gl_model_private.h"
 #include "view_shared.h"

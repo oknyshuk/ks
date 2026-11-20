@@ -3,7 +3,16 @@
 
 // Purpose: Engine implementation of services required by the audio subsystem
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.filename_table;
+import ks.tier1.fmtstr;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 #include "quakedef.h"
 #include "cdll_int.h"
 #include "soundservice.h"

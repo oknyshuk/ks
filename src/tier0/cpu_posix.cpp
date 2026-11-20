@@ -5,7 +5,11 @@
 
 
 import std;
-import ks.core;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
 
 // Compute the positive difference between two 64 bit numbers.
 static inline uint64 diff(uint64 v1, uint64 v2)

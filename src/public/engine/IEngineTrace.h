@@ -2,7 +2,14 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.math.aabb;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "basehandle.h"
 import std;
 #include "bspflags.h"

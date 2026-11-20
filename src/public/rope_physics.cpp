@@ -2,9 +2,11 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.core;
-import ks.math;
-import ks.tier1;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "rope_physics.h"
 
 CBaseRopePhysics::CBaseRopePhysics( CSimplePhysics::CNode *pNodes, int nNodes, CRopeSpring *pSprings, float *flSpringDistsSqr )

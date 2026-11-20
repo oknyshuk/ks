@@ -1,11 +1,30 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-#include "functionproxy.h"
-#include "entity_cast.h"
-#include "materialsystem/imaterialvar.h"
-#include "materialsystem/imaterial.h"
+module;
+#include <string.h>
 #include "iclientrenderable.h"
+#include "materialsystem/imaterialvar.h"
+module ks.client;
+
+import std;
+import ks.game.entity_cast;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import :baseentity;
+import :props;
+import :iinput;
+import :baseanimatedtextureproxy;
+import :sharedvar;
+import :util;
+import :particlemgr;
+import ks.game.mapentities_shared;
+import ks.game.shareddefs;
+
+class CBaseEntity;
 
 //-----------------------------------------------------------------------------
 // Helper class to deal with floating point inputs
@@ -83,8 +102,6 @@ float CFloatInput::GetFloat() const
 	return v[m_FloatVecComp];
 }
 
-
-
 //-----------------------------------------------------------------------------
 //
 // Result proxy; a result (with vector friendliness)
@@ -98,7 +115,6 @@ CResultProxy::CResultProxy() : m_pResult(0)
 CResultProxy::~CResultProxy()
 {
 }
-
 
 bool CResultProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 {
@@ -138,7 +154,6 @@ bool CResultProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 	return true;
 }
-
 
 //-----------------------------------------------------------------------------
 // A little code to allow us to set single components of vectors
@@ -182,17 +197,16 @@ void CResultProxy::SetVecResult( float x, float y, float z, float w )
 	}
 }
 
-C_BaseEntity *CResultProxy::BindArgToEntity( void *pArg )
+CBaseEntity *CResultProxy::BindArgToEntity( void *pArg )
 {
 	IClientRenderable *pRend = (IClientRenderable *)pArg;
-	return EntityCast<C_BaseEntity>( pRend->GetIClientUnknown()->GetBaseEntity() );
+	return EntityCast<CBaseEntity>( pRend->GetIClientUnknown()->GetBaseEntity() );
 }
 
 IMaterial *CResultProxy::GetMaterial()
 {
 	return m_pResult->GetOwningMaterial();
 }
-
 
 //-----------------------------------------------------------------------------
 //
@@ -207,7 +221,6 @@ CFunctionProxy::CFunctionProxy() : m_pSrc1(0), m_pSrc2(0)
 CFunctionProxy::~CFunctionProxy()
 {
 }
-
 
 bool CFunctionProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 {
@@ -238,7 +251,6 @@ bool CFunctionProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 
 	return true;
 }
-
 
 void CFunctionProxy::ComputeResultType( MaterialVarType_t& resultType, int& vecSize )
 {

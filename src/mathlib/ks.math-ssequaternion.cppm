@@ -3,12 +3,16 @@
 // Purpose: - defines SIMD "structure of arrays" classes and functions.
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:ssequaternion;
+export module ks.math.ssequaternion;
 
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
 import ks.simd;
-export import :ssemath;
+export import ks.math.ssemath;
 
 export extern "C++" {
 

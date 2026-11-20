@@ -4,7 +4,8 @@
 
 #include "shaderapi/shareddefs.h"
 #include <materialsystem/imaterial.h>
-import ks.math;
+import ks.platform;
+import ks.simd;
 
 //-----------------------------------------------------------------------------
 // forward declarations

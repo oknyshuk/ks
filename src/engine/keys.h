@@ -4,6 +4,11 @@
 
 #include "inputsystem/ButtonCode.h"
 #include "cdll_int.h"
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.tier1.text_writer;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 
 namespace ks { class text_writer; }
 struct InputEvent_t;

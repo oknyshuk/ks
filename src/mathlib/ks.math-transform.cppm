@@ -2,12 +2,15 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:transform;
+export module ks.math.transform;
 
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.platform;
 import ks.simd;
-export import :mathlib;
+export import ks.math.mathlib;
 
 export extern "C++" {
 

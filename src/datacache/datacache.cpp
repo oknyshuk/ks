@@ -2,7 +2,21 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.datamanager;
+import ks.tier1.fixed_pool;
+import ks.tier1.fmtstr;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
 #include "datacache/idatacache.h"
 
 #include "filesystem.h"

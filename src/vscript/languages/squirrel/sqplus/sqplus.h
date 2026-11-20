@@ -17,7 +17,13 @@
 
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
 #endif
   #ifdef _T
   #undef _T

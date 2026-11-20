@@ -7,9 +7,9 @@
 // inside its class is not implicitly inline the way it is in a header, and these are called on
 // the hottest paths in the engine.
 
-export module ks.core:time;
+export module ks.core.time;
 
-import :platform;
+import ks.core.platform;
 
 // Monotonic nanoseconds, defined in tier0/fasttimer.cpp. Out of line so that <chrono> stays out
 // of every importer.

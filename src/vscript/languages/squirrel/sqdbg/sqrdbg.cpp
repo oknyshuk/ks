@@ -5,7 +5,9 @@
 
 #include <squirrel.h>
 import std;
-import ks.core;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 #include "sqrdbg.h"
 #include "sqdbgserver.h"
 SQInteger debug_hook(HSQUIRRELVM v);

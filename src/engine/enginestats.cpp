@@ -3,6 +3,8 @@
 
 #include "enginestats.h"
 #include "clientstats.h"
+import ks.core.platform;
+import ks.tier1.strtools;
 
 CEngineStats::CEngineStats() : m_InFrame( false )
 {

@@ -5,7 +5,11 @@
 // It will cause that project to use the shader memory allocator
 
 import std;
-import ks.core;
+import ks.core.memalloc;
+import ks.core.minidump;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
 inline void VPurecallHandler()
 {
 	DebuggerBreakIfDebugging();	// give the debugger a chance to catch first

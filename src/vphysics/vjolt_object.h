@@ -13,7 +13,14 @@
 #include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/StateRecorder.h>
-import ks.math;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "vphysics_interface.h"
 #include "vjolt_internal_listeners.h"
 import std;

@@ -11,6 +11,8 @@
 #include "weapondecal_ps30.inc"
 
 #include "shaderlib/commandbuilder.h"
+import ks.core.basetypes;
+import ks.math.mathlib;
 
 void InitParamsWeaponDecal( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, WeaponDecalVars_t &info )
 {

@@ -2,6 +2,10 @@
 // Copyright (c) 1996-2008 Valve Corporation
 
 #include "flexrenderdata.h"
+import ks.core.numeric;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.tier1.vector_ops;
 
 //-----------------------------------------------------------------------------
 // Constructor

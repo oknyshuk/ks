@@ -6,6 +6,7 @@
 #include <tier2/tier2.h>
 #include "resourceprecacher.h"
 #include "datacache/iprecachesystem.h"
+import ks.tier1.interfaces;
 
 CBaseResourcePrecacher *CBaseResourcePrecacher::sm_pFirst[PRECACHE_SYSTEM_COUNT] = { 0 };
 

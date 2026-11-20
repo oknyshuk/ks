@@ -1,7 +1,24 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.vstdlib;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.cvar;
+import ks.tier1.exprevaluator;
+import ks.tier1.iconvar;
+import ks.tier1.icvar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
+import ks.tier1.strtools;
+import ks.tier1.text_writer;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.vstdlib.vstrtools;
 #include "cvar.h"
 #include "gl_cvars.h"
 

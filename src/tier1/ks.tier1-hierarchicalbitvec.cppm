@@ -2,10 +2,13 @@
 // Copyright (c) Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:hierarchicalbitvec;
+export module ks.tier1.hierarchicalbitvec;
 
 import std;
-import ks.math;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 
 export extern "C++" {
 

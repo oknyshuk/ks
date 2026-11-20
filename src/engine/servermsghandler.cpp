@@ -1,3 +1,19 @@
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.icvar;
+import ks.tier1.interfaces;
+import ks.tier1.playerid;
+import ks.tier1.strtools;
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
@@ -8,14 +24,12 @@
 #include "proto_oob.h"
 #include "demo.h"
 import std;
-import ks.core;
 #include "ispatialpartitioninternal.h"
 #include "GameEventManager.h"
 #include "cdll_engine_int.h"
 #include "voice.h"
 #include "host_cmd.h"
 #include "server.h"
-import ks.tier1;
 #include "dt_recv_eng.h"
 #include "dt_common_eng.h"
 #include "LocalNetworkBackdoor.h"
@@ -41,7 +55,6 @@ import ks.tier1;
 
 
 
-import ks.math;
 
 #include "tier2/riff.h"
 #include "soundservice.h"

@@ -3,7 +3,34 @@
 
 // Purpose: BSP collision!
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.microprofiler;
+import ks.core.numeric;
+import ks.core.platform;
+import ks.core.random;
+import ks.core.tslist;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.aabb;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.transform;
+import ks.math.vector;
+import ks.math.vplane;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.exprevaluator;
+import ks.tier1.fmtstr;
+import ks.tier1.iconvar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 #include "cmodel_engine.h"
 #include "cmodel_private.h"
 #include "dispcoll_common.h"

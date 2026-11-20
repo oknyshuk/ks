@@ -12,6 +12,15 @@ import std;
 
 #include "inputsystem/iinputsystem.h"
 #include "rocketkeys.h"
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.types;
+import ks.tier1.convar;
+import ks.tier1.iappsystem;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.strtools;
 
 // Helper to get current key modifier state for RmlUi
 static int GetRmlKeyModifierState() {

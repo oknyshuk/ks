@@ -3,7 +3,27 @@
 
 // Purpose: particle system code
 
-import ks.core;
+import ks.core.basetypes;
+import ks.core.color;
+import ks.core.dbg;
+import ks.core.numeric;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.transform;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.utlsoacontainer;
+import ks.tier1.vector_ops;
 #include "particles/particles.h"
 #include "tier2/renderutils.h"
 #include "dmxloader/dmxelement.h"

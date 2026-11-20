@@ -5,9 +5,19 @@
 // 360 uses a baked resident image of aggregated compiled VCDs.
 
 import std;
-import ks.core;
-import ks.math;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.checksum_crc;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.lzmadecoder;
+import ks.tier1.strtools;
 #include "scenefilecache/ISceneFileCache.h"
 #include "filesystem.h"
 #include "scenefilecache/SceneImageFile.h"

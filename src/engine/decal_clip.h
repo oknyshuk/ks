@@ -3,7 +3,11 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/imaterial.h"
 #include "filesystem.h"

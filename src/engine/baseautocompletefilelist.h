@@ -3,7 +3,9 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
 
 //-----------------------------------------------------------------------------
 // Purpose: Simple helper class for doing autocompletion of all files in a specific directory by extension

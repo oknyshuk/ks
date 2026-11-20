@@ -5,6 +5,13 @@
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/ipaintmapdatamanager.h"
 #include "surfacehandle.h"
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.tier1.small_vector;
 
 //forward declaration
 struct model_t;

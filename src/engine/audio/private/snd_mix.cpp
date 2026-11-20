@@ -5,7 +5,25 @@
 
 
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.numeric;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.mathlib;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.tier1.text_writer;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 
 #include "tier2/riff.h"
 #include "sound.h"

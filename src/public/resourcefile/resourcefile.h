@@ -14,7 +14,10 @@
 // containing the data described in this header to load the entire file in
 // so that all blocks are in memory.
 
-import ks.core;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 #include "resourcefile/resourcestream.h"
 
 #include "resourcefile/schema.h"

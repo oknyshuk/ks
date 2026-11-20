@@ -3,7 +3,13 @@
 
 // Purpose: Implementation of the CGameEventTransmitter class.
 
-import ks.tier1;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 #include "gameeventtransmitter.h"
 #include "net.h"
 import std;

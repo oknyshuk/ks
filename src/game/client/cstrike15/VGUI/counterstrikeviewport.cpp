@@ -1,39 +1,65 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-// Purpose: Client DLL VGUI2 Viewport
+module;
+#include <stdlib.h>
+#include "IGameUIFuncs.h"
+#include "edict.h"
+#include "game/client/iviewport.h"
+#include "igameevents.h"
+#include "../../cdll_client_int.h"
+#include "../../cdll_util.h"
+module ks.client;
 
-#include "rocketui/rmlui.h"
-#include "predictable_entity.h"
-#include "util_shared.h"
-#include "baseentity_shared.h"
-#include "c_basecombatweapon.h"
-#include "c_basecombatcharacter.h"
-#include "gamerules.h"
-#include "c_baseplayer.h"
-#include "cdll_client_int.h"
-#include "engine/ivmodelinfo.h"
+import std;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import ks.tier1.strtools;
+import :props;
+import :baseanimatedtextureproxy;
+import :iinput;
+import :sharedvar;
+import :util;
+import :cstrike15.RocketUI.rkconsole;
+import :cstrike15.VGUI.counterstrikeviewport;
+import :cstrike15.cs_player;
+import :cstrike15.cs_shareddefs;
+import :game_controls.baseviewport;
+import :precache;
+import ks.game.shareddefs;
+import :triggers;
+import :achievements_and_stats_interface;
+import :baseentity;
+import :cstrike15.cs_player_shared;
+import :econ.econ_item_schema_minimal;
+import ks.game.gamemovement;
+import :particlemgr;
+import :noopanimcontroller;
+
+class CCSPlayer;
+
+using namespace ::ks::reflect;
+
+// Purpose: Client DLL VGUI2 Viewport
 
 // vgui panel includes
 
 // client dll/engine defines
-#include <voice_status.h>
 
 // cstrike specific dialogs
-#include "clientmode_csnormal.h"
-#include "IGameUIFuncs.h"
 
 // viewport definitions
-#include <baseviewport.h>
-#include "counterstrikeviewport.h"
-#include "cs_gamerules.h"
-// #include "c_user_message_register.h"
-#include "uicenterprint.h"
-#include "../RocketUI/rkhud_teammenu.h"
+// #include "user_message_register.h"
 
-ConVar crosshair( "crosshair", "1", FCVAR_ARCHIVE  | FCVAR_SS );
+ConVar crosshair( side_registry(), "crosshair", "1", FCVAR_ARCHIVE  | FCVAR_SS );
 ConVar cl_disablefreezecam(
-        "cl_disablefreezecam",
+        side_registry(), "cl_disablefreezecam",
         "0",
         FCVAR_ARCHIVE,
         "Turn on/off freezecam on client"
@@ -51,12 +77,11 @@ void PrintBuyTimeOverMessage( void )
 {
 }
 
-
 static void teammenu( const CCommand &args );
-static ConCommand teammenu_command( "teammenu", teammenu, "Show team selection window", FCVAR_SERVER_CAN_EXECUTE );
+static ConCommand teammenu_command( side_registry(), "teammenu", teammenu, "Show team selection window", FCVAR_SERVER_CAN_EXECUTE );
 static void teammenu( const CCommand &args )
 {
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	CCSPlayer *pPlayer = CCSPlayer::GetLocalCSPlayer();
 	
 	if( pPlayer && pPlayer->CanShowTeamMenu() )
 	{
@@ -68,14 +93,14 @@ static void teammenu( const CCommand &args )
 }
 
 static void buymenu( const CCommand &args );
-static ConCommand buymenu_command( "buymenu", buymenu, "Show or hide main buy menu", FCVAR_SERVER_CAN_EXECUTE );
+static ConCommand buymenu_command( side_registry(), "buymenu", buymenu, "Show or hide main buy menu", FCVAR_SERVER_CAN_EXECUTE );
 extern ConVar mp_buy_anywhere;
 extern ConVar mp_buy_during_immunity;
 static void buymenu( const CCommand &args )
 {
 	bool bShowIt = true;
 
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	CCSPlayer *pPlayer = CCSPlayer::GetLocalCSPlayer();
 
 	if ( args.ArgC() == 2 )
 	{
@@ -139,12 +164,12 @@ static void buymenu( const CCommand &args )
 //}
 
 static void spec_menu( const CCommand &args );
-static ConCommand spec_menu_command( "spec_menu", spec_menu, "Activates spectator menu", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static ConCommand spec_menu_command( side_registry(), "spec_menu", spec_menu, "Activates spectator menu", FCVAR_CLIENTCMD_CAN_EXECUTE );
 static void spec_menu( const CCommand &args )
 {
 	bool bShowIt = true;
 
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	CCSPlayer *pPlayer = CCSPlayer::GetLocalCSPlayer();
 
 	if ( pPlayer && !pPlayer->IsObserver() )
 		return;
@@ -159,12 +184,12 @@ static void spec_menu( const CCommand &args )
 }
 
 static void spec_gui( const CCommand &args );
-static ConCommand spec_gui_command( "spec_gui", spec_gui, "Shows or hides the spectator bar", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static ConCommand spec_gui_command( side_registry(), "spec_gui", spec_gui, "Shows or hides the spectator bar", FCVAR_CLIENTCMD_CAN_EXECUTE );
 static void spec_gui( const CCommand &args )
 {
 	bool bShowIt = true;
 
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	CCSPlayer *pPlayer = CCSPlayer::GetLocalCSPlayer();
 
 	if ( pPlayer && !pPlayer->IsObserver() )
 		return;
@@ -186,7 +211,7 @@ static void spec_gui( const CCommand &args )
 }
 
 static void togglescores( const CCommand &args );
-static ConCommand togglescores_command( "togglescores", togglescores, "Toggles score panel", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static ConCommand togglescores_command( side_registry(), "togglescores", togglescores, "Toggles score panel", FCVAR_CLIENTCMD_CAN_EXECUTE );
 static void togglescores( const CCommand &args )
 {
 	if ( !GetViewPortInterface() )
@@ -209,7 +234,7 @@ static void togglescores( const CCommand &args )
 }
 
 static void hidescores( const CCommand &args );
-static ConCommand hidescores_command( "hidescores", hidescores, "Forcibly hide score panel", FCVAR_CLIENTCMD_CAN_EXECUTE );
+static ConCommand hidescores_command( side_registry(), "hidescores", hidescores, "Forcibly hide score panel", FCVAR_CLIENTCMD_CAN_EXECUTE );
 static void hidescores( const CCommand &args )
 {
 	if ( !GetViewPortInterface() )
@@ -236,7 +261,6 @@ void CounterStrikeViewport::Start( IGameUIFuncs *pGameUIFuncs, IGameEventManager
 	BaseClass::Start( pGameUIFuncs, pGameEventManager );
 	SetChoseTeamAndClass( false );
 }
-
 
 IViewPortPanel* CounterStrikeViewport::CreatePanelByName( const char *szPanelName )
 {
@@ -303,7 +327,7 @@ void CounterStrikeViewport::UpdateAllPanels( void )
 	// see if we need to show a special ui instead of the hud
 	if ( !bSomethingIsVisible )
 	{
-		C_CSPlayer *pCSPlayer = C_CSPlayer::GetLocalCSPlayer();
+		CCSPlayer *pCSPlayer = CCSPlayer::GetLocalCSPlayer();
 
 		const char* UIToShow = nullptr;
 

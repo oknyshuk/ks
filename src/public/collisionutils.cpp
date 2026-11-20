@@ -3,7 +3,22 @@
 
 // Purpose: Common collision utility methods
 
-import ks.math;
+import ks.core.basetypes;
+import ks.core.numeric;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.pfns;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.transform;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vector4d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
 #include "collisionutils.h"
 #include "cmodel.h"
 import std;

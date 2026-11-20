@@ -5,10 +5,8 @@
 #include "edict.h"
 #include "networkvar.h"
 #include "reflect_annotations.h"
+import ks.math.vector;
 // Only care about this stuff in game/client .dlls
-#if defined( CLIENT_DLL )
-#include "predictable_entity.h"
-#endif
 
 class [[= ks::reflect::NetTable{ .name = "DT_PlayerState", .base = false } ]]
       CPlayerState
@@ -29,7 +27,6 @@ public:
 	
 // The client .dll only cares about deadflag
 //  the game and engine .dlls need to worry about the rest of this data
-#if !defined( CLIENT_DLL )
 	// Player's network name
 	string_t	netname;
 	// 0:nothing, 1:force view angles, 2:add avelocity
@@ -43,15 +40,8 @@ public:
 	int			assists;
 	int			deaths;
 	int			score;
-#endif
 
 // NOTE:  Only care about this stuff in game/client dlls
 // Put at end in case it has any effect on size of structure
-#if defined( GAME_DLL )
-	DECLARE_SIMPLE_DATADESC();
-#endif
 
-#if defined( CLIENT_DLL )
-	DECLARE_PREDICTABLE();
-#endif
 };

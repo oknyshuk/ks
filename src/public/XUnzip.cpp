@@ -94,7 +94,17 @@
 
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.appinstance;
+import ks.tier1.exprevaluator;
+import ks.tier1.strtools;
 #include "zip/XUnzip.h"
 
 #define _tcslen std::strlen

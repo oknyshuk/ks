@@ -2,7 +2,17 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include <eiface.h>
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.random;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.iconvar;
+import ks.tier1.strtools;
 import std;
 #include "hltvdemo.h"
 #include "hltvserver.h"

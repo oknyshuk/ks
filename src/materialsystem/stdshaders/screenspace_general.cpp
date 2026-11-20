@@ -4,6 +4,7 @@
 #include "BaseVSShader.h"
 
 #include "screenspaceeffect_vs20.inc"
+import ks.tier1.strtools;
 
 static void GetAdjustedShaderName( char *pOutputBuffer, char const *pShader20Name )
 {

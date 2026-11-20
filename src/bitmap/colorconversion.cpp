@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
+import ks.core.basetypes;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "bitmap/imageformat.h"
 import std;
 #include "nvtc.h"

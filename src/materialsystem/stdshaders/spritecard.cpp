@@ -3,7 +3,14 @@
 
 // Purpose: shader for drawing sprites as cards, with animation frame lerping
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.math.mathlib;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 #include "BaseVSShader.h"
 import std;
 

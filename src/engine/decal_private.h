@@ -4,6 +4,9 @@
 
 #include "gl_model_private.h"
 #include "idispinfo.h"
+import ks.core.basetypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
 
 inline constexpr auto DECAL_NORMAL = 0x00; // Default
 inline constexpr auto DECAL_CUSTOM = 0x01; // Clan logo, etc.

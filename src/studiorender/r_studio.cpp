@@ -3,7 +3,15 @@
 
 // Purpose: r_studio.cpp: routines for setting up to draw 3DStudio models
 
-import ks.core;
+import ks.core.dbg;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.transform;
+import ks.math.vector;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
 #include "studio.h"
 #include "studiorender.h"
 #include "studiorendercontext.h"

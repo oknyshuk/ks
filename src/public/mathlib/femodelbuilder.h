@@ -3,7 +3,18 @@
 // Copyright (c) Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.platform;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.transform;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.buffer_strider;
+import ks.tier1.exprevaluator;
+import ks.tier1.small_vector;
+import ks.tier1.strtools;
 #include "mathlib/femodel.h"
 
 class CFeModelBuilder: public CFeModel, public CMultiBufferHelper< CFeModelBuilder >

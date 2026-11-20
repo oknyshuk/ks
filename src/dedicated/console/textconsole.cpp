@@ -7,7 +7,10 @@
 //////////////////////////////////////////////////////////////////////
 
 //#include "port.h"
-import ks.tier1;
+import ks.core.dbg;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 #include "textconsole.h"
 import std;
 

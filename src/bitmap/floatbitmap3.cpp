@@ -2,7 +2,10 @@
 // Copyright (c) 1996-2006 Valve Corporation
 
 import std;
-import ks.vstdlib;
+import ks.core.random;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 #include "bitmap/floatbitmap.h"
 
 

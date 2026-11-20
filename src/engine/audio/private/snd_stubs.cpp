@@ -2,7 +2,8 @@
 
 
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 
 #include "snd_stubs.h"
 

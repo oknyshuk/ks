@@ -19,7 +19,12 @@
 //        (feel free to impliment)
 
 import std;
-import ks.tier1;
+import ks.core.platform;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.appinstance;
+import ks.tier1.strtools;
 
 
 

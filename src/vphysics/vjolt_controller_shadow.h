@@ -6,6 +6,9 @@
 
 #include "vjolt_object.h"
 #include "vjolt_environment.h"
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.vector;
 
 class JoltPhysicsShadowController final : public IPhysicsShadowController
 {

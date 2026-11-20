@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
+import ks.core.scratcharena;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "tier2/beamsegdraw.h"
 #include "materialsystem/imaterialvar.h"
 import std;

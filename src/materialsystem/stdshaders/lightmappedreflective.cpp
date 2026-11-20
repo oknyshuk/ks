@@ -6,6 +6,7 @@
 #include "lightmappedreflective_vs20.inc"
 #include "lightmappedreflective_ps20.inc"
 #include "lightmappedreflective_ps20b.inc"
+import ks.core.basetypes;
 
 DEFINE_FALLBACK_SHADER( LightmappedReflective, LightmappedReflective_DX90 )
 

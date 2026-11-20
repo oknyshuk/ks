@@ -1,3 +1,13 @@
+import ks.core.basetypes;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.tier1.text_writer;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 //

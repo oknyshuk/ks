@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import ks.core;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 import std;
 
 static const uint32 INTERSECTION_ENTITY_ID_NONE = 0xFFFFFFFF;

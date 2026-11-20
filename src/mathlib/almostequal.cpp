@@ -7,7 +7,9 @@
 
 import std;
 
-import ks.math;
+import ks.math.mathlib;
+import ks.platform;
+import ks.simd;
 
 static inline bool AE_IsInfinite(float a)
 {

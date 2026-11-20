@@ -4,7 +4,19 @@
 // main precompiled header for server files
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.keyvalues;
+import ks.tier1.netadr;
+import ks.tier1.ns_address;
+import ks.tier1.playerid;
+import ks.tier1.strtools;
 
 #include "qlimits.h"
 #include "quakedef.h"

@@ -5,7 +5,9 @@
 //
 //////////////////////////////////////////////////////////////////////
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
 #include "hltvtest.h"
 #include "hltvserver.h"
 

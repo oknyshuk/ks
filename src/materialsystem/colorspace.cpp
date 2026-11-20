@@ -5,6 +5,7 @@ import std;
 #include "colorspace.h"
 #include "materialsystem_global.h"
 #include "IHardwareConfigInternal.h"
+import ks.core.types;
 
 //static float			texLightToLinear[256];	// texlight (0..255) to linear (0..4)
 static float			textureToLinear[256];	// texture (0..255) to linear (0..1)

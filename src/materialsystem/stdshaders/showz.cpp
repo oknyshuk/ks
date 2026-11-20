@@ -6,7 +6,11 @@
 //         into visual range of grayscale colors.
 
 import std;
-import ks.tier1;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 #include "BaseVSShader.h"
 
 #include "showz_vs20.inc"

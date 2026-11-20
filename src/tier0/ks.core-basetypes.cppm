@@ -2,12 +2,12 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.core:basetypes;
+export module ks.core.basetypes;
 
 import std;
-import :types;
-import :numeric;
-import :wchartypes;
+import ks.core.types;
+import ks.core.numeric;
+import ks.core.wchartypes;
 
 export extern "C++" {
 

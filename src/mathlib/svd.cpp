@@ -1,7 +1,10 @@
 // svd.cpp : Defines the entry point for the console application.
 //
 import std;
-import ks.math;
+import ks.core.dbg;
+import ks.math.svd;
+import ks.platform;
+import ks.simd;
 
 namespace SVD
 {

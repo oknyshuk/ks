@@ -2,11 +2,18 @@
 // Copyright (c) 2006 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.vstdlib:callqueue;
+export module ks.vstdlib.callqueue;
 
 import std;
-import ks.tier1;
-export import :jobthread;
+import ks.core.basetypes;
+import ks.core.tslist;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.functors;
+import ks.tier1.memstack;
+import ks.tier1.strtools;
+export import ks.vstdlib.jobthread;
 
 export extern "C++" {
 

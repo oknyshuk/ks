@@ -5,6 +5,9 @@
 // Purpose: A higher level link library for general use in the game and tools.
 
 #include "tier2/tier2.h"
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 
 //-----------------------------------------------------------------------------
 // Set up methods related to datamodel interfaces

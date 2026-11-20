@@ -2,6 +2,8 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "changeframelist.h"
+import ks.core.types;
+import ks.tier1.fixed_pool;
 
 //-----------------------------------------------------------------------------
 ks::fixed_pool_mt CChangeFrameList::s_Allocator( sizeof(CChangeFrameList), 2048, ks::fixed_pool::grow::fast, "CChangeFrameList pool", alignof(CChangeFrameList) );

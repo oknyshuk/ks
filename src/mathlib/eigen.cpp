@@ -1,5 +1,12 @@
 import std;
-import ks.math;
+import ks.math.aabb;
+import ks.math.compressed_vector;
+import ks.math.eigen;
+import ks.math.mathlib;
+import ks.math.ssequaternion;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 static matrix3x4_t Transpose(const matrix3x4_t &a)
 {

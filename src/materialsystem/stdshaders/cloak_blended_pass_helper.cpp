@@ -7,7 +7,11 @@
 			// Cloak Pass
 			"$cloakPassEnabled" "1"
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.math.mathlib;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
 		#include "cloak_blended_pass_helper.h"
  
 		In :

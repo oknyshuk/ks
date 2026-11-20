@@ -16,7 +16,13 @@
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/Collision/Shape/Shape.h>
 #include <Jolt/Physics/Collision/Shape/ConvexShape.h>
-import ks.math;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.polyhedron;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
 #include "vphysics_interface.h"
 import std;
 

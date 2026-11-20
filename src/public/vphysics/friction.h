@@ -8,7 +8,10 @@
 // NOTE: VPHYSICS may choose to make the data contained within this object invalid 
 // NOTE: any time simulation is run.
 import std;
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 class IPhysicsObject;
 class IPhysicsFrictionSnapshot
 {

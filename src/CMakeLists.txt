@@ -46,7 +46,10 @@ target_compile_definitions(ks_common_base INTERFACE
     POSIX=1 _LINUX=1 LINUX=1 CSTRIKE15=1 NDEBUG=1)
 target_compile_options(ks_common_base INTERFACE
     -march=x86-64-v3 -fdiagnostics-color=always
-    $<$<COMPILE_LANGUAGE:CXX>:-freflection;-fcontracts;-Wno-invalid-offsetof;-Wno-free-nonheap-object>)
+    $<$<COMPILE_LANGUAGE:CXX>:-freflection;-fcontracts;-Wno-invalid-offsetof;-Wno-free-nonheap-object>
+    # GCC 16 crashes or misreads lazily loaded module data (ICEs in implicitly_declare_fn,
+    # build_special_member_call); loading imports eagerly avoids that.
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-module-lazy>)
 target_link_options(ks_common_base INTERFACE -fuse-ld=mold)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -109,7 +112,6 @@ add_library(public_common STATIC
     common/playerid.cpp common/platforminputdevice.cpp common/randoverride.cpp)
 target_link_libraries(public_common PRIVATE ks_common)
 
-# Code of public/ that both game sides use unchanged; one copy, shared like public_common.
 add_library(game_public STATIC
     public/closedcaptions.cpp public/interpolatortypes.cpp public/keyframe/keyframe.cpp
     public/rope_physics.cpp public/server_class.cpp public/simple_physics.cpp
@@ -163,28 +165,10 @@ add_subdirectory(studiorender)
 add_subdirectory(vphysics)
 add_subdirectory(vscript)
 add_subdirectory(engine)
+add_subdirectory(game/shared)
 add_subdirectory(game/client)
 add_subdirectory(game/server)
 
-# ---------------------------------------------------------------------------------------
-# Executables
-#
-# srceng = engine + server + client, srcds = engine + server, all ordinary objects linked once.
-# Nothing is renamed, hidden or post-processed, and the link suppresses nothing: what the engine,
-# the libraries and the two game sides share is the global namespace (tier1, tier2, tier3,
-# mathlib, particles, the engine-owned headers in the sides' preludes, ...), and what is per side
-# lives in the inline namespace ks_server or ks_client (see game/ks_side.cmake), so the two sides
-# can define the same names without clashing.  The few places where a library has per-side state
-# are explicit: ks::registry (tier1/ks.tier1-registry.cppm).
-#
-# The engine reaches a side through the factory the executable's main defines
-# (game_entry.h); the server never sees the client.
-#
-# The objects of an executable are those of its OBJECT libraries plus those of the OBJECT
-# libraries they link directly (CMake takes no objects from OBJECT libraries that are linked
-# deeper, nor from a static library's); the static libraries and their dependencies come from
-# the normal link closure.
-# ---------------------------------------------------------------------------------------
 function(ks_link_game exe)
     set(_objlibs)
     foreach(_lib IN LISTS ARGN)
@@ -212,17 +196,10 @@ foreach(_exe srceng srcds)
     target_link_libraries(${_exe} PRIVATE RmlCore d3d9 ks_jpeg PkgConfig::SDL3)
 endforeach()
 
-# The shader API is selected here, at build time: srceng renders through shaderapidx9, srcds (which
-# never draws) uses the empty implementation.  Neither is part of the engine; both define the same
-# classes (IShaderAPI, IShaderDevice, ... see materialsystem/shaderapi_facade), which the engine
-# calls as ordinary undefined symbols.
 target_link_libraries(srceng PRIVATE shaderapidx9)
 target_link_libraries(srcds PRIVATE shaderapiempty)
 
 enable_testing()
 add_subdirectory(tools/no_vtables)
 
-install(TARGETS srceng srcds RmlCore d3d9
-    RUNTIME DESTINATION . LIBRARY DESTINATION bin)
-set_target_properties(srceng srcds PROPERTIES INSTALL_RPATH "$ORIGIN/bin")
-set_target_properties(RmlCore d3d9 PROPERTIES INSTALL_RPATH "$ORIGIN")
+install(TARGETS srceng srcds RUNTIME DESTINATION .)

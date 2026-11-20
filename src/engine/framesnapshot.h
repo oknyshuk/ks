@@ -3,7 +3,11 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 
-import ks.tier1;
+import ks.core.numeric;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.fixed_pool;
 import std;
 #include "const.h"
 #include "packed_entity.h"

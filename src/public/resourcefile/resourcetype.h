@@ -8,7 +8,11 @@
 // is stored in a second, parallel file.
 
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
 #include "resourcefile/schema.h"
 #include "tier2/tier2.h" // g_nResourceFrameCount defn
 

@@ -2,10 +2,15 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.vstdlib:vstrtools;
+export module ks.vstdlib.vstrtools;
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 
 export extern "C++" {
 

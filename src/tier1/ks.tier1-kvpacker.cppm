@@ -2,11 +2,13 @@
 // Copyright (c) Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:kvpacker;
+export module ks.tier1.kvpacker;
 
 import std;
-import ks.math;
-export import :keyvalues;
+import ks.core.tslist;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.keyvalues;
 
 export extern "C++" {
 

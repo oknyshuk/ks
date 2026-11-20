@@ -4,7 +4,11 @@
 // Purpose: A higher level link library for general use in the game and tools.
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.tier1;
 
 //-----------------------------------------------------------------------------
 // Call this to connect to all tier 1 libraries.

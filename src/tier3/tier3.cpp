@@ -3,7 +3,10 @@
 
 // Purpose: A higher level link library for general use in the game and tools.
 
-import ks.core;
+import ks.platform;
+import ks.simd;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 #include "tier3/tier3.h"
 import std;
 

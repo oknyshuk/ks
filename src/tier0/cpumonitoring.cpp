@@ -16,7 +16,7 @@
 // work. The threads are started on demand and are never terminated, in order to simplify
 // the code.
 
-module ks.core;
+module ks.core.cpu;
 
 CPUFrequencyResults GetCPUFrequencyResults( bool )
 {

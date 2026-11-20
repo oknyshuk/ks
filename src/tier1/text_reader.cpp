@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.characterset;
+import ks.tier1.commandbuffer;
+import ks.tier1.keyvalues;
+import ks.tier1.string_escapes;
+import ks.tier1.text_reader;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 
 
 import std;

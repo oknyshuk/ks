@@ -3,7 +3,7 @@
 
 // Purpose: Monotonic clock backing the timers in ks.core:time.
 
-module ks.core;
+module ks.core.time;
 
 import std;
 

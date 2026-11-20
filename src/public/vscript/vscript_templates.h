@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 2008 Valve Corporation
 
-import ks.core;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "vscript/ivscript.h"
 
 import std;

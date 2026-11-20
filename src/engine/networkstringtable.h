@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.checksum_crc;
 #include "networkstringtabledefs.h"
 #include "networkstringtableitem.h"
 import std;

@@ -1,3 +1,11 @@
+import ks.core.platwindow;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 //

@@ -4,6 +4,7 @@
 
 #include <materialsystem/IShader.h>
 #include "shaderlib/shadercombosemantics.h"
+import ks.tier1.cvar;
 
 //-----------------------------------------------------------------------------
 // forward declarations

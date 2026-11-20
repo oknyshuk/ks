@@ -5,6 +5,7 @@
 #include "worldimposter_vs20.inc"
 #include "worldimposter_ps20.inc"
 #include "worldimposter_ps20b.inc"
+import ks.math.vmatrix;
 
 BEGIN_VS_SHADER( worldimposter, "Help for worldimposter" )
 	

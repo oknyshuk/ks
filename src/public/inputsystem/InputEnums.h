@@ -3,7 +3,8 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.core;
+import ks.platform;
+import ks.simd;
 
 // Standard maximum +/- value of a joystick axis
 inline constexpr auto MAX_BUTTONSAMPLE = 32768;

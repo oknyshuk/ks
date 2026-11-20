@@ -5,7 +5,10 @@
 // Purpose: INetMessage interface
 
 import std;
-import ks.tier1;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
 
 class INetMsgHandler;
 class INetMessage;

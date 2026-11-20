@@ -6,6 +6,9 @@
 
 #include "materialsystem/imaterialsystem.h"
 #include "mathlib/camera.h"
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
 
 //-----------------------------------------------------------------------------
 // Forward declarations

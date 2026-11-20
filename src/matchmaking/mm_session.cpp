@@ -3,6 +3,12 @@
 
 #include "mm_framework.h"
 #include "filesystem.h"
+import ks.core.dbg;
+import ks.core.types;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
 
 void MatchSession_BroadcastSessionSettingsUpdate( KeyValues *pUpdateDeletePackage )
 {

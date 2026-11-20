@@ -12,7 +12,16 @@
 #include <igameevents.h>
 #include "networksystem/inetworksystem.h"
 #include <engine/iserverplugin.h>
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.scratcharena;
+import ks.core.tslist;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.keyvalues;
 import std;
 #include "netmessages_signon.h"
 

@@ -4,7 +4,13 @@
 
 // Purpose: A set of utilities to render standard shapes
 
-import ks.math;
+import ks.core.color;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
 #include "tier2/tier2.h"
 import std;
 

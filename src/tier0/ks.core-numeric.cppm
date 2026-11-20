@@ -4,9 +4,9 @@
 
 // Scalar float helpers.
 
-export module ks.core:numeric;
+export module ks.core.numeric;
 
-import :types;
+import ks.core.types;
 
 export extern "C++" {
 

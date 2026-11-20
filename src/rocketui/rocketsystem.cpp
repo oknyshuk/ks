@@ -3,6 +3,7 @@
 
 #include "rocketsystem.h"
 #include "rocketuiimpl.h"
+import ks.core.dbg;
 
 
 RocketSystem RocketSystem::m_Instance;

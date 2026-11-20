@@ -9,7 +9,10 @@
 // http://www.strchr.com/hash_functions
 
 import std;
-import ks.tier1;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.murmurhash3;
 
 //-----------------------------------------------------------------------------
 

@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
 import std;
 
 // A vector prop is a "lengthproxy" subtable plus one element prop per slot. Neither end touches

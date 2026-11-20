@@ -6,6 +6,7 @@
 
 
 import std;
+import ks.core.basetypes;
 
 namespace ks::proto
 {

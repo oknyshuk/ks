@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.vstdlib;
+import ks.platform;
+import ks.simd;
 #include "filesystem_engine.h"
 #include "proto_oob.h"
 #include "net_chan.h"

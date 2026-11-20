@@ -5,7 +5,12 @@
 
 #include <tier2/tier2.h>
 import std;
-import ks.tier1;
+import ks.core.cmdline;
+import ks.core.progress;
+import ks.math.mathlib;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 
 
 

@@ -5,7 +5,16 @@
 #define NOISE_DIVISIONS		128
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.numeric;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
 #include "materialsystem/imesh.h"
 
 //-----------------------------------------------------------------------------

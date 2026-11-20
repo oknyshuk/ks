@@ -3,7 +3,9 @@
 // Copyright (c) 2012 Valve Corporation
 
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
 
 // [dkorus]:  The values here are setup to be used as a bit-field.  
 //			for example: A PS3 with a KEYBOARD_MOUSE attached as well as a PLAYSTATION_MOVE would have a connected 

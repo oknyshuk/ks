@@ -2,11 +2,17 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:lerp_functions;
+export module ks.tier1.lerp_functions;
 
 import std;
-import ks.math;
-export import :rangecheckedvar;
+import ks.core.basetypes;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.rangecheckedvar;
 
 export extern "C++" {
 

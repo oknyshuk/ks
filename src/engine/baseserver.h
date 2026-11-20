@@ -4,7 +4,17 @@
 
 #include <iserver.h>
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.checksum_crc;
+import ks.tier1.convar;
+import ks.tier1.netadr;
+import ks.tier1.ns_address;
 #include "baseclient.h"
 #include "netmessages.h"
 #include "net.h"

@@ -2,11 +2,13 @@
 // Copyright (c) 1996-2006 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:commandbuffer;
+export module ks.tier1.commandbuffer;
 
 import std;
-import ks.math;
-export import :convar;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.convar;
 
 export extern "C++" {
 

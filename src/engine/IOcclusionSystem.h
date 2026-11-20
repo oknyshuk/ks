@@ -1,7 +1,12 @@
 #pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.math.vmatrix;
+import ks.math.vplane;
+import ks.platform;
+import ks.simd;
 
 struct model_t;
 

@@ -4,7 +4,13 @@
 
 // Purpose: The application object for apps that use tier2
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.tier1;
 #include "appframework/AppFramework.h"
 #include "tier2/tier2dm.h"
 import std;

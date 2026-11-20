@@ -29,7 +29,16 @@
 #include <Jolt/Physics/Constraints/HingeConstraint.h>
 #include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.logging;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 #include "bspfile.h"
 #include "cmodel.h"
 #include "vphysics/collision_set.h"

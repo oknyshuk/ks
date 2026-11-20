@@ -3,7 +3,14 @@
 // Copyright (c) 1996-2007 Valve Corporation
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.tslist;
+import ks.core.types;
+import ks.math.mathlib;
+import ks.platform;
+import ks.simd;
+import ks.tier1.exprevaluator;
+import ks.tier1.small_vector;
 #include "surfacehandle.h"
 #include "ivrenderview.h"
 #include "iclientrenderable.h"

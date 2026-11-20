@@ -2,7 +2,16 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import ks.math;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.byte_writer;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 import std;
 
 //-----------------------------------------------------------------------------

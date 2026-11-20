@@ -4,7 +4,19 @@
 // Purpose: Tier1 logging helpers.
 
 import std;
-import ks.tier1;
+import ks.core.color;
+import ks.core.logging;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.icvar;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.tier1_logging;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 
 CBufferedLoggingListener::CBufferedLoggingListener() :
 ILoggingListener( [this]( const LoggingContext_t *pContext, const tchar *pMessage ) { Log( pContext, pMessage ); } ),

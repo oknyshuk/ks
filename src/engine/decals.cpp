@@ -5,7 +5,10 @@
 
 // main precompiled header for client rendering code
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.filename_table;
+import ks.tier1.interfaces;
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"

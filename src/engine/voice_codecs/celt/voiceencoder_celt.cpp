@@ -43,6 +43,7 @@ damage. */
 
 import std;
 #include "celt.h"
+import ks.tier1.createinterface;
 
 
 

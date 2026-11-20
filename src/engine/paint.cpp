@@ -1,7 +1,29 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.random;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vplane;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.envelope;
+import ks.tier1.iconvar;
+import ks.tier1.interfaces;
+import ks.tier1.small_vector;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
+import ks.vstdlib.callqueue;
+import ks.vstdlib.jobthread;
 #include "paint.h"
 #include "materialsystem/facade/ipaintmapdatamanager.inl"
 #include "materialsystem/imaterial.h"

@@ -5,7 +5,11 @@
 // Purpose: Interface used to construct morph buffers
 
 import std;
-import ks.math;
+import ks.core.numeric;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "materialsystem/imaterial.h"
 
 //-----------------------------------------------------------------------------

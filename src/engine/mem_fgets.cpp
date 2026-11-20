@@ -2,6 +2,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
+import ks.core.types;
 
 // Copied from sound.cpp in the DLL
 char *memfgets( unsigned char *pMemFile, int fileSize, int *pFilePos, char *pBuffer, int bufferSize )

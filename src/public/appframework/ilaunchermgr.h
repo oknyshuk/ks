@@ -8,7 +8,11 @@
 // and set to something that is reasonable for usage in the overlay. 
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 import ks.desktop;
 #include "inputsystem/iinputsystem.h"
 

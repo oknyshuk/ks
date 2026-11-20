@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-export module ks.core:types;
+export module ks.core.types;
 
 export extern "C++" {
 

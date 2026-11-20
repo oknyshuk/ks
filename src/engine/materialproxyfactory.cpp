@@ -7,6 +7,9 @@ import std;
 #include "materialsystem/facade/imaterialproxyfactory.inl"
 #include "server.h"
 #include "cdll_int.h"
+import ks.core.dbg;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 
 extern IBaseClientDLL *g_ClientDLL;
 #ifndef DEDICATED

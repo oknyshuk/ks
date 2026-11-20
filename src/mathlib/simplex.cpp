@@ -1,5 +1,10 @@
 import std;
-import ks.math;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.math.simplex;
+import ks.platform;
+import ks.simd;
 
 // a nice tutorial on simplex method: http://math.uww.edu/~mcfarlat/ism.htm
 CSimplex::CSimplex():

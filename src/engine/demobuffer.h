@@ -6,7 +6,10 @@
 // Includes
 //-----------------------------------------------------------------------------
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 #include "demofile/demoformat.h"
 
 //-----------------------------------------------------------------------------

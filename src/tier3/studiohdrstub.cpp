@@ -6,6 +6,10 @@
 #include "datacache/imdlcache.h"
 #include "istudiorender.h"
 #include "tier3/tier3.h"
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.tier1.interfaces;
 
 //-----------------------------------------------------------------------------
 // FIXME: This trashy glue code is really not acceptable. Figure out a way of making it unnecessary.

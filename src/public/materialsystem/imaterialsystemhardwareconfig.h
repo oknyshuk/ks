@@ -5,7 +5,9 @@
 [[gnu::always_inline]] inline constexpr auto IsPlatformOpenGL() { return false; }
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
 //#include "tier2/tier2.h"
 #include "bitmap/imageformat.h"
 #include "imaterialsystem.h"

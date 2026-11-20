@@ -4,6 +4,8 @@
 
 #include "materialsystem/imorph.h"
 #include "shaderapi/shareddefs.h"
+import ks.math.compressed_vector;
+import ks.math.vector2d;
 
 //-----------------------------------------------------------------------------
 // Forward declarations

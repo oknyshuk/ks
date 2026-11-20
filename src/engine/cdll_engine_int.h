@@ -3,6 +3,10 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "cdll_int.h"
+import ks.core.basetypes;
+import ks.math.mathlib;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 
 class IVModelRender;
 class IClientLeafSystemEngine;

@@ -5,7 +5,8 @@
 // carries a kind tag; what used to be a virtual call is a switch on the tag, defined here where both
 // derived classes are complete.
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 #include "common.h"
 #include "quakedef.h"
 #include "hltvserver.h"

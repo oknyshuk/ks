@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.core;
+import ks.core.scratcharena;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 #include "BaseVSShader.h"
 
 BEGIN_VS_SHADER_FLAGS( Sample4x4, "Help for Sample4x4", SHADER_NOT_EDITABLE )

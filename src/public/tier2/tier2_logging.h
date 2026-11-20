@@ -5,7 +5,11 @@
 // Purpose: Tier2 logging helpers. Adds support for file I/O
 
 import std;
-import ks.core;
+import ks.core.logging;
+import ks.platform;
+import ks.simd;
+import ks.tier1.icvar;
+import ks.tier1.keyvalues;
 
 const int MAX_SIMULTANEOUS_LOGGING_FILE_COUNT = 16;
 const int INVALID_LOGGING_FILE_HANDLE = -1;

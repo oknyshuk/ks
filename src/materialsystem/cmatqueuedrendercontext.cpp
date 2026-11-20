@@ -4,7 +4,32 @@
 import std;
 
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.color;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.lightdesc;
+import ks.math.mathlib;
+import ks.math.polyhedron;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.envelope;
+import ks.tier1.exprevaluator;
+import ks.tier1.functors;
+import ks.tier1.iconvar;
+import ks.tier1.interfaces;
+import ks.tier1.memstack;
+import ks.vstdlib.callqueue;
+import ks.vstdlib.jobthread;
 
 #include "tier2/tier2.h"
 #include "bitmap/imageformat.h"

@@ -32,7 +32,12 @@
 #include <Jolt/Physics/Constraints/SixDOFConstraint.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
 import std;
-import ks.tier1;
+import ks.core.logging;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "bspfile.h"
 #include "cmodel.h"
 #include "vphysics/collision_set.h"

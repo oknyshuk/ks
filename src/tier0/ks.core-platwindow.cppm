@@ -2,9 +2,9 @@
 // Copyright (c) 1996-2009 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.core:platwindow;
+export module ks.core.platwindow;
 
-import :platform;
+import ks.core.platform;
 
 export extern "C++" {
 

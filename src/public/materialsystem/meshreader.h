@@ -8,6 +8,12 @@
 // vertex data.
 //-----------------------------------------------------------------------------
 #include "materialsystem/imesh.h"
+import ks.core.color;
+import ks.core.dbg;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.math.vector2d;
 
 class CBaseMeshReader : protected MeshDesc_t
 {

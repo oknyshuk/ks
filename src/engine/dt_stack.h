@@ -5,6 +5,9 @@
 import std;
 #include "dt.h"
 #include "dt_recv_decoder.h"
+import ks.core.tslist;
+import ks.core.types;
+import ks.core.vprof;
 
 class CSendNode;
 static 	CSendProxyRecipients s_Recipients; // avoid calling constructor each time

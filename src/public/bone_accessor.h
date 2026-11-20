@@ -3,6 +3,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "studio.h"
+import ks.math.mathlib;
 
 
 class CBoneAccessor

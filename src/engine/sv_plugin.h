@@ -5,6 +5,12 @@
 #include "eiface.h"
 #include "engine/iserverplugin.h"
 import std;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.tier1.convar;
+import ks.tier1.createinterface;
+import ks.tier1.keyvalues;
 
 //---------------------------------------------------------------------------------
 // Purpose: a single plugin

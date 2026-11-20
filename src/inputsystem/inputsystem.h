@@ -6,7 +6,21 @@
 
 
 typedef char xKey_t;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.platwindow;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.appinstance;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.map_ops;
 #include "posix_stubs.h"
 #include "appframework/ilaunchermgr.h"
 

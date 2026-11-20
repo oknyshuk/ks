@@ -7,7 +7,35 @@
 #include <syscall.h>
 
 
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.byte_writer;
+import ks.tier1.checksum_crc;
+import ks.tier1.convar;
+import ks.tier1.cvar;
+import ks.tier1.functors;
+import ks.tier1.iconvar;
+import ks.tier1.icvar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.netadr;
+import ks.tier1.strtools;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.tier1.vector_ops;
+import ks.vstdlib.jobthread;
 #include "common.h"
 #include "qlimits.h"
 #include "quakedef.h"

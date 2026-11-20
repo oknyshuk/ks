@@ -2,12 +2,17 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:convar;
+export module ks.tier1.convar;
 
 import std;
-import ks.math;
-export import :utlstring;
-export import :icvar;
+import ks.core.basetypes;
+import ks.core.color;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.utlstring;
+export import ks.tier1.icvar;
 
 export extern "C++" {
 
@@ -25,6 +30,7 @@ class ConVar;
 class CCommand;
 class ConCommand;
 class ConCommandBase;
+namespace ks { struct registry; }
 
 // This performs a simple, reversible obscuring of the floating point value passed in with
 // the obscuring val. This just ensures that we don't see the exact bits of fVal in memory 
@@ -165,7 +171,10 @@ class ConCommandBase
 	friend void ConVar_PublishToVXConsole();
 
 public:
+								// Registers with the engine's registry, or with the given one
+								// (a game side passes its own: side_registry()).
 								ConCommandBase( void );
+	explicit					ConCommandBase( ks::registry &registry );
 								ConCommandBase( const char *pName, const char *pHelpString = 0, 
 									int flags = 0 );
 
@@ -336,6 +345,10 @@ public:
 		const char *pHelpString = 0, int flags = 0, FnCommandCompletionCallback completionFunc = 0 );
 	ConCommand( const char *pName, FnCommandCallback_t callback, 
 		const char *pHelpString = 0, int flags = 0, FnCommandCompletionCallback completionFunc = 0 );
+	ConCommand( ks::registry &registry, const char *pName, FnCommandCallbackV1_t callback, 
+		const char *pHelpString = 0, int flags = 0, FnCommandCompletionCallback completionFunc = 0 );
+	ConCommand( ks::registry &registry, const char *pName, FnCommandCallback_t callback, 
+		const char *pHelpString = 0, int flags = 0, FnCommandCompletionCallback completionFunc = 0 );
 	// For commands that carry state: any callable that cannot be a plain function pointer.
 	template < typename F >
 		requires ( std::is_invocable_r_v< void, F &, const CCommand & >
@@ -344,6 +357,15 @@ public:
 	ConCommand( const char *pName, F &&callback, 
 		const char *pHelpString = 0, int flags = 0, ConCommandCompletionCallback_t completionCallback = ConCommandCompletionCallback_t() )
 		: ConCommand( StatefulTag_t(), pName, ConCommandCallback_t( std::forward< F >( callback ) ), pHelpString, flags, std::move( completionCallback ) )
+	{
+	}
+	template < typename F >
+		requires ( std::is_invocable_r_v< void, F &, const CCommand & >
+			&& !std::is_convertible_v< F, FnCommandCallback_t >
+			&& !std::is_convertible_v< F, FnCommandCallbackV1_t > )
+	ConCommand( ks::registry &registry, const char *pName, F &&callback, 
+		const char *pHelpString = 0, int flags = 0, ConCommandCompletionCallback_t completionCallback = ConCommandCompletionCallback_t() )
+		: ConCommand( StatefulTag_t(), registry, pName, ConCommandCallback_t( std::forward< F >( callback ) ), pHelpString, flags, std::move( completionCallback ) )
 	{
 	}
 
@@ -359,6 +381,8 @@ public:
 private:
 	struct StatefulTag_t {};
 	ConCommand( StatefulTag_t, const char *pName, ConCommandCallback_t callback, 
+		const char *pHelpString, int flags, ConCommandCompletionCallback_t completionCallback );
+	ConCommand( StatefulTag_t, ks::registry &registry, const char *pName, ConCommandCallback_t callback, 
 		const char *pHelpString, int flags, ConCommandCompletionCallback_t completionCallback );
 
 	// Call this function when executing the command
@@ -389,6 +413,17 @@ public:
 								ConVar( const char *pName, const char *pDefaultValue, int flags, 
 									const char *pHelpString, FnChangeCallback_t callback );
 								ConVar( const char *pName, const char *pDefaultValue, int flags, 
+									const char *pHelpString, bool bMin, float fMin, bool bMax, float fMax,
+									FnChangeCallback_t callback );
+								ConVar( ks::registry &registry, const char *pName, const char *pDefaultValue, int flags = 0);
+
+								ConVar( ks::registry &registry, const char *pName, const char *pDefaultValue, int flags, 
+									const char *pHelpString );
+								ConVar( ks::registry &registry, const char *pName, const char *pDefaultValue, int flags, 
+									const char *pHelpString, bool bMin, float fMin, bool bMax, float fMax );
+								ConVar( ks::registry &registry, const char *pName, const char *pDefaultValue, int flags, 
+									const char *pHelpString, FnChangeCallback_t callback );
+								ConVar( ks::registry &registry, const char *pName, const char *pDefaultValue, int flags, 
 									const char *pHelpString, bool bMin, float fMin, bool bMax, float fMax,
 									FnChangeCallback_t callback );
 

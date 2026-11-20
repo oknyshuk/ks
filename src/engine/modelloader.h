@@ -8,6 +8,10 @@ class IFileList;
 
 
 #include "engine/ivmodelinfo.h"
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
 
 //-----------------------------------------------------------------------------
 // Purpose: 

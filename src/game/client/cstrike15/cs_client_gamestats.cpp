@@ -1,35 +1,57 @@
+// Copyright:	(c) 2009 Hidden Path Entertainment
+
+module;
+#include "engine/ivmodelinfo.h"
+#include "iachievementmgr.h"
+#include "igameevents.h"
+#include "localize/ilocalize.h"
+#include "matchmaking/cstrike15/imatchext_cstrike15.h"
+#include "matchmaking/imatchframework.h"
+#include "usermessages_schema.h"
+#include "../cdll_client_int.h"
+module ks.client;
+
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.checksum_crc;
+import ks.tier1.interfaces;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.strtools;
+import :particlemgr;
+import :props;
+import :baseanimatedtextureproxy;
+import :iinput;
+import :sharedvar;
+import :util;
+import :cstrike15.cs_player;
+import :cstrike15.cs_shareddefs;
+import :cstrike15.gameui.bonusmapsdatabase;
+import :precache;
+import ks.game.shareddefs;
+import :achievements_and_stats_interface;
+import :baseentity;
+import :cstrike15.cs_player_shared;
+import ks.game.gamemovement;
+
+class CCSPlayer;
+class CTeam;
+
+using namespace ::ks::reflect;
+
 //-------------------------------------------------------------
 // File:		cs_client_gamestats.cpp
 // Desc: 		Manages client side stat storage, accumulation, and access
 // Author: 		Peter Freese <peter@hiddenpath.com>
 // Date: 		2009/09/11
-// Copyright:	(c) 2009 Hidden Path Entertainment
 //
 // Keywords: 	
 //-------------------------------------------------------------
-
-#include "rocketui/rmlui.h"
-#include "predictable_entity.h"
-#include "util_shared.h"
-#include "baseentity_shared.h"
-#include "c_basecombatweapon.h"
-#include "c_basecombatcharacter.h"
-#include "gamerules.h"
-#include "c_baseplayer.h"
-#include "cdll_client_int.h"
-#include "engine/ivmodelinfo.h"
-#include "cs_client_gamestats.h"
-#include "achievementmgr.h"
-#include "usermessages.h"
-#include "c_cs_player.h"
-#include "achievements_cs.h"
-#include "localize/ilocalize.h"
-#include "c_team.h"
-#include "engineinterface.h"
-#include "cs_gamerules.h"
-#include "cs_player_rank_mgr.h"
-
-
 
 CCSClientGameStats g_CSClientGameStats;
 
@@ -37,9 +59,6 @@ bool MsgFunc_PlayerStatsUpdate( const ks::net::CCSUsrMsg_PlayerStatsUpdate &msg 
 {
 	return g_CSClientGameStats.MsgFunc_PlayerStatsUpdate(msg);
 }
-
-
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
@@ -83,7 +102,7 @@ void CCSClientGameStats::LevelShutdownPreEntity()
 	UpdateLastMatchStats();
 }
 
-static inline int GetNumPlayers( C_Team *pTeam )
+static inline int GetNumPlayers( CTeam *pTeam )
 {
 	return pTeam ? pTeam->Get_Number_Players() : 0;
 }
@@ -205,7 +224,7 @@ const StatsCollection_t& CCSClientGameStats::GetRoundStats( int nUserSlot )
 
 void CCSClientGameStats::UpdateStats( const StatsCollection_t &stats, int nUserSlot )
 {
-	C_CSPlayer *pPlayer = C_CSPlayer::GetLocalCSPlayer();
+	CCSPlayer *pPlayer = CCSPlayer::GetLocalCSPlayer();
 	if ( !pPlayer )
 		return;
 
@@ -260,20 +279,17 @@ void CRC32Helper_ProcessInt16( CRC32_t &crc, int16 n )
 	CRC32_ProcessBuffer( &crc, &plat_n, sizeof(plat_n) );
 }
 
-
 void CRC32Helper_ProcessInt32( CRC32_t &crc, int32 n )
 {
 	int32 plat_n = ( n );
 	CRC32_ProcessBuffer( &crc, &plat_n, sizeof(plat_n) );
 }
 
-
 void CRC32Helper_ProcessUInt32( CRC32_t &crc, uint32 n )
 {
 	uint32 plat_n = ( n );
 	CRC32_ProcessBuffer( &crc, &plat_n, sizeof(plat_n) );
 }
-
 
 bool CCSClientGameStats::MsgFunc_PlayerStatsUpdate( const ks::net::CCSUsrMsg_PlayerStatsUpdate &msg )
 {
@@ -342,7 +358,6 @@ bool CCSClientGameStats::MsgFunc_PlayerStatsUpdate( const ks::net::CCSUsrMsg_Pla
 
 	// everything looks okay at this point; add these stats for the player's round, match, and lifetime stats
 	int userSlot = SINGLE_PLAYER_SLOT;
-
 
 	UpdateStats(deltaStats, userSlot );
 
@@ -451,13 +466,11 @@ void CCSClientGameStats::CalculateMatchFavoriteWeapons()
 	}
 }
 
-
 bool CCSClientGameStats::ValidateTitleBlockVersion( TitleDataFieldsDescription_t const *pFields, IPlayerLocal *pPlayerLocal, CSSyncStatValueDirection_t eOp, int titleBlockNo )
 {
 	return false;		// no title data for non Xbox systems
 
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Serialize lifetime stats to the user profile title data
@@ -468,7 +481,6 @@ bool CCSClientGameStats::SyncCSStatsToTitleData( int iController, CSSyncStatValu
 	return true;
 
 }
-
 
 bool CCSClientGameStats::SyncCSLoadoutsToTitleData( int iController, CSSyncStatValueDirection_t eOp )
 {
@@ -490,15 +502,12 @@ bool CCSClientGameStats::SyncCSMatchmakingDataToTitleData( int iController, CSSy
 	return true;
 }
 
-
-
 bool CCSClientGameStats::SyncCSRankingDataToTitleData( int iController, CSSyncStatValueDirection_t eOp )
 {
 	// Get the local player.
 	IPlayerLocal *pPlayerLocal = g_pMatchFramework->GetMatchSystem()->GetPlayerManager()->GetLocalPlayer( iController );
 	if ( !pPlayerLocal )
 		return false;
-
 
 	return true;
 }

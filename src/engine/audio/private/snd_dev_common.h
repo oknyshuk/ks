@@ -7,6 +7,9 @@
 #include "snd_mix_buf.h"
 #include "snd_channels.h"
 #include "snd_fixedint.h"
+import ks.core.basetypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
 
 void DEBUG_DrawPanCurves(void);
 

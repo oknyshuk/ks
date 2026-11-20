@@ -2,7 +2,10 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.vstdlib;
+import ks.core.platform;
+import ks.core.random;
+import ks.platform;
+import ks.simd;
 
 void srand(unsigned int)
 {

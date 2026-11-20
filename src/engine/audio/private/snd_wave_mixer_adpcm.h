@@ -4,6 +4,7 @@
 
 #include "snd_wave_mixer_private.h"
 #include "audio/private/posix_stubs.h"
+import ks.core.basetypes;
 
 class CAudioMixer;
 class IWaveData;

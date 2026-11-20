@@ -3,6 +3,8 @@
 // Copyright (c) 1996-2008 Valve Corporation
 
 #include "studio.h"
+import ks.core.basetypes;
+import ks.core.wchartypes;
 
 inline constexpr auto MAX_NUM_BONES_PER_STRIP = 512;
 

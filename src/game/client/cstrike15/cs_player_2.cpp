@@ -1,0 +1,3261 @@
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) Valve Corporation
+// Copyright (c) 1996-2005 Valve Corporation
+
+module;
+#include <string.h>
+#include <math.h>
+#include <time.h>
+#include "igameevents.h"
+#include "matchmaking/imatchframework.h"
+#include "client_class.h"
+#include "declare_class.h"
+#include "edict.h"
+#include "gametypes.h"
+#include "inputsystem/iinputsystem.h"
+#include "irecipientfilter.h"
+#include "platforminputdevice.h"
+#include "reflect_annotations.h"
+#include "vphysics_interface.h"
+#include "../cdll_client_int.h"
+#include "../reflect_recvtable.h"
+module ks.client;
+
+import std;
+import ks.core.dbg;
+import ks.core.threadtools;
+import ks.game.cstrike15.cs_achievementdefs;
+import ks.game.cstrike15.cs_player_rank_shared;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.fmtstr;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import ks.tier1.strtools;
+import :particlemgr;
+import :props;
+import :baseanimatedtextureproxy;
+import :iinput;
+import :sharedvar;
+import :util;
+import :cstrike15.cs_player;
+import :precache;
+import :achievements_and_stats_interface;
+import :baseentity;
+import ks.game.gamemovement;
+import :noopanimcontroller;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.tier1.cvar;
+import ks.tier1.exprevaluator;
+import ks.tier1.icvar;
+import ks.tier1.vector_ops;
+import ks.game.ai_activity;
+import :triggers;
+import :cstrike15.cs_team;
+import :cstrike15.cs_player_shared;
+import :cstrike15.cs_shareddefs;
+import :gamevars_shared;
+import ks.game.shareddefs;
+import :econ.econ_item_schema_minimal;
+import ks.game.mapentities_shared;
+
+class CAchievementMgr;
+class CAchievement_StatGoal;
+class CBaseAchievement;
+class CBasePlayer;
+
+using namespace ::ks::reflect;
+
+ConVar cl_player_rank_debug( side_registry(), "cl_player_rank_debug", "0", FCVAR_DEVELOPMENTONLY );
+ConVar cl_force_progress_notice_every_change( side_registry(), "cl_force_progress_notice_every_change", "0", FCVAR_DEVELOPMENTONLY );
+ConVar cl_medal_progress_shown_fraction( side_registry(), "cl_medal_progress_shown_fraction", "5", FCVAR_DEVELOPMENTONLY, "Show progress on the win panel every GOAL/X increments for stat based achievements.", true, 1, true, 10 );
+
+CPlayerRankManager g_PlayerRankManager;
+
+MedalCategory_t GetAchievementCategory( int id );
+
+static CFmtStr s_MedalCategoryNameActiveSeason( "SFUI_MedalCategory_Season%d_CAPHTML", MEDAL_SEASON_ACCESS_VALUE + 1 );
+const char *s_MedalCategoryNames[] = 
+{
+	"SFUI_MedalCategory_TeamAndObjective_CAPHTML",
+	"SFUI_MedalCategory_Combat_CAPHTML",
+	"SFUI_MedalCategory_Weapon_CAPHTML",
+	"SFUI_MedalCategory_Map_CAPHTML",
+	"SFUI_MedalCategory_GunGame_CAPHTML",
+	s_MedalCategoryNameActiveSeason.Access()
+};
+
+const char *s_MedalCategoryRankNames[] = 
+{
+	"SFUI_Medal_RankName_0",
+	"SFUI_Medal_RankName_1",
+	"SFUI_Medal_RankName_2",
+	"SFUI_Medal_RankName_3"
+};
+
+CPlayerRankManager::CPlayerRankManager()
+	: m_bMedalCategoriesBuilt( false ),
+	  m_iEloBracketDelta( 0 ),
+	  m_iNewEloBracket( -1 )
+{
+	static_assert( std::size( s_MedalCategoryRankNames ) == MEDAL_RANK_COUNT );
+	static_assert( std::size( s_MedalCategoryNames ) == MEDAL_CATEGORY_COUNT );
+
+	V_memset( m_rank, 0, sizeof( m_rank ) );
+}
+
+CPlayerRankManager::~CPlayerRankManager()
+{
+}
+
+bool CPlayerRankManager::Init()
+{
+	ListenForGameEvent( "achievement_earned_local" );
+	ListenForGameEvent( "round_start" );
+	ListenForGameEvent( "achievement_info_loaded" );
+	ListenForGameEvent( "seasoncoin_levelup" );
+	
+	g_pMatchFramework->GetEventsSubscription()->Subscribe( this, [this]( KeyValues *pEvent ) { OnEvent( pEvent ); } );
+	return true;
+}
+
+void CPlayerRankManager::Shutdown()
+{
+	g_pMatchFramework->GetEventsSubscription()->Unsubscribe( this );
+
+	StopListeningForAllEvents();
+}
+
+void CPlayerRankManager::LevelInitPostEntity()
+{
+	// Intention here is to send this once we finish connecting to a server.
+	SendRankDataToServer();
+	ResetRecordedEloBracketChange();
+}
+
+void CPlayerRankManager::FireGameEvent( IGameEvent *event )
+{
+	const char *name = event->GetName();
+	if ( 0 == V_strcmp( name, "round_start" ) )
+	{
+		OnRoundStart();
+	}
+	else if ( 0 == V_strcmp( name, "achievement_earned_local" ) )
+	{
+		OnAchievementEarned( event->GetInt( "achievement", CSInvalidAchievement ) );
+	}
+	else if ( 0 == V_strcmp( name, "achievement_info_loaded" ) )
+	{
+		// After we retrieve achievement info or titledata, 
+		// get lists of our achievements in each category and determine the 'rank' for the player.
+		BuildMedalCategories();
+	}
+	else if ( 0 == V_strcmp( name, "seasoncoin_levelup" ) )
+	{
+		int iPlayerIndex = event->GetInt( "player" );
+		int iCategory = event->GetInt( "category" );
+		int iRank = event->GetInt( "rank" );
+		CBasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
+		if ( CBasePlayer::GetLocalPlayer() && pPlayer && CBasePlayer::GetLocalPlayer() == pPlayer )
+		{
+			OnSeasonCoinLeveledUp( iCategory, iRank );
+		}
+	}
+}
+
+// Use CommandKeyValues to send our rank data to the server so it can
+// network to other clients and display in the scoreboard.
+void CPlayerRankManager::SendRankDataToServer( void )
+{
+}
+
+// Once we have achievements loaded, sort them into category lists and build our internal
+// category info structures.
+void CPlayerRankManager::BuildMedalCategories( void )
+{
+	// Note: we cut splitscreen, so achievements should all be at idx 0.
+	CAchievementMgr::AchievementMap_t &achievements = g_AchievementMgrCS.GetAchievements( 0 );
+
+	// clear these out before we rebuild them
+	for ( int i=0; i<MEDAL_CATEGORY_COUNT; i++)
+	{
+		m_medalCategoryList[i].clear();
+	}
+
+	m_StatBasedAchievements.clear();
+
+	if ( achievements.empty() )
+	{
+		//TODO: need disable this whole system when this happens.
+		Warning( "PlayerRankManager: No achievements loaded!\n" );
+		m_bMedalCategoriesBuilt = false;
+		return;
+	}
+
+	int count[MEDAL_CATEGORY_COUNT];
+	memset( count, 0, sizeof( count ) );
+	for ( const auto &[nID, pEntry] : achievements )
+	{
+		CBaseAchievement *pAchievement = pEntry.get();
+		MedalCategory_t c = GetAchievementCategory( pAchievement->GetAchievementID() );
+		if ( c != MEDAL_CATEGORY_NONE )
+		{
+			count[c]++;
+			m_medalCategoryList[c].push_back( pAchievement );
+
+			// Keep a separate list of achievements withs stat goals so we can 
+			// check for relevant stat changes then report those for display.
+			if ( !pAchievement->IsAchieved() && pAchievement->GetGoal() > 1 )	
+			{
+				CAchievement_StatGoal *pStatGoal = dynamic_cast<CAchievement_StatGoal*>(pAchievement);
+				contract_assert( pStatGoal );
+				if ( pStatGoal )
+				{
+					m_StatBasedAchievements.push_back( pStatGoal );	
+				}
+			}
+		}
+	}
+	
+	// This may be temp... First guess at how to distribute the rank requirements
+	// This also assumes the medal rank enum never changes...
+	for ( int c = MEDAL_CATEGORY_START; c < MEDAL_CATEGORY_COUNT; ++c )
+	{
+		m_categoryInfo[c].m_totalInCategory = count[c];
+		m_categoryInfo[c].m_minCountForRank[MEDAL_RANK_NONE]		= 0;
+		m_categoryInfo[c].m_minCountForRank[MEDAL_RANK_BRONZE]		= (int)((float)(count[c])/3.0f); // ~1/3rd for bronze;
+		m_categoryInfo[c].m_minCountForRank[MEDAL_RANK_SILVER]		= (int)(2.0f*(float)(count[c])/3.0f); // ~2/3rd for silver;
+		m_categoryInfo[c].m_minCountForRank[MEDAL_RANK_GOLD]		= count[c]; // all for gold
+	}
+
+#if defined ( DEBUG )
+	int dbgCatCount = 0;
+	for ( const auto &[nID, pEntry] : achievements )
+	{
+		CBaseAchievement *pAchievement = pEntry.get();
+		if (  MEDAL_CATEGORY_NONE != GetAchievementCategory( pAchievement->GetAchievementID() ) )
+		{
+			dbgCatCount++;
+		}
+	}
+	// If you implement a new achievement, give it a category. 
+	contract_assert( dbgCatCount == g_AchievementMgrCS.GetAchievementCount() );
+#endif
+
+	m_bMedalCategoriesBuilt = true;
+
+	RecalculateRanks();
+}
+
+void CPlayerRankManager::RecalculateRanks( void )
+{
+	for ( int j = MEDAL_CATEGORY_START; j < MEDAL_CATEGORY_COUNT; ++j )
+	{
+		MedalRank_t newRank = CalculateRankForCategory( (MedalCategory_t)j );
+		if ( newRank > m_rank[j] )
+			m_rank[j] = newRank;
+	}
+}
+
+MedalRank_t CPlayerRankManager::CalculateRankForCategory( MedalCategory_t category ) const
+{
+	if ( m_bMedalCategoriesBuilt == false )
+		return MEDAL_RANK_NONE;
+
+	int count = CountAchievedInCategory( category );
+	const MedalCategoryInfo_t& info = m_categoryInfo[category];
+	int rank = MEDAL_RANK_NONE;
+	for ( int i = 0; i < MEDAL_RANK_COUNT; i++ )
+	{
+		// increase rank until we no longer meet the reqirements for the rank
+		if ( count >= info.m_minCountForRank[i] )
+			rank = i;
+	}
+
+	if ( cl_player_rank_debug.GetBool() )
+		Msg( "PlayerRankManager: Calculating rank for category %d: %d (%d achieved, %d needed)\n", category, rank, count, info.m_minCountForRank[rank] );
+
+	return (MedalRank_t)rank;
+}
+
+int CPlayerRankManager::CountAchievedInCategory( MedalCategory_t category ) const
+{
+	contract_assert( category >= MEDAL_CATEGORY_START && category < MEDAL_CATEGORY_COUNT );
+	if( category < MEDAL_CATEGORY_START || category >= MEDAL_CATEGORY_COUNT )
+		return 0;
+
+	int achievedCount = 0;
+	for ( CBaseAchievement *pAchievement : m_medalCategoryList[category] )
+	{
+		if ( pAchievement->IsAchieved() )
+			achievedCount++;
+	}
+	return achievedCount;
+}
+
+void CPlayerRankManager::OnRoundStart()
+{
+	if ( cl_player_rank_debug.GetBool() )
+		Msg( "PlayerRankManager: clearing all rank progress events at round start\n" );
+
+	m_RankIncreases.clear();
+	m_MedalsEarned.clear();
+}
+
+void CPlayerRankManager::OnAchievementEarned( int achievementId )
+{
+	CBaseAchievement *pAchievement = g_AchievementMgrCS.GetAchievementByID( achievementId, 0 );
+	MedalCategory_t category = GetAchievementCategory( achievementId );
+	if ( !pAchievement || category == MEDAL_CATEGORY_NONE )
+		return;
+
+	if ( cl_player_rank_debug.GetBool() )
+		Msg( "PlayerRankManager: Adding achievement event '%s'\n", pAchievement->GetName() );
+
+	MedalEarnedEvent_t event( pAchievement, category );
+	m_MedalsEarned.push_back( event );
+
+	MedalRank_t oldRank = m_rank[category];
+	MedalRank_t newRank = CalculateRankForCategory( category );
+	if ( newRank > oldRank )
+	{
+		if ( engine->IsConnected() )
+		{
+			RankIncreasedEvent_t event( pAchievement, category );	
+			m_RankIncreases.push_back( event );
+		}
+
+		m_rank[category] = newRank;
+
+		SendRankDataToServer();
+
+		if ( cl_player_rank_debug.GetBool() )
+			Msg( "PlayerRankManager: Increasing medal rank category %d to %d\n", category, m_rank[category] );
+	}
+}
+
+void CPlayerRankManager::OnSeasonCoinLeveledUp( int iCategory, int iRank )
+{
+	// figure out which coin we leveled up
+	if ( iCategory <= MEDAL_CATEGORY_NONE )
+	{
+		for ( int i = MEDAL_CATEGORY_SEASON_COIN; i < MEDAL_CATEGORY_COUNT; i++ )
+		{
+			CheckCategoryRankLevelUp( i, -1 );
+		}
+	}
+	else
+	{
+		CheckCategoryRankLevelUp( iCategory, iRank );
+	}
+}
+
+bool CPlayerRankManager::CheckCategoryRankLevelUp( int iCategory, int iRank )
+{
+	if ( iCategory != MEDAL_CATEGORY_SEASON_COIN )
+		return false;
+
+	bool bLeveledUp = false;
+
+	MedalCategory_t category = (MedalCategory_t)iCategory;
+
+	MedalRank_t oldRank = m_rank[category];
+	MedalRank_t newRank = (iRank > -1) ? (MedalRank_t)iRank : CalculateRankForCategory( category );
+	if ( newRank > oldRank )
+	{
+		if ( engine->IsConnected() && oldRank > MEDAL_RANK_NONE )
+		{
+			RankIncreasedEvent_t event( nullptr, category );	
+			m_RankIncreases.push_back( event );
+		}
+
+		m_rank[category] = newRank;
+
+		SendRankDataToServer();
+
+		if ( cl_player_rank_debug.GetBool() )
+			Msg( "PlayerRankManager: Increasing medal rank category %d to %d\n", category, m_rank[category] );
+
+		bLeveledUp = true;
+	}
+
+	return bLeveledUp;
+}
+
+int CPlayerRankManager::GetTotalMedalsInCategory( MedalCategory_t category ) const
+{
+	contract_assert( category >= MEDAL_CATEGORY_START && category < MEDAL_CATEGORY_COUNT );
+	if( category < MEDAL_CATEGORY_START || category >= MEDAL_CATEGORY_COUNT )
+		return 0;
+
+	return m_categoryInfo[category].m_totalInCategory;
+}
+
+int CPlayerRankManager::GetMinMedalsForRank( MedalCategory_t category, MedalRank_t rank ) const
+{
+	contract_assert( category >= MEDAL_CATEGORY_START && category < MEDAL_CATEGORY_COUNT );
+	if( category < MEDAL_CATEGORY_START || category >= MEDAL_CATEGORY_COUNT )
+		return 0;
+
+	contract_assert( rank >= MEDAL_RANK_NONE && rank < MEDAL_RANK_COUNT );
+	if( rank < MEDAL_RANK_NONE || rank >= MEDAL_RANK_COUNT )
+		return 0;
+
+	return m_categoryInfo[category].m_minCountForRank[rank];
+}
+
+void CPlayerRankManager::GetMedalStatsEarnedThisRound( std::vector< MedalStatEvent_t >& outVec ) const
+{
+	const StatsCollection_t &roundStats = g_CSClientGameStats.GetRoundStats(0);
+
+	for ( CAchievement_StatGoal *pStatGoal : m_StatBasedAchievements )
+	{
+		if ( roundStats[pStatGoal->GetStatId()] > 0 && !pStatGoal->IsAchieved() )
+		{
+			MedalCategory_t cat = GetAchievementCategory( pStatGoal->GetAchievementID() );
+			if ( cat == MEDAL_CATEGORY_NONE )
+			{
+				contract_assert( 0 );
+				continue;
+			}
+
+			// Hackish: Logic for culling which stat goal achievements is going here.
+			// Current idea is any achievemnt that just reached or crossed a 20% border of the total
+			// gets sent to UI code for possible display.
+			int showProgresCount = std::max( 1, pStatGoal->GetGoal() / cl_medal_progress_shown_fraction.GetInt() ); // Show a progress notification in the win panel every X stats.
+			int cur = pStatGoal->GetCount();
+			int prev = cur - roundStats[pStatGoal->GetStatId()];
+			
+			bool bCrossedBorder = false;
+			while ( cur != prev )
+			{
+				if ( cur%showProgresCount == 0 )
+				{
+					bCrossedBorder = true;
+					break;
+				}
+				cur--;
+			}
+
+			if ( cl_force_progress_notice_every_change.GetBool() )
+				bCrossedBorder = true;
+
+			if ( bCrossedBorder )
+			{
+				MedalStatEvent_t event( pStatGoal, cat, pStatGoal->GetStatId() );
+				outVec.push_back( event );
+
+				if ( cl_player_rank_debug.GetBool() )
+					Msg( "PlayerRankManager: Adding stat progress for achievement '%s' in stat %d\n", pStatGoal->GetName(), pStatGoal->GetStatId() );
+			}
+		}
+	}
+}
+
+const std::vector< RankIncreasedEvent_t >& CPlayerRankManager::GetRankIncreasesThisRound( void ) const
+{
+	return m_RankIncreases;
+}
+
+const std::vector< MedalEarnedEvent_t >& CPlayerRankManager::GetMedalsEarnedThisRound( void ) const
+{
+	return m_MedalsEarned;
+}
+
+const char *CPlayerRankManager::GetMedalCatagoryName( MedalCategory_t category )
+{
+	contract_assert( category >= 0 && category < std::size( s_MedalCategoryNames ) );
+
+	return s_MedalCategoryNames[category];
+}
+
+const char *CPlayerRankManager::GetMedalCatagoryRankName( int nRank )
+{
+	contract_assert( nRank >= 0 && nRank < std::size( s_MedalCategoryRankNames ) );
+
+	return s_MedalCategoryRankNames[nRank];
+}
+
+void CPlayerRankManager::PrintRankProgressThisRound() const
+{
+	Msg( "Rank Increases:\n" );
+	for ( const RankIncreasedEvent_t &rankIncrease : m_RankIncreases )
+	{
+		Msg( "PlayerRankManager: Rank increase because of medal '%s' in category %d\n", rankIncrease.m_pAchievement->GetName(), rankIncrease.m_category );
+	}
+	Msg( "Current Ranks: " );
+	for ( int i = MEDAL_CATEGORY_START; i < MEDAL_CATEGORY_COUNT; ++i )
+	{
+		Msg( "%d", m_rank[i] );
+	}
+
+	Msg( "\n\n" );
+
+	Msg( "Medals Earned:\n" );
+	for ( const MedalEarnedEvent_t &medalEarned : m_MedalsEarned )
+	{
+		Msg( "PlayerRankManager: Earned medal '%s' in category %d\n", medalEarned.m_pAchievement->GetName(), medalEarned.m_category );
+	}
+
+	Msg( "\n\n" );
+
+	Msg( "Medal Progress made:\n" );
+	std::vector< MedalStatEvent_t > outVec;
+	GetMedalStatsEarnedThisRound( outVec );
+	for ( const MedalStatEvent_t &statEvent : outVec )
+	{
+		Msg( "PlayerRankManager: Earned statid %d towards achievement '%s' in category %d\n", statEvent.m_StatType, statEvent.m_pAchievement->GetName(), statEvent.m_category );
+	}
+}
+
+void CPlayerRankManager::OnEvent( KeyValues *pEvent )
+{
+	/* Removed for partner depot */
+}
+
+void CPlayerRankManager::NoteEloBracketChanged( int iOldBracket, int iNewBracket )
+{
+	m_iEloBracketDelta += (iNewBracket - iOldBracket);
+	m_iNewEloBracket = iNewBracket;
+}
+
+// Returns the delta between the elo at the start of the map and now. 
+// Should be reset explictly when we've displayed the 'elo changed' update to the player.
+int CPlayerRankManager::GetEloBracketChange( int &iOutNewEloBracket )
+{
+	if ( m_iEloBracketDelta != 0 ) 
+	{
+		contract_assert( m_iNewEloBracket >= 0 );
+		iOutNewEloBracket = m_iNewEloBracket;
+	}
+	return m_iEloBracketDelta;
+}
+
+// Call this after we're sure we've shown the user their new rank.
+void CPlayerRankManager::ResetRecordedEloBracketChange( void )
+{
+	m_iEloBracketDelta = 0;
+	m_iNewEloBracket = -1;
+}
+
+static void cl_player_rank_events_spew( const CCommand &args );
+static ConCommand cl_player_rank_events_spew_command( side_registry(), "cl_player_rank_events_spew", cl_player_rank_events_spew, "Spews the contents of all events this round that could be displayed to the player, as well as the player's current ranks.", FCVAR_DEVELOPMENTONLY );
+static void cl_player_rank_events_spew( const CCommand &args )
+{
+	g_PlayerRankManager.PrintRankProgressThisRound();
+}
+
+static void print_achievement_categories( const CCommand &args );
+static ConCommand print_achievement_categories_command( side_registry(), "print_achievement_categories", print_achievement_categories, "Spews achievements for each category", FCVAR_DEVELOPMENTONLY );
+static void print_achievement_categories( const CCommand &args )
+{
+	CAchievementMgr::AchievementMap_t &achievements = g_AchievementMgrCS.GetAchievements( 0 );
+	for( int i = MEDAL_CATEGORY_START; i < MEDAL_CATEGORY_COUNT; ++i )
+	{
+		Msg( "Category %d:\n", i );
+		int count = 0;
+		int countAchieved = 0;
+		for ( const auto &[nID, pEntry] : achievements )
+		{
+			CBaseAchievement *pAchievement = pEntry.get();
+			if ( i == GetAchievementCategory( pAchievement->GetAchievementID() ) )
+			{
+				Msg( "%s %s\n", pAchievement->GetName(), pAchievement->IsAchieved() ? "*achieved*" : " " );
+				count++;
+				if ( pAchievement->IsAchieved() )
+					countAchieved++;
+			}
+
+			if ( GetAchievementCategory( pAchievement->GetAchievementID() ) == MEDAL_CATEGORY_NONE )
+			{
+				Msg( "***%s Uncategorized!\n", pAchievement->GetName() );
+			}
+		}
+		Msg( "Total: %d\n\n", count );
+	}
+}
+
+// Pretty ugly... Fragile hand-built categorization using the achievement excel sheet. May need to revisit how
+// we tag an achievement with a category more formally.
+MedalCategory_t GetAchievementCategory( int id )
+{
+	switch( id )
+	{
+	// Team and Objective
+	case CSMedalist:
+	case CSWinBombPlant:
+	case CSWinBombDefuse:
+	case CSBombDefuseCloseCall:
+	case CSKilledDefuser:
+	case CSPlantBombWithin25Seconds:
+	case CSKillBombPickup:
+	case CSBombMultikill:
+	case CSGooseChase:
+	case CSWinBombPlantAfterRecovery:
+	case CSDefuseDefense:
+	case CSPlantBombsLow:
+	case CSDefuseBombsLow:
+	case CSRescueAllHostagesInARound:
+	case CSKilledRescuer:
+	case CSFastHostageRescue:
+	case CSRescueHostagesLow:
+	case CSRescueHostagesMid:
+	case CSWinRoundsLow:
+	case CSWinRoundsMed:
+	case CSWinRoundsHigh:
+	case CSFastRoundWin:
+	case CSLosslessExtermination:
+	case CSFlawlessVictory:
+	case CSDonateWeapons:
+	case CSBloodlessVictory:
+	case CSMoneyEarnedLow:
+	case CSMoneyEarnedMed:
+	case CSMoneyEarnedHigh:
+	case CSKillEnemyTeam:
+	case CSLastPlayerAlive:
+	case CSWinPistolRoundsLow:
+	case CSWinPistolRoundsMed:
+	case CSWinPistolRoundsHigh:
+	case CSSilentWin:
+	case CSWinRoundsWithoutBuying:
+	case CSAvengeFriend:
+		return MEDAL_CATEGORY_TEAM_AND_OBJECTIVE;
+
+	// Combat
+	case CSEnemyKillsLow:
+	case CSEnemyKillsMed:
+	case CSEnemyKillsHigh:
+	case CSKillEnemyReloading:
+	case CSKillingSpree:
+	case CSKillsWithMultipleGuns:
+	case CSHeadshots:
+	case CSSurviveGrenade:
+	case CSKillEnemyBlinded:
+	case CSKillEnemiesWhileBlind:
+	case CSKillEnemiesWhileBlindHard:
+	case CSKillsEnemyWeapon:
+	case CSWinKnifeFightsLow:
+	case CSWinKnifeFightsHigh:
+	case CSKilledDefuserWithGrenade:
+	case CSKillSniperWithSniper:
+	case CSKillSniperWithKnife:
+	case CSHipShot:
+	case CSKillSnipers:
+	case CSKillWhenAtLowHealth:
+	case CSPistolRoundKnifeKill:
+	case CSWinDualDuel:
+	case CSGrenadeMultikill:
+	case CSKillWhileInAir:
+	case CSKillEnemyInAir:
+	case CSKillerAndEnemyInAir:
+	case CSKillEnemyWithFormerGun:
+	case CSKillTwoWithOneShot:
+	case CSGiveDamageLow:
+	case CSGiveDamageMed:
+	case CSGiveDamageHigh:
+	case CSKillEnemyLastBullet:
+	case CSKillingSpreeEnder:
+	case CSSurviveManyAttacks:
+	case CSDamageNoKill:
+	case CSKillLowDamage:
+	case CSUnstoppableForce:
+	case CSImmovableObject:
+	case CSHeadshotsInRound:
+	case CSCauseFriendlyFireWithFlashbang:
+		return MEDAL_CATEGORY_COMBAT;
+
+	// Weapon
+	case CSEnemyKillsDeagle:
+	case CSEnemyKillsHKP2000:
+	case CSEnemyKillsGlock:
+	case CSEnemyKillsP250:
+	case CSEnemyKillsElite:
+	case CSEnemyKillsFiveSeven:
+	case CSEnemyKillsAWP:
+	case CSEnemyKillsAK47:
+	case CSEnemyKillsM4A1:
+	case CSEnemyKillsAUG:
+	case CSEnemyKillsSG556:
+	case CSEnemyKillsSCAR20:
+	case CSEnemyKillsGALILAR:
+	case CSEnemyKillsFAMAS:
+	case CSEnemyKillsSSG08:
+	case CSEnemyKillsG3SG1:
+	case CSEnemyKillsP90:
+	case CSEnemyKillsMP7:
+	case CSEnemyKillsMP9:
+	case CSEnemyKillsMAC10:
+	case CSEnemyKillsUMP45:
+	case CSEnemyKillsNova:
+	case CSEnemyKillsXM1014:
+	case CSEnemyKillsMag7:
+	case CSEnemyKillsM249:
+	case CSEnemyKillsNegev:
+	case CSEnemyKillsTec9:
+	case CSEnemyKillsSawedoff:
+	case CSEnemyKillsBizon:
+	case CSEnemyKillsKnife:
+	case CSEnemyKillsHEGrenade:
+	case CSEnemyKillsMolotov:
+	case CSPosthumousGrenadeKill:
+	case CSMetaPistol:
+	case CSMetaRifle:
+	case CSMetaSMG:
+	case CSMetaShotgun:
+	case CSMetaWeaponMaster:
+	case CSEnemyKillsTaser:
+	case CSKillWithEveryWeapon:
+		return MEDAL_CATEGORY_WEAPON;
+
+	// Map
+	case CSWinMapCS_ITALY:
+	case CSWinMapCS_OFFICE:
+	case CSWinMapDE_AZTEC:
+	case CSWinMapDE_DUST:
+	case CSWinMapDE_DUST2:
+	case CSWinMapDE_INFERNO:
+	case CSWinMapDE_NUKE:
+	case CSWinMapDE_TRAIN:
+	case CSWinMatchAR_SHOOTS:
+	case CSWinMatchAR_BAGGAGE:
+	case CSWinMatchDE_LAKE:
+	case CSWinMatchDE_SAFEHOUSE:   
+	case CSWinMatchDE_SUGARCANE:	
+	case CSWinMatchDE_STMARC:  
+	case CSWinMatchDE_BANK:	
+	case CSWinMatchDE_SHORTTRAIN:
+	case CSBreakWindows:
+	//case CSBreakProps:
+		return MEDAL_CATEGORY_MAP;
+
+	// Arsenal
+	case CSGunGameKillKnifer:
+	case CSWinEveryGGMap:
+	case CSGunGameProgressiveRampage:
+	case CSGunGameFirstKill:
+	case CSFirstBulletKills:
+	case CSGunGameConservationist:
+	case CSPlantBombsTRLow:
+	case CSDefuseBombsTRLow:
+	case CSKillEnemyTerrTeamBeforeBombPlant:
+	case CSKillEnemyCTTeamBeforeBombPlant:
+	case CSBornReady:
+	case CSSpawnCamper:
+	case CSGunGameKnifeKillKnifer:
+	case CSGunGameSMGKillKnifer:
+	case CSStillAlive:
+	case CSGGRoundsLow:
+	case CSGGRoundsMed:
+	case CSGGRoundsHigh:
+	case CSGGWinRoundsLow:
+	case CSGGWinRoundsMed:
+	case CSGGWinRoundsHigh:
+	case CSGGWinRoundsExtreme:
+	case CSGGWinRoundsUltimate:
+	case CSPlayEveryGGMap:
+	case CSDominationsLow:
+	case CSDominationsHigh:
+	case CSRevengesLow:
+	case CSRevengesHigh:
+	case CSDominationOverkillsLow:
+	case CSDominationOverkillsHigh:
+	case CSDominationOverkillsMatch:
+	case CSExtendedDomination:
+	case CSConcurrentDominations:
+		return MEDAL_CATEGORY_ARSENAL;
+
+	default:
+		break;
+	}
+
+	// Disabling assert for now, there are some stale achievements with no category that need to be removed first.
+	//AssertMsg( 0, "Found achievement with no known category." );
+	return MEDAL_CATEGORY_NONE;
+}
+
+// Find the loc string with the correct phrasing for this stat based achievement's progress 
+// ie, "You've killed X out of Y enemies" vs "You've planted X out of Y bombs".
+// Returns NULL if no string token mapped to stat id.
+const char* GetLocTokenForStatId( const CSStatType_t id )
+{
+	switch ( id )
+	{
+	case CSSTAT_KILLS:
+	case CSSTAT_KILLS_DEAGLE:
+	case CSSTAT_KILLS_GLOCK:
+	case CSSTAT_KILLS_ELITE:
+	case CSSTAT_KILLS_FIVESEVEN:
+	case CSSTAT_KILLS_BIZON:
+	case CSSTAT_KILLS_TEC9:
+	case CSSTAT_KILLS_TASER:
+	case CSSTAT_KILLS_HKP2000:
+	case CSSTAT_KILLS_P250:
+	case CSSTAT_KILLS_AWP:
+	case CSSTAT_KILLS_AK47:
+	case CSSTAT_KILLS_M4A1:
+	case CSSTAT_KILLS_AUG:
+	case CSSTAT_KILLS_GALILAR:
+	case CSSTAT_KILLS_FAMAS:
+	case CSSTAT_KILLS_G3SG1:
+	case CSSTAT_KILLS_SCAR20:
+	case CSSTAT_KILLS_SG556:
+	case CSSTAT_KILLS_SSG08:
+	case CSSTAT_KILLS_P90:
+	case CSSTAT_KILLS_MAC10:
+	case CSSTAT_KILLS_UMP45:
+	case CSSTAT_KILLS_MP7:
+	case CSSTAT_KILLS_MP9:
+	case CSSTAT_KILLS_XM1014:
+	case CSSTAT_KILLS_MAG7:
+	case CSSTAT_KILLS_SAWEDOFF:
+	case CSSTAT_KILLS_NOVA:
+	case CSSTAT_KILLS_M249:
+	case CSSTAT_KILLS_NEGEV:
+	case CSSTAT_KILLS_KNIFE:
+	case CSSTAT_KILLS_HEGRENADE:
+	case CSSTAT_KILLS_MOLOTOV:
+	case CSSTAT_KILLS_ENEMY_WEAPON:
+	case CSSTAT_KILLS_ENEMY_BLINDED:
+	case CSSTAT_KILLS_KNIFE_FIGHT:
+	case CSSTAT_KILLS_AGAINST_ZOOMED_SNIPER:
+		return "SFUI_WinPanelProg_stat_progress_kills";
+
+	case  CSSTAT_MAP_WINS_CS_ITALY:
+	case  CSSTAT_MAP_WINS_CS_OFFICE:
+	case  CSSTAT_MAP_WINS_DE_AZTEC:
+	case  CSSTAT_MAP_WINS_DE_DUST2:
+	case  CSSTAT_MAP_WINS_DE_DUST:
+	case  CSSTAT_MAP_WINS_DE_INFERNO:
+	case  CSSTAT_MAP_WINS_DE_NUKE:
+	case  CSSTAT_MAP_WINS_DE_TRAIN:
+	case  CSSTAT_MAP_MATCHES_WON_BANK:
+	case  CSSTAT_MAP_MATCHES_WON_SHOOTS:
+	case  CSSTAT_MAP_MATCHES_WON_STMARC:
+	case  CSSTAT_MAP_MATCHES_WON_SUGARCANE:
+	case  CSSTAT_MAP_MATCHES_WON_SAFEHOUSE:
+	case  CSSTAT_MAP_MATCHES_WON_LAKE:
+	case  CSSTAT_MAP_MATCHES_WON_BAGGAGE:
+	case  CSSTAT_MAP_MATCHES_WON_SHORTTRAIN:
+	case CSSTAT_ROUNDS_WON:
+	case CSSTAT_PISTOLROUNDS_WON:
+	case CSSTAT_GUN_GAME_MATCHES_WON:
+		return "SFUI_WinPanelProg_stat_progress_wins";
+
+	case CSSTAT_GUN_GAME_MATCHES_PLAYED:
+		return "SFUI_WinPanelProg_stat_progress_played";
+
+	case CSSTAT_MONEY_EARNED:
+		return "SFUI_WinPanelProg_stat_progress_money";
+
+	case CSSTAT_DAMAGE:
+		return "SFUI_WinPanelProg_stat_progress_damage";
+
+	case CSSTAT_KILLS_HEADSHOT:
+		return "SFUI_WinPanelProg_stat_progress_headshots";
+
+	case CSSTAT_NUM_BOMBS_PLANTED:
+		return "SFUI_WinPanelProg_stat_progress_bomb_plant";
+
+	case CSSTAT_NUM_BOMBS_DEFUSED:
+		return "SFUI_WinPanelProg_stat_progress_bomb_diffuse";
+
+	case CSSTAT_NUM_HOSTAGES_RESCUED:
+		return "SFUI_WinPanelProg_stat_progress_rescue";
+
+	case CSSTAT_WEAPONS_DONATED:
+		return "SFUI_WinPanelProg_stat_progress_donate";
+
+	case CSSTAT_DOMINATIONS:
+		return "SFUI_WinPanelProg_stat_progress_dominate";
+
+	case CSSTAT_DOMINATION_OVERKILLS:
+		return "SFUI_WinPanelProg_stat_progress_overkill";
+
+	case CSSTAT_REVENGES:
+		return "SFUI_WinPanelProg_stat_progress_revenge";
+
+	default:
+		break;
+	}
+
+	return nullptr;
+}
+
+bool CPlayerRankManager::HasBuiltMedalCategories( void ) const
+{
+	return m_bMedalCategoriesBuilt;
+}
+
+class CCSWeaponInfo;
+class CConfigurationForHighPriorityUseEntity_t;
+class CEconQuestDefinition;
+class CEffectData;
+class CAnimationLayer;
+class CBaseCombatCharacter;
+class CBaseCombatWeapon;
+class CBaseEntity;
+class CBaseViewModel;
+class CBaseWeaponWorldModel;
+class CCSPlayer;
+class CEconItemView;
+class CRecipientFilter;
+class CWeaponCSBase;
+
+using namespace ::ks::reflect;
+
+ConVar sv_penetration_type( side_registry(), "sv_penetration_type", "1", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY, "What type of penertration to use. 0 = old CS, 1 = new penetration" );
+ConVar sv_showimpacts_penetration( side_registry(), "sv_showimpacts_penetration", "0", FCVAR_REPLICATED | FCVAR_RELEASE, "Shows extra data when bullets penetrate. (use sv_showimpacts_time to increase time shown)" );
+
+ConVar sv_showbullethits(side_registry(), "sv_showbullethits", "0", FCVAR_REPLICATED | FCVAR_RELEASE, "" );
+
+ConVar sv_showimpacts(side_registry(), "sv_showimpacts", "0", FCVAR_REPLICATED | FCVAR_RELEASE, "Shows client (red) and server (blue) bullet impact point (1=both, 2=client-only, 3=server-only)" );
+ConVar sv_showimpacts_time(side_registry(), "sv_showimpacts_time", "4", FCVAR_REPLICATED | FCVAR_RELEASE, "Duration bullet impact indicators remain before disappearing", true, 0.0f, true, 10.0f );
+ConVar sv_showplayerhitboxes( side_registry(), "sv_showplayerhitboxes", "0", FCVAR_REPLICATED, "Show lag compensated hitboxes for the specified player index whenever a player fires." );
+
+// friendly fire damage scalers
+ConVar	ff_damage_reduction_grenade( side_registry(), "ff_damage_reduction_grenade", "0.25", FCVAR_REPLICATED | FCVAR_RELEASE, "How much to reduce damage done to teammates by a thrown grenade.  Range is from 0 - 1 (with 1 being damage equal to what is done to an enemy)" );
+ConVar	ff_damage_reduction_grenade_self( side_registry(), "ff_damage_reduction_grenade_self", "1", FCVAR_REPLICATED | FCVAR_RELEASE, "How much to damage a player does to himself with his own grenade.  Range is from 0 - 1 (with 1 being damage equal to what is done to an enemy)" );
+ConVar	ff_damage_reduction_bullets( side_registry(), "ff_damage_reduction_bullets", "0.1", FCVAR_REPLICATED | FCVAR_RELEASE, "How much to reduce damage done to teammates when shot.  Range is from 0 - 1 (with 1 being damage equal to what is done to an enemy)" );
+ConVar	ff_damage_reduction_other( side_registry(), "ff_damage_reduction_other", "0.25", FCVAR_REPLICATED | FCVAR_RELEASE, "How much to reduce damage done to teammates by things other than bullets and grenades.  Range is from 0 - 1 (with 1 being damage equal to what is done to an enemy)" );
+ConVar  ff_damage_bullet_penetration( side_registry(), "ff_damage_bullet_penetration", "0", FCVAR_REPLICATED | FCVAR_RELEASE, "If friendly fire is off, this will scale the penetration power and damage a bullet does when penetrating another friendly player", true, 0.0f, true, 1.0f );
+
+ConVar sv_spec_use_tournament_content_standards( side_registry(), "sv_spec_use_tournament_content_standards", "0.0", FCVAR_REPLICATED | FCVAR_RELEASE );
+
+ConVar cl_spec_use_tournament_content_standards( side_registry(), "cl_spec_use_tournament_content_standards", "0.0", FCVAR_RELEASE );
+
+extern ConVar mp_teammates_are_enemies;
+extern ConVar mp_use_respawn_waves;
+extern ConVar mp_respawn_on_death_ct;
+extern ConVar mp_respawn_on_death_t;
+extern ConVar mp_buy_allow_grenades;
+extern ConVar mp_buy_anywhere;
+extern ConVar mp_buy_during_immunity;
+extern ConVar mp_free_armor;
+
+static constexpr auto CS_MASK_SHOOT = (MASK_SOLID|CONTENTS_DEBRIS);
+static constexpr auto MAX_PENETRATION_DISTANCE = 90; // this is 7.5 feet
+
+static constexpr auto CS_MAX_WALLBANG_TRAIL_LENGTH = 800;
+
+void DispatchEffect( const char *pName, const CEffectData &data );
+
+extern void StartParticleEffect( const CEffectData &data, int nSplitScreenPlayerSlot = -1 );
+
+Vector CCSPlayer::Weapon_ShootPosition()
+{
+	Vector vecPos = BaseClass::Weapon_ShootPosition();
+
+	// fail out to un-altered position
+	if ( !m_bUseNewAnimstate || !m_PlayerAnimStateCSGO )
+		return vecPos;
+
+	// warning: the modify eye position call will query and set up bones
+	// on the game server it is called when giving weapon items or firing bullets
+	m_PlayerAnimStateCSGO->ModifyEyePosition( vecPos );
+
+	return vecPos;
+}
+
+bool CCSPlayer::IsInBuyZone()
+{
+	if ( mp_buy_anywhere.GetInt() == 1 ||
+		mp_buy_anywhere.GetInt() == GetTeamNumber() )
+		return true;//m_bGunGameImmunity;
+
+	return m_bInBuyZone;
+}
+
+bool CCSPlayer::IsInBuyPeriod()
+{
+	if ( mp_buy_during_immunity.GetInt() == 1 ||
+		mp_buy_during_immunity.GetInt() == GetTeamNumber() )
+	{
+		return m_bGunGameImmunity;
+	}
+	else
+	{
+
+		return CSGameRules() ? !CSGameRules()->IsBuyTimeElapsed() : false;
+	}
+}
+
+bool CCSPlayer::CanBuyDuringImmunity()
+{
+	return ( mp_buy_during_immunity.GetInt() == 1 ) || ( mp_buy_during_immunity.GetInt() == GetTeamNumber() ); 
+}
+
+bool CCSPlayer::IsAbleToInstantRespawn( void )
+{
+	if ( CSGameRules() )
+	{
+		switch( CSGameRules()->GetGamePhase() )
+		{
+		case GAMEPHASE_MATCH_ENDED:
+		case GAMEPHASE_HALFTIME:
+			return false;
+		}
+
+		if ( CSGameRules()->IsWarmupPeriod() )
+			return true;
+	}
+
+	// if we use respawn waves AND the next respawn wave is past AND our team is able to respawn OR it is the warmup period
+	return (	CSGameRules() && ( ( mp_respawn_on_death_ct.GetBool() && GetTeamNumber() == TEAM_CT ) || 
+		( mp_respawn_on_death_t.GetBool() && GetTeamNumber() == TEAM_TERRORIST ) ) );
+}
+
+char const * CCSPlayer::IsAbleToApplySpray( trace_t *ptr, Vector *pvecForward, Vector *pvecRight )
+{
+	Vector forward, right;
+	EyeVectors( &forward, &right );
+	if ( pvecForward ) *pvecForward = forward;
+	if ( pvecRight ) *pvecRight = right;
+
+	if ( !IsAlive() || ( GetTeamNumber() != TEAM_CT && GetTeamNumber() != TEAM_TERRORIST ) )
+		return "#SFUI_Notice_SprayPaint_NotAlive";
+
+	trace_t	tr;
+
+	Vector vecTraceOriginLocation = Weapon_ShootPosition();
+	Vector vecTraceTestMaxDepth = vecTraceOriginLocation + forward * 96;
+	UTIL_TraceLine( vecTraceOriginLocation,
+		vecTraceTestMaxDepth,
+		CONTENTS_SOLID | CONTENTS_MOVEABLE | CONTENTS_WINDOW,
+		this, COLLISION_GROUP_NONE, &tr );
+
+	if ( tr.fraction == 1.0 )
+		return "#SFUI_Notice_SprayPaint_OutOfRange";
+
+	// Have we hit something TOOLS/???
+	if ( tr.surface.name && StringHasPrefix( tr.surface.name, "tools/" ) )
+		return "#SFUI_Notice_SprayPaint_BadSurface";
+
+	// Do a second trace to see if anything weird blocks the trace?
+	// an example could be a destructible door, so spray would go through onto the wall behind it
+	// then we should ignore the first trace obtained
+	trace_t tr2;
+	UTIL_TraceLine( vecTraceOriginLocation,
+		vecTraceTestMaxDepth,
+		CONTENTS_OPAQUE | CONTENTS_MONSTER,
+		this, COLLISION_GROUP_NONE, &tr2 );
+	if ( tr2.fraction + 0.001 < tr.fraction )
+		return "#SFUI_Notice_SprayPaint_Obstructed";
+
+	//
+	// Now that we have the location+normal of the trace hit do some validation checks for
+	// whether that's a good way to apply a decal
+	//
+	Vector vecHitToEye = ( vecTraceOriginLocation - tr.endpos );
+	if ( vecHitToEye.LengthSqr() < 0.5f )
+		return "#SFUI_Notice_SprayPaint_TooClose";
+
+	/*vec_t lenToHit = */ vecHitToEye.NormalizeInPlace();
+	if ( tr.plane.normal.Dot( vecHitToEye ) < 0.1f )
+		return "#SFUI_Notice_SprayPaint_GrazingAngle"; // angle too grazing (or backfacing normal), 0.1 = 85 degrees
+
+	if ( ptr )
+		*ptr = tr;
+
+	return nullptr; // all trace tests passed
+}
+
+float CCSPlayer::GetPlayerMaxSpeed()
+{
+	if ( GetMoveType() == MOVETYPE_NONE )
+	{
+		return CS_PLAYER_SPEED_STOPPED;
+	}
+
+	if ( IsObserver() )
+	{
+		// Player gets speed bonus in observer mode
+		return CS_PLAYER_SPEED_OBSERVER;
+	}
+
+	bool bValidMoveState = ( State_Get() == STATE_ACTIVE || State_Get() == STATE_OBSERVER_MODE );
+	if ( !bValidMoveState || m_bIsDefusing || m_bIsGrabbingHostage || (CSGameRules()->IsFreezePeriod() && !m_bCanMoveDuringFreezePeriod) )
+	{
+		// Player should not move during the freeze period
+		return CS_PLAYER_SPEED_STOPPED;
+	}
+
+	float speed = BaseClass::GetPlayerMaxSpeed();
+
+	speed = std::min( CS_PLAYER_SPEED_RUN, speed );
+	
+	if ( IsVIP() == true )  // VIP is slow due to the armour he's wearing
+	{
+		speed = CS_PLAYER_SPEED_VIP;
+	}
+	else if ( m_hCarriedHostage != nullptr )
+	{
+		speed = CS_PLAYER_SPEED_HAS_HOSTAGE;
+	}
+	else
+	{
+		CWeaponCSBase *pWeapon = dynamic_cast<CWeaponCSBase*>( GetActiveWeapon() );
+
+		if ( pWeapon )
+		{
+			if ( HasShield() && IsShieldDrawn() )
+			{
+				speed = std::min( CS_PLAYER_SPEED_SHIELD, speed );	
+			}
+			else
+			{
+				speed = std::min( pWeapon->GetMaxSpeed(), speed );
+			}
+		}
+	}
+
+//	if ( HasExosuit() )
+//		speed *= CS_PLAYER_SPEED_EXOSUIT_RUN_BONUS;
+
+	return speed;
+}
+
+void CCSPlayer::GiveCarriedHostage( EHANDLE hHostage )
+{
+	if ( !IsAlive() )
+		return;
+
+	m_hCarriedHostage = hHostage;
+
+	RefreshCarriedHostage( true );
+}
+
+void CCSPlayer::RefreshCarriedHostage( bool bForceCreate )
+{
+}
+
+void CCSPlayer::RemoveCarriedHostage( void )
+{
+	m_hCarriedHostage = nullptr;
+
+}
+
+void CCSPlayer::GetBulletTypeParameters( 
+	int iBulletType, 
+	float &fPenetrationPower, 
+	float &flPenetrationDistance )
+{
+	if ( sv_penetration_type.GetInt() == 1 )
+	{
+		fPenetrationPower = 35;
+		flPenetrationDistance = 3000.0;
+		return;
+	}
+
+	//MIKETODO: make ammo types come from a script file.
+	if ( IsAmmoType( iBulletType, BULLET_PLAYER_50AE ) )
+	{
+		fPenetrationPower = 30;
+		flPenetrationDistance = 1000.0;
+	}
+	else if ( IsAmmoType( iBulletType, BULLET_PLAYER_762MM ) )
+	{
+		fPenetrationPower = 39;
+		flPenetrationDistance = 5000.0;
+	}
+	else if (	IsAmmoType( iBulletType, BULLET_PLAYER_556MM ) || 
+				IsAmmoType( iBulletType, BULLET_PLAYER_556MM_SMALL ) ||
+				IsAmmoType( iBulletType, BULLET_PLAYER_556MM_BOX ) )
+	{
+		fPenetrationPower = 35;
+		flPenetrationDistance = 4000.0;
+	}
+	else if ( IsAmmoType( iBulletType, BULLET_PLAYER_338MAG ) )
+	{
+		fPenetrationPower = 45;
+		flPenetrationDistance = 8000.0;
+	}
+	else if ( IsAmmoType( iBulletType, BULLET_PLAYER_9MM ) )
+	{
+		fPenetrationPower = 21;
+		flPenetrationDistance = 800.0;
+	}
+	else if ( IsAmmoType( iBulletType, BULLET_PLAYER_BUCKSHOT ) )
+	{
+		fPenetrationPower = 0;
+		flPenetrationDistance = 0.0;
+	}
+	else if ( IsAmmoType( iBulletType, BULLET_PLAYER_45ACP ) )
+	{
+		fPenetrationPower = 15;
+		flPenetrationDistance = 500.0;
+	}
+	else if (	IsAmmoType( iBulletType, BULLET_PLAYER_357SIG ) ||
+				IsAmmoType( iBulletType, BULLET_PLAYER_357SIG_SMALL ) ||
+				IsAmmoType( iBulletType, BULLET_PLAYER_357SIG_P250 ) ||
+				IsAmmoType( iBulletType, BULLET_PLAYER_357SIG_MIN ) )
+	{
+		fPenetrationPower = 25;
+		flPenetrationDistance = 800.0;
+	}
+	else if ( IsAmmoType( iBulletType, BULLET_PLAYER_57MM ) )
+	{
+		fPenetrationPower = 30;
+		flPenetrationDistance = 2000.0;
+	}
+	else if ( IsAmmoType( iBulletType, AMMO_TYPE_TASERCHARGE ) )
+	{
+		fPenetrationPower = 0;
+		flPenetrationDistance = 0.0;
+	}
+	else
+	{
+		// What kind of ammo is this?
+		contract_assert( false );
+		fPenetrationPower = 0;
+		flPenetrationDistance = 0.0;
+	}
+}
+
+static bool TraceToExit( Vector start, Vector dir, Vector &end, trace_t &trEnter, trace_t &trExit, float flStepSize, float flMaxDistance )
+{
+	float flDistance = 0;
+	Vector last = start;
+	int nStartContents = 0;
+
+	while ( flDistance <= flMaxDistance )
+	{
+		flDistance += flStepSize;
+
+		end = start + ( flDistance * dir );
+
+		Vector vecTrEnd = end - ( flStepSize * dir );
+
+		if ( nStartContents == 0 )
+			nStartContents = UTIL_PointContents( end, CS_MASK_SHOOT|CONTENTS_HITBOX );
+
+		int nCurrentContents = UTIL_PointContents( end, CS_MASK_SHOOT|CONTENTS_HITBOX );
+
+		if ( (nCurrentContents & CS_MASK_SHOOT) == 0 || ((nCurrentContents & CONTENTS_HITBOX) && nStartContents != nCurrentContents) )
+		{
+			// this gets a bit more complicated and expensive when we have to deal with displacements
+			UTIL_TraceLine( end, vecTrEnd, CS_MASK_SHOOT|CONTENTS_HITBOX, nullptr, &trExit );
+
+			// we exited the wall into a player's hitbox
+			if ( trExit.startsolid == true && (trExit.surface.flags & SURF_HITBOX)/*( nStartContents & CONTENTS_HITBOX ) == 0 && (nCurrentContents & CONTENTS_HITBOX)*/ )
+			{
+				// do another trace, but skip the player to get the actual exit surface 
+				UTIL_TraceLine( end, start, CS_MASK_SHOOT, trExit.Ent<CBaseEntity>(), COLLISION_GROUP_NONE, &trExit );
+				if ( trExit.DidHit() && trExit.startsolid == false )
+				{
+					end = trExit.endpos;
+					return true;
+				}
+			}
+			else if ( trExit.DidHit() && trExit.startsolid == false )
+			{
+				bool bStartIsNodraw = !!( trEnter.surface.flags & (SURF_NODRAW) );
+				bool bExitIsNodraw = !!( trExit.surface.flags & (SURF_NODRAW) );
+				if ( bExitIsNodraw && IsBreakableEntity( trExit.Ent<CBaseEntity>() ) && IsBreakableEntity( trEnter.Ent<CBaseEntity>() ) )
+				{
+					// we have a case where we have a breakable object, but the mapper put a nodraw on the backside
+					end = trExit.endpos;
+					return true;
+				}
+				else if ( bExitIsNodraw == false || (bStartIsNodraw && bExitIsNodraw) ) // exit nodraw is only valid if our entrace is also nodraw
+				{
+					Vector vecNormal = trExit.plane.normal;
+					float flDot = dir.Dot( vecNormal );
+					if ( flDot <= 1.0f )
+					{
+						// get the real end pos
+						end = end - ( (flStepSize * trExit.fraction) * dir );
+						return true;
+					}
+				}
+			}
+			else if ( TraceDidHitNonWorldEntity( trEnter ) && IsBreakableEntity( trEnter.Ent<CBaseEntity>() ) )
+			{
+				// if we hit a breakable, make the assumption that we broke it if we can't find an exit (hopefully..)
+				// fake the end pos
+				trExit = trEnter;
+				trExit.endpos = start + ( 1.0f * dir );
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+inline void UTIL_TraceLineIgnoreTwoEntities( const Vector& vecAbsStart, const Vector& vecAbsEnd, unsigned int mask, 
+					 const IHandleEntity *ignore, const IHandleEntity *ignore2, int collisionGroup, trace_t *ptr )
+{
+	Ray_t ray;
+	ray.Init( vecAbsStart, vecAbsEnd );
+	CTraceFilterSkipTwoEntities traceFilter( ignore, ignore2, collisionGroup );
+	enginetrace->TraceRay( ray, mask, &traceFilter, ptr );
+	if( r_visualizetraces.GetBool() )
+	{
+		DebugDrawLine( ptr->startpos, ptr->endpos, 255, 0, 0, true, -1.0f );
+	}
+}
+
+bool CCSPlayer::IsPrimaryOrSecondaryWeapon( CSWeaponType nType )
+{
+	if ( nType == WEAPONTYPE_PISTOL || nType == WEAPONTYPE_SUBMACHINEGUN || nType == WEAPONTYPE_RIFLE ||  
+		nType == WEAPONTYPE_SHOTGUN || nType == WEAPONTYPE_SNIPER_RIFLE || nType == WEAPONTYPE_MACHINEGUN )
+	{
+		return true;
+	}
+
+	return false;
+}
+
+bool CCSPlayer::IsOtherSameTeam( int nTeam )
+{
+	return GetTeamNumber() == nTeam;
+}
+
+bool CCSPlayer::IsOtherEnemy( CCSPlayer *pPlayer )
+{
+	if ( !pPlayer )
+		return false;
+
+	// we are never an enemy of ourselves
+	if ( entindex() == pPlayer->entindex() )
+		return false;
+	
+	int nOtherTeam = pPlayer->GetAssociatedTeamNumber();
+
+	int nTeam = GetAssociatedTeamNumber();
+
+	if ( mp_teammates_are_enemies.GetBool() && nTeam == nOtherTeam )
+	{
+		return true;
+	}
+
+	return nTeam != nOtherTeam;
+}
+
+uint32 CCSPlayer::GetActiveQuestID( void ) const
+{
+	uint32 unQuestID = 
+	 CSInventoryManager()->GetLocalCSInventory() ? CSInventoryManager()->GetLocalCSInventory()->GetActiveQuestID() : 0;
+
+	return unQuestID;
+}
+
+static bool ClientThinksQuestIsOk(CCSGameRules* pGameRules, const CCSPlayer* pPlayer)
+{
+	if ( !pGameRules || !pPlayer )
+		return false;
+
+	// Should also be handled by QuestProgressReason set to QUEST_NONOFFICIAL_SERVER, but just to be safe, handle it here too.
+	if ( !pGameRules->IsQuestEligible() )
+		return false;
+
+	uint32 unQuestID = pPlayer->GetActiveQuestID();
+	if ( !unQuestID )
+		return false;
+
+	CEconQuestDefinition *pQuestDef = GetItemSchema()->GetQuestDefinition( unQuestID );
+	if ( !pQuestDef )
+		return false;
+
+	// This is a clone of the server logic in Helper_InitializeQuestDataFromInventory() in cs_player.cpp
+
+	//
+	// Check the game mode
+	//
+	char const *szRequireGameType = nullptr;
+	if ( !g_pGameTypes->GetGameTypeFromMode( pQuestDef->GetGameMode(), szRequireGameType ) )
+		return false;
+
+	int nRequireGameType = -1;
+	int nRequireGameMode = -1;
+	if ( !g_pGameTypes->GetGameModeAndTypeIntsFromStrings( szRequireGameType, pQuestDef->GetGameMode(), nRequireGameType, nRequireGameMode ) )
+		return false;
+
+	if ( ( g_pGameTypes->GetCurrentGameType() != nRequireGameType ) || ( g_pGameTypes->GetCurrentGameMode() != nRequireGameMode ) )
+		return false;
+
+	//
+	// check the map group
+	//
+	const char* szCurMapGroup = engine->GetMapGroupName();
+	bool bHasMapGroupReq = pQuestDef->GetMapGroup() && pQuestDef->GetMapGroup()[0];
+	if ( bHasMapGroupReq && stricmp( szCurMapGroup, pQuestDef->GetMapGroup() ) != 0 )
+		return false;
+
+	// check the map
+	const char *szCurMapName = engine->GetLevelNameShort();
+	bool bHasMapReq = pQuestDef->GetMap() && pQuestDef->GetMap()[0];
+	if ( bHasMapReq && stricmp( szCurMapName, pQuestDef->GetMap() ) != 0 )
+		return false;
+
+	//
+	// mapgroup, gamemode, and/or map are valid.
+
+	// Note: We can't check the server quest here; co-op missions require the server to have been
+	// started exactly for that mission.  Assume the server is wrong here, we don't want to display
+	// a de-sync message.
+	if ( CSGameRules()->IsPlayingCooperativeGametype() )
+		return false;
+
+	// TODO: There are some longer-term things not checked here, but in quest rules, such as
+	//       cond_team_terrorist.  Ideally we'd like to put those in your quest progression
+	//       reason too, but I'm leaving that for a future update.  We should probably put
+	//       those outside of the quest evaluation expression into a separate set of state
+	//       that is easier to message failure reasons for than arbitrary conditional expressions.
+
+	// Alright, we think we are allowed to make progress!
+	return true;
+}
+
+QuestProgress::Reason CCSPlayer::GetQuestProgressReason( void ) const
+{
+	// On the client, we want to compare our expected quest state with the server
+
+	// Non-official server, don't bother
+	if ( m_nQuestProgressReason == QuestProgress::QUEST_NONOFFICIAL_SERVER )
+		return m_nQuestProgressReason;
+
+	// If we are OK, skip the more expensive test
+	if ( m_nQuestProgressReason == QuestProgress::QUEST_OK || m_nQuestProgressReason == QuestProgress::QUEST_NOT_ENOUGH_PLAYERS )
+		return m_nQuestProgressReason;
+
+	// If we get here, the server thinks we don't have a valid quest.  Check if we believe it by looking at the state in our inventory.
+	if ( CSGameRules() && ClientThinksQuestIsOk( CSGameRules(), this ) )
+	{
+		// The server doesn't initialize quests until after warmup, so during warmup we will trust that the client's state is valid.
+		if ( CSGameRules()->IsWarmupPeriod() )
+			return QuestProgress::QUEST_WARMUP;
+
+		// Otherwise, the client thinks the quest should be able to make progress but the server doesn't.  Notify the de-sync'd state.
+		return QuestProgress::QUEST_NOT_SYNCED_WITH_SERVER;
+	}
+
+	return m_nQuestProgressReason;
+}
+
+bool CCSPlayer::IsAssassinationTarget( void ) const
+{
+	CCS_PlayerResource* pCSPR =
+		GetCSResources();
+
+	if ( !pCSPR )
+		return false;
+	
+	return pCSPR->IsAssassinationTarget( entindex() );
+}
+
+bool CCSPlayer::IsOtherEnemy( int nEntIndex )
+{
+	CCSPlayer *pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( nEntIndex );
+	if ( !pPlayer )
+	{
+		// client doesn't have a pointer to enemy players outside our PVS
+
+		// we are never an enemy of ourselves
+		if ( entindex() == nEntIndex )
+			return false;
+
+		CCS_PlayerResource *pCSPR = GetCSResources();
+		if ( pCSPR )
+		{
+			int nOtherTeam = pCSPR->GetTeam( nEntIndex );
+			int nTeam = GetAssociatedTeamNumber();
+
+			if ( mp_teammates_are_enemies.GetBool() && nTeam == nOtherTeam )
+			{
+				return true;
+			}
+
+			return nTeam != nOtherTeam;
+		}
+
+		return false;
+	}
+
+	return IsOtherEnemy( pPlayer );
+}
+
+bool CCSPlayer::IsOtherEnemyAndPlaying( int nEntIndex )
+{
+	int nOtherTeam = 0;
+
+	CCSPlayer *pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( nEntIndex );
+	if ( !pPlayer )
+	{
+		CCS_PlayerResource *pCSPR = GetCSResources();
+		if ( !pCSPR )
+			return false;
+
+		nOtherTeam = pCSPR->GetTeam( nEntIndex );
+	}
+
+	if ( ( GetTeamNumber() == TEAM_CT && nOtherTeam == TEAM_TERRORIST ) ||
+		( GetTeamNumber() == TEAM_TERRORIST && nOtherTeam == TEAM_CT ) )
+		return true;
+
+	return false;
+}
+
+extern ConVar sv_buy_status_override;
+bool CCSPlayer::CanPlayerBuy( bool display )
+{
+	if ( !CSGameRules() )
+		return false;
+
+	// is the player alive?
+	if ( m_lifeState != LIFE_ALIVE )
+	{
+		return false;
+	}
+
+	// is the player in a buy zone?
+	if ( !IsInBuyZone() )
+	{
+		return false;
+	}
+
+	// Don't allow buying in the last few seconds of warmup because everybody should be freezed, but sometimes people aren't
+	// also fixes buy on the very moment that round starts which might cause the bought weapon to spawn, but touched by the
+	// player in the actual match time next frame and have a powerful gun for the first pistol round.
+	if ( CSGameRules()->IsWarmupPeriod() && ( CSGameRules()->GetWarmupPeriodEndTime() - 3 < gpGlobals->curtime ) )
+		return false;
+
+	// Even if buytime has run out, if buy time is tied to immunity then we let the player buy if the menu is still open.
+	if ( !IsInBuyPeriod() && CanBuyDuringImmunity() )
+			return IsBuyMenuOpen();
+
+	CCSGameRules* mp = CSGameRules();
+
+	if ( mp->m_bCTCantBuy && ( GetTeamNumber() == TEAM_CT ) )
+	{
+		if ( display == true )
+			ClientPrint( this, HUD_PRINTCENTER, "#CT_cant_buy" );
+
+		return false;
+	}
+
+	if ( mp->m_bTCantBuy && ( GetTeamNumber() == TEAM_TERRORIST ) )
+	{
+		if ( display == true )
+			ClientPrint( this, HUD_PRINTCENTER, "#Terrorist_cant_buy" );
+
+		return false;
+	}
+
+	if ( CSGameRules()->IsPlayingCoopGuardian() )
+	{
+		if ( CSGameRules()->IsWarmupPeriod() == false &&
+			CSGameRules()->m_flGuardianBuyUntilTime < gpGlobals->curtime )
+		{
+			int nTeam = CSGameRules()->IsHostageRescueMap() ? TEAM_TERRORIST : TEAM_CT;
+			if ( GetTeamNumber() == nTeam )
+			{
+				if ( display == true )
+				{
+					static ConVarRef sv_buy_status_override_ref( "sv_buy_status_override" );
+					int iBuyStatus = sv_buy_status_override_ref.GetInt();
+					if ( iBuyStatus > 0 && ( ( nTeam == TEAM_CT && iBuyStatus != 1 ) || ( nTeam == TEAM_TERRORIST && iBuyStatus != 2 ) ) )
+						ClientPrint( this, HUD_PRINTCENTER, "#SFUI_BuyMenu_CantBuy" );
+					else
+						ClientPrint( this, HUD_PRINTCENTER, "#SFUI_BuyMenu_CantBuyTilNextWave" );
+				}
+				return false;
+			}
+		}
+	}
+
+	int buyTime = mp_buytime.GetInt();
+
+	if ( mp->IsBuyTimeElapsed() && !CanBuyDuringImmunity() )
+	{
+		if ( display == true )
+		{
+			char strBuyTime[16];
+			V_snprintf( strBuyTime, sizeof( strBuyTime ), "%d", buyTime );
+			ClientPrint( this, HUD_PRINTCENTER, "#Cant_buy", strBuyTime );
+		}
+
+		return false;
+	}
+
+	if ( mp->IsWarmupPeriod() && mp->IsPlayingCooperativeGametype() )
+		return true;
+
+	if ( mp->IsPlayingCoopMission() )
+		return true;
+
+	return true;
+}
+
+bool CCSPlayer::GetUseConfigurationForHighPriorityUseEntity( CBaseEntity *pEntity, CConfigurationForHighPriorityUseEntity_t &cfg )
+{
+	if ( dynamic_cast<CPlantedC4*>( pEntity ) )
+	{
+		if ( CSGameRules() && CSGameRules()->IsBombDefuseMap() &&
+			( this->GetTeamNumber() == TEAM_CT ) )
+		{
+			cfg.m_pEntity = pEntity;
+		}
+		else
+		{
+			// it's a high-priority entity, but not used by the player team
+			cfg.m_pEntity = nullptr;
+		}
+		cfg.m_ePriority = cfg.k_EPriority_Bomb;
+		cfg.m_eDistanceCheckType = cfg.k_EDistanceCheckType_2D;
+		cfg.m_pos = pEntity->GetAbsOrigin() + Vector( 0, 0, 3 );
+		cfg.m_flMaxUseDistance = 62;		// Cannot use if > 62 units away
+		cfg.m_flLosCheckDistance = 36;		// Check LOS if > 36 units away (2D)
+		cfg.m_flDotCheckAngle = -0.7;		// 0.7 taken from Goldsrc, +/- ~45 degrees
+		cfg.m_flDotCheckAngleMax = -0.5;	// 0.3 for it going outside the range during continuous use (120-degree cone)
+		return true;
+	}
+	else if ( dynamic_cast<CCHostage*>( pEntity ) )
+	{
+		cfg.m_pEntity = pEntity;
+		cfg.m_ePriority = cfg.k_EPriority_Hostage;
+		cfg.m_eDistanceCheckType = cfg.k_EDistanceCheckType_3D;
+		cfg.m_pos = pEntity->EyePosition();
+		cfg.m_flMaxUseDistance = 62;		// Cannot use if > 62 units away
+		cfg.m_flLosCheckDistance = 32;		// Check LOS if > 32 units away (2D)
+		cfg.m_flDotCheckAngle = -0.7;		// 0.7 taken from Goldsrc, +/- ~45 degrees
+		cfg.m_flDotCheckAngleMax = -0.5;	// 0.5 for it going outside the range during continuous use (120-degree cone)
+		return true;
+	}
+	return false;
+}
+
+CBaseEntity *CCSPlayer::GetUsableHighPriorityEntity( void )
+{
+	// This is done separately since there might be something blocking our LOS to it
+	// but we might want to use it anyway if it's close enough.  This should eliminate
+	// the vast majority of bomb placement exploits (places where the bomb can be planted
+	// but can't be "used".  This also mimics goldsrc cstrike behavior.
+
+	CBaseEntity *pEntsNearPlayer[64];
+	// 64 is the distance in Goldsrc.  However since Goldsrc did distance from the player's origin and we're doing distance from the player's eye, make the radius a bit bigger.
+	int iEntsNearPlayer = UTIL_EntitiesInSphere( pEntsNearPlayer, 64, EyePosition(), 72, FL_OBJECT );
+	if( iEntsNearPlayer != 0 )
+	{
+		CConfigurationForHighPriorityUseEntity_t cfgBestHighPriorityEntity;
+		cfgBestHighPriorityEntity.m_pEntity = nullptr;
+		cfgBestHighPriorityEntity.m_ePriority = cfgBestHighPriorityEntity.k_EPriority_Default;
+
+		for( int i = 0; i != iEntsNearPlayer; ++i )
+		{
+			CBaseEntity *pEntity = pEntsNearPlayer[i];
+			contract_assert( pEntity != nullptr );
+			CConfigurationForHighPriorityUseEntity_t cfgUseSettings;
+			if ( !GetUseConfigurationForHighPriorityUseEntity( pEntity, cfgUseSettings ) )
+				continue; // not a high-priority entity
+			if ( !cfgUseSettings.m_pEntity )
+				continue; // not used by the player
+			if ( cfgUseSettings.m_ePriority < cfgBestHighPriorityEntity.m_ePriority )
+				continue; // we already have a higher priority entity
+			
+			if ( !cfgUseSettings.UseByPlayerNow( this, cfgUseSettings.k_EPlayerUseType_Start ) )
+				continue; // cannot start use by the player right now
+				
+			// This high-priority entity passes the checks, remember it as best
+			if ( cfgUseSettings.IsBetterForUseThan( cfgBestHighPriorityEntity ) )
+				cfgBestHighPriorityEntity = cfgUseSettings;
+		}
+
+		return cfgBestHighPriorityEntity.m_pEntity;
+	}
+
+	return nullptr;
+}
+
+bool CConfigurationForHighPriorityUseEntity_t::IsBetterForUseThan( CConfigurationForHighPriorityUseEntity_t const &other ) const
+{
+	if ( !m_pEntity )
+		return false;
+	if ( !other.m_pEntity )
+		return true;
+	if ( m_ePriority < other.m_ePriority )
+		return false;
+	if ( m_ePriority > other.m_ePriority )
+		return true;
+	if ( m_flDotCheckAngleMax < other.m_flDotCheckAngleMax ) // We are looking at it with a better angle
+		return true;
+	if ( m_flMaxUseDistance < other.m_flMaxUseDistance ) // This entity is closer to user
+		return true;
+	return false;
+}
+
+bool CConfigurationForHighPriorityUseEntity_t::UseByPlayerNow( CCSPlayer *pPlayer, EPlayerUseType_t ePlayerUseType )
+{
+	if ( !pPlayer )
+		return false;
+
+	// entity is close enough, now make sure the player is facing the bomb.
+	float flDistTo = std::numeric_limits<float>::max();
+	switch ( m_eDistanceCheckType )
+	{
+	case k_EDistanceCheckType_2D:
+		flDistTo = pPlayer->EyePosition().AsVector2D().DistTo( m_pos.AsVector2D() );
+		break;
+	case k_EDistanceCheckType_3D:
+		flDistTo = pPlayer->EyePosition().DistTo( m_pos );
+		break;
+	default:
+		contract_assert( false );
+	}
+	// UTIL_EntitiesInSphere gives strange results where I can find it when my eyes are at an angle, but not when I'm right on top of it
+	// because of that, make sure it's in our radius, but check the 2d los and make sure we are as close or closer than we need to be in 1.6
+	if ( flDistTo > m_flMaxUseDistance )
+		return false;
+
+	// if it's more than 36 units away (2d), we should check LOS
+	if ( flDistTo > m_flLosCheckDistance )
+	{
+		trace_t tr;
+		UTIL_TraceLine( pPlayer->EyePosition(), m_pos, (MASK_VISIBLE|CONTENTS_WATER|CONTENTS_SLIME), pPlayer, COLLISION_GROUP_DEBRIS, &tr );
+		// if we can't trace to the bomb at this distance, then we fail
+		if ( tr.fraction < 0.98 )
+			return false;
+	}
+
+	Vector vecLOS = pPlayer->EyePosition() - m_pos;
+	Vector forward;
+	AngleVectors( pPlayer->EyeAngles(), &forward, nullptr, nullptr );
+
+	vecLOS.NormalizeInPlace();
+
+	float flDot = DotProduct(forward, vecLOS);
+	float flCheckAngle = ( ePlayerUseType == k_EPlayerUseType_Start ) ? m_flDotCheckAngle : m_flDotCheckAngleMax;
+	if ( flDot >= flCheckAngle )
+		return false;
+
+	// Remember the actual settings of this entity
+	m_flDotCheckAngle = m_flDotCheckAngleMax = flDot;
+	m_flLosCheckDistance = m_flMaxUseDistance = flDistTo;
+	return true;
+}
+ConVar sv_server_verify_blood_on_player( side_registry(), "sv_server_verify_blood_on_player", "1", FCVAR_CHEAT | FCVAR_REPLICATED );
+
+extern ConVar cl_weapon_debug_print_accuracy;
+extern ConVar cl_weapon_debug_show_accuracy;
+extern ConVar cl_weapon_debug_show_accuracy_duration;
+void CCSPlayer::FireBullet( 
+	Vector vecSrc,	// shooting postion
+	const QAngle &shootAngles,  //shooting angle
+	float flDistance, // max distance 
+	float flPenetration, // the power of the penetration
+	int nPenetrationCount,
+	int iBulletType, // ammo type
+	int iDamage, // base damage
+	float flRangeModifier, // damage range modifier
+	CBaseEntity *pevAttacker, // shooter
+	bool bDoEffects,
+	float xSpread, float ySpread
+	)
+{
+	float fCurrentDamage = iDamage;   // damage of the bullet at it's current trajectory
+	float flCurrentDistance = 0.0;  //distance that the bullet has traveled so far
+		
+	Vector vecDirShooting, vecRight, vecUp;
+	AngleVectors( shootAngles, &vecDirShooting, &vecRight, &vecUp );
+	
+	// MIKETODO: put all the ammo parameters into a script file and allow for CS-specific params.
+	float flPenetrationPower = 0;		// thickness of a wall that this bullet can penetrate
+	float flPenetrationDistance = 0;	// distance at which the bullet is capable of penetrating a wall
+	float flDamageModifier = 0.5f;		// default modification of bullets power after they go through a wall.
+	float flPenetrationModifier = 1.0f;
+
+	GetBulletTypeParameters( iBulletType, flPenetrationPower, flPenetrationDistance );
+
+	// we use the max penetrations on this gun to figure out how much penetration it's capable of
+	if ( sv_penetration_type.GetInt() == 1 )
+		flPenetrationPower = flPenetration; 
+
+	if ( !pevAttacker )
+		pevAttacker = this;  // the default attacker is ourselves
+
+	// add the spray 
+	Vector vecDir = vecDirShooting + xSpread * vecRight + ySpread * vecUp;
+
+	VectorNormalize( vecDir );
+
+	//Adrian: visualize server/client player positions
+	//This is used to show where the lag compesator thinks the player should be at.
+
+	bool bFirstHit = true;
+
+	const CBaseCombatCharacter *lastPlayerHit = nullptr;	// this includes players, bots, and hostages
+
+	Vector vecWallBangHitStart, vecWallBangHitEnd;
+	vecWallBangHitStart.Init();
+	vecWallBangHitEnd.Init();
+	bool bWallBangStarted = false;
+	bool bWallBangEnded = false;
+	bool bWallBangHeavyVersion = false;
+
+	bool bBulletHitPlayer = false;
+
+	MDLCACHE_CRITICAL_SECTION();
+
+	bool bShotHitTeammate = false;
+
+	float flDist_aim = 0;
+	Vector vHitLocation = Vector( 0,0,0 );
+
+	while ( fCurrentDamage > 0 )
+	{
+		Vector vecEnd = vecSrc + vecDir * (flDistance-flCurrentDistance);
+
+		trace_t tr; // main enter bullet trace
+
+		UTIL_TraceLineIgnoreTwoEntities( vecSrc, vecEnd, CS_MASK_SHOOT|CONTENTS_HITBOX, this, lastPlayerHit, COLLISION_GROUP_NONE, &tr );
+		{
+			CTraceFilterSkipTwoEntities filter( this, lastPlayerHit, COLLISION_GROUP_NONE );
+
+			// Check for player hitboxes extending outside their collision bounds
+			const float rayExtension = 40.0f;
+			UTIL_ClipTraceToPlayers( vecSrc, vecEnd + vecDir * rayExtension, CS_MASK_SHOOT|CONTENTS_HITBOX, &filter, &tr );
+		}
+
+		if ( !flDist_aim )
+		{
+			flDist_aim = ( tr.fraction != 1.0 ) ? ( tr.startpos - tr.endpos ).Length() : 0;
+		}
+
+		if ( flDist_aim )
+		{
+			vHitLocation = tr.endpos;
+		}
+
+		lastPlayerHit = dynamic_cast<const CBaseCombatCharacter *>(tr.Ent<CBaseEntity>());
+
+		if ( lastPlayerHit )
+		{
+			if ( lastPlayerHit->GetTeamNumber() == GetTeamNumber() )
+			{
+				bShotHitTeammate = true;
+			}
+
+			bBulletHitPlayer = true;
+		}
+
+		if ( tr.fraction == 1.0f )
+			break; // we didn't hit anything, stop tracing shoot
+
+		if ( !bWallBangStarted && !bBulletHitPlayer )
+		{
+			vecWallBangHitStart = tr.endpos;
+			vecWallBangHitEnd = tr.endpos;
+			bWallBangStarted = true;
+
+			if ( fCurrentDamage > 20 )
+				bWallBangHeavyVersion = true;
+		}
+		else if ( !bWallBangEnded )
+		{
+			vecWallBangHitEnd = tr.endpos;
+
+			if ( bBulletHitPlayer )
+				bWallBangEnded = true;
+		}
+
+		////  ACCURACY DEBUG INFO
+		//
+		if ( bFirstHit )
+		{
+
+			if ( ( cl_weapon_debug_print_accuracy.GetBool( ) || cl_weapon_debug_show_accuracy.GetBool( ) ) && this->IsLocalPlayer( ) )
+			{
+				CWeaponCSBase *weapon = dynamic_cast< CWeaponCSBase * >( GetActiveWeapon( ) );
+				//		const CCSWeaponInfo& weaponInfo = weapon->GetCSWpnData();
+
+				//Vector vecDirShooting, vecRight, vecUp;
+				//		AngleVectors( GetFinalAimAngle(), &vecDirShooting, &vecRight, &vecUp );
+
+				// 		float flInaccuracyMove = weaponInfo.GetInaccuracyMove( weapon->m_weaponMode, weapon->GetEconItemView() );
+				// 		Vector vecDirInaccMove = vecDirShooting + flInaccuracyMove * vecRight + flInaccuracyMove * vecUp;
+				// 		VectorNormalize( vecDirInaccMove );
+				// 		float flDotInaccMove = DotProduct( vecDirShooting.Normalized(), vecDirInaccMove.Normalized() );
+				// 		float flAngleInaccMove = flDotInaccMove < 0.0f ? -acos( flDotInaccMove ) : acos( flDotInaccMove );
+				// 		Msg( "Movement Inaccuracy	: %.2f deg.\n",	RAD2DEG( flAngleInaccMove ) );
+				// 
+				// 		float flInaccuracyStand = weaponInfo.GetInaccuracyStand( weapon->m_weaponMode, weapon->GetEconItemView() );
+				// 		Vector vecDirInaccStand = vecDirShooting + flInaccuracyStand * vecRight + flInaccuracyStand * vecUp;
+				// 		VectorNormalize( vecDirInaccStand );
+				// 		float flDotInaccStand = DotProduct( vecDirShooting.Normalized(), vecDirInaccStand.Normalized() );
+				// 		float flAngleInaccStand = flDotInaccStand < 0.0f ? -acos( flDotInaccStand ) : acos( flDotInaccStand );
+				// 		Msg( "Standing Inaccuracy	: %.2f deg.\n",	RAD2DEG( flAngleInaccStand ) );
+				// 
+				// 		float flInaccuracyLadder = weaponInfo.GetInaccuracyLadder( weapon->m_weaponMode, weapon->GetEconItemView() );
+				// 		Vector vecDirInaccLadder = vecDirShooting + flInaccuracyLadder * vecRight + flInaccuracyLadder * vecUp;
+				// 		VectorNormalize( vecDirInaccLadder );
+				// 		float flDotInaccLadder = DotProduct( vecDirShooting.Normalized(), vecDirInaccLadder.Normalized() );
+				// 		float flAngleInaccLadder = flDotInaccLadder < 0.0f ? -acos( flDotInaccLadder ) : acos( flDotInaccLadder );
+				// 		Msg( "Ladder   Inaccuracy	: %.2f deg.\n",	RAD2DEG( flAngleInaccLadder ) );
+				// 
+				// 		float flInaccuracyFire = weaponInfo.GetInaccuracyFire( weapon->m_weaponMode, weapon->GetEconItemView() );
+				// 		Vector vecDirInaccFire = vecDirShooting + flInaccuracyFire * vecRight + flInaccuracyFire * vecUp;
+				// 		VectorNormalize( vecDirInaccFire );
+				// 		float flDotInaccFire = DotProduct( vecDirShooting.Normalized(), vecDirInaccFire.Normalized() );
+				// 		float flAngleInaccFire = flDotInaccFire < 0.0f ? -acos( flDotInaccFire ) : acos( flDotInaccFire );
+				// 		Msg( "Firing   Inaccuracy	: %.2f deg.\n",	RAD2DEG( flAngleInaccFire ) );
+				// 
+				float fInaccuracy = weapon->GetInaccuracy( );
+				// 		Vector vecDirInaccuracy = vecDirShooting + fInaccuracy * vecRight + fInaccuracy * vecUp;
+				// 		VectorNormalize( vecDirInaccuracy );
+				// 		float flDotInaccuracy = DotProduct( vecDirShooting.Normalized(), vecDirInaccuracy.Normalized() );
+				// 		float flAngleInaccuracy = flDotInaccuracy < 0.0f ? -acos( flDotInaccuracy ) : acos( flDotInaccuracy );
+				// 
+				float fSpread = weapon->GetSpread( );
+				// 		Vector vecDirSpread = vecDirShooting + fSpread * vecRight + fSpread * vecUp;
+				// 		VectorNormalize( vecDirSpread );
+				// 		float flDotSpread = DotProduct( vecDirShooting.Normalized(), vecDirSpread.Normalized() );
+				// 		float flAngleSpread = flDotSpread < 0.0f ? -acos( flDotSpread ) : acos( flDotSpread );
+				// 		Msg( "Spread				: %.2f deg.\n",	RAD2DEG( flAngleSpread ) );
+
+				const float kAccurateRadius = 0.5f * 12; // 12 inch dinner plate
+
+				float fFinalInaccuracy = fInaccuracy + fSpread;
+
+				// Calculate effective range:              
+				//                                   ----| -
+				//                              -----    | ^
+				//                         -----         | |
+				//                    -----              | accurateRadius
+				//               -----                   | |   
+				//          ----|                        | |    vecUp * (accurateradius / inaccuracy)
+				//     -----    | vecUp * inaccuracy     | v          * inaccuracy
+				//  ------------|------------------------| -    = vecUp * accurateRadius
+				//     vecDirShooting
+				//  |<--- 1 --->|
+				//  |<-------- effective range --------->| =  accurateradius / inaccuracy
+				float flEffectiveRange = fFinalInaccuracy > 0.00001f ? (kAccurateRadius / fFinalInaccuracy) : 1000000.0f;
+
+				// float flAngleInaccFinal = atanf(fFinalInaccuracy);
+				//Msg( "Inaccuracy			: %.2f deg.\n", RAD2DEG( flAngleInaccFinal ) );
+
+				if ( cl_weapon_debug_show_accuracy.GetInt( ) == 1 )	// head sized circle at effective range
+				{
+					NDebugOverlay::Line( vecSrc, vecSrc + ( flEffectiveRange * vecDirShooting.Normalized( ) ), 100, 100, 100, false, cl_weapon_debug_show_accuracy_duration.GetFloat( ) );
+
+					// shift the color deeper into the recoil sequence.
+
+					int nColorFromRecoilIndex = Max( 255 - ( (int)weapon->m_flRecoilIndex * 20 ), 0 );
+
+					NDebugOverlay::Circle( vecSrc + ( flEffectiveRange * vecDirShooting.Normalized( ) ), kAccurateRadius/*inches radius*/, 255 /*r*/, nColorFromRecoilIndex /*g*/, nColorFromRecoilIndex /*b*/, 255 /*a*/, false /*no depth test*/, cl_weapon_debug_show_accuracy_duration.GetFloat( ) /*duration*/ );
+				}
+				else if ( cl_weapon_debug_show_accuracy.GetInt( ) == 2 ) // size of inaccuracy on surface
+				{
+					int nColorFromRecoilIndex = Max( 255 - ( ( int )weapon->m_flRecoilIndex * 20 ), 0 );
+
+					// trace the shot as intended without inaccuracy
+
+					Vector vecEnd = vecSrc + vecDirShooting.Normalized( ) * flDistance;
+
+					trace_t tr_intended;
+					UTIL_TraceLine( vecSrc, vecEnd, CS_MASK_SHOOT|CONTENTS_HITBOX, this, COLLISION_GROUP_NONE, &tr_intended );
+
+					NDebugOverlay::Line( vecSrc, tr_intended.endpos, 100, 100, 100, false, cl_weapon_debug_show_accuracy_duration.GetFloat( ) );
+
+					if ( tr_intended.fraction != 1.0 )
+					{
+						float flRadius = fFinalInaccuracy * vecSrc.DistTo( tr_intended.endpos );
+
+						NDebugOverlay::Circle( tr_intended.endpos, flRadius /*inches radius*/, 255 /*r*/, nColorFromRecoilIndex /*g*/, nColorFromRecoilIndex /*b*/, 255 /*a*/, true /*no depth test*/, cl_weapon_debug_show_accuracy_duration.GetFloat( ) /*duration*/ );
+					}
+				}
+
+				// 		// trace actual shot
+				// 		Vector vecEndShot = vecSrc + vecDir * flDistance;
+				// 		trace_t tr_actual;
+				// 		UTIL_TraceLineIgnoreTwoEntities( vecSrc, vecEndShot, CS_MASK_SHOOT | CONTENTS_HITBOX, this, NULL, COLLISION_GROUP_NONE, &tr_actual );
+				// 		{
+				// 			CTraceFilterSkipTwoEntities filter( this, lastPlayerHit, COLLISION_GROUP_NONE );
+				// 
+				// 			// Check for player hitboxes extending outside their collision bounds
+				// 			const float rayExtension = 40.0f;
+				// 			UTIL_ClipTraceToPlayers( vecSrc, vecEndShot + vecDir * rayExtension, CS_MASK_SHOOT | CONTENTS_HITBOX, &filter, &tr_actual );
+				// 		}
+				//		float flDist_actual = ( tr_aim.fraction != 1.0 ) ? ( tr_actual.startpos - tr_actual.endpos ).Length() : 0;
+
+				//		float flMissedDist = ( tr_actual.fraction != 1.0 && tr_aim.fraction != 1.0 ) ? ( tr_aim.endpos - tr_actual.endpos ).Length() : 0;
+
+				//		float flDotShot = DotProduct( vecDirShooting.Normalized(), vecDir.Normalized() );
+				//		float flAngleShot = flDotShot < 0.0f ? -acos( flDotShot ) : acos( flDotShot );
+
+				//		Msg(						"-- Shot info --\n" );
+
+				if ( cl_weapon_debug_print_accuracy.GetInt( ) == 1 )
+				{
+					Msg( "\nAccurate range:		%.2fm", flEffectiveRange * 0.0254 );
+					if ( flDist_aim ) Msg( "					Distance to target:		%.2fm\n", flDist_aim * 0.0254 );
+				}
+				else if ( cl_weapon_debug_print_accuracy.GetInt( ) == 2 )
+				{
+					if ( weapon->m_flRecoilIndex == 0 )
+					{
+						Msg( "\ntime	bullet	range	recovery	inaccuracy\n" );
+					}
+
+					Msg( "%.5f	%d	%.5f	%.10f	%.10f\n", gpGlobals->curtime, (int)weapon->m_flRecoilIndex, flEffectiveRange * 0.0254, weapon->GetRecoveryTime( ), fFinalInaccuracy );
+				}
+
+				//		if ( flDist_actual ) Msg(	"Actual shot distance:  %.0f\"  (%.2f\')\n", flDist_actual, flDist_actual / 12.0 );
+				//		if ( flMissedDist ) Msg(	"Missed by:             %.0f\"  (%.2f\')\n", flMissedDist, flMissedDist / 12.0 );
+
+				//		Msg( "\n" );
+				//		Msg( "Nominal inaccuracy:       %.2f degrees\n", RAD2DEG( flAngleInaccFinal ) );
+				//		Msg( "Actual shot inaccuracy:   %.2f degrees\n", RAD2DEG( flAngleShot ) );
+
+			}
+		}
+
+		bFirstHit = false;
+		FirePerfStatsEvent( PERF_STATS_BULLET ); // client-only event
+
+		/************* MATERIAL DETECTION ***********/
+		surfacedata_t *pSurfaceData = physprops->GetSurfaceData( tr.surface.surfaceProps );
+		int iEnterMaterial = pSurfaceData->game.material;
+
+		flPenetrationModifier = pSurfaceData->game.penetrationModifier;
+		flDamageModifier = pSurfaceData->game.damageModifier;
+
+		bool hitGrate = ( tr.contents & CONTENTS_GRATE ) != 0;
+
+		if ( sv_showimpacts.GetInt() == 1 || sv_showimpacts.GetInt() == 2 )
+		{
+			// draw red client impact markers
+			debugoverlay->AddBoxOverlay( tr.endpos, Vector(-2,-2,-2), Vector(2,2,2), QAngle( 0, 0, 0), 255,0,0,127, sv_showimpacts_time.GetFloat() );
+		}
+
+		// bullet registration recording ( client )
+		// This code allowed us to measure discrepency between client and server bullet hits.
+		// It became obsolete when we started using a separate seed for client and server
+		// to eliminate 'rage' hacks.
+		//
+		if ( this == CCSPlayer::GetLocalCSPlayer())
+		{
+			m_vecBulletVerifyListClient.push_back( clientHitVerify_t( tr.endpos, gpGlobals->realtime, gpGlobals->curtime + 10.0f ) );
+		}
+		
+		// client-server hit comparison.
+		if ( tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>()->IsPlayer() && !IsControllingBot()  )
+		{
+			if ( m_totalHitsOnClient < 255 ) // clamp at 8 bits
+				m_totalHitsOnClient++;
+		}
+
+		// draw green boxes where the shot originated from
+		//NDebugOverlay::Box( vecSrc, Vector(-1,-1,-1), Vector(1,1,1), 0,255,90,90, 10 );
+
+		//calculate the damage based on the distance the bullet travelled.
+		flCurrentDistance += tr.fraction * (flDistance-flCurrentDistance);
+		fCurrentDamage *= std::pow (flRangeModifier, (flCurrentDistance / 500));
+
+		// check if we reach penetration distance, no more penetrations after that
+		// or if our modifyer is super low, just stop the bullet
+		if ( (flCurrentDistance > flPenetrationDistance && flPenetration > 0 ) ||
+			flPenetrationModifier < 0.1 )
+		{
+			// Setting nPenetrationCount to zero prevents the bullet from penetrating object at max distance
+			// and will no longer trace beyond the exit point, however "numPenetrationsInitiallyAllowedForThisBullet"
+			// is saved off to allow correct determination whether the hit on the object at max distance had
+			// *previously* penetrated anything or not. In case of a direct hit over 3000 units the saved off
+			// value would be max penetrations value and will determine a direct hit and not a penetration hit.
+			// However it is important that all tracing further stops past this point (as the code does at
+			// the time of writing) because otherwise next trace will think that 4 penetrations have already
+			// occurred.
+			nPenetrationCount = 0;
+		}
+
+		int iDamageType = DMG_BULLET | DMG_NEVERGIB;
+		CWeaponCSBase* pActiveWeapon = GetActiveCSWeapon();
+		if ( pActiveWeapon && pActiveWeapon->IsA( WEAPON_TASER ) )
+		{
+			iDamageType = DMG_SHOCK | DMG_NEVERGIB;
+		}
+
+		if( bDoEffects )
+		{
+			// See if the bullet ended up underwater + started out of the water
+			if ( enginetrace->GetPointContents( tr.endpos, MASK_WATER ) & (CONTENTS_WATER|CONTENTS_SLIME) )
+			{	
+				trace_t waterTrace;
+				UTIL_TraceLine( vecSrc, tr.endpos, (MASK_SHOT|CONTENTS_WATER|CONTENTS_SLIME), this, COLLISION_GROUP_NONE, &waterTrace );
+				
+				if( waterTrace.allsolid != 1 )
+				{
+					CEffectData	data;
+ 					data.m_vOrigin = waterTrace.endpos;
+					data.m_vNormal = waterTrace.plane.normal;
+					data.m_flScale = random_valve->RandomFloat( 8, 12 );
+
+					if ( waterTrace.contents & CONTENTS_SLIME )
+					{
+						data.m_fFlags |= FX_WATER_IN_SLIME;
+					}
+
+					DispatchEffect( "gunshotsplash", data );
+				}
+			}
+			else
+			{
+				//Do Regular hit effects
+
+				// Don't decal nodraw surfaces
+				if ( !( tr.surface.flags & (SURF_SKY|SURF_NODRAW|SURF_HINT|SURF_SKIP) ) )
+				{
+					//CBaseEntity *pEntity = tr.Ent<CBaseEntity>();
+					UTIL_ImpactTrace( &tr, iDamageType );
+				}
+			}
+		}
+
+		// create the tracer
+		CreateWeaponTracer( vecSrc, tr.endpos );
+
+		// add damage to entity that we hit
+		
+		// [dkorus] note: values are changed inside of HandleBulletPenetration
+		bool bulletStopped = HandleBulletPenetration( flPenetration, iEnterMaterial, hitGrate, tr, vecDir, pSurfaceData, flPenetrationModifier,
+			flDamageModifier, bDoEffects, iDamageType, flPenetrationPower, nPenetrationCount, vecSrc, flDistance,
+			flCurrentDistance, fCurrentDamage );
+
+		// [dkorus] bulletStopped is true if the bullet can no longer continue penetrating materials
+		if ( bulletStopped )
+			break;
+
+	}
+
+	if ( bWallBangStarted )
+	{
+		float flWallBangLength = (vecWallBangHitEnd - vecWallBangHitStart).Length();
+		if ( flWallBangLength > 0 && flWallBangLength < CS_MAX_WALLBANG_TRAIL_LENGTH )
+		{
+			QAngle temp;
+			VectorAngles( vecWallBangHitEnd - vecWallBangHitStart, temp );
+
+			CEffectData	data;
+ 			data.m_vOrigin = vecWallBangHitStart;
+			data.m_vStart = vecWallBangHitEnd;
+			data.m_vAngles = temp;
+			//data.m_vNormal = vecWallBangHitStart - vecWallBangHitEnd;
+			data.m_flScale = 1.0f;
+			
+			//why is particle system index stored on m_nHitBox?
+			if ( bWallBangHeavyVersion )
+			{
+				data.m_nHitBox = GetParticleSystemIndex( "impact_wallbang_heavy" );
+			}
+			else
+			{
+				data.m_nHitBox = GetParticleSystemIndex( "impact_wallbang_light" );
+			}
+
+			StartParticleEffect( data );
+
+			//debugoverlay->AddLineOverlay( vecWallBangHitStart, vecWallBangHitEnd, 0, 255, 0, false, 3 );
+		}
+	}
+
+}
+
+// [dkorus] helper for FireBullet
+//			changes iPenetration to updated value
+//			returns true if we should stop processing more hits after this one
+//			returns false if we can continue processing
+bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
+										 int &iEnterMaterial,
+										 bool &hitGrate,
+										 trace_t &tr,
+										 Vector &vecDir,
+										 surfacedata_t *pSurfaceData,
+										 float flPenetrationModifier,
+										 float flDamageModifier,
+										 bool bDoEffects,
+										 int iDamageType,
+										 float flPenetrationPower,
+										 int &nPenetrationCount,
+										 Vector &vecSrc,
+										 float flDistance,
+										 float flCurrentDistance,
+										 float &fCurrentDamage)
+{
+	bool bIsNodraw = !!( tr.surface.flags & (SURF_NODRAW) );
+
+	bool bFailedPenetrate = false;
+
+	// check if bullet can penetrarte another entity
+	if ( nPenetrationCount == 0 && !hitGrate && !bIsNodraw 
+		 && iEnterMaterial != CHAR_TEX_GLASS && iEnterMaterial != CHAR_TEX_GRATE )
+		bFailedPenetrate = true; // no, stop
+
+	// If we hit a grate with iPenetration == 0, stop on the next thing we hit
+	if ( flPenetration <= 0 || nPenetrationCount <= 0 )
+		bFailedPenetrate = true;
+
+	Vector penetrationEnd;
+
+	// find exact penetration exit
+	trace_t exitTr;
+	if ( !TraceToExit( tr.endpos, vecDir, penetrationEnd, tr, exitTr, 4, MAX_PENETRATION_DISTANCE ) )
+	{
+		// ended in solid
+		if ( (UTIL_PointContents ( tr.endpos, CS_MASK_SHOOT ) & CS_MASK_SHOOT) == 0 )
+		{
+			bFailedPenetrate = true;
+		}
+	}
+	
+	if ( bFailedPenetrate == true )
+	{
+		float flTraceDistance = VectorLength( penetrationEnd - tr.endpos );
+
+		// this is copy pasted from below, it should probably be its own function
+		float flPenMod = std::max<std::common_type_t<int, float>>( 0, ( 1 / flPenetrationModifier ) );
+		float flPercentDamageChunk = fCurrentDamage * 0.15;
+		float flDamageLostImpact = flPercentDamageChunk + std::max<std::common_type_t<int, double>>( 0, ( 3/ flPenetrationPower ) * 1.18 ) * (flPenMod * 2.8);
+
+		float flLostDamageObject = ( ( flPenMod * ( flTraceDistance*flTraceDistance ) ) / 24 );
+		float flTotalLostDamage = flDamageLostImpact + flLostDamageObject;
+		DisplayPenetrationDebug( tr.endpos, penetrationEnd, flTraceDistance, fCurrentDamage, flDamageLostImpact, flTotalLostDamage, tr.surface.surfaceProps, -100 );
+		return true;
+	}
+
+	//debugoverlay->AddBoxOverlay( exitTr.endpos, Vector(-1,-1,-1), Vector(1,1,1), QAngle( 0, 0, 0), 255,255,0,127, 400 );
+
+	// get material at exit point
+	surfacedata_t *pExitSurfaceData = physprops->GetSurfaceData( exitTr.surface.surfaceProps );
+	int iExitMaterial = pExitSurfaceData->game.material;
+
+	// new penetration method
+	if ( sv_penetration_type.GetInt() == 1 )
+	{
+		// percent of total damage lost automatically on impacting a surface
+		float flDamLostPercent = 0.16;
+
+		// since some railings in de_inferno are CONTENTS_GRATE but CHAR_TEX_CONCRETE, we'll trust the
+		// CONTENTS_GRATE and use a high damage modifier.
+		if ( hitGrate || bIsNodraw || iEnterMaterial == CHAR_TEX_GLASS || iEnterMaterial == CHAR_TEX_GRATE )
+		{
+			// If we're a concrete grate (TOOLS/TOOLSINVISIBLE texture) allow more penetrating power.
+			if ( iEnterMaterial == CHAR_TEX_GLASS || iEnterMaterial == CHAR_TEX_GRATE )
+			{
+				flPenetrationModifier = 3.0f;
+				flDamLostPercent = 0.05;
+			}
+			else
+				flPenetrationModifier = 1.0f;
+
+			flDamageModifier = 0.99f;
+		}
+		else if ( iEnterMaterial == CHAR_TEX_FLESH && ff_damage_reduction_bullets.GetFloat() == 0 
+				  && tr.Ent<CBaseEntity>() && tr.Ent<CBaseEntity>()->IsPlayer() && tr.Ent<CBaseEntity>()->GetTeamNumber() == GetTeamNumber() )
+		{
+			if ( ff_damage_bullet_penetration.GetFloat() == 0 )
+			{
+				// don't allow penetrating players when FF is off
+				flPenetrationModifier = 0;
+				return true;
+			}
+
+			flPenetrationModifier = ff_damage_bullet_penetration.GetFloat();
+			flDamageModifier = ff_damage_bullet_penetration.GetFloat();
+		}
+		else
+		{
+			// check the exit material and average the exit and entrace values
+			float flExitPenetrationModifier = pExitSurfaceData->game.penetrationModifier;
+			float flExitDamageModifier = pExitSurfaceData->game.damageModifier;
+			flPenetrationModifier = (flPenetrationModifier + flExitPenetrationModifier)/2;
+			flDamageModifier = (flDamageModifier + flExitDamageModifier)/2;
+		}
+
+		// if enter & exit point is wood we assume this is 
+		// a hollow crate and give a penetration bonus
+		if ( iEnterMaterial == iExitMaterial )
+		{
+			if( iExitMaterial == CHAR_TEX_WOOD || iExitMaterial == CHAR_TEX_CARDBOARD )
+			{
+				flPenetrationModifier = 3;
+			}
+			else if ( iExitMaterial == CHAR_TEX_PLASTIC )
+			{
+				flPenetrationModifier = 2;
+			}
+		}
+
+		float flTraceDistance = VectorLength( exitTr.endpos - tr.endpos );
+
+		float flPenMod = std::max<std::common_type_t<int, float>>( 0, ( 1 / flPenetrationModifier ));
+
+		float flPercentDamageChunk = fCurrentDamage * flDamLostPercent;
+		float flPenWepMod = flPercentDamageChunk + std::max<std::common_type_t<int, double>>( 0, ( 3/ flPenetrationPower ) * 1.25 ) * (flPenMod * 3.0);
+
+		float flLostDamageObject = ((flPenMod * (flTraceDistance*flTraceDistance)) / 24);
+		float flTotalLostDamage = flPenWepMod + flLostDamageObject;
+
+		if ( sv_showimpacts_penetration.GetInt() > 0 )
+		{
+			Vector vecStart = tr.endpos;
+			Vector vecEnd = penetrationEnd;
+			float flTotalTraceDistance = VectorLength( penetrationEnd - tr.endpos );
+
+			DisplayPenetrationDebug( vecStart, vecEnd, flTotalTraceDistance, fCurrentDamage, flPenWepMod, flTotalLostDamage, tr.surface.surfaceProps, exitTr.surface.surfaceProps );
+		}
+		
+		// reduce damage power each time we hit something other than a grate
+		fCurrentDamage -= std::max<std::common_type_t<int, float>>( 0, flTotalLostDamage );
+
+		if ( fCurrentDamage < 1 )
+			return true;
+
+		// penetration was successful
+
+		// bullet did penetrate object, exit Decal
+		if ( bDoEffects )
+		{
+			UTIL_ImpactTrace( &exitTr, iDamageType );
+		}
+
+		//setup new start end parameters for successive trace
+
+		//flPenetrationPower -= (flTraceDistance/2) / flPenMod;
+		flCurrentDistance += flTraceDistance;
+
+		// NDebugOverlay::Box( exitTr.endpos, Vector(-2,-2,-2), Vector(2,2,2), 0,255,0,127, 8 );
+
+		vecSrc = exitTr.endpos;
+		flDistance = (flDistance - flCurrentDistance) * 0.5;
+
+		nPenetrationCount--;
+		return false;
+	}
+	else
+	{
+		// since some railings in de_inferno are CONTENTS_GRATE but CHAR_TEX_CONCRETE, we'll trust the
+		// CONTENTS_GRATE and use a high damage modifier.
+		if ( hitGrate || bIsNodraw )
+		{
+			// If we're a concrete grate (TOOLS/TOOLSINVISIBLE texture) allow more penetrating power.
+			flPenetrationModifier = 1.0f;
+			flDamageModifier = 0.99f;
+		}
+		else
+		{
+			// Check the exit material to see if it is has less penetration than the entrance material.
+			float flExitPenetrationModifier = pExitSurfaceData->game.penetrationModifier;
+			float flExitDamageModifier = pExitSurfaceData->game.damageModifier;
+			if ( flExitPenetrationModifier < flPenetrationModifier )
+			{
+				flPenetrationModifier = flExitPenetrationModifier;
+			}
+			if ( flExitDamageModifier < flDamageModifier )
+			{
+				flDamageModifier = flExitDamageModifier;
+			}
+		}
+
+		// if enter & exit point is wood or metal we assume this is 
+		// a hollow crate or barrel and give a penetration bonus
+		if ( iEnterMaterial == iExitMaterial )
+		{
+			if ( iExitMaterial == CHAR_TEX_WOOD ||
+				 iExitMaterial == CHAR_TEX_METAL )
+			{
+				flPenetrationModifier *= 2;
+			}
+		}
+
+		float flTraceDistance = VectorLength( exitTr.endpos - tr.endpos );
+
+		// check if bullet has enough power to penetrate this distance for this material
+		if ( flTraceDistance > ( flPenetrationPower * flPenetrationModifier ) )
+			return true; // bullet hasn't enough power to penetrate this distance
+
+		// reduce damage power each time we hit something other than a grate
+		fCurrentDamage *= flDamageModifier;
+
+		// penetration was successful
+
+		// bullet did penetrate object, exit Decal
+		if ( bDoEffects )
+		{
+			UTIL_ImpactTrace( &exitTr, iDamageType );
+		}
+
+		//setup new start end parameters for successive trace
+
+		flPenetrationPower -= flTraceDistance / flPenetrationModifier;
+		flCurrentDistance += flTraceDistance;
+
+		// NDebugOverlay::Box( exitTr.endpos, Vector(-2,-2,-2), Vector(2,2,2), 0,255,0,127, 8 );
+
+		vecSrc = exitTr.endpos;
+		flDistance = ( flDistance - flCurrentDistance ) * 0.5;
+
+		// reduce penetration counter
+		nPenetrationCount--;
+		return false;
+	}
+}
+
+void CCSPlayer::DisplayPenetrationDebug( Vector vecEnter, Vector vecExit, float flDistance, float flInitialDamage, float flDamageLostImpact, float flTotalLostDamage, short nEnterSurf, short nExitSurf )
+{
+}
+
+void CCSPlayer::ImpactTrace( trace_t *pTrace, int iDamageType, const char *pCustomImpactName )
+{
+
+	if ( sv_server_verify_blood_on_player.GetBool() )
+		return;
+
+	static ConVar *violence_hblood = cvar->FindVar( "violence_hblood" );
+	if ( violence_hblood && !violence_hblood->GetBool() )
+		return;
+
+	CVProfScope _( "CCSPlayer::ImpactTrace", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+	contract_assert( pTrace->Ent<CBaseEntity>() );
+
+	CBaseEntity *pEntity = pTrace->Ent<CBaseEntity>();
+
+	// Build the impact data
+	CEffectData data;
+	data.m_vOrigin = pTrace->endpos;
+	data.m_vStart = pTrace->startpos;
+	data.m_nSurfaceProp = pTrace->surface.surfaceProps;
+	if ( data.m_nSurfaceProp < 0 )
+	{
+		data.m_nSurfaceProp = 0;
+	}
+	data.m_nDamageType = iDamageType;
+	data.m_nHitBox = pTrace->hitbox;
+	data.m_hEntity = ClientEntityList().EntIndexToHandle( pEntity->entindex() );
+
+	// Send it on its way
+	if ( !pCustomImpactName )
+	{
+		DispatchEffect( "Impact", data );
+	}
+	else
+	{
+		DispatchEffect( pCustomImpactName, data );
+	}
+}
+
+void TE_DynamicLight( IRecipientFilter& filter, float delay,
+	const Vector* org, int r, int g, int b, int exponent, float radius, float time, float decay, int nLightIndex = LIGHT_INDEX_TE_DYNAMIC );
+
+void CCSPlayer::CreateWeaponTracer( Vector vecStart, Vector vecEnd )
+{
+	int iTracerFreq = 1;
+	CWeaponCSBase *pWeapon = GetActiveCSWeapon();
+
+	if ( pWeapon )
+	{
+		// if this is a local player, start at attachment on view model
+		// else start on attachment on weapon model
+		int iEntIndex = entindex();
+		int iUseAttachment = TRACER_DONT_USE_ATTACHMENT;
+		int iAttachment = 1;
+
+		CCSPlayer *pLocalPlayer = nullptr;
+		bool bUseObserverTarget = false;
+
+		FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
+		{
+			ACTIVE_SPLITSCREEN_PLAYER_GUARD( hh );
+			pLocalPlayer = CCSPlayer::GetLocalCSPlayer();
+			if ( !pLocalPlayer )
+				continue;
+
+			if ( pLocalPlayer->GetObserverTarget() == this &&
+				pLocalPlayer->GetObserverMode() == OBS_MODE_IN_EYE &&
+				!pLocalPlayer->IsInObserverInterpolation() )
+			{
+				bUseObserverTarget = true;
+				break;
+			}
+		}
+		
+		CBaseCombatWeapon *pActiveWeapon = GetActiveWeapon();
+		CBaseViewModel *pViewModel = GetViewModel(0);
+
+		CBaseWeaponWorldModel *pWeaponWorldModel = nullptr;
+		if ( pActiveWeapon && ( !pViewModel || this->ShouldDraw() ) )
+			pWeaponWorldModel = pActiveWeapon->GetWeaponWorldModel();
+
+		if ( pWeaponWorldModel && pWeaponWorldModel->HasDormantOwner() )
+		{
+			// This is likely a player firing from around a corner, where this client can't see them.
+			// Don't modify the tracer start position, since our local world weapon model position is not reliable.
+		}
+		else if (pWeaponWorldModel)
+		{
+			iAttachment = pWeaponWorldModel->LookupAttachment( "muzzle_flash" );
+			if ( iAttachment > 0 )
+				pWeaponWorldModel->GetAttachment( iAttachment, vecStart );
+		}
+		else if ( pViewModel )
+		{
+			iAttachment = pViewModel->LookupAttachment( "1" );
+			pViewModel->GetAttachment( iAttachment, vecStart );
+		}
+
+		// bail if we're at the origin
+		if ( vecStart.LengthSqr() <= 0 )
+			return;
+
+		// muzzle flash dynamic light
+		m_GlowObject.SetGlowAlphaPulseOverdrive( 0.3f );
+		CPVSFilter filter( vecStart );
+		TE_DynamicLight( filter, 0.0, &vecStart, 255, 192, 64, 5, 70, 0.05, 768 );
+
+		int	nBulletNumber = (pWeapon->GetMaxClip1() - pWeapon->Clip1()) + 1;
+		iTracerFreq = pWeapon->GetCSWpnData().GetTracerFrequency( pWeapon->GetEconItemView(), pWeapon->m_weaponMode );
+		if ( ( iTracerFreq != 0 ) && ( nBulletNumber % iTracerFreq ) == 0 )
+		{
+			const char *pszTracerEffect = GetTracerType();
+			if ( pszTracerEffect && pszTracerEffect[0] )
+			{
+				UTIL_ParticleTracer( pszTracerEffect, vecStart, vecEnd, iEntIndex, iUseAttachment, true );
+			}
+		}
+		else
+		{
+			// just do the whiz sound
+			FX_TracerSound( vecStart, vecEnd, TRACER_TYPE_DEFAULT );
+		}
+		
+	}
+}
+
+void CCSPlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOrigin, const Vector &vecVelocity  )
+{
+	if ( IsBot() && IsDormant() )
+		return;
+
+	if (!IsAlive())
+		return;
+
+	float speedSqr = vecVelocity.LengthSqr();
+
+	float flWalkSpeed = (CS_PLAYER_SPEED_RUN * CS_PLAYER_SPEED_WALK_MODIFIER);
+
+	if ( ( speedSqr < flWalkSpeed * flWalkSpeed ) || m_bIsWalking )
+	{
+		if ( speedSqr < 10.0 )
+		{
+			// If we stop, reset the step sound tracking.
+			// This makes step sounds play a consistent time after
+			// we start running making it easier to co-ordinate suit and
+			// step sounds.
+			SetStepSoundTime( STEPSOUNDTIME_NORMAL, false );
+		}
+
+		return; // player is not running, no footsteps
+	}
+
+	BaseClass::UpdateStepSound( psurface, vecOrigin, vecVelocity  );
+}
+
+ConVar weapon_recoil_view_punch_extra( side_registry(), "weapon_recoil_view_punch_extra", "0.055", FCVAR_RELEASE | FCVAR_CHEAT | FCVAR_REPLICATED, "Additional (non-aim) punch added to view from recoil" );
+
+void CCSPlayer::KickBack( float fAngle, float fMagnitude )
+{
+	QAngle angleVelocity(0,0,0);
+	angleVelocity[YAW] = -std::sinf(DEG2RAD(fAngle)) * fMagnitude;
+	angleVelocity[PITCH] = -std::cosf(DEG2RAD(fAngle)) * fMagnitude;
+	angleVelocity += m_Local.m_aimPunchAngleVel.Get();
+	SetAimPunchAngleVelocity( angleVelocity );
+
+	// this bit gives additional punch to the view (screen shake) to make the kick back a bit more visceral
+	QAngle viewPunch = GetViewPunchAngle();
+	float fViewPunchMagnitude = fMagnitude * weapon_recoil_view_punch_extra.GetFloat();
+	viewPunch[YAW] -= sinf(DEG2RAD(fAngle)) * fViewPunchMagnitude;
+	viewPunch[PITCH] -= cosf(DEG2RAD(fAngle)) * fViewPunchMagnitude;
+	SetViewPunchAngle(viewPunch);
+}
+
+QAngle CCSPlayer::GetAimPunchAngle()
+{
+
+	if (  PlatformInputDevice::IsInputDeviceAPointer( g_pInputSystem->GetCurrentInputDevice() ) )
+	{
+		return m_Local.m_aimPunchAngle.Get() * weapon_recoil_scale_motion_controller.GetFloat();
+	}
+	else
+	{
+		return m_Local.m_aimPunchAngle.Get() * weapon_recoil_scale.GetFloat();
+	}
+}
+
+QAngle CCSPlayer::GetRawAimPunchAngle() const
+{
+	return m_Local.m_aimPunchAngle.Get();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : int
+//-----------------------------------------------------------------------------
+int CCSPlayer::GetDefaultCrouchedFOV( void ) const
+{
+	return GetDefaultFOV();
+}
+
+bool CCSPlayer::CanMove() const
+{
+	// When we're in intro camera mode, it's important to return false here 
+	// so our physics object doesn't fall out of the world.
+	if ( GetMoveType() == MOVETYPE_NONE )
+		return false;
+
+	if ( IsObserver() )
+		return true; // observers can move all the time
+
+	bool bValidMoveState = (State_Get() == STATE_ACTIVE || State_Get() == STATE_OBSERVER_MODE);
+			
+	if ( m_bIsDefusing || m_bIsGrabbingHostage || !bValidMoveState || (CSGameRules()->IsFreezePeriod() && !m_bCanMoveDuringFreezePeriod) )
+	{
+		return false;
+	}
+	else
+	{
+		// Can't move while planting C4.
+		CC4 *pC4 = dynamic_cast< CC4* >( GetActiveWeapon() );
+		if ( pC4 && pC4->m_bStartedArming )
+			return false;
+
+		return true;
+	}
+}
+
+unsigned int CCSPlayer::PhysicsSolidMaskForEntity( void ) const
+{
+	if ( !CSGameRules()->IsTeammateSolid() )
+	{
+		switch ( GetTeamNumber() )
+		{
+			case TEAM_UNASSIGNED:
+				return MASK_PLAYERSOLID;
+			case LAST_SHARED_TEAM:
+				return MASK_PLAYERSOLID;
+			case TEAM_TERRORIST:
+				return MASK_PLAYERSOLID | CONTENTS_TEAM1;
+			case TEAM_CT:
+				return MASK_PLAYERSOLID | CONTENTS_TEAM2;
+		}
+	}
+
+	return MASK_PLAYERSOLID;
+}
+
+void CCSPlayer::OnJump( float fImpulse )
+{
+	CWeaponCSBase* pActiveWeapon = GetActiveCSWeapon();
+	if ( pActiveWeapon != nullptr )
+		pActiveWeapon->OnJump(fImpulse);
+}
+
+void CCSPlayer::OnLand( float fVelocity )
+{
+
+	CWeaponCSBase* pActiveWeapon = GetActiveCSWeapon();
+	if (pActiveWeapon != nullptr)
+		pActiveWeapon->OnLand(fVelocity);
+
+	if ( fVelocity > 270 )
+	{
+		CRecipientFilter filter;
+
+		filter.AddRecipient( this );
+
+		if ( prediction->InPrediction() )
+		{
+			// Only use these rules when in prediction.
+			filter.UsePredictionRules();
+		}
+		
+			EmitSound(filter, entindex(), "Default.Land");
+
+			if (!m_pSurfaceData)
+				return;
+
+			unsigned short stepSoundName = m_pSurfaceData->sounds.runStepLeft;
+			if (!stepSoundName)
+				return;
+
+			IPhysicsSurfaceProps *physprops = MoveHelper()->GetSurfaceProps();
+
+			const char *pRawSoundName = physprops->GetString(stepSoundName);
+
+			char szStep[512];
+
+			if (GetTeamNumber() == TEAM_TERRORIST)
+			{
+				V_snprintf(szStep, sizeof(szStep), "t_%s", pRawSoundName);
+			}
+			else
+			{
+				V_snprintf(szStep, sizeof(szStep), "ct_%s", pRawSoundName);
+			}
+
+			EmitSound(filter, entindex(), szStep);
+			
+	}
+
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------
+/**
+* Track the last time we were on a ladder, along with the ladder's normal and where we
+* were grabbing it, so we don't reach behind us and grab it again as we are trying to
+* dismount.
+*/
+void CCSPlayer::SurpressLadderChecks( const Vector& pos, const Vector& normal )
+{
+	m_ladderSurpressionTimer.Start( 1.0f );
+	m_lastLadderPos = pos;
+	m_lastLadderNormal = normal;
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------
+/**
+* Prevent us from re-grabbing the same ladder we were just on:
+*  - if the timer is elapsed, let us grab again
+*  - if the normal is different, let us grab
+*  - if the 2D pos is very different, let us grab, since it's probably a different ladder
+*/
+bool CCSPlayer::CanGrabLadder( const Vector& pos, const Vector& normal )
+{
+	if ( m_ladderSurpressionTimer.GetRemainingTime() <= 0.0f )
+	{
+		return true;
+	}
+
+	const float MaxDist = 64.0f;
+	if ( pos.AsVector2D().DistToSqr( m_lastLadderPos.AsVector2D() ) < MaxDist * MaxDist )
+	{
+		return false;
+	}
+
+	if ( normal != m_lastLadderNormal )
+	{
+		return true;
+	}
+
+	return false;
+}
+
+void CCSPlayer::SetAnimation( PLAYER_ANIM playerAnim )
+{
+	// In CS, its CPlayerAnimState object manages ALL the animation state.
+	return;
+}
+
+CWeaponCSBase* CCSPlayer::CSAnim_GetActiveWeapon()
+{
+	return GetActiveCSWeapon();
+}
+
+bool CCSPlayer::CSAnim_CanMove()
+{
+	return CanMove();
+}
+
+int CCSPlayer::GetCarryLimit( CSWeaponID weaponId )
+{
+	const CCSWeaponInfo *pWeaponInfo = GetWeaponInfo( weaponId );
+	if ( pWeaponInfo == nullptr )
+		return 0;
+
+	if ( pWeaponInfo->GetWeaponType() == WEAPONTYPE_GRENADE )
+	{
+		return GetAmmoDef()->MaxCarry( pWeaponInfo->GetPrimaryAmmoType( ), this );	// We still use player-stored ammo for grenades.
+	}
+
+	return 1;
+}
+
+extern ConVar mp_weapons_allow_zeus;
+extern ConVar mp_weapons_allow_typecount;
+AcquireResult::Type CCSPlayer::CanAcquire( CSWeaponID weaponId, AcquireMethod::Type acquireMethod, CEconItemView *pItem )
+{
+	const CCSWeaponInfo *pWeaponInfo = nullptr;
+	if ( weaponId == WEAPON_NONE && (pItem == nullptr || !pItem->IsValid()) )
+		return AcquireResult::InvalidItem;
+
+	if ( pItem && pItem->IsValid() )
+	{
+		weaponId = WeaponIdFromString( pItem->GetStaticData()->GetItemClass() );
+		if ( weaponId == WEAPON_NONE )
+			return AcquireResult::InvalidItem;
+
+		pWeaponInfo = GetWeaponInfo( weaponId );
+	}
+	else
+		pWeaponInfo = GetWeaponInfo( weaponId );
+
+	if ( pWeaponInfo == nullptr )
+		return AcquireResult::InvalidItem;
+
+	AcquireResult::Type nGamerulesResult = CSGameRules()->IsWeaponAllowed( pWeaponInfo, GetTeamNumber(), pItem );
+	if ( nGamerulesResult != AcquireResult::Allowed )
+	{
+		return nGamerulesResult;
+	}
+
+	int nType = pWeaponInfo->GetWeaponType( pItem );
+
+// 	if ( acquireMethod == AcquireMethod::Buy )
+// 	{
+// 		bool bFoundInLoadout = false;
+// 		int nStartSearchPos = LOADOUT_POSITION_INVALID;
+// 
+// 		if ( nType == WEAPONTYPE_PISTOL )
+// 			nStartSearchPos = LOADOUT_POSITION_SECONDARY0;
+// 		else if ( nType == WEAPONTYPE_SHOTGUN || nType == WEAPONTYPE_MACHINEGUN )
+// 			nStartSearchPos = LOADOUT_POSITION_HEAVY0;
+// 		else if ( nType == WEAPONTYPE_SUBMACHINEGUN )
+// 			nStartSearchPos = LOADOUT_POSITION_SMG0;
+// 		else if ( nType == WEAPONTYPE_RIFLE || nType == WEAPONTYPE_SNIPER_RIFLE )
+// 			nStartSearchPos = LOADOUT_POSITION_RIFLE0;
+// 
+// 		// make sure that we have this item equipped in our inventory loadout
+// 		for ( int i = nStartSearchPos; i < (nStartSearchPos+6); ++i )
+// 		{
+// 			CEconItemView *pItemView = Inventory()->GetItemInLoadout( GetTeamNumber(), i );
+// 			if ( pItemView && pItemView->GetStaticData() )
+// 			{
+// 				if ( pItemView == pItem || ( V_stricmp( pItemView->GetStaticData()->GetDefinitionName(), WeaponIdAsString( weaponId ) ) == 0 ) )
+// 				{
+// 					bFoundInLoadout = true;
+// 					break;
+// 				}
+// 			}
+// 		}
+// 		if ( nStartSearchPos != LOADOUT_POSITION_INVALID && !bFoundInLoadout )
+// 			return AcquireResult::NotAllowedForPurchase;
+// 	}
+
+	if ( nType == WEAPONTYPE_GRENADE )
+	{
+		if ( mp_buy_allow_grenades.GetBool() == false )
+		{
+			if ( acquireMethod == AcquireMethod::Buy )
+				return AcquireResult::NotAllowedForPurchase;
+		}
+
+		// make sure we aren't exceeding the ammo max for this grenade type
+		int carryLimitThisGrenade = GetCarryLimit( weaponId );
+
+		int carryLimitAllGrenades = ammo_grenade_limit_total.GetInt();
+
+		CBaseCombatWeapon* pGrenadeWeapon = ( pItem && pItem->IsValid() ) ? CSWeapon_OwnsThisType( pItem ) : Weapon_OwnsThisType( WeaponIdAsString( weaponId ) );
+		if ( pGrenadeWeapon != nullptr )
+		{
+			int nAmmoType = pGrenadeWeapon->GetPrimaryAmmoType();
+
+			if( nAmmoType != -1 )
+			{
+				int thisGrenadeCarried = GetAmmoCount(nAmmoType );
+				if ( thisGrenadeCarried >= carryLimitThisGrenade )
+				{
+					return AcquireResult::ReachedGrenadeTypeLimit;
+				}
+			}
+		}
+
+		// count how many grenades of any type the player is currently carrying
+		int allGrenadesCarried = 0;
+		for ( int i = 0; i < MAX_WEAPONS; ++i )
+		{
+			CWeaponCSBase* pWeapon = dynamic_cast<CWeaponCSBase*>( GetWeapon( i) );
+			if ( pWeapon != nullptr && pWeapon->IsKindOf( WEAPONTYPE_GRENADE ) )
+			{
+				int nAmmoType = pWeapon->GetPrimaryAmmoType();
+				if( nAmmoType != -1 )
+				{
+					allGrenadesCarried += GetAmmoCount( nAmmoType );
+				}
+			}
+		}
+
+		if ( allGrenadesCarried >= carryLimitAllGrenades )
+		{
+			return AcquireResult::ReachedGrenadeTotalLimit;
+		}
+
+		// don't allow players with an inferno spawning weapon to pick up another inferno spawning weapon
+		if ( weaponId == WEAPON_INCGRENADE )
+		{
+			 if ( Weapon_OwnsThisType( "weapon_molotov" ) )
+				 return AcquireResult::AlreadyOwned;
+		}
+		else if ( weaponId == WEAPON_MOLOTOV )
+		{
+			if ( Weapon_OwnsThisType( "weapon_incgrenade" ) )
+				return AcquireResult::AlreadyOwned;
+		}
+	}
+	else if ( nType == WEAPONTYPE_STACKABLEITEM )
+	{
+		int carryLimit = GetAmmoDef()->MaxCarry( pWeaponInfo->GetPrimaryAmmoType(), this );
+
+		CBaseCombatWeapon* pItemWeapon = ( pItem && pItem->IsValid() ) ? CSWeapon_OwnsThisType( pItem ) : Weapon_OwnsThisType( WeaponIdAsString( weaponId ) );
+		if ( pItemWeapon != nullptr )
+		{
+			int nAmmoType = pItemWeapon->GetPrimaryAmmoType();
+
+			if ( nAmmoType != -1 )
+			{
+				int thisCarried = GetAmmoCount( nAmmoType );
+				if ( thisCarried >= carryLimit )
+				{
+					return AcquireResult::ReachedGrenadeTypeLimit;
+				}
+			}
+		}
+	}
+	else if ( weaponId == ITEM_KEVLAR )
+	{
+		if ( mp_free_armor.GetBool() )
+		{
+			if ( acquireMethod == AcquireMethod::Buy )
+				return AcquireResult::NotAllowedForPurchase;
+		}
+
+		if ( ArmorValue() >= 100 )
+		{
+			return AcquireResult::AlreadyOwned;
+		}
+	}
+	else if ( weaponId == ITEM_ASSAULTSUIT )
+	{
+		if ( mp_free_armor.GetBool() )
+		{
+			if ( acquireMethod == AcquireMethod::Buy )
+				return AcquireResult::NotAllowedForPurchase;
+		}
+
+		if ( m_bHasHelmet && !m_bHasHeavyArmor /*&& ArmorValue() >= 100*/ )
+		{
+			return AcquireResult::AlreadyOwned;
+		}
+	}
+	else if ( weaponId == ITEM_HEAVYASSAULTSUIT )
+	{
+		if ( m_bHasHeavyArmor && ArmorValue() >= 200 )
+		{
+			return AcquireResult::AlreadyOwned;
+		}
+	}
+	else if ( weaponId == ITEM_DEFUSER || weaponId == ITEM_CUTTERS )
+	{
+		if ( CSGameRules() && (CSGameRules()->IsPlayingGunGameDeathmatch() || CSGameRules()->IsPlayingCoopGuardian()) )
+		{
+			if ( acquireMethod == AcquireMethod::Buy )
+				return AcquireResult::NotAllowedForPurchase;
+		}
+
+		if ( m_bHasDefuser )
+			return AcquireResult::AlreadyOwned;
+	}
+	else if ( weaponId == WEAPON_C4 )
+	{
+		// TODO[pmf]: Data drive this from the scripts
+		if ( acquireMethod == AcquireMethod::Buy )
+			return AcquireResult::NotAllowedForPurchase;
+	}
+	else if ( CSWeapon_OwnsThisType( pItem ) )	
+	{
+		return AcquireResult::AlreadyOwned;
+	}
+
+	// special case for limiting taser to classic casual; data drive this if it becomes more complex
+	if ( weaponId == WEAPON_TASER )
+	{
+		if ( !mp_weapons_allow_zeus.GetBool() )
+			return AcquireResult::NotAllowedForPurchase;
+		else if ( ( mp_weapons_allow_zeus.GetInt() > 0 ) && ( m_iWeaponPurchasesThisRound[ weaponId ] >= mp_weapons_allow_zeus.GetInt() ) )
+			return AcquireResult::AlreadyPurchased;
+		else
+			return AcquireResult::Allowed;
+	}
+
+	// additional constraints for purchasing weapons
+	if ( acquireMethod == AcquireMethod::Buy )
+	{
+		if ( pWeaponInfo->GetUsedByTeam( pItem ) != TEAM_UNASSIGNED && GetTeamNumber() != pWeaponInfo->GetUsedByTeam( pItem ) )
+		{
+			return AcquireResult::NotAllowedByTeam;
+		}
+
+		// special case for flashbangs - no limit
+		if ( weaponId == WEAPON_FLASHBANG )
+		{
+			return AcquireResult::Allowed;
+		}
+
+		// don't allow purchasing multiple grenades of a given type per round (even if the player throws the purchased one)
+		if ( pWeaponInfo->GetWeaponType() == WEAPONTYPE_GRENADE && !CSGameRules()->IsPlayingCooperativeGametype() )
+		{
+			// limit the number of purchases to one more than the number we are allowed to carry
+			int carryLimitThisGrenade = GetAmmoDef()->MaxCarry( pWeaponInfo->GetPrimaryAmmoType(), this ); // We still use player-stored ammo for grenades.
+
+			// for smoke grenade, we are only allow to buy exactly the amount we are allowed to carry, with other weapons, we can purchase one more than what we can carry per round
+			if ( weaponId == WEAPON_SMOKEGRENADE && carryLimitThisGrenade > 0 )
+				carryLimitThisGrenade--;
+
+			if ( m_iWeaponPurchasesThisRound[weaponId] > carryLimitThisGrenade )
+				return AcquireResult::AlreadyPurchased;
+		}
+
+		if ( weaponId == WEAPON_KNIFE || weaponId == WEAPON_KNIFE_GG )
+		{ 
+			return AcquireResult::NotAllowedForPurchase; 
+		}
+
+		// Validate that each player can buy only so many instances of same weapon type
+		if ( mp_weapons_allow_typecount.GetInt() == 0 )
+			return AcquireResult::NotAllowedForPurchase;
+		else if ( ( mp_weapons_allow_typecount.GetInt() > 0 ) && ( m_iWeaponPurchasesThisRound[weaponId] >= mp_weapons_allow_typecount.GetInt() ) )
+			return AcquireResult::AlreadyPurchased;
+	}
+
+	return AcquireResult::Allowed;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Returns weapon if already owns a weapon of this class
+//-----------------------------------------------------------------------------
+CWeaponCSBase* CCSPlayer::CSWeapon_OwnsThisType( CEconItemView *pItem ) const
+{
+	/** Removed for partner depot **/
+	return nullptr;
+}
+
+//************************************
+// Determine the current cash cost of a weapon for this particular player
+// Parameter: CSWeaponID weaponId
+//************************************
+int CCSPlayer::GetWeaponPrice( CSWeaponID weaponId, const CEconItemView *pWepView ) const
+{
+
+	if ( !pWepView && ( weaponId == WEAPON_NONE ) )
+		return -1;
+		
+	bool bHasFullArmor = (ArmorValue() >= 100);
+
+	// special case handling for reduced cost of Kevlar + helmet
+	if ( weaponId == ITEM_ASSAULTSUIT )
+	{
+		int iCost = ITEM_PRICE_ASSAULTSUIT;
+		if ( bHasFullArmor && !m_bHasHelmet )
+			iCost -= ITEM_PRICE_KEVLAR;
+		//else if ( m_bHasHelmet )
+		//	iCost = ITEM_PRICE_KEVLAR;
+
+		return iCost;
+	}
+
+	// special case handling for reduced cost of Kevlar
+	if ( weaponId == ITEM_KEVLAR )
+	{
+		int iCost = ITEM_PRICE_KEVLAR;
+
+		return iCost;
+	}
+	// special case handling for reduced cost of Kevlar
+	if ( weaponId == ITEM_HEAVYASSAULTSUIT )
+	{
+		int iCost = ITEM_PRICE_HEAVYASSAULTSUIT;
+
+		return iCost;
+	}
+
+//	if ( weaponId == ITEM_EXOSUIT )
+//	{
+//		int iCost = ITEM_PRICE_EXOSUIT;
+//
+//		return iCost;
+//	}
+
+	const CCSWeaponInfo* pWeaponInfo = GetWeaponInfo( weaponId );
+	return ( pWeaponInfo ) ? pWeaponInfo->GetWeaponPrice( pWepView ) : 0;
+}
+
+bool CCSPlayer::HasWeaponOfType( int nWeaponID ) const
+{
+	for ( int i = 0; i < WeaponCount(); ++i )
+	{		
+		CWeaponCSBase *pWeapon = dynamic_cast< CWeaponCSBase* > ( GetWeapon( i ) );
+
+		if ( pWeapon && pWeapon->GetCSWeaponID() == nWeaponID )
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+#if defined ( GAME_DLL ) || defined ( ENABLE_CLIENT_INVENTORIES_FOR_OTHER_PLAYERS )
+CEconItemView *CCSPlayer::GetEquippedItemInLoadoutSlotOrBaseItem( int iLoadoutSlot )
+{
+	CEconItemView *pBaseItem = CSInventoryManager()->GetBaseItemForTeam( GetTeamNumber(), iLoadoutSlot );
+
+	bool bRandomCosmetics = false;
+
+	// Bots and controlled bots always return the base item unless we're randomizing
+	if ( !bRandomCosmetics && ( IsBot() || IsControllingBot() ) )
+		return pBaseItem;
+
+	CEconItemView *pResult = Inventory()->GetInventoryItemByItemID( m_EquippedLoadoutItemIndices[iLoadoutSlot] );
+	if ( !pResult || !pResult->IsValid() )
+	{
+		pResult = pBaseItem;
+	}
+
+	return pResult;
+}
+#endif
+
+bool CCSPlayer::UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence )
+{
+	if ( !pWeaponStudioHdr || !pLayer )
+	{
+		if ( pLayer )
+			pLayer->m_nDispatchedDst = ACT_INVALID;
+		return false;
+	}	
+
+	if ( pLayer->m_pDispatchedStudioHdr != pWeaponStudioHdr || pLayer->m_nDispatchedSrc != iSequence || pLayer->m_nDispatchedDst >= pWeaponStudioHdr->GetNumSeq() )
+	{
+		pLayer->m_pDispatchedStudioHdr = pWeaponStudioHdr;
+		pLayer->m_nDispatchedSrc = iSequence;
+		if ( pWeaponStudioHdr )
+		{
+			const char *pszSeqName = GetSequenceName( iSequence );
+			
+#ifdef DEBUG
+			if ( V_stristr( pszSeqName, "default" ) )
+			{
+				contract_assert( false && "Warning: weapon is attempting to play its default sequence as a dispatched anim.\n" );
+			}
+#endif
+
+			// check if the weapon has a CT or T specific version of this sequence (denoted by a _t or ct suffix)
+			if ( GetTeamNumber() == TEAM_TERRORIST )
+			{
+				char pszLayerNameT[128];
+				V_sprintf_safe( pszLayerNameT, "%s_t", pszSeqName );
+				int nTeamSpecificSequenceIndex = pWeaponStudioHdr->LookupSequence( pszLayerNameT );
+				if ( nTeamSpecificSequenceIndex > 0 )
+				{
+					pLayer->m_nDispatchedDst = nTeamSpecificSequenceIndex;
+					return true;
+				}
+			}
+
+			pLayer->m_nDispatchedDst = pWeaponStudioHdr->LookupSequence( pszSeqName );
+		}
+		else
+		{
+			pLayer->m_nDispatchedDst = ACT_INVALID;
+		}
+	}
+	return (pLayer->m_nDispatchedDst > 0 );
+}
+
+bool CCSPlayer::UpdateLayerWeaponDispatch( CAnimationLayer *pLayer, int iSequence )
+{
+	CBaseCombatWeapon *pWeapon = GetActiveWeapon();
+	if ( pWeapon )
+	{
+		CBaseWeaponWorldModel *pWeaponWorldModel = pWeapon->GetWeaponWorldModel();
+		if ( pWeaponWorldModel )
+		{
+			return UpdateDispatchLayer( pLayer, pWeaponWorldModel->GetModelPtr(), iSequence );
+		}
+	}
+	return UpdateDispatchLayer( pLayer, nullptr, iSequence );
+}
+
+float CCSPlayer::GetLayerSequenceCycleRate( CAnimationLayer *pLayer, int iSequence ) 
+{ 
+	UpdateLayerWeaponDispatch( pLayer, iSequence );
+	if ( pLayer->m_nDispatchedDst != ACT_INVALID )
+	{
+		// weapon world model overrides rate
+		return GetSequenceCycleRate( pLayer->m_pDispatchedStudioHdr, pLayer->m_nDispatchedDst );
+	}
+	return BaseClass::GetLayerSequenceCycleRate( pLayer, iSequence );
+}
+
+//--------------------------------------------------------------------------------------------------------------
+
+static constexpr auto MATERIAL_NAME_LENGTH = 16;
+
+//--------------------------------------------------------------------------------------------------------------
+
+class CFootstepControl : public CBaseTrigger
+{
+	[[= ks::reflect::NetTable{ .name = "DT_FootstepControl" } ]]
+	static constexpr bool ks_class = true;
+
+public:
+	DECLARE_CLASS( CFootstepControl, CBaseTrigger );
+	DECLARE_CLIENTCLASS();
+
+	CFootstepControl( void );
+	~CFootstepControl();
+
+	[[= ks::reflect::Net{} ]] char m_source[MATERIAL_NAME_LENGTH];
+	[[= ks::reflect::Net{} ]] char m_destination[MATERIAL_NAME_LENGTH];
+};
+
+IMPLEMENT_REFLECT_CLIENTCLASS( CFootstepControl, DT_FootstepControl, CFootstepControl )
+
+std::vector< CFootstepControl * > s_footstepControllers;
+
+CFootstepControl::CFootstepControl( void )
+{
+	s_footstepControllers.push_back( this );
+}
+
+CFootstepControl::~CFootstepControl()
+{
+	ks::erase_first( s_footstepControllers, this );
+}
+
+surfacedata_t * CCSPlayer::GetFootstepSurface( const Vector &origin, const char *surfaceName )
+{
+	for ( int i=0; i<std::ssize( s_footstepControllers ); ++i )
+	{
+		CFootstepControl *control = s_footstepControllers[i];
+
+		if ( FStrEq( control->m_source, surfaceName ) )
+		{
+			if ( control->CollisionProp()->IsPointInBounds( origin ) )
+			{
+				return physprops->GetSurfaceData( physprops->GetSurfaceIndex( control->m_destination ) );
+			}
+		}
+	}
+
+	return physprops->GetSurfaceData( physprops->GetSurfaceIndex( surfaceName ) );
+}

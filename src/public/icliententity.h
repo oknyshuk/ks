@@ -6,6 +6,8 @@
 #include "iclientnetworkable.h"
 #include "iclientthinkable.h"
 #include "string_t.h"
+import ks.math.compressed_vector;
+import ks.math.vector;
 
 struct Ray_t;
 class CGameTrace;

@@ -5,9 +5,14 @@
 typedef unsigned char byte;
 
 import std;
-import ks.core;
-import ks.math;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "keyframe.h"
 #include "rope_shared.h"
 

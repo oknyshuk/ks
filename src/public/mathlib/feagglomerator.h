@@ -23,7 +23,12 @@
 // Also, it's cleaner (but slower) to use heaps and update them (by percolating the corresponding elements when clusters change connectivity)
 
 import std;
-import ks.tier1;
+import ks.core.platform;
+import ks.math.aabb;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 class CFeAgglomerator
 {

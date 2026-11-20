@@ -4,7 +4,15 @@
 
 // Purpose: client sound i/o functions
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.logging;
+import ks.core.numeric;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.keyvalues;
 #include "datamap.h"
 import std;
 #include "soundflags.h"

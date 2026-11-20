@@ -33,7 +33,12 @@
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
 #include <Jolt/Physics/Constraints/SliderConstraint.h>
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "bspfile.h"
 #include "cmodel.h"
 #include "vphysics/collision_set.h"

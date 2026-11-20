@@ -17,7 +17,15 @@
 #include <Jolt/Physics/Collision/Shape/DecoratedShape.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.color;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
 #include "gametrace.h"
 
 inline constexpr float InchesToMetres = 0.0254f;

@@ -3,7 +3,9 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
 #include "cmodel.h"
 #include "const.h"
 #include "iserverentity.h"

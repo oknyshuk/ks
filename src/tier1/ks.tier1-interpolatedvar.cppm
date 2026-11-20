@@ -2,13 +2,19 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:interpolatedvar;
+export module ks.tier1.interpolatedvar;
 
 import std;
-import ks.math;
-export import :rangecheckedvar;
-export import :lerp_functions;
-export import :convar;
+import ks.core.basetypes;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.rangecheckedvar;
+export import ks.tier1.lerp_functions;
+export import ks.tier1.convar;
 
 export extern "C++" {
 
@@ -107,7 +113,8 @@ private:
 	static float s_flLastTimeStamp;
 };
 
-extern ConVar cl_extrapolate_amount;
+// The game client's cl_extrapolate_amount; the client sets it when it initializes (it owns the ConVar).
+inline const ConVar *g_pExtrapolateAmount = nullptr;
 
 template< class T >
 inline T ExtrapolateInterpolatedVarType( const T &oldVal, const T &newVal, float divisor, float flExtrapolationAmount )
@@ -979,7 +986,7 @@ inline void CInterpolatedVarArrayBase<Type, IS_ARRAY>::DebugInterpolate( Type *p
 			// The End
 
 			// Use the velocity here (extrapolate up to 1/4 of a second).
-			_Extrapolate( pOut, &history[realOlder], &history[info.newer], currentTime - interpolation_amount, cl_extrapolate_amount.GetFloat() );
+			_Extrapolate( pOut, &history[realOlder], &history[info.newer], currentTime - interpolation_amount, g_pExtrapolateAmount->GetFloat() );
 		}
 		else
 		{
@@ -1036,7 +1043,7 @@ inline int CInterpolatedVarArrayBase<Type, IS_ARRAY>::Interpolate( float current
 			// The End
 
 			// Use the velocity here (extrapolate up to 1/4 of a second).
-			_Extrapolate( m_pValue, &history[realOlder], &history[info.newer], currentTime - interpolation_amount, cl_extrapolate_amount.GetFloat() );
+			_Extrapolate( m_pValue, &history[realOlder], &history[info.newer], currentTime - interpolation_amount, g_pExtrapolateAmount->GetFloat() );
 		}
 		else
 		{
@@ -1124,10 +1131,10 @@ void CInterpolatedVarArrayBase<Type, IS_ARRAY>::GetDerivative_SmoothVelocity( Ty
 		// Now ramp it to zero after cl_extrapolate_amount..
 		float flDestTime = currentTime - m_InterpolationAmount;
 		float diff = flDestTime - history[info.newer].flChangeTime;
-		diff = clamp( diff, 0, cl_extrapolate_amount.GetFloat() * 2 );
-		if ( diff > cl_extrapolate_amount.GetFloat() )
+		diff = clamp( diff, 0, g_pExtrapolateAmount->GetFloat() * 2 );
+		if ( diff > g_pExtrapolateAmount->GetFloat() )
 		{
-			float scale = 1 - (diff - cl_extrapolate_amount.GetFloat()) / cl_extrapolate_amount.GetFloat();
+			float scale = 1 - (diff - g_pExtrapolateAmount->GetFloat()) / g_pExtrapolateAmount->GetFloat();
 			for ( int i=0; i < m_nMaxCount; i++ )
 			{
 				pOut[i] *= scale;

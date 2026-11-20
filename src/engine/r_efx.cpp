@@ -12,6 +12,12 @@
 #include "decal.h"
 #include "client.h"
 #include "facade/ivefx.inl"
+import ks.core.basetypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.transform;
+import ks.math.vector;
+import ks.tier1.createinterface;
 
 // Effects API object.
 static CVEfx efx;

@@ -330,3 +330,13 @@ void CMatchFramework::SetCurrentMatchSession( IMatchSessionInternal *pNewMatchSe
 
 //-----------------------------------------------------------------------------
 #include "facade/imatchframework.inl"
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.tier1.convar;
+import ks.tier1.fmtstr;
+import ks.tier1.iappsystem;
+import ks.tier1.iconvar;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;

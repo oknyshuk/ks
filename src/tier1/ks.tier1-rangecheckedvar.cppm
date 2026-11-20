@@ -2,11 +2,15 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:rangecheckedvar;
+export module ks.tier1.rangecheckedvar;
 
 import std;
-import ks.math;
-export import :reflect_wirevar;
+import ks.core.basetypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.reflect_wirevar;
 
 export extern "C++" {
 
@@ -29,8 +33,10 @@ inline void RangeCheck( const Vector &value, int minValue, int maxValue )
 
 // The wire payload is the single data member this class declares; see reflect_wirevar.h.
 template< class T, int minValue, int maxValue, int startValue >
-class [[= ks::reflect::WireVar{} ]] CRangeCheckedVar
+class CRangeCheckedVar
 {
+	[[= ks::reflect::WireVar{} ]] static constexpr bool ks_class = true;
+
 public:
 
 	inline CRangeCheckedVar()

@@ -17,6 +17,7 @@
 import std.compat;
 
 #include <d3d9.h>
-import ks.core;
+import ks.platform;
+import ks.simd;
 
 #pragma pop_macro("ARRAYSIZE")

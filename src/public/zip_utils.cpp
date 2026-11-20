@@ -8,17 +8,8 @@
 #endif
 #if defined(CLIENT_DLL)
 import std;
-import ks.core;
-import ks.tier1;
-import ks.vstdlib;
 #include "const.h"
 #include "string_t.h"
-#include "predictableid.h"
-#include "predictable_entity.h"
-#include "cdll_util.h"
-#include "util_shared.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
 #endif
 #define INVALID_HANDLE_VALUE (void *)0
 #define FILE_BEGIN k_nSeekSet
@@ -26,6 +17,27 @@ import ks.vstdlib;
 import ks.platform;
 #include "zip_utils.h"
 #include "zip_uncompressed.h"
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.mathlib;
+import ks.platform;
+import ks.simd;
+import ks.tier1.appinstance;
+import ks.tier1.byte_reader;
+import ks.tier1.byte_writer;
+import ks.tier1.checksum_crc;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.tier1.vector_ops;
 
 
 // Data descriptions for byte swapping - only needed

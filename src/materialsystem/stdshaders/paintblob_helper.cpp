@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2007 Valve Corporation
 
-import ks.tier1;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
 #include "BaseVSShader.h"
 #include "paintblob_helper.h"
 /*

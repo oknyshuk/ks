@@ -6,7 +6,11 @@
 
 // Externs the logging channel
 import std;
-import ks.core;
+import ks.core.color;
+import ks.core.logging;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 #include "soundservice.h"
 #include "sound.h"
 

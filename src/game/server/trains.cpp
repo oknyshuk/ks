@@ -1,62 +1,83 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-// Purpose: Spawn, think, and touch functions for trains, etc.
-
-#include "string_t.h"
-#include "vphysics_interface.h"
-#include "const.h"
-#include "edict.h"
+module;
+#include <math.h>
+#include <stdlib.h>
+#include <time.h>
+#include "declare_class.h"
 #include "eiface.h"
-#include "iserverentity.h"
-#include "dt_send.h"
-#include "shareddefs.h"
-#include "ehandle.h"
-#include "datamap.h"
-#include "util.h"
-#include "predictable_entity.h"
-#include "variant_t.h"
-#include "takedamageinfo.h"
-#include "touchlink.h"
-#include "groundlink.h"
 #include "networkvar.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
-#include "basetoggle.h"
-#include "igameevents.h"
-#include "precache_register.h"
-#include "baseanimating.h"
-#include "basecombatweapon.h"
-#include "basecombatcharacter.h"
-#include "gamerules.h"
-#include "entitylist.h"
-#include "physics.h"
-#include "ndebugoverlay.h"
-#include "recipientfilter.h"
-#include "npcevent.h"
+#include "reflect.h"
+#include "responserules/response_types.h"
+#include "server_class.h"
+#include "studio.h"
+#include "vphysics/friction.h"
+#include "vphysics_interface.h"
+#include "vscript/ivscript.h"
+#include "baseentity.h"
+#include "entity_dispatch.h"
+#include "entity_dispatch_list.h"
+#include "entity_kinds_dump.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
-#include "reflect_annotations.h"
-#include "ai_basenpc.h"
-#include "trains.h"
-#include "ndebugoverlay.h"
-#include "entitylist.h"
-#include "engine/IEngineSound.h"
-#include "soundenvelope.h"
-#include "physics_npc_solver.h"
-#include "vphysics/friction.h"
-#include "hierarchy.h"
+#include "shareddefs.h"
+#include "util.h"
+#include "vscript_game.h"
 #include "vscript_shared.h"
+module ks.server;
+
+import std;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.tslist;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.exprevaluator;
+import ks.tier1.interfaces;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.strtools;
+import :fish;
+import :vscript;
+import :sharedvar;
+import :baseentity;
+import :player;
+import :nav_4;
+import :entity_dispatch;
+import :entity_kind;
+import :entity_2;
+import ks.game.shareddefs;
+import :cstrike15.bot.bot;
+import :entityutil;
+import ks.game.gamemovement;
+import ks.game.mapentities_shared;
+
+class CBaseEntity;
+class CTakeDamageInfo;
+struct inputdata_t;
+
+using namespace ::ks::reflect;
+
+// Purpose: Spawn, think, and touch functions for trains, etc.
 
 static void PlatSpawnInsideTrigger(edict_t *pevPlatform);
 
-constexpr auto SF_PLAT_TOGGLE = 0x0001;
+static constexpr auto SF_PLAT_TOGGLE = 0x0001;
 
-class [[= ks::reflect::KeyFrom<"m_flLip", ks::reflect::Key{ .name = "lip" } >{} ]]
-      [[= ks::reflect::KeyFrom<"m_flWait", ks::reflect::Key{ .name = "wait" } >{} ]]
-      [[= ks::reflect::KeyFrom<"m_flHeight", ks::reflect::Key{ .name = "height" } >{} ]]
-      CBasePlatTrain : public CBaseToggle
+class CBasePlatTrain : public CBaseToggle
 {
+	[[= ks::reflect::KeyFrom<"m_flLip", ks::reflect::Key{ .name = "lip" } >{} ]]
+	[[= ks::reflect::KeyFrom<"m_flWait", ks::reflect::Key{ .name = "wait" } >{} ]]
+	[[= ks::reflect::KeyFrom<"m_flHeight", ks::reflect::Key{ .name = "height" } >{} ]]
+	static constexpr bool ks_class = true;
+
 	DECLARE_CLASS( CBasePlatTrain, CBaseToggle );
 
 public:
@@ -85,7 +106,6 @@ public:
 
 IMPLEMENT_REFLECT_DATAMAP( CBasePlatTrain )
 
-
 bool CBasePlatTrain::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "rotation"))
@@ -99,7 +119,6 @@ bool CBasePlatTrain::KeyValue_Impl( const char *szKeyName, const char *szValue )
 
 	return true;
 }
-
 
 CBasePlatTrain::~CBasePlatTrain()
 {
@@ -145,7 +164,6 @@ void CBasePlatTrain::Precache_Impl( void )
 
 }
 
-
 class CFuncPlat : public CBasePlatTrain
 {
 	DECLARE_CLASS( CFuncPlat, CBasePlatTrain );
@@ -178,9 +196,7 @@ private:
 	string_t m_sNoise;
 };
 
-
 IMPLEMENT_REFLECT_DATAMAP( CFuncPlat )
-
 
 LINK_ENTITY_TO_CLASS( func_plat, CFuncPlat );
 
@@ -241,7 +257,6 @@ void CFuncPlat::Setup( void )
 	}
 }
 
-
 void CFuncPlat::Precache_Impl( )
 {
 	BaseClass::Precache_Impl();
@@ -252,7 +267,6 @@ void CFuncPlat::Precache_Impl( )
 		PlatSpawnInsideTrigger( edict() );
 	}
 }
-
 
 void CFuncPlat::Spawn_Impl( )
 {
@@ -281,7 +295,6 @@ bool CFuncPlat::CreateVPhysics_Impl()
 	return true;
 }
 
-
 static void PlatSpawnInsideTrigger(edict_t* pevPlatform)
 {
 	// old code: //GetClassPtr( (CPlatTrigger *)NULL)->SpawnInsideTrigger( GetClassPtr( (CFuncPlat *)pevPlatform ) );
@@ -289,7 +302,6 @@ static void PlatSpawnInsideTrigger(edict_t* pevPlatform)
 	plattrig->SpawnInsideTrigger( (CFuncPlat *)GetContainingEntity( pevPlatform ) );
 }
 		
-
 //
 // Create a trigger entity for a platform.
 //
@@ -320,7 +332,6 @@ void CPlatTrigger::SpawnInsideTrigger( CFuncPlat *pPlatform )
 	UTIL_SetSize ( this, vecTMin, vecTMax );
 }
 
-
 //
 // When the platform's trigger field is touched, the platform ???
 //
@@ -340,8 +351,6 @@ void CPlatTrigger::Touch_Impl( CBaseEntity *pOther )
 	else if (m_pPlatform->m_toggle_state == TS_AT_TOP)
 		m_pPlatform->SetMoveDoneTime( 1 );// delay going down
 }
-
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Used when a platform is the target of a button.
@@ -413,7 +422,6 @@ void CFuncPlat::PlatUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 	}
 }
 
-
 //
 // Platform is at top, now starts moving down.
 //
@@ -426,7 +434,6 @@ void CFuncPlat::GoDown( void )
 	SetMoveDone(&CFuncPlat::CallHitBottom);
 	LinearMove(m_vecPosition2, m_flSpeed);
 }
-
 
 //
 // Platform has hit bottom.  Stops and waits forever.
@@ -452,7 +459,6 @@ void CFuncPlat::HitBottom( void )
 	m_toggle_state = TS_AT_BOTTOM;
 }
 
-
 //
 // Platform is at bottom, now starts moving up
 //
@@ -465,7 +471,6 @@ void CFuncPlat::GoUp( void )
 	SetMoveDone(&CFuncPlat::CallHitTop);
 	LinearMove(m_vecPosition1, m_flSpeed);
 }
-
 
 //
 // Platform has hit top.  Pauses, then starts back down again.
@@ -498,7 +503,6 @@ void CFuncPlat::HitTop( void )
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Called when we are blocked.
 //-----------------------------------------------------------------------------
@@ -526,7 +530,6 @@ void CFuncPlat::Blocked_Impl( CBaseEntity *pOther )
 	}
 }
 
-
 class CFuncPlatRot : public CFuncPlat
 {
 	DECLARE_CLASS( CFuncPlatRot, CFuncPlat );
@@ -549,7 +552,6 @@ LINK_ENTITY_TO_CLASS( func_platrot, CFuncPlatRot );
 
 IMPLEMENT_REFLECT_DATAMAP( CFuncPlatRot )
 
-
 void CFuncPlatRot::SetupRotation( void )
 {
 	if ( m_vecFinalAngle.x != 0 )		// This plat rotates too!
@@ -569,7 +571,6 @@ void CFuncPlatRot::SetupRotation( void )
 	}
 }
 
-
 void CFuncPlatRot::Spawn_Impl( void )
 {
 	BaseClass::Spawn_Impl();
@@ -582,7 +583,6 @@ void CFuncPlatRot::GoDown( void )
 	RotMove( m_start, GetMoveDoneTime() );
 }
 
-
 //
 // Platform has hit bottom.  Stops and waits forever.
 //
@@ -593,7 +593,6 @@ void CFuncPlatRot::HitBottom( void )
 	SetLocalAngles( m_start );
 }
 
-
 //
 // Platform is at bottom, now starts moving up
 //
@@ -602,7 +601,6 @@ void CFuncPlatRot::GoUp( void )
 	BaseClass::GoUp();
 	RotMove( m_end, GetMoveDoneTime() );
 }
-
 
 //
 // Platform has hit top.  Pauses, then starts back down again.
@@ -613,7 +611,6 @@ void CFuncPlatRot::HitTop( void )
 	SetLocalAngularVelocity( vec3_angle );
 	SetLocalAngles( m_end );
 }
-
 
 void CFuncPlatRot::RotMove( QAngle &destAngle, float time )
 {
@@ -629,7 +626,6 @@ void CFuncPlatRot::RotMove( QAngle &destAngle, float time )
 		SetMoveDoneTime( 1 );
 	}
 }
-
 
 class CFuncTrain : public CBasePlatTrain
 {
@@ -670,7 +666,6 @@ public:
 
 LINK_ENTITY_TO_CLASS( func_train, CFuncTrain );
 
-
 IMPLEMENT_REFLECT_DATAMAP( CFuncTrain )
 
 //-----------------------------------------------------------------------------
@@ -687,7 +682,6 @@ void CFuncTrain::Blocked_Impl( CBaseEntity *pOther )
 	//Inflict damage
 	pOther->TakeDamage( CTakeDamageInfo( this, this, m_flBlockDamage, DMG_CRUSH ) );
 }
-
 
 void CFuncTrain::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
@@ -787,7 +781,6 @@ void CFuncTrain::Wait( void )
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Advances the train to the next path corner on the path.
 //-----------------------------------------------------------------------------
@@ -861,7 +854,6 @@ void CFuncTrain::Next( void )
 		LinearMove ( pTarg->GetLocalOrigin() - CollisionProp()->OBBCenter(), m_flSpeed );
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Called after all the entities spawn.
@@ -961,12 +953,10 @@ void CFuncTrain::Spawn_Impl( void )
 	}
 }
 
-
 void CFuncTrain::Precache_Impl( void )
 {
 	BaseClass::Precache_Impl();
 }
-
 
 void CFuncTrain::OnRestore_Impl( void )
 {
@@ -982,7 +972,6 @@ void CFuncTrain::OnRestore_Impl( void )
 	SetupTarget();
 }
 
-
 void CFuncTrain::InputToggle( inputdata_t &data )
 {
 	//If we've been waiting to be retriggered, move to the next destination
@@ -996,18 +985,15 @@ void CFuncTrain::InputToggle( inputdata_t &data )
 	}
 }
 
-
 void CFuncTrain::InputStart( inputdata_t &data )
 {
 	Start();
 }
 
-
 void CFuncTrain::InputStop( inputdata_t &data )
 {
 	Stop();
 }
-
 
 void CFuncTrain::Start( void )
 {
@@ -1019,7 +1005,6 @@ void CFuncTrain::Start( void )
 		Next();
 	}
 }
-
 
 void CFuncTrain::Stop( void )
 {
@@ -1069,16 +1054,11 @@ LINK_ENTITY_TO_CLASS( func_tracktrain, CFuncTrackTrain );
 //-----------------------------------------------------------------------------
 IMPLEMENT_REFLECT_SERVERCLASS( CFuncTrackTrain, DT_FuncTrackTrain )
 
-
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
 CFuncTrackTrain::CFuncTrackTrain()
 {
-#ifdef _DEBUG
-	m_controlMins.Init();
-	m_controlMaxs.Init();
-#endif
 
 	// These defaults match old func_tracktrains. Changing these defaults would
 	// require a vmf_tweak of older content to keep it from breaking.
@@ -1087,7 +1067,6 @@ CFuncTrackTrain::CFuncTrackTrain()
 	m_lastBlockPos.Init();
 	m_lastBlockTick = gpGlobals->tickcount;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1116,7 +1095,6 @@ int CFuncTrackTrain::DrawDebugTextOverlays_Impl( void )
 	return nOffset;
 }
 
-
 void CFuncTrackTrain::DrawDebugGeometryOverlays_Impl()
 {
 	BaseClass::DrawDebugGeometryOverlays_Impl();
@@ -1128,7 +1106,6 @@ void CFuncTrackTrain::DrawDebugGeometryOverlays_Impl()
 		NDebugOverlay::Box( out, -Vector(4,4,4),Vector(4,4,4), 255, 0, 255, 0, 0);
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1148,7 +1125,6 @@ bool CFuncTrackTrain::KeyValue_Impl( const char *szKeyName, const char *szValue 
 	return true;
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Input handler that stops the train.
 //-----------------------------------------------------------------------------
@@ -1156,7 +1132,6 @@ void CFuncTrackTrain::InputStop( inputdata_t &inputdata )
 {
 	Stop();
 }
-
 
 //------------------------------------------------------------------------------
 // Purpose: Input handler that starts the train moving.
@@ -1167,7 +1142,6 @@ void CFuncTrackTrain::InputResume( inputdata_t &inputdata )
 	Start();
 }
 
-
 //------------------------------------------------------------------------------
 // Purpose: Input handler that reverses the trains current direction of motion.
 //------------------------------------------------------------------------------
@@ -1177,7 +1151,6 @@ void CFuncTrackTrain::InputReverse( inputdata_t &inputdata )
 	SetSpeed( m_flSpeed );
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Returns whether we are travelling forward along our path.
 //-----------------------------------------------------------------------------
@@ -1185,7 +1158,6 @@ bool CFuncTrackTrain::IsDirForward()
 {
 	return ( m_dir == 1 );
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Sets whether we go forward or backward along our path.
@@ -1214,7 +1186,6 @@ void CFuncTrackTrain::SetDirForward( bool bForward )
 	}
 }
 
-
 //------------------------------------------------------------------------------
 // Purpose: Input handler that starts the train moving.
 //------------------------------------------------------------------------------
@@ -1223,7 +1194,6 @@ void CFuncTrackTrain::InputStartForward( inputdata_t &inputdata )
 	SetDirForward( true );
 	SetSpeed( m_maxSpeed );
 }
-
 
 //------------------------------------------------------------------------------
 // Purpose: Input handler that starts the train moving.
@@ -1234,7 +1204,6 @@ void CFuncTrackTrain::InputStartBackward( inputdata_t &inputdata )
 	SetSpeed( m_maxSpeed );
 }
 
-
 //------------------------------------------------------------------------------
 // Purpose: Starts the train moving.
 //------------------------------------------------------------------------------
@@ -1243,7 +1212,6 @@ void CFuncTrackTrain::Start( void )
 	m_OnStart.FireOutput(this,this);
 	Next();
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Toggles the train between moving and not moving.
@@ -1259,7 +1227,6 @@ void CFuncTrackTrain::InputToggle( inputdata_t &inputdata )
 		SetSpeed( 0 );
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Handles player use so players can control the speed of the train.
@@ -1287,7 +1254,6 @@ void CFuncTrackTrain::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, U
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Input handler that sets the speed of the train.
 // Input  : Float speed from 0 to max speed, in units per second.
@@ -1296,7 +1262,6 @@ void CFuncTrackTrain::InputSetSpeedReal( inputdata_t &inputdata )
 {
 	SetSpeed( clamp( inputdata.value.Float(), 0, m_maxSpeed ) );
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Input handler that sets the speed of the train.
@@ -1518,7 +1483,6 @@ void CFuncTrackTrain::SetSpeed( float flSpeed, bool bAccel /*= false */  )
 	DevMsg( 2, "TRAIN(%s), speed to %.2f\n", GetDebugName(), m_flSpeed );
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Stops the train.
 //-----------------------------------------------------------------------------
@@ -1642,11 +1606,9 @@ void CFuncTrackTrain::Blocked_Impl( CBaseEntity *pOther )
 	pOther->TakeDamage( CTakeDamageInfo( this, this, m_flBlockDamage, DMG_CRUSH ) );
 }
 
-
 extern void FixupAngles( QAngle &v );
 
-constexpr auto TRAIN_MAXSPEED = 1000; // approx max speed for sound pitch calculation
-
+static constexpr auto TRAIN_MAXSPEED = 1000; // approx max speed for sound pitch calculation
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1682,7 +1644,6 @@ void CFuncTrackTrain::SoundStop( void )
 
 	m_bSoundPlaying = false;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Update pitch based on speed, start sound if not playing.
@@ -1788,7 +1749,6 @@ void CFuncTrackTrain::SoundUpdate( void )
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : *pNode - 
@@ -1837,7 +1797,6 @@ void CFuncTrackTrain::ArriveAtNode( CPathTrack *pNode )
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Controls how the train accelerates as it moves along the path.
 //-----------------------------------------------------------------------------
@@ -1845,7 +1804,6 @@ TrainVelocityType_t CFuncTrackTrain::GetTrainVelocityType()
 {
 	return m_eVelocityType;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1937,7 +1895,6 @@ void CFuncTrackTrain::UpdateTrainVelocity( CPathTrack *pPrev, CPathTrack *pNext,
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Controls how the train blends angles as it moves along the path.
 //-----------------------------------------------------------------------------
@@ -1945,7 +1902,6 @@ TrainOrientationType_t CFuncTrackTrain::GetTrainOrientationType()
 {
 	return m_eOrientationType;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1982,7 +1938,6 @@ void CFuncTrackTrain::UpdateTrainOrientation( CPathTrack *pPrev, CPathTrack *pNe
 		}
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Adjusts our angles as we hit each path track. This is for support of
@@ -2036,7 +1991,6 @@ void CFuncTrackTrain::UpdateOrientationAtPathTracks( CPathTrack *pPrev, CPathTra
 
 	DoUpdateOrientation( curAngles, angles, flInterval );
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Blends our angles using one of two orientation blending types.
@@ -2121,7 +2075,6 @@ void CFuncTrackTrain::UpdateOrientationBlend( TrainOrientationType_t eOrientatio
 	DoUpdateOrientation( GetLocalAngles(), angNew, flInterval );
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Sets our angular velocity to approach the target angles over the given interval.
 //-----------------------------------------------------------------------------
@@ -2147,7 +2100,6 @@ void CFuncTrackTrain::DoUpdateOrientation( const QAngle &curAngles, const QAngle
 	{
 		vz = 0;
 	}
-	
 	
 	// HACKHACK: Clamp really small angular deltas to avoid rotating movement on things
 	// that are close enough
@@ -2191,7 +2143,6 @@ void CFuncTrackTrain::DoUpdateOrientation( const QAngle &curAngles, const QAngle
 	SetLocalAngularVelocity( vecAngVel );
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : pTeleport - 
@@ -2221,7 +2172,6 @@ void CFuncTrackTrain::TeleportToPathTrack( CPathTrack *pTeleport )
 	Teleport( &pTeleport->GetLocalOrigin(), &nextAngles, nullptr );
 	SetLocalAngularVelocity( vec3_angle );
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Advances the train to the next path corner on the path.
@@ -2395,7 +2345,6 @@ void CFuncTrackTrain::FirePassInputs( CPathTrack *pStart, CPathTrack *pEnd, bool
 	}
 }
 
-
 void CFuncTrackTrain::DeadEnd( void )
 {
 	// Fire the dead-end target if there is one
@@ -2456,7 +2405,6 @@ void CFuncTrackTrain::DeadEnd( void )
 	}
 }
 
-
 void CFuncTrackTrain::SetControls( CBaseEntity *pControls )
 {
 	Vector offset = pControls->GetLocalOrigin();
@@ -2464,7 +2412,6 @@ void CFuncTrackTrain::SetControls( CBaseEntity *pControls )
 	m_controlMins = pControls->WorldAlignMins() + offset;
 	m_controlMaxs = pControls->WorldAlignMaxs() + offset;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns true if the entity's origin is within the controls region.
@@ -2496,7 +2443,6 @@ bool CFuncTrackTrain::OnControls_Impl( CBaseEntity *pTest )
 	return false;
 }
 
-
 void CFuncTrackTrain::Find( void )
 {
 	m_ppath = (CPathTrack *)gEntList.FindEntityByName( nullptr, m_target );
@@ -2512,8 +2458,6 @@ void CFuncTrackTrain::Find( void )
 		m_ppath = nullptr;
 		return;
 	}
-
-
 
 	Vector nextPos = m_ppath->GetLocalOrigin();
 	Vector look = nextPos;
@@ -2546,7 +2490,6 @@ void CFuncTrackTrain::Find( void )
 		SoundUpdate();
 	}
 }
-
 
 void CFuncTrackTrain::NearestPath( void )
 {
@@ -2605,7 +2548,6 @@ void CFuncTrackTrain::OnRestore_Impl( void )
 	}
 }
 
-
 CFuncTrackTrain *CFuncTrackTrain::Instance( edict_t *pent )
 { 
 	CBaseEntity *pEntity = CBaseEntity::Instance( pent );
@@ -2613,7 +2555,6 @@ CFuncTrackTrain *CFuncTrackTrain::Instance( edict_t *pent )
 		return (CFuncTrackTrain *)pEntity;
 	return nullptr;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -2679,13 +2620,11 @@ void CFuncTrackTrain::Spawn_Impl( void )
 	CreateVPhysics();
 }
 
-
 bool CFuncTrackTrain::CreateVPhysics_Impl( void )
 {
 	VPhysicsInitShadow( false, false );
 	return true;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Precaches the train sounds.
@@ -2734,8 +2673,6 @@ void CFuncTrackTrain::MoveDone_Impl()
 	BaseClass::MoveDone_Impl();
 }
 
-
-
 //-----------------------------------------------------------------------------
 // Purpose: Defines the volume of space that the player must stand in to
 //			control the train
@@ -2749,9 +2686,7 @@ public:
 
 };
 
-
 LINK_ENTITY_TO_CLASS( func_traincontrols, CFuncTrainControls );
-
 
 void CFuncTrainControls::Find( void )
 {
@@ -2774,7 +2709,6 @@ void CFuncTrainControls::Find( void )
 	SetThink( nullptr );
 }
 
-
 void CFuncTrainControls::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
@@ -2782,21 +2716,17 @@ void CFuncTrainControls::Spawn_Impl( void )
 	SetModel( STRING( GetModelName() ) );
 	AddEffects( EF_NODRAW );
 
-	
 	SetThink( &CFuncTrainControls::Find );
 	SetNextThink( gpGlobals->curtime );
 }
 
-
-constexpr auto SF_TRACK_ACTIVATETRAIN = 0x00000001;
-constexpr auto SF_TRACK_RELINK = 0x00000002;
-constexpr auto SF_TRACK_ROTMOVE = 0x00000004;
-constexpr auto SF_TRACK_STARTBOTTOM = 0x00000008;
-constexpr auto SF_TRACK_DONT_MOVE = 0x00000010;
-
+static constexpr auto SF_TRACK_ACTIVATETRAIN = 0x00000001;
+static constexpr auto SF_TRACK_RELINK = 0x00000002;
+static constexpr auto SF_TRACK_ROTMOVE = 0x00000004;
+static constexpr auto SF_TRACK_STARTBOTTOM = 0x00000008;
+static constexpr auto SF_TRACK_DONT_MOVE = 0x00000010;
 
 typedef enum { TRAIN_SAFE, TRAIN_BLOCKING, TRAIN_FOLLOWING } TRAIN_CODE;
-
 
 //-----------------------------------------------------------------------------
 // This entity is a rotating/moving platform that will carry a train to a new track.
@@ -2847,7 +2777,6 @@ LINK_ENTITY_TO_CLASS( func_trackchange, CFuncTrackChange );
 
 IMPLEMENT_REFLECT_DATAMAP( CFuncTrackChange )
 
-
 void CFuncTrackChange::Spawn_Impl( void )
 {
 	Setup();
@@ -2877,7 +2806,6 @@ void CFuncTrackChange::Spawn_Impl( void )
 	Precache();
 }
 
-
 void CFuncTrackChange::Precache_Impl( void )
 {
 	BaseClass::Precache_Impl();
@@ -2885,12 +2813,10 @@ void CFuncTrackChange::Precache_Impl( void )
 	PrecacheScriptSound( "FuncTrackChange.Blocking" );
 }
 
-
 // UNDONE: Filter touches before re-evaluating the train.
 void CFuncTrackChange::Touch_Impl( CBaseEntity *pOther )
 {
 }
-
 
 void CFuncTrackChange::Find( void )
 {
@@ -2942,7 +2868,6 @@ void CFuncTrackChange::Find( void )
 	}
 }
 
-
 TRAIN_CODE CFuncTrackChange::EvaluateTrain( CPathTrack *pcurrent )
 {
 	// Go ahead and work, we don't have anything to switch, so just be an elevator
@@ -2967,7 +2892,6 @@ TRAIN_CODE CFuncTrackChange::EvaluateTrain( CPathTrack *pcurrent )
 	
 	return TRAIN_SAFE;
 }
-
 
 void CFuncTrackChange::UpdateTrain( QAngle &dest )
 {
@@ -2994,7 +2918,6 @@ void CFuncTrackChange::UpdateTrain( QAngle &dest )
 	local = local - offset;
 	m_train->SetAbsVelocity( GetAbsVelocity() + (local * (1.0/time)) );
 }
-
 
 void CFuncTrackChange::GoDown( void )
 {
@@ -3027,7 +2950,6 @@ void CFuncTrackChange::GoDown( void )
 		m_train->m_ppath = nullptr;
 	}
 }
-
 
 //
 // Platform is at bottom, now starts moving up
@@ -3065,7 +2987,6 @@ void CFuncTrackChange::GoUp( void )
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Normal track change
 // Input  : toggleState - 
@@ -3093,7 +3014,6 @@ void CFuncTrackChange::UpdateAutoTargets( int toggleState )
 		m_trackBottom->AddSpawnFlags( SF_PATH_DISABLED );
 	}
 }
-
 
 void CFuncTrackChange::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
@@ -3125,7 +3045,6 @@ void CFuncTrackChange::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, 
 		GoUp();
 }
 
-
 //
 // Platform has hit bottom.  Stops and waits forever.
 //
@@ -3144,7 +3063,6 @@ void CFuncTrackChange::HitBottom( void )
 
 	EnableUse();
 }
-
 
 //
 // Platform has hit bottom.  Stops and waits forever.
@@ -3165,7 +3083,6 @@ void CFuncTrackChange::HitTop( void )
 	EnableUse();
 }
 
-
 class CFuncTrackAuto : public CFuncTrackChange
 {
 	DECLARE_CLASS( CFuncTrackAuto, CFuncTrackChange );
@@ -3180,7 +3097,6 @@ public:
 IMPLEMENT_REFLECT_DATAMAP( CFuncTrackAuto )
 
 LINK_ENTITY_TO_CLASS( func_trackautochange, CFuncTrackAuto );
-
 
 // Auto track change
 void CFuncTrackAuto::UpdateAutoTargets( int toggleState )
@@ -3215,7 +3131,6 @@ void CFuncTrackAuto::UpdateAutoTargets( int toggleState )
 		pNextTarget->AddSpawnFlags( SF_PATH_DISABLED );
 	}
 }
-
 
 void CFuncTrackAuto::TriggerTrackChange ( inputdata_t &inputdata )
 {
@@ -3260,7 +3175,6 @@ void CFuncTrackAuto::TriggerTrackChange ( inputdata_t &inputdata )
 	}
 }
 
-
 void CFuncTrackAuto::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	CPathTrack *pTarget;
@@ -3303,3 +3217,5 @@ void CFuncTrackAuto::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, US
 		UpdateAutoTargets( m_targetState );
 	}
 }
+
+KS_ENTITY_ABSTRACT_KIND( CBasePlatTrain )

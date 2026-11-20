@@ -1,4 +1,9 @@
 #pragma once
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
@@ -6,7 +11,6 @@
 #define DLIGHTH
 
 import std;
-import ks.math;
 
 class IClientRenderable;
 

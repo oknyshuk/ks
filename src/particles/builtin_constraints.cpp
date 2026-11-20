@@ -3,7 +3,16 @@
 
 // Purpose: particle system code
 
-import ks.core;
+import ks.core.numeric;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "particles/particles.h"
 #include "bspflags.h"
 #include "const.h"

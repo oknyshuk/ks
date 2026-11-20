@@ -3,7 +3,14 @@
 // Copyright (c) 2026 oknyshuk
 
 import std;
-import ks.tier1;
+import ks.core.cmdline;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.strtools;
 #include "isys.h"
 #include "dedicated.h"
 #include "engine_hlds_api.h"

@@ -5,7 +5,9 @@
 // Purpose: Forwards game events to remote IP address. This is to facilitate the recording
 // of the play tests and to be able to index into the recorded video based on events.
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.netadr;
 #include "igameevents.h"
 import std;
 

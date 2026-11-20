@@ -1,78 +1,76 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-// Purpose: Precaches and defs for entities and other data that must always be available.
-
-#include "vphysics_interface.h"
-#include "edict.h"
+module;
+#include "declare_class.h"
 #include "eiface.h"
-#include "iserverentity.h"
-#include "shareddefs.h"
-#include "ehandle.h"
-#include "datamap.h"
-#include "util.h"
-#include "predictable_entity.h"
-#include "variant_t.h"
-#include "takedamageinfo.h"
-#include "touchlink.h"
-#include "groundlink.h"
-#include "networkvar.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
-#include "basetoggle.h"
-#include "igameevents.h"
-#include "precache_register.h"
-#include "baseanimating.h"
-#include "basecombatweapon.h"
-#include "basecombatcharacter.h"
-#include "te.h"
-#include "ndebugoverlay.h"
-#include "recipientfilter.h"
-#include "npcevent.h"
-#include "reflect_sendtable.h"
-#include "reflect_datamap.h"
-#include "reflect_annotations.h"
-#include "soundent.h"
-#include "client.h"
-#include "decals.h"
-#include "editor_sendcommand.h"
-#include "EnvMessage.h"
-#include "player.h"
-#include "gamerules.h"
-#include "teamplay_gamerules.h"
-#include "physics.h"
-#include "activitylist.h"
-#include "eventlist.h"
-#include "eventqueue.h"
-#include "ai_network.h"
-#include "ai_schedule.h"
-#include "ai_networkmanager.h"
-#include "ai_utils.h"
-#include "basetempentity.h"
-#include "world.h"
-#include "igamesystem.h"
-#include "engine/IEngineSound.h"
-#include "globals.h"
-#include "engine/IStaticPropMgr.h"
-#include "particle_parse.h"
-#include "globalstate.h"
-#include "cvisibilitymonitor.h"
-#include "model_types.h"
-#include "vscript/ivscript.h"
-#include "vscript_server.h"
-
 #include "gametypes.h"
+#include "igameevents.h"
+#include "model_types.h"
+#include "networkvar.h"
+#include "reflect.h"
+#include "responserules/response_types.h"
+#include "server_class.h"
+#include "studio.h"
+#include "vphysics_interface.h"
+#include "baseentity.h"
+#include "entity_dispatch.h"
+#include "entity_dispatch_list.h"
+#include "entity_kinds_dump.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "util.h"
+module ks.server;
+
+import std;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.transform;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.icvar;
+import ks.tier1.interfaces;
+import ks.tier1.reflect_wirevar;
+import :fish;
+import :sharedvar;
+import :vscript;
+import :baseentity;
+import :player;
+import :nav_4;
+import :entity_dispatch;
+import :entity_kind;
+import :entity_2;
+import ks.game.shareddefs;
+import :cstrike15.bot.bot;
+import :entityutil;
+import ks.game.gamemovement;
+import ks.game.mapentities_shared;
+
+class CBaseCombatCharacter;
+class CBaseEntity;
+class CBasePlayer;
+class CBaseTempEntity;
+class CRecipientFilter;
+class CWorld;
+class IGameSystem;
+struct inputdata_t;
+
+using namespace ::ks::reflect;
+
+// Purpose: Precaches and defs for entities and other data that must always be available.
 
 extern CBaseEntity				*g_pLastSpawn;
 void InitBodyQue(void);
 extern void W_Precache(void);
 extern void ActivityList_Free( void );
 
-constexpr auto SF_DECAL_NOTINDEATHMATCH = 2048;
+static constexpr auto SF_DECAL_NOTINDEATHMATCH = 2048;
 
-
-#if !defined( CLIENT_DLL )
-#define SF_GAME_EVENT_PROXY_AUTO_VISIBILITY		1
+static constexpr auto SF_GAME_EVENT_PROXY_AUTO_VISIBILITY = 1;
 
 //=========================================================
 // Allows level designers to generate certain game events 
@@ -171,11 +169,9 @@ bool CInfoGameEventProxy::GameEventProxyEvaluator( CBaseEntity *pProxy, CBasePla
 	return !pProxyPtr->m_bDisabled;
 }
 
-
 LINK_ENTITY_TO_CLASS( info_game_event_proxy, CInfoGameEventProxy );
 
 IMPLEMENT_REFLECT_DATAMAP( CInfoGameEventProxy )
-#endif
 
 class CDecal : public CPointEntity
 {
@@ -340,12 +336,10 @@ void CDecal::TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_T
 	SetNextThink( gpGlobals->curtime + 0.1f );
 }
 
-
 void CDecal::InputActivate( inputdata_t &inputdata )
 {
 	TriggerDecal( inputdata.pActivator, inputdata.pCaller, USE_ON, 0 );
 }
-
 
 void CDecal::StaticDecal( void )
 {
@@ -370,7 +364,6 @@ void CDecal::StaticDecal( void )
 
 	SUB_Remove();
 }
-
 
 bool CDecal::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
@@ -486,7 +479,6 @@ void CProjectedDecal::StaticDecal( void )
 	SUB_Remove();
 }
 
-
 bool CProjectedDecal::KeyValue_Impl( const char *szKeyName, const char *szValue )
 {
 	if (FStrEq(szKeyName, "texture"))
@@ -515,7 +507,6 @@ bool CProjectedDecal::KeyValue_Impl( const char *szKeyName, const char *szValue 
 LINK_ENTITY_TO_CLASS( worldspawn, CWorld );
 
 IMPLEMENT_REFLECT_DATAMAP( CWorld )
-
 
 // SendTable stuff.
 IMPLEMENT_REFLECT_SERVERCLASS( CWorld, DT_WORLD )
@@ -562,9 +553,6 @@ bool CWorld::KeyValue_Impl( const char *szKeyName, const char *szValue )
 	return true;
 }
 
-
-
-
 extern bool		g_fGameOver;
 CWorld *g_WorldEntity = nullptr;
 
@@ -589,7 +577,6 @@ CWorld::CWorld( )
 	m_iTimeOfDay.Set( TIME_MIDNIGHT );
 }
 
-
 CWorld::~CWorld()
 {
 	// If in edit mode tell Hammer I'm ending my session. This re-enables
@@ -605,7 +592,6 @@ CWorld::~CWorld()
 	}
 	g_WorldEntity = nullptr;
 }
-
 
 //------------------------------------------------------------------------------
 // Add a decal to the world
@@ -636,7 +622,6 @@ void CWorld::RegisterSharedEvents( void )
 {
 	EventList_RegisterSharedEvents();
 }
-
 
 void CWorld::Spawn_Impl( void )
 {
@@ -689,7 +674,6 @@ static const char *g_DefaultLightstyles[] =
 	"mmnnmmnnnmmnn",
 };
 
-
 const char *GetDefaultLightstyleString( int styleIndex )
 {
 	if ( styleIndex < std::size( g_DefaultLightstyles ) )
@@ -702,7 +686,6 @@ const char *GetDefaultLightstyleString( int styleIndex )
 //-----------------------------------------------------------------------------
 
 string_t g_iszFuncBrushClassname = NULL_STRING;
-
 
 void CWorld::Precache_Impl( void )
 {
@@ -790,16 +773,6 @@ void CWorld::Precache_Impl( void )
 	// 63 testing
 	engine->LightStyle(63, "a");
 
-	COM_TimestampedLog( "InitializeAINetworks" );
-	// =================================================
-	//	Load and Init AI Networks
-	// =================================================
-	CAI_NetworkManager::InitializeAINetworks();
-	// =================================================
-	//	Load and Init AI Schedules
-	// =================================================
-	COM_TimestampedLog( "LoadAllSchedules" );
-	g_AI_SchedulesManager.LoadAllSchedules();
 	// =================================================
 	//	Initialize NPC Relationships
 	// =================================================
@@ -853,7 +826,6 @@ float GetRealTime()
 {
 	return Plat_FloatTime();
 }
-
 
 bool CWorld::GetDisplayTitle() const
 {

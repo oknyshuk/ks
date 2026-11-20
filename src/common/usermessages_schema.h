@@ -10,6 +10,7 @@ import std;
 
 #include "netmessages_schema.h"
 #include "proto_types.h"
+import ks.tier1.exprevaluator;
 
 namespace ks::net
 {

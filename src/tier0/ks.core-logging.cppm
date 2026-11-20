@@ -2,12 +2,15 @@
 // Copyright (c) Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.core:logging;
+export module ks.core.logging;
 
 import std;
 import ks.platform;
-import :prelude;
-import :color;
+import ks.core.cmdline;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.core.color;
 
 export extern "C++" {
 

@@ -1,132 +1,110 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
+module;
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+#include "datacache/idatacache.h"
+#include "eiface.h"
+#include "engine/IEngineSound.h"
+#include "engine/IEngineTrace.h"
+#include "engine/IStaticPropMgr.h"
+#include "engine/iblackbox.h"
+#include "engine/ivdebugoverlay.h"
+#include "gametypes.h"
+#include "igameevents.h"
+#include "ivoiceserver.h"
+#include "matchmaking/imatchframework.h"
+#include "networkvar.h"
+#include "particles/particles.h"
+#include "scenefilecache/ISceneFileCache.h"
+#include "server_class.h"
+#include "studio.h"
+#include "tier2/tier2_logging.h"
+#include "vphysics_interface.h"
+#include "vscript/ivscript.h"
+#include "shareddefs.h"
+module ks.server;
+
+import std;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.numeric;
+import ks.core.platform;
+import ks.core.random;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.vprof;
+import ks.game.entity_cast;
+import ks.math.aabb;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.convar;
+import ks.tier1.cvar;
+import ks.tier1.functors;
+import ks.tier1.iappsystem;
+import ks.tier1.iconvar;
+import ks.tier1.icvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import ks.tier1.strtools;
+import ks.vstdlib.jobthread;
+import :sharedvar;
+import :vscript;
+import :baseentity;
+import :player;
+import :fish;
+import :cstrike15.bot.bot;
+import :cstrike15.bot.cs_bot;
+import :cstrike15.cs_player;
+import :nav_4;
+import :entity_kind;
+import :entityutil;
+import ks.game.shareddefs;
+import :cstrike15.cs_player_2;
+import ks.game.gamemovement;
+import ks.game.mapentities_shared;
+import :entity_2;
+import ks.tier1.playerid;
+
+class CBaseAnimating;
+class CBaseEntity;
+class CBasePlayer;
+class CCSPlayer;
+class CSound;
+class CTimedEventMgr;
+class CUserCmd;
+class IGameSystem;
+
+using namespace ::ks::reflect;
+
 // Purpose: encapsulates and implements all the accessing of the game dll from external
 //			sources (only the engine at the time of writing)
 //			This files ONLY contains functions and data necessary to build an interface
 //			to external modules
 
-#include "string_t.h"
-#include "edict.h"
-#include "eiface.h"
-#include "iserverentity.h"
-#include "shareddefs.h"
-#include "ehandle.h"
-#include "datamap.h"
-#include "util.h"
-#include "predictable_entity.h"
-#include "variant_t.h"
-#include "takedamageinfo.h"
-#include "touchlink.h"
-#include "groundlink.h"
-#include "networkvar.h"
-#include "baseentity_shared.h"
-#include "basetoggle.h"
-#include "igameevents.h"
-#include "precache_register.h"
-#include "baseanimating.h"
-#include "basecombatweapon.h"
-#include "basecombatcharacter.h"
-#include "gamerules.h"
-#include "entitylist.h"
-#include "ndebugoverlay.h"
-
-#include "gamestringpool.h"
-#include "game.h"
-#include "entityapi.h"
-#include "client.h"
-#include "entitylist.h"
-#include "gamerules.h"
-#include "soundent.h"
-#include "player.h"
-#include "server_class.h"
-#include "ai_node.h"
-#include "ai_link.h"
-#include "ai_networkmanager.h"
-#include "ndebugoverlay.h"
-#include "ivoiceserver.h"
-#include "networkstringtable_gamedll.h"
-#include "filesystem.h"
-#include "func_areaportalwindow.h"
-#include "igamesystem.h"
-#include "init_factory.h"
-#include "env_wind_shared.h"
-#include "engine/IEngineSound.h"
-#include "ispatialpartition.h"
-#include "textstatsmgr.h"
-#include "effect_dispatch_data.h"
-#include "engine/IStaticPropMgr.h"
-#include "ai_speech.h"
-#include "soundenvelope.h"
-#include "usermessages.h"
-#include "physics.h"
-#include "igameevents.h"
-#include "EventLog.h"
-#include "datacache/idatacache.h"
-#include "engine/ivdebugoverlay.h"
-#include "shareddefs.h"
-#include "props.h"
-#include "timedeventmgr.h"
-#include "gameinterface.h"
-#include "eventqueue.h"
-#include "hltvdirector.h"
-#include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "nav_mesh.h"
-#include "ai_responsesystem.h"
-#include "util.h"
-#include "datacache/imdlcache.h"
-#include "engine/iserverplugin.h"
-#include "env_debughistory.h"
-#include "util_shared.h"
-#include "player_voice_listener.h"
-
-
-#include "ragdoll_shared.h"
-#include "sceneentity.h"
-#include "scenefilecache/ISceneFileCache.h"
-#include "tier2/tier2.h"
-#include "particles/particles.h"
-#include "GameStats.h"
-#include "matchmaking/imatchframework.h"
-#include "querycache.h"
-#include "particle_parse.h"
-#include "tier3/tier3.h"
-#include "vscript/ivscript.h"
-#include "point_template.h"
-#include "engine/iblackbox.h"
-#include "tier2/tier2_logging.h"
-#include "env_cascade_light.h"
-#include "cstrike15/cs_player.h"
-#include "gametypes/igametypes.h"
-
-
-#ifdef CSTRIKE_DLL // BOTPORT: TODO: move these ifdefs out
-#include "bot/bot.h"
-#include "bot/cs_bot_manager.h"
-#endif
-
-
-
-
-
-
-ConVar occlusion_test_shadow_length( "occlusion_test_shadow_length", "144", FCVAR_RELEASE, "Max length of completely occluded shadow to consider a player for occlusion test. If shadow provably stops at this distance, the player may be considered for occlusion test. For longer shadows, we just don't do occlusion because we are not likely to find full occlusion when one of the boxes is expanded too much." );
+ConVar occlusion_test_shadow_length( side_registry(), "occlusion_test_shadow_length", "144", FCVAR_RELEASE, "Max length of completely occluded shadow to consider a player for occlusion test. If shadow provably stops at this distance, the player may be considered for occlusion test. For longer shadows, we just don't do occlusion because we are not likely to find full occlusion when one of the boxes is expanded too much." );
 //ConVar occlusion_test_margins( "occlusion_test_margins", "36", FCVAR_RELEASE, "Amount by which the player bounding box is expanded for occlusion test. This margin should be large enough to accommodate player movement within a frame or two, and the longest weapon they might hold. Shadow does not take this into account." ); // default: 360 (max speed) / 30 ( give it a couple of frames) + however much the biggest weapon can stick out
-ConVar occlusion_test_camera_margins( "occlusion_test_camera_margins", "12", FCVAR_RELEASE, "Amount by which the camera (viewer's eye) is expanded for occlusion test. This should be large enough to accommodate eye's movement within a frame or two" ); // default: 360 (max speed) / 30 ( give it a couple of frames)
-ConVar occlusion_test_jump_margin( "occlusion_test_jump_margin", "12", FCVAR_RELEASE, "Amount by which the player bounding box is expanded up for occlusion test to account for jumping. This margin should be large enough to accommodate player movement within a frame or two. Affects both camera box and player box." ); // default: 360 (max speed) / 30 ( give it a couple of frames) + however much the biggest weapon can stick out
+ConVar occlusion_test_camera_margins( side_registry(), "occlusion_test_camera_margins", "12", FCVAR_RELEASE, "Amount by which the camera (viewer's eye) is expanded for occlusion test. This should be large enough to accommodate eye's movement within a frame or two" ); // default: 360 (max speed) / 30 ( give it a couple of frames)
+ConVar occlusion_test_jump_margin( side_registry(), "occlusion_test_jump_margin", "12", FCVAR_RELEASE, "Amount by which the player bounding box is expanded up for occlusion test to account for jumping. This margin should be large enough to accommodate player movement within a frame or two. Affects both camera box and player box." ); // default: 360 (max speed) / 30 ( give it a couple of frames) + however much the biggest weapon can stick out
 //ConVar occlusion_test_shadow_max_distance( "occlusion_test_shadow_max_distance", "1500", FCVAR_RELEASE, "Max distance at which to consider shadows for occlusion computations" );
-ConVar pvs_min_player_distance( "pvs_min_player_distance", "1500", FCVAR_RELEASE, "Min distance to player at which PVS is used. At closer distances, PVS assumes we can see a shadow or something else from the player, so it's safer to just always be \"Visible\"" );
+ConVar pvs_min_player_distance( side_registry(), "pvs_min_player_distance", "1500", FCVAR_RELEASE, "Min distance to player at which PVS is used. At closer distances, PVS assumes we can see a shadow or something else from the player, so it's safer to just always be \"Visible\"" );
 
 bool ShouldHideAllPlayers() { return false; }
 
-
 IUploadGameStats *gamestatsuploader = nullptr;
 
-
-
-
 CTimedEventMgr g_NetworkPropertyEventMgr;
-
 
 std::vector<CMapEntityRef> g_MapEntityRefs;
 
@@ -136,7 +114,7 @@ IVoiceServer	*g_pVoiceServer = nullptr;
 IFileSystem		*filesystem = nullptr;
 INetworkStringTableContainer *networkstringtable = nullptr;
 IStaticPropMgrServer *staticpropmgr = nullptr;
-CUniformRandomStream *random = nullptr;
+CUniformRandomStream *random_valve = nullptr;
 IEngineSound *enginesound = nullptr;
 ISpatialPartition *partition = nullptr;
 IVModelInfo *modelinfo = nullptr;
@@ -151,7 +129,6 @@ ISceneFileCache *scenefilecache = nullptr;
 IScriptManager *scriptmanager = nullptr;
 IBlackBox *blackboxrecorder = nullptr;
 
-
 IGameSystem *SoundEmitterSystem();
 void SoundSystemPreloadSounds( void );
 
@@ -160,24 +137,19 @@ void ModelSoundsCacheShutdown();
 
 void SceneManager_ClientActive( CBasePlayer *player );
 
-
-#ifdef _DEBUG
-static ConVar s_UseNetworkVars( "UseNetworkVars", "1", FCVAR_CHEAT, "For profiling, toggle network vars." );
-#endif
-
 extern ConVar sv_noclipduringpause;
-ConVar sv_massreport( "sv_massreport", "0" );
-ConVar sv_force_transmit_ents( "sv_force_transmit_ents", "0", FCVAR_RELEASE, "Will transmit all entities to client, regardless of PVS conditions (will still skip based on transmit flags, however)." );
+ConVar sv_massreport( side_registry(), "sv_massreport", "0" );
+ConVar sv_force_transmit_ents( side_registry(), "sv_force_transmit_ents", "0", FCVAR_RELEASE, "Will transmit all entities to client, regardless of PVS conditions (will still skip based on transmit flags, however)." );
 
-ConVar sv_autosave( "sv_autosave", "1", 0, "Set to 1 to autosave game on level transition. Does not affect autosave triggers." );
+ConVar sv_autosave( side_registry(), "sv_autosave", "1", 0, "Set to 1 to autosave game on level transition. Does not affect autosave triggers." );
 ConVar *sv_maxreplay = nullptr;
 
-ConVar sv_comp_mode_allow_dc( "sv_comp_mode_allow_dc", 
+ConVar sv_comp_mode_allow_dc( side_registry(), "sv_comp_mode_allow_dc", 
 	"0", FCVAR_DEVELOPMENTONLY, 
 	"Set this to 1 to allow direct connects in Competitive mode" );
 
 ConVar sv_dc_friends_reqd(
-	"sv_dc_friends_reqd",
+	side_registry(), "sv_dc_friends_reqd",
 	"0", FCVAR_RELEASE,
 	"Set this to 0 to allow direct connects to a game in progress even if no presents are present" );
 
@@ -193,7 +165,6 @@ INetworkStringTable *g_pStringTableClientSideChoreoScenes = nullptr;
 INetworkStringTable *g_pStringTableExtraParticleFiles = nullptr;
 INetworkStringTable *g_pStringTableMovies = nullptr;
 
-
 // Holds global variables shared between engine and game.
 CGlobalVars *gpGlobals;
 static int		g_nCommandClientIndex = -1;
@@ -201,23 +172,16 @@ static int		g_nCommandClientIndex = -1;
 // The chapter number of the current
 static int		g_nCurrentChapterIndex = -1;
 
-#ifdef _DEBUG
-static ConVar sv_showhitboxes( "sv_showhitboxes", "-1", FCVAR_CHEAT, "Send server-side hitboxes for specified entity to client (NOTE:  this uses lots of bandwidth, use on listen server only)." );
-#endif
-
 static ClientPutInServerOverrideFn g_pClientPutInServerOverride = nullptr;
 static void UpdateChapterRestrictions( const char *mapname );
 
-const char *GetHintTypeDescription( CAI_Hint *pHint );
 
 void ClientPutInServerOverride( ClientPutInServerOverrideFn fn )
 {
 	g_pClientPutInServerOverride = fn;
 }
 
-ConVar ai_post_frame_navigation( "ai_post_frame_navigation", "0" );
-class CPostFrameNavigationHook;
-extern CPostFrameNavigationHook *PostFrameNavigationSystem( void );
+ConVar ai_post_frame_navigation( side_registry(), "ai_post_frame_navigation", "0" );
 
 static bool g_bHeadTrackingEnabled = false;
 
@@ -225,7 +189,6 @@ bool IsHeadTrackingEnabled()
 {
 	return false;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -262,12 +225,8 @@ float			GetFloorZ(const Vector &origin);
 void			UpdateAllClientData( void );
 void			DrawMessageEntities();
 
-#include "ai_network.h"
-
 // For now just using one big AI network
 extern ConVar think_limit;
-
-
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -300,87 +259,10 @@ void DrawAllDebugOverlays( void )
 	// --------------------------------------------------------
 	UTIL_DrawOverlayLines();
 
-	// ------------------------------------------------------------------------
-	// If in wc_edit mode draw a box to highlight which node I'm looking at
-	// ------------------------------------------------------------------------
-	if (engine->IsInEditMode())
+	// In edit mode, a crosshair on the ground where the player looks
+	if (engine->IsInEditMode() && UTIL_PlayerByIndex( CBaseEntity::m_nDebugPlayer ))
 	{
-		CBasePlayer* pPlayer = UTIL_PlayerByIndex( CBaseEntity::m_nDebugPlayer );
-		if (pPlayer) 
-		{
-			if (g_pAINetworkManager->GetEditOps()->m_bLinkEditMode)
-			{
-				CAI_Link* pAILink = pPlayer->FindPickerAILink();
-				if (pAILink)
-				{
-					// For now just using one big AI network
-					Vector startPos = g_pBigAINet->GetNode(pAILink->m_iSrcID)->GetPosition(g_pAINetworkManager->GetEditOps()->m_iHullDrawNum);
-					Vector endPos	= g_pBigAINet->GetNode(pAILink->m_iDestID)->GetPosition(g_pAINetworkManager->GetEditOps()->m_iHullDrawNum);
-					Vector linkDir	= startPos-endPos;
-					float linkLen = VectorNormalize( linkDir );
-					
-					// Draw in green if link that's been turned off
-					if (pAILink->m_LinkInfo & bits_LINK_OFF)
-					{
-						NDebugOverlay::BoxDirection(startPos, Vector(-4,-4,-4), Vector(-linkLen,4,4), linkDir, 0,255,0,40,0);
-					}
-					// Draw in a pukey yellowish green if link that's "bashable", which is off to everyone but a special door basher
-					else if (pAILink->m_LinkInfo & bits_LINK_ASW_BASHABLE)
-					{
-						NDebugOverlay::BoxDirection(startPos, Vector(-4,-4,-4), Vector(-linkLen,4,4), linkDir, 40,255,0,40,0);
-					}
-					else
-					{
-						NDebugOverlay::BoxDirection(startPos, Vector(-4,-4,-4), Vector(-linkLen,4,4), linkDir, 255,0,0,40,0);
-					}
-				}
-			}
-			else
-			{
-				CAI_Node* pAINode;
-				if (g_pAINetworkManager->GetEditOps()->m_bAirEditMode)
-				{
-					pAINode = pPlayer->FindPickerAINode(NODE_AIR);
-				}
-				else
-				{
-					pAINode = pPlayer->FindPickerAINode(NODE_GROUND);
-				}
-
-				if (pAINode)
-				{
-					Vector vecPos = pAINode->GetPosition(g_pAINetworkManager->GetEditOps()->m_iHullDrawNum);
-					NDebugOverlay::Box( vecPos, Vector(-8,-8,-8), Vector(8,8,8), 255,0,0,40,0);
-
-					if ( pAINode->GetHint() )
-					{
-						CBaseEntity *pEnt = (CBaseEntity *)pAINode->GetHint();
-						if ( pEnt->GetEntityName() != NULL_STRING )
-						{
-							NDebugOverlay::Text( vecPos + Vector(0,0,6), STRING(pEnt->GetEntityName()), false, 0 );
-						}
-						NDebugOverlay::Text( vecPos, GetHintTypeDescription( pAINode->GetHint() ), false, 0 );
-					}
-				}
-			}
-			// ------------------------------------
-			// If in air edit mode draw guide line
-			// ------------------------------------
-			if (g_pAINetworkManager->GetEditOps()->m_bAirEditMode)
-			{
-				UTIL_DrawPositioningOverlay(g_pAINetworkManager->GetEditOps()->m_flAirEditDistance);
-			}
-			else
-			{
-				NDebugOverlay::DrawGroundCrossHairOverlay();
-			}
-		}
-	}
-
-	// For not just using one big AI Network
-	if ( g_pAINetworkManager )
-	{
-		g_pAINetworkManager->GetEditOps()->DrawAINetworkOverlay();
+		NDebugOverlay::DrawGroundCrossHairOverlay();
 	}
 
 	// PERFORMANCE: only do this in developer mode
@@ -426,7 +308,7 @@ void DrawAllDebugOverlays( void )
 }
 
 // enable threading of init functions on x360
-static ConVar sv_threaded_init("sv_threaded_init", "0");
+static ConVar sv_threaded_init(side_registry(), "sv_threaded_init", "0");
 
 static bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 {
@@ -440,7 +322,6 @@ static bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 	IGameSystem::Add( g_pPrecacheRegister );
 
 	// Used to service deferred navigation queries for NPCs
-	IGameSystem::Add( (IGameSystem *) PostFrameNavigationSystem() );
 
 	// Add game log system
 	IGameSystem::Add( GameLogSystem() );
@@ -448,17 +329,13 @@ static bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 	// Add HLTV director 
 	IGameSystem::Add( HLTVDirectorSystem() );
 
-
 	// Add sound emitter
 	IGameSystem::Add( SoundEmitterSystem() );
-
 
 	// load Mod specific game events ( MUST be before InitAllSystems() so it can pickup the mod specific events)
 	gameeventmanager->LoadEventsFromFile("resource/ModEvents.res");
 
-#ifdef CSTRIKE_DLL // BOTPORT: TODO: move these ifdefs out
 	InstallBotControl();
-#endif
 
 	if ( !IGameSystem::InitAllSystems() )
 		return false;
@@ -484,7 +361,7 @@ static bool InitGameSystems( CreateInterfaceFn appSystemFactory )
 }
 
 CServerGameDLL g_ServerGameDLL;
-static InterfaceReg s_Reg_CServerGameDLL_IServerGameDLL( []() -> void * { return static_cast<IServerGameDLL *>( &g_ServerGameDLL ); }, INTERFACEVERSION_SERVERGAMEDLL );;
+static InterfaceReg s_Reg_CServerGameDLL_IServerGameDLL( side_registry(), []() -> void * { return static_cast<IServerGameDLL *>( &g_ServerGameDLL ); }, INTERFACEVERSION_SERVERGAMEDLL );;
 
 bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory, 
 		CreateInterfaceFn physicsFactory, CreateInterfaceFn fileSystemFactory, 
@@ -506,7 +383,7 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 		return false;
 	if ( (staticpropmgr = (IStaticPropMgrServer *)appSystemFactory(INTERFACEVERSION_STATICPROPMGR_SERVER,nullptr)) == nullptr )
 		return false;
-	if ( (random = (CUniformRandomStream *)appSystemFactory(VENGINE_SERVER_RANDOM_INTERFACE_VERSION, nullptr)) == nullptr )
+	if ( (random_valve = (CUniformRandomStream *)appSystemFactory(VENGINE_SERVER_RANDOM_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
 	if ( (enginesound = (IEngineSound *)appSystemFactory(IENGINESOUND_SERVER_INTERFACE_VERSION, nullptr)) == nullptr )
 		return false;
@@ -545,8 +422,6 @@ bool CServerGameDLL::DLLInit( CreateInterfaceFn appSystemFactory,
 
 	if ( ( g_pGameTypes = (IGameTypes *)appSystemFactory( VENGINE_GAMETYPES_VERSION, nullptr )) == nullptr )
 		return false;
-
-
 
 	if ( !g_pMatchFramework )
 		return false;
@@ -661,8 +536,6 @@ void CServerGameDLL::DLLShutdown( void )
 	// Due to dependencies, these are not autogamesystems
 	ModelSoundsCacheShutdown();
 
-
-
 	g_pParticleSystemMgr->Shutdown();
 
 	char *pFilename = g_TextStatsMgr.GetStatsFilename();
@@ -674,11 +547,7 @@ void CServerGameDLL::DLLShutdown( void )
 
 	IGameSystem::ShutdownAllSystems();
 
-
-#ifdef CSTRIKE_DLL // BOTPORT: TODO: move these ifdefs out
 	RemoveBotControl();
-#endif
-
 
 	// destroy the Navigation Mesh interface
 	if (TheNavMesh)
@@ -687,9 +556,8 @@ void CServerGameDLL::DLLShutdown( void )
 		TheNavMesh = nullptr;
 	}
 
-	ConVar_Unregister( ks::server_registry().convars );
+	ConVar_Unregister( side_registry().convars );
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: See shareddefs.h for redefining this.  Don't even think about it, though, for HL2.  Or you will pay.  ywb 9/22/03
@@ -698,7 +566,6 @@ void CServerGameDLL::DLLShutdown( void )
 float CServerGameDLL::GetTickInterval( void ) const
 {
 	float tickinterval = DEFAULT_TICK_INTERVAL;
-
 
 // Ignoring this for now, server ops are abusing it
 	// override if tick rate specified in command line
@@ -991,15 +858,13 @@ void CServerGameDLL::ServerActivate( edict_t *pEdictList, int edictCount, int cl
 	TheNavMesh->Load();
 	TheNavMesh->OnServerActivate();
 
-#if defined( CSTRIKE_DLL ) // BOTPORT: TODO: move these ifdefs out
 	TheCSBots()->ServerActivate();
-#endif
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Called at the start of every game frame
 //-----------------------------------------------------------------------------
-ConVar  trace_report( "trace_report", "0" );
+ConVar  trace_report( side_registry(), "trace_report", "0" );
 
 extern void GameStartFrame( void );
 extern void ServiceEventQueue( void );
@@ -1027,12 +892,6 @@ void CServerGameDLL::GameFrame( bool simulating )
 
 	float oldframetime = gpGlobals->frametime;
 
-#ifdef _DEBUG
-	// For profiling.. let them enable/disable the networkvar manual mode stuff.
-	g_bUseNetworkVars = s_UseNetworkVars.GetBool();
-#endif
-
-
 	// Delete anything that was marked for deletion
 	//  outside of server frameloop (e.g., in response to concommand)
 	gEntList.CleanupDeleteList();
@@ -1042,7 +901,6 @@ void CServerGameDLL::GameFrame( bool simulating )
 
 		IGameSystem::FrameUpdatePreEntityThinkAllSystems();
 		GameStartFrame();
-
 
 		TheNavMesh->Update();
 
@@ -1122,37 +980,6 @@ void CServerGameDLL::PreClientUpdate( bool simulating )
 	
 	IGameSystem::PreClientUpdateAllSystems();
 
-#ifdef _DEBUG
-	if ( sv_showhitboxes.GetInt() == -1 )
-		return;
-
-	if ( sv_showhitboxes.GetInt() == 0 )
-	{
-		// assume it's text
-		CBaseEntity *pEntity = nullptr;
-
-		while (1)
-		{
-			pEntity = gEntList.FindEntityByName( pEntity, sv_showhitboxes.GetString() );
-			if ( !pEntity )
-				break;
-
-			CBaseAnimating *anim = entity_cast<CBaseAnimating>( pEntity );
-
-			if (anim)
-			{
-				anim->DrawServerHitboxes();
-			}
-		}
-		return;
-	}
-
-	CBaseAnimating *anim = entity_cast<CBaseAnimating>( CBaseEntity::Instance( INDEXENT( sv_showhitboxes.GetInt() ) ) );
-	if ( !anim )
-		return;
-
-	anim->DrawServerHitboxes();
-#endif
 }
 
 void CServerGameDLL::Think( bool finalTick )
@@ -1223,7 +1050,6 @@ ServerClass* CServerGameDLL::GetAllServerClasses()
 	return g_pServerClassHead;
 }
 
-
 const char *CServerGameDLL::GetGameDescription( void )
 {
 	return ::GetGameDescription();
@@ -1274,12 +1100,10 @@ void CServerGameDLL::CreateNetworkStringTables( void )
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
 
-
 CStandardSendProxies* CServerGameDLL::GetStandardSendProxies()
 {
 	return &g_StandardSendProxies;
 }
-
 
 // This little hack lets me marry BSP names to messages in titles.txt
 typedef struct
@@ -1582,8 +1406,8 @@ static void ValidateMOTDFilename( ConVar *pConVar, const char *oldValue, float f
 	}
 }
 
-static ConVar motdfile( "motdfile", "motd.txt", FCVAR_RELEASE, "The MOTD file to load.", ValidateMOTDFilename );
-static ConVar hostfile( "hostfile", "host.txt", FCVAR_RELEASE, "The HOST file to load.", ValidateMOTDFilename );
+static ConVar motdfile( side_registry(), "motdfile", "motd.txt", FCVAR_RELEASE, "The MOTD file to load.", ValidateMOTDFilename );
+static ConVar hostfile( side_registry(), "hostfile", "host.txt", FCVAR_RELEASE, "The HOST file to load.", ValidateMOTDFilename );
 void LoadMOTDFile( const char *stringname, ConVar *pConvarFilename )
 {
 	char data[2048];
@@ -1634,7 +1458,6 @@ void LoadServerImageFile( const char *stringname )
 	}
 }
 
-
 void CServerGameDLL::LoadMessageOfTheDay()
 {
 	LoadMOTDFile( "motd", &motdfile );
@@ -1644,7 +1467,7 @@ void CServerGameDLL::LoadMessageOfTheDay()
 }
 
 // keeps track of which chapters the user has unlocked
-ConVar sv_unlockedchapters( "sv_unlockedchapters", "1", FCVAR_ARCHIVE );
+ConVar sv_unlockedchapters( side_registry(), "sv_unlockedchapters", "1", FCVAR_ARCHIVE );
 
 //-----------------------------------------------------------------------------
 // Purpose: Updates which chapters are unlocked
@@ -1743,7 +1566,6 @@ void PrecacheMaterial( const char *pMaterialName )
 	g_pStringTableMaterials->AddString( CBaseEntity::IsServer(), pMaterialName );
 }
 
-
 //-----------------------------------------------------------------------------
 // Converts a previously precached material into an index
 //-----------------------------------------------------------------------------
@@ -1775,7 +1597,6 @@ const char *GetMaterialNameFromIndex( int nMaterialIndex )
 {
 	return g_pStringTableMaterials->GetString( nMaterialIndex );
 }
-
 
 //-----------------------------------------------------------------------------
 // Precaches a vgui screen overlay material
@@ -1845,7 +1666,6 @@ const char *GetParticleSystemNameFromIndex( int nMaterialIndex )
 	return "error";
 }
 
-
 //-----------------------------------------------------------------------------
 // Precaches an effect (used by DispatchEffect)
 //-----------------------------------------------------------------------------
@@ -1854,7 +1674,6 @@ void PrecacheEffect( const char *pEffectName )
 	contract_assert( pEffectName && pEffectName[0] );
 	g_pStringTableEffectDispatch->AddString( CBaseEntity::IsServer(), pEffectName );
 }
-
 
 //-----------------------------------------------------------------------------
 // Converts a previously precached effect into an index
@@ -1949,7 +1768,7 @@ public:
 	virtual void			PrepareForFullUpdate( edict_t *pEdict );
 };
 static CServerGameEnts s_Singleton_CServerGameEnts;
-static InterfaceReg s_Reg_CServerGameEnts_IServerGameEnts( []() -> void * { return static_cast<IServerGameEnts *>( &s_Singleton_CServerGameEnts ); }, INTERFACEVERSION_SERVERGAMEENTS );;
+static InterfaceReg s_Reg_CServerGameEnts_IServerGameEnts( side_registry(), []() -> void * { return static_cast<IServerGameEnts *>( &s_Singleton_CServerGameEnts ); }, INTERFACEVERSION_SERVERGAMEENTS );;
 
 //-----------------------------------------------------------------------------
 // Purpose: Marks entities as touching
@@ -1991,10 +1810,9 @@ CBaseEntity* CServerGameEnts::EdictToBaseEntity( edict_t *pEdict )
 		return nullptr;
 }
 
-
 /* Yuck.. ideally this would be in CServerNetworkProperty's header, but it requires CBaseEntity and
 // inlining it gives a nice speedup.
-inline void CServerNetworkProperty::CheckTransmit( CCheckTransmitInfo *pInfo )
+void CServerNetworkProperty::CheckTransmit( CCheckTransmitInfo *pInfo )
 {
 	// If we have a transmit proxy, let it hook our ShouldTransmit return value.
 	if ( m_pTransmitProxy )
@@ -2008,7 +1826,7 @@ inline void CServerNetworkProperty::CheckTransmit( CCheckTransmitInfo *pInfo )
 	}
 } */
 
-ConVar sv_occlude_players( "sv_occlude_players", "1", FCVAR_RELEASE /*, "Do additional traces on the server to hide players occluded by large brushes from each other - anti-cheat"*/ );
+ConVar sv_occlude_players( side_registry(), "sv_occlude_players", "1", FCVAR_RELEASE /*, "Do additional traces on the server to hide players occluded by large brushes from each other - anti-cheat"*/ );
 
 // A bitmap which records whether players were occluded under sv_occlude_players
 // rules. This is so other code areas which are interested in player-player
@@ -2039,7 +1857,6 @@ void SetPlayerOccluded( int index, bool newvalue )
 
 }
 
-
 /*
 AABB_t GetOcclusionBounds( CBasePlayer *pPlayer )
 {
@@ -2069,7 +1886,6 @@ AABB_t GetOcclusionBounds( CBaseEntity *pItem )
 	pColl->WorldSpaceAABB( &aabb.m_vMinBounds, &aabb.m_vMaxBounds );
 	return aabb;
 }
-
 
 AABB_t GetCameraBounds( CBasePlayer *pPlayer )
 {
@@ -2244,7 +2060,6 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 					// if ( dump_occlusion_probes.GetBool() ) Msg( "Occlusion probe %s - %s: %s\n", pRecipientPlayer->GetPlayerName(), pPlayer->GetPlayerName(), bInPVS ? "miss" : "occluded" );
 				}
 			}
-#if defined( CSTRIKE_DLL )
 			else if ( CServerNetworkProperty *pNetworkParent = check )
 			{
 				do
@@ -2285,7 +2100,6 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 					pNetworkParent = pNetworkParent->GetNetworkParent();
 				} while ( pNetworkParent );
 			}
-#endif
 		}
 
 		// If a player has just been spawned, forcibly send it for a brief
@@ -2376,10 +2190,8 @@ void CServerGameEnts::PrepareForFullUpdate( edict_t *pEdict )
 	pPlayer->PrepareForFullUpdate();
 }
 
-
 CServerGameClients g_ServerGameClients;
-static InterfaceReg s_Reg_CServerGameClients_IServerGameClients( []() -> void * { return static_cast<IServerGameClients *>( &g_ServerGameClients ); }, INTERFACEVERSION_SERVERGAMECLIENTS );;
-
+static InterfaceReg s_Reg_CServerGameClients_IServerGameClients( side_registry(), []() -> void * { return static_cast<IServerGameClients *>( &g_ServerGameClients ); }, INTERFACEVERSION_SERVERGAMECLIENTS );;
 
 //-----------------------------------------------------------------------------
 // Purpose: called when a player tries to connect to the server
@@ -2427,7 +2239,6 @@ void CServerGameClients::ClientActive( edict_t *pEdict, bool bLoadGame )
 	SceneManager_ClientActive( pPlayer );
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Called when a player is fully connect ( initial baseline entities have been received )
 // Input  : *pEntity - the player
@@ -2436,7 +2247,6 @@ void CServerGameClients::ClientFullyConnect( edict_t *pEdict )
 {
 	::ClientFullyConnect( pEdict );
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: called when a player disconnects from a server
@@ -2605,7 +2415,6 @@ void CServerGameClients::ClientSettingsChanged( edict_t *pEdict )
 		player->m_bLagCompensation = false;
 	}
 
-
 	//HACKHACK: There's a bug in portal 2 splitscreen where the primary player will be set to non-predictive and the secondary player will be set to predictive.
 	//	It's probably a better idea in the long run to have CBaseClient::ProcessSetConVar() in engine better handle splitscreen. But for now we're going for a surgical fix
 	{
@@ -2623,14 +2432,11 @@ void CServerGameClients::ClientSettingsChanged( edict_t *pEdict )
 		}
 	}
 	
-
 #undef QUICKGETCVARVALUE
 	}
 
 	g_pGameRules->ClientSettingsChanged( player );
 }
-
-
 
 //-----------------------------------------------------------------------------
 // Purpose: A client can have a separate "view entity" indicating that his/her view should depend on the origin of that
@@ -2718,7 +2524,6 @@ void CServerGameClients::ClientSetupVisibility( edict_t *pViewEntity, edict_t *p
 		portalNums[iOutPortal] = pCur->m_portalNumber;
 		isOpen[iOutPortal] = pCur->UpdateVisibility( areaPortalOrigins, fovDistanceAdjustFactor, bIsOpenOnClient );
 
-
 		++iOutPortal;
 		if ( iOutPortal >= std::size( portalNums ) )
 		{
@@ -2754,9 +2559,6 @@ void CServerGameClients::ClientSetupVisibility( edict_t *pViewEntity, edict_t *p
 
 }
 
-
-
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : *player - 
@@ -2768,9 +2570,9 @@ void CServerGameClients::ClientSetupVisibility( edict_t *pViewEntity, edict_t *p
 //			paused - 
 // Output : float
 //-----------------------------------------------------------------------------
-constexpr auto CMD_MAXBACKUP = 64;
+static constexpr auto CMD_MAXBACKUP = 64;
 
-static ConVar sv_max_usercmd_move_magnitude( "sv_max_usercmd_move_magnitude", "1000", 0, "Maximum move magnitude that can be requested by client." );
+static ConVar sv_max_usercmd_move_magnitude( side_registry(), "sv_max_usercmd_move_magnitude", "1000", 0, "Maximum move magnitude that can be requested by client." );
 
 float CServerGameClients::ProcessUsercmds( edict_t *player, bf_read *buf, int numcmds, int totalcmds,
 	int dropped_packets, bool ignore, bool paused )
@@ -2863,7 +2665,6 @@ float CServerGameClients::ProcessUsercmds( edict_t *player, bf_read *buf, int nu
 	return TICK_INTERVAL;
 }
 
-
 void CServerGameClients::PostClientMessagesSent( void )
 {
 	CVProfScope _( "CServerGameClients::PostClient", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
@@ -2888,7 +2689,6 @@ int	CServerGameClients::GetReplayDelay( edict_t *pEdict, int &entity )
 	return pPlayer->GetDelayTicks();
 }
 
-
 //-----------------------------------------------------------------------------
 // The client's userinfo data lump has changed
 //-----------------------------------------------------------------------------
@@ -2907,7 +2707,6 @@ void CServerGameClients::ClientEarPosition( edict_t *pEdict, Vector *pEarOrigin 
 	}
 }
 
-
 bool CServerGameClients::ClientReplayEvent( edict_t *pEdict, const ClientReplayEventParams_t &params )
 {
 	CCSPlayer *pPlayer = ( CCSPlayer * )CBaseEntity::Instance( pEdict );
@@ -2920,7 +2719,6 @@ bool CServerGameClients::ClientReplayEvent( edict_t *pEdict, const ClientReplayE
 		return 0.0f;
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -3260,8 +3058,7 @@ private:
 };
 
 static CServerDLLSharedAppSystems s_Singleton_CServerDLLSharedAppSystems;
-static InterfaceReg s_Reg_CServerDLLSharedAppSystems_IServerDLLSharedAppSystems( []() -> void * { return static_cast<IServerDLLSharedAppSystems *>( &s_Singleton_CServerDLLSharedAppSystems ); }, SERVER_DLL_SHARED_APPSYSTEMS );;
-
+static InterfaceReg s_Reg_CServerDLLSharedAppSystems_IServerDLLSharedAppSystems( side_registry(), []() -> void * { return static_cast<IServerDLLSharedAppSystems *>( &s_Singleton_CServerDLLSharedAppSystems ); }, SERVER_DLL_SHARED_APPSYSTEMS );;
 
 //-----------------------------------------------------------------------------
 //
@@ -3272,4 +3069,28 @@ void CServerGameTags::GetTaggedConVarList( KeyValues *pCvarTagList )
 	{
 		g_pGameRules->GetTaggedConVarList( pCvarTagList );
 	}
+}
+
+bool CMapLoadEntityFilter::ShouldCreateEntity(const char *pClassname)
+{
+  // During map load, create all the entities.
+  return true;
+}
+
+CBaseEntity * CMapLoadEntityFilter::CreateNextEntity(const char *pClassname)
+{
+  CBaseEntity *pRet = CreateEntityByName(pClassname);
+
+  CMapEntityRef ref;
+  ref.m_iEdict = -1;
+  ref.m_iSerialNumber = -1;
+
+  if (pRet) {
+    ref.m_iEdict = pRet->entindex();
+    if (pRet->edict())
+      ref.m_iSerialNumber = pRet->edict()->m_NetworkSerialNumber;
+  }
+
+  g_MapEntityRefs.push_back(ref);
+  return pRet;
 }

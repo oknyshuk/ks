@@ -5,7 +5,12 @@
 // Purpose: Engine voice interface
 
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
 
 inline constexpr const char *IENGINEVOICE_INTERFACE_VERSION = "IEngineVoice001";
 

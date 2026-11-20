@@ -8,7 +8,9 @@
 #elif defined(GAME_DLL)
 #endif
 import std;
-import ks.core;
+import ks.platform;
+import ks.simd;
+import ks.tier1.map_ops;
 #if defined(CLIENT_DLL)
 #elif defined(GAME_DLL)
 #endif

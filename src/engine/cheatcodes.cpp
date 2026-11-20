@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 #include "cheatcodes.h"
 #include "cmd.h"
 import std;

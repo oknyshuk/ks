@@ -1,4 +1,7 @@
 #pragma once
+import ks.core.basetypes;
+import ks.core.types;
+import ks.math.ssemath;
 // stb_dxt.h - v1.04 - DXT1/DXT5 compressor - public domain
 // original by fabian "ryg" giesen - ported to C by stb
 // use '#define STB_DXT_IMPLEMENTATION' before including to create the implementation

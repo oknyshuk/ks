@@ -2,16 +2,18 @@
 // Copyright (c) Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.core:tslist;
+export module ks.core.tslist;
 
 import std;
 import ks.platform;
-import :prelude;
-import :color;
-import :logging;
-import :dbg;
-import :memalloc;
-import :threadtools;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.color;
+import ks.core.logging;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.threadtools;
 
 export extern "C++" {
 

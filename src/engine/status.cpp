@@ -2,7 +2,19 @@
 // Copyright (c) 1996-2013 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.sysinfo;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.tier1.text_writer;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 #include "matchmaking/imatchframework.h"
 #include "edict.h"
 #include "igame.h"

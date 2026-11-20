@@ -2,7 +2,12 @@
 // Copyright (c) Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.playerid;
+import ks.tier1.strtools;
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor

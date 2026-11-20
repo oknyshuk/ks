@@ -3,6 +3,7 @@
 
 #include "quakedef.h"
 #include "networkstringtableitem.h"
+import ks.tier1.strtools;
 
 //-----------------------------------------------------------------------------
 // Purpose: 

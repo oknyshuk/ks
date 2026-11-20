@@ -3,7 +3,11 @@
 // Copyright (c) Valve Corporation
 
 import std;
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 // Purpose: Generic constraint functions to compute bone constraints
 // Used by studio/engine, SFM & Maya

@@ -4,6 +4,8 @@
 
 #include "captioncompiler.h"
 import std;
+import ks.tier1.datamanager;
+import ks.tier1.strtools;
 
 struct memhandle_t__;
 using memhandle_t = memhandle_t__ *;

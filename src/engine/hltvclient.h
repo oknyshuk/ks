@@ -3,6 +3,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "baseclient.h"
+import ks.core.vprof;
 
 class CHLTVServer;
 

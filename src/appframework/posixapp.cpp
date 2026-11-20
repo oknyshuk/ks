@@ -3,7 +3,14 @@
 
 // Purpose: Pieces of the application framework, shared between POSIX systems (Mac OS X, Linux, etc)
 
-import ks.vstdlib;
+import ks.core.dbg;
+import ks.core.logging;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.vstdlib.cvar;
 #include "appframework/AppFramework.h"
 import std;
 #include "filesystem.h"

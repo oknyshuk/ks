@@ -2,7 +2,32 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.color;
+import ks.core.dbg;
+import ks.core.numeric;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.characterset;
+import ks.tier1.commandbuffer;
+import ks.tier1.convar;
+import ks.tier1.convar_serverbounded;
+import ks.tier1.cvar;
+import ks.tier1.exprevaluator;
+import ks.tier1.iconvar;
+import ks.tier1.icvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.registry;
+import ks.tier1.strtools;
+import ks.tier1.text_reader;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.tier1.vector_ops;
 
 static bool DefaultAccessor( ConCommandBase *pVar )
 {
@@ -78,7 +103,12 @@ ConCommandBase::ConCommandBase( void )
 
 	m_nFlags = 0;
 	m_pNext  = nullptr;
-	m_pRegistry = &ks::current_registry().convars;
+	m_pRegistry = &ks::engine_registry().convars;
+}
+
+ConCommandBase::ConCommandBase( ks::registry &registry ) : ConCommandBase()
+{
+	m_pRegistry = &registry.convars;
 }
 
 //-----------------------------------------------------------------------------
@@ -89,6 +119,7 @@ ConCommandBase::ConCommandBase( void )
 //-----------------------------------------------------------------------------
 ConCommandBase::ConCommandBase( const char *pName, const char *pHelpString /*=0*/, int flags /*= 0*/ )
 {
+	m_pRegistry = &ks::engine_registry().convars;
 	m_Kind = ConKind::Command;
 	Create( pName, pHelpString, flags );
 }
@@ -128,8 +159,6 @@ void ConCommandBase::Create( const char *pName, const char *pHelpString /*= 0*/,
 	m_pszHelpString = pHelpString ? pHelpString : empty_string;
 
 	m_nFlags = flags;
-
-	m_pRegistry = &ks::current_registry().convars;
 
 	if ( !( m_nFlags & FCVAR_UNREGISTERED ) )
 	{
@@ -532,7 +561,35 @@ ConCommand::ConCommand( const char *pName, FnCommandCallbackV1_t callback, const
 	BaseClass::Create( pName, pHelpString, flags );
 }
 
+ConCommand::ConCommand( ks::registry &registry, const char *pName, FnCommandCallbackV1_t callback, const char *pHelpString /*= 0*/, int flags /*= 0*/, FnCommandCompletionCallback completionFunc /*= 0*/ )
+	: ConCommandBase( registry )
+{
+	// Set the callback
+	if ( callback )
+	{
+		m_fnCallback = [callback]( const CCommand & ) { ( *callback )(); };
+	}
+	m_fnCompletion = WrapCompletion( completionFunc );
+
+	// Setup the rest
+	BaseClass::Create( pName, pHelpString, flags );
+}
+
 ConCommand::ConCommand( const char *pName, FnCommandCallback_t callback, const char *pHelpString /*= 0*/, int flags /*= 0*/, FnCommandCompletionCallback completionFunc /*= 0*/ )
+{
+	// Set the callback
+	if ( callback )
+	{
+		m_fnCallback = callback;
+	}
+	m_fnCompletion = WrapCompletion( completionFunc );
+
+	// Setup the rest
+	BaseClass::Create( pName, pHelpString, flags );
+}
+
+ConCommand::ConCommand( ks::registry &registry, const char *pName, FnCommandCallback_t callback, const char *pHelpString /*= 0*/, int flags /*= 0*/, FnCommandCompletionCallback completionFunc /*= 0*/ )
+	: ConCommandBase( registry )
 {
 	// Set the callback
 	if ( callback )
@@ -547,6 +604,13 @@ ConCommand::ConCommand( const char *pName, FnCommandCallback_t callback, const c
 
 ConCommand::ConCommand( StatefulTag_t, const char *pName, ConCommandCallback_t callback, const char *pHelpString, int flags, ConCommandCompletionCallback_t completionCallback )
 	: m_fnCallback( std::move( callback ) ), m_fnCompletion( std::move( completionCallback ) )
+{
+	// Setup the rest
+	BaseClass::Create( pName, pHelpString, flags );
+}
+
+ConCommand::ConCommand( StatefulTag_t, ks::registry &registry, const char *pName, ConCommandCallback_t callback, const char *pHelpString, int flags, ConCommandCompletionCallback_t completionCallback )
+	: ConCommandBase( registry ), m_fnCallback( std::move( callback ) ), m_fnCompletion( std::move( completionCallback ) )
 {
 	// Setup the rest
 	BaseClass::Create( pName, pHelpString, flags );
@@ -628,6 +692,37 @@ ConVar::ConVar( const char *pName, const char *pDefaultValue, int flags, const c
 }
 
 ConVar::ConVar( const char *pName, const char *pDefaultValue, int flags, const char *pHelpString, bool bMin, float fMin, bool bMax, float fMax, FnChangeCallback_t callback )
+{
+	Create( pName, pDefaultValue, flags, pHelpString, bMin, fMin, bMax, fMax, callback );
+}
+
+
+ConVar::ConVar( ks::registry &registry, const char *pName, const char *pDefaultValue, int flags /* = 0 */ )
+	: ConCommandBase( registry )
+{
+	Create( pName, pDefaultValue, flags );
+}
+
+ConVar::ConVar( ks::registry &registry, const char *pName, const char *pDefaultValue, int flags, const char *pHelpString )
+	: ConCommandBase( registry )
+{
+	Create( pName, pDefaultValue, flags, pHelpString );
+}
+
+ConVar::ConVar( ks::registry &registry, const char *pName, const char *pDefaultValue, int flags, const char *pHelpString, bool bMin, float fMin, bool bMax, float fMax )
+	: ConCommandBase( registry )
+{
+	Create( pName, pDefaultValue, flags, pHelpString, bMin, fMin, bMax, fMax );
+}
+
+ConVar::ConVar( ks::registry &registry, const char *pName, const char *pDefaultValue, int flags, const char *pHelpString, FnChangeCallback_t callback )
+	: ConCommandBase( registry )
+{
+	Create( pName, pDefaultValue, flags, pHelpString, false, 0.0, false, 0.0, callback );
+}
+
+ConVar::ConVar( ks::registry &registry, const char *pName, const char *pDefaultValue, int flags, const char *pHelpString, bool bMin, float fMin, bool bMax, float fMax, FnChangeCallback_t callback )
+	: ConCommandBase( registry )
 {
 	Create( pName, pDefaultValue, flags, pHelpString, bMin, fMin, bMax, fMax, callback );
 }

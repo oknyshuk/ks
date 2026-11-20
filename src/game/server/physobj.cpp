@@ -1,50 +1,69 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-#include "vphysics_interface.h"
-#include "edict.h"
-#include "iserverentity.h"
-#include "shareddefs.h"
-#include "ehandle.h"
-#include "datamap.h"
-#include "util.h"
-#include "predictable_entity.h"
-#include "variant_t.h"
-#include "takedamageinfo.h"
-#include "touchlink.h"
-#include "groundlink.h"
+module;
+#include "bone_setup.h"
+#include "declare_class.h"
+#include "eiface.h"
+#include "model_types.h"
 #include "networkvar.h"
-#include "baseentity_shared.h"
-#include "basetoggle.h"
-#include "precache_register.h"
-#include "baseanimating.h"
-#include "basecombatweapon.h"
-#include "basecombatcharacter.h"
-#include "physics.h"
-#include "ndebugoverlay.h"
-#include "recipientfilter.h"
-#include "npcevent.h"
+#include "reflect.h"
+#include "responserules/response_types.h"
+#include "server_class.h"
+#include "vcollide_parse.h"
+#include "vphysics/constraints.h"
+#include "worldsize.h"
+#include "baseentity.h"
+#include "entity_dispatch.h"
+#include "entity_dispatch_list.h"
+#include "entity_kinds_dump.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
-#include "reflect_annotations.h"
-#include "player.h"
+#include "util.h"
+#include "studio.h"
 #include "vphysics_interface.h"
-#include "physics.h"
-#include "vcollide_parse.h"
-#include "entitylist.h"
-#include "physobj.h"
-#include "hierarchy.h"
-#include "game.h"
-#include "ndebugoverlay.h"
-#include "engine/IEngineSound.h"
-#include "model_types.h"
-#include "props.h"
-#include "vphysics/constraints.h"
-#include "collisionutils.h"
-#include "decals.h"
-#include "bone_setup.h"
+module ks.server;
 
-ConVar debug_physimpact("debug_physimpact", "0" );
+import std;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.threadtools;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import ks.tier1.strtools;
+import :fish;
+import :vscript;
+import :sharedvar;
+import :baseentity;
+import :player;
+import :nav_4;
+import :entity_dispatch;
+import :entity_kind;
+import :entity_2;
+import ks.game.shareddefs;
+import :cstrike15.bot.bot;
+import :entityutil;
+import ks.game.gamemovement;
+import ks.game.mapentities_shared;
+
+class CBaseEntity;
+class CBasePlayer;
+class CTakeDamageInfo;
+struct gamevcollisionevent_t;
+struct inputdata_t;
+struct notify_system_event_params_t;
+
+using namespace ::ks::reflect;
+
+ConVar debug_physimpact(side_registry(), "debug_physimpact", "0" );
 
 const char *GetMassEquivalent(float flMass);
 
@@ -55,7 +74,7 @@ const char *GetMassEquivalent(float flMass);
 // and infinite force), they can penetrate any other object (or spring). They do not occupy any space.
 // 
 
-constexpr auto SF_SPRING_ONLYSTRETCH = 0x0001;
+static constexpr auto SF_SPRING_ONLYSTRETCH = 0x0001;
 
 class CPhysicsSpring : public CBaseEntity
 {
@@ -122,13 +141,8 @@ bool GetSpringAttachments( CBaseEntity *pEntity, CBaseEntity *pAttachOut[2], IPh
 	return false;
 }
 
-
 CPhysicsSpring::CPhysicsSpring( void )
 {
-#ifdef _DEBUG
-	m_start.Init();
-	m_end.Init();
-#endif
 	m_pSpring = nullptr;
 	m_tempConstant = 150;
 	m_tempLength = 0;
@@ -146,7 +160,6 @@ CPhysicsSpring::~CPhysicsSpring( void )
 	}
 }
 
-
 //------------------------------------------------------------------------------
 // Purpose:
 //------------------------------------------------------------------------------
@@ -155,7 +168,6 @@ void CPhysicsSpring::InputSetSpringConstant( inputdata_t &inputdata )
 	m_tempConstant = inputdata.value.Float();
 	m_pSpring->SetSpringConstant(inputdata.value.Float());
 }
-
 
 //------------------------------------------------------------------------------
 // Purpose:
@@ -166,7 +178,6 @@ void CPhysicsSpring::InputSetSpringDamping( inputdata_t &inputdata )
 	m_pSpring->SetSpringDamping(inputdata.value.Float());
 }
 
-
 //------------------------------------------------------------------------------
 // Purpose:
 //------------------------------------------------------------------------------
@@ -175,7 +186,6 @@ void CPhysicsSpring::InputSetSpringLength( inputdata_t &inputdata )
 	m_tempLength = inputdata.value.Float();
 	m_pSpring->SetSpringLength(inputdata.value.Float());
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Draw any debug text overlays
@@ -284,7 +294,6 @@ void CPhysicsSpring::GetSpringObjectConnections( string_t nameStart, string_t na
 	*pEnd = pEndObject;
 }
 
-
 void CPhysicsSpring::Activate_Impl( void )
 {
 	BaseClass::Activate_Impl();
@@ -327,7 +336,6 @@ void CPhysicsSpring::Activate_Impl( void )
 	}
 }
 
-
 void CPhysicsSpring::Spawn_Impl( void )
 {
 	SetSolid( SOLID_NONE );
@@ -347,7 +355,6 @@ void CPhysicsSpring::NotifySystemEvent_Impl( CBaseEntity *pNotify, notify_system
 	m_teleportTick = gpGlobals->tickcount;
 	PhysTeleportConstrainedEntity( pNotify, m_pSpring->GetStartObject(), m_pSpring->GetEndObject(), params.pTeleport->prevOrigin, params.pTeleport->prevAngles, params.pTeleport->physicsRotate );
 }
-
 
 // ---------------------------------------------------------------------
 //
@@ -465,7 +472,6 @@ static bool ShouldDampRotation( const CPhysCollide *pCollide )
 	return false;
 }
 
-
 bool CPhysBox::CreateVPhysics_Impl()
 {
 	solid_t tmpSolid;
@@ -503,7 +509,6 @@ bool CPhysBox::CreateVPhysics_Impl()
 	return true;
 }
 
-       
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -545,7 +550,6 @@ void CPhysBox::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 bool CPhysBox::CanBePickedUpByPhyscannon()
@@ -562,7 +566,6 @@ bool CPhysBox::CanBePickedUpByPhyscannon()
 
 	return true;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Draw any debug text overlays
@@ -585,7 +588,6 @@ int CPhysBox::DrawDebugTextOverlays_Impl(void)
 
 	return text_offset;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Input handler that breaks the physics object away from its parent
@@ -832,7 +834,6 @@ bool CPhysBox::HasPreferredCarryAnglesForPlayer( CBasePlayer *pPlayer )
 	return HasSpawnFlags( SF_PHYSBOX_USEPREFERRED );
 }
 
-
 // ---------------------------------------------------------------------
 //
 // CPhysExplosion -- physically simulated explosion
@@ -842,7 +843,6 @@ bool CPhysBox::HasPreferredCarryAnglesForPlayer( CBasePlayer *pPlayer )
 LINK_ENTITY_TO_CLASS( env_physexplosion, CPhysExplosion );
 
 IMPLEMENT_REFLECT_DATAMAP( CPhysExplosion )
-
 
 void CPhysExplosion::Spawn_Impl( void )
 {
@@ -881,7 +881,6 @@ CBaseEntity *CPhysExplosion::FindEntity( CBaseEntity *pEntity, CBaseEntity *pAct
 	return gEntList.FindEntityInSphere( pEntity, GetAbsOrigin(), GetRadius() );
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -894,7 +893,6 @@ void CPhysExplosion::InputExplodeAndRemove( inputdata_t &inputdata )
 {
 	ExplodeAndRemove( inputdata.pActivator, inputdata.pCaller );
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -981,8 +979,8 @@ void CPhysExplosion::Explode( CBaseEntity *pActivator, CBaseEntity *pCaller )
 							//Disorient the player
 							QAngle vecDeltaAngles;
 
-							vecDeltaAngles.x = random->RandomInt( -30, 30 );
-							vecDeltaAngles.y = random->RandomInt( -30, 30 );
+							vecDeltaAngles.x = random_valve->RandomInt( -30, 30 );
+							vecDeltaAngles.y = random_valve->RandomInt( -30, 30 );
 							vecDeltaAngles.z = 0.0f;
 
 							CBasePlayer *pPlayer = ToBasePlayer( pEntity );
@@ -1024,7 +1022,6 @@ void CPhysExplosion::Explode( CBaseEntity *pActivator, CBaseEntity *pCaller )
 		}
 	}
 }
-
 
 void CPhysExplosion::ExplodeAndRemove( CBaseEntity *pActivator, CBaseEntity *pCaller )
 {
@@ -1075,22 +1072,19 @@ void CreatePhysExplosion( Vector origin, float magnitude, float radius, string_t
 	pExplosion->AcceptInput( "ExplodeAndRemove", nullptr, nullptr, emptyVariant, 0 );
 }
 
-
-
 //==================================================
 // CPhysImpact
 //==================================================
 
-constexpr auto bitsPHYSIMPACT_NOFALLOFF = 0x00000001;
-constexpr auto bitsPHYSIMPACT_INFINITE_LENGTH = 0x00000002;
-constexpr auto bitsPHYSIMPACT_IGNORE_MASS = 0x00000004;
-constexpr auto bitsPHYSIMPACT_IGNORE_NORMAL = 0x00000008;
+static constexpr auto bitsPHYSIMPACT_NOFALLOFF = 0x00000001;
+static constexpr auto bitsPHYSIMPACT_INFINITE_LENGTH = 0x00000002;
+static constexpr auto bitsPHYSIMPACT_IGNORE_MASS = 0x00000004;
+static constexpr auto bitsPHYSIMPACT_IGNORE_NORMAL = 0x00000008;
 
-constexpr auto DEFAULT_EXPLODE_DISTANCE = 256;
+static constexpr auto DEFAULT_EXPLODE_DISTANCE = 256;
 LINK_ENTITY_TO_CLASS( env_physimpact, CPhysImpact );
 
 IMPLEMENT_REFLECT_DATAMAP( CPhysImpact )
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1210,7 +1204,6 @@ void CPhysImpact::InputImpact( inputdata_t &inputdata )
 	}
 }
 
-
 class CSimplePhysicsBrush : public CBaseEntity
 {
 	DECLARE_CLASS( CSimplePhysicsBrush, CBaseEntity );
@@ -1322,8 +1315,8 @@ static CBaseEntity *CreateSimplePhysicsObject( CBaseEntity *pEntity, bool create
 	return pPhysEntity;
 }
 
-constexpr auto SF_CONVERT_ASLEEP = 0x0001;
-constexpr auto SF_CONVERT_AS_DEBRIS = 0x0002;
+static constexpr auto SF_CONVERT_ASLEEP = 0x0001;
+static constexpr auto SF_CONVERT_AS_DEBRIS = 0x0002;
 
 class CPhysConvert : public CLogicalEntity
 {
@@ -1346,8 +1339,6 @@ private:
 LINK_ENTITY_TO_CLASS( phys_convert, CPhysConvert );
 
 IMPLEMENT_REFLECT_DATAMAP( CPhysConvert )
-
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Input handler that converts our target to a physics object.
@@ -1426,11 +1417,11 @@ void CPhysConvert::InputConvertTarget( inputdata_t &inputdata )
 //============================================================================================================
 // PHYS MAGNET
 //============================================================================================================
-constexpr auto SF_MAGNET_ASLEEP = 0x0001;
-constexpr auto SF_MAGNET_MOTIONDISABLED = 0x0002;
-constexpr auto SF_MAGNET_SUCK = 0x0004;
-constexpr auto SF_MAGNET_ALLOWROTATION = 0x0008;
-constexpr auto SF_MAGNET_COAST_HACK = 0x0010;
+static constexpr auto SF_MAGNET_ASLEEP = 0x0001;
+static constexpr auto SF_MAGNET_MOTIONDISABLED = 0x0002;
+static constexpr auto SF_MAGNET_SUCK = 0x0004;
+static constexpr auto SF_MAGNET_ALLOWROTATION = 0x0008;
+static constexpr auto SF_MAGNET_COAST_HACK = 0x0010;
 
 LINK_ENTITY_TO_CLASS( phys_magnet, CPhysMagnet );
 
@@ -1451,7 +1442,6 @@ void SendProxy_MagnetAttachedObjectList( const void *pStruct, const void *pData,
 
 	pOut->m_Int = pMagnet->GetAttachedObject(iElement)->entindex();
 }
-
 
 int SendProxyArrayLength_MagnetAttachedArray( const void *pStruct, int objectID )
 {
@@ -1844,3 +1834,65 @@ public:
 	}
 };
 LINK_ENTITY_TO_CLASS( info_mass_center, CInfoMassCenter );
+
+using namespace ::ks::reflect;
+
+//==================================================
+// CPlasma
+//==================================================
+
+//Link the entity
+LINK_ENTITY_TO_CLASS( _plasma, CPlasma );
+
+//Send datatable
+IMPLEMENT_REFLECT_SERVERCLASS( CPlasma, DT_Plasma )
+
+//Data description 
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *name - 
+//-----------------------------------------------------------------------------
+CPlasma::CPlasma( void ) 
+{
+	//Client-side
+	m_flScale				= 0.0f;
+	m_flScaleTime			= 0.0f;
+	m_nFlags				= bitsFIRE_NONE;
+	m_nPlasmaModelIndex		= PrecacheModel( "sprites/plasma1.vmt" );
+	m_nPlasmaModelIndex2	= PrecacheModel( "sprites/plasma1.vmt" );//<<TEMP>>
+	m_nGlowModelIndex		= PrecacheModel( "sprites/fire_floor.vmt" );
+	//Server-side
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+CPlasma::~CPlasma( void )
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : state - 
+//-----------------------------------------------------------------------------
+void CPlasma::EnableSmoke( int state )
+{
+	if ( state )
+	{
+		m_nFlags |= bitsFIRESMOKE_SMOKE;
+	}
+	else
+	{
+		m_nFlags &= ~bitsFIRESMOKE_SMOKE;
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CPlasma::Precache_Impl( void )
+{
+	PrecacheModel( "sprites/plasma1.vmt" );
+	PrecacheModel( "sprites/fire_floor.vmt" );
+}

@@ -7,7 +7,18 @@
 #include <SDL3/SDL_vulkan.h>
 
 import ks.desktop;
-import ks.tier1;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iappsystem;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 #include "appframework/ilaunchermgr.h"
 import std;
 #include "filesystem.h"

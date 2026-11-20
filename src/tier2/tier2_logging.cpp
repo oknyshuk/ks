@@ -3,7 +3,13 @@
 
 // Purpose: Tier2 logging helpers.
 
-import ks.tier1;
+import ks.core.logging;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.icvar;
+import ks.tier1.interfaces;
+import ks.tier1.strtools;
 #include "tier2_logging.h"
 #include "filesystem.h"
 import std;

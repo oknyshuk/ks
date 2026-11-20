@@ -10,7 +10,25 @@
 // So I found an fast approximate solution to Wahba's problem, which allows me to quickly shape-match
 // more than 3 vertices, with different masses. 2D LSq is still used for 2-vert-constrained elements
 
-import ks.math;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.cholesky;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.pfns;
+import ks.math.ssecholesky;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.svd;
+import ks.math.transform;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
 #include "mathlib/femodel.h"
 import std;
 #include "mathlib/femodel.inl"

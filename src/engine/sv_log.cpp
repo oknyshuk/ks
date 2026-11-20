@@ -29,7 +29,22 @@
 #include "filesystem_engine.h"
 #include "sv_main.h"
 #include <proto_oob.h>
-import ks.tier1;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.checksum_crc;
+import ks.tier1.convar;
+import ks.tier1.cvar;
+import ks.tier1.fmtstr;
+import ks.tier1.iconvar;
+import ks.tier1.icvar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.netadr;
+import ks.tier1.strtools;
 import std;
 #include "GameEventManager.h"
 

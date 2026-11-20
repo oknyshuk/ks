@@ -4,7 +4,13 @@
 
 #include <tier2/tier2.h>
 
-import ks.tier1;
+import ks.core.platform;
+import ks.core.tslist;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.checksum_md5;
+import ks.tier1.keyvalues;
 #include "filesystem.h"
 import std;
 

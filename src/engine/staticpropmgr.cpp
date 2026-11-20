@@ -3,7 +3,34 @@
 
 // Purpose: This file contains code to allow us to associate client data with bsp leaves.
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.color;
+import ks.core.dbg;
+import ks.core.logging;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.aabb;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.convar;
+import ks.tier1.generichash;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.strtools;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 #include "staticpropmgr.h"
 #include "vcollide_parse.h"
 #include "engine/ICollideable.h"

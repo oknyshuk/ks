@@ -6,7 +6,8 @@
 // main precompiled header for server files
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 
 #include "common.h"
 #include "qlimits.h"

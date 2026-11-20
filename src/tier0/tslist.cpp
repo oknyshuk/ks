@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 2007 Valve Corporation
 
-import ks.core;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.core.threadtools;
+import ks.core.tslist;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 
 // First include standard libraries
 import std;

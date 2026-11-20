@@ -3,7 +3,9 @@
 #if defined(CLIENT_DLL)
 #endif
 import std;
-import ks.core;
+import ks.core.memalloc;
+import ks.platform;
+import ks.simd;
 #if defined(CLIENT_DLL)
 #endif
 #include "vallocator.h"

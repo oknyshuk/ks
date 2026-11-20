@@ -3,7 +3,14 @@
 #include <SDL3/SDL.h>
 
 
-import ks.core;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 import std;
 
 #include "soundsystem/lowlevel.h"

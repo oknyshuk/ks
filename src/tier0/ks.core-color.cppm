@@ -2,11 +2,11 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.core:color;
+export module ks.core.color;
 
 import std;
 import ks.platform;
-import :prelude;
+import ks.core.basetypes;
 
 export extern "C++" {
 

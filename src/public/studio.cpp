@@ -6,10 +6,8 @@
 #endif
 #if defined(CLIENT_DLL)
 import std;
-import ks.core;
 #elif defined(GAME_DLL)
 #endif
-import ks.tier1;
 #include "studio.h"
 #include "datacache/idatacache.h"
 #include "datacache/imdlcache.h"
@@ -18,6 +16,26 @@ import ks.tier1;
 #include "mathlib/softbody.h"
 #include "mathlib/softbody.inl"
 #include "bone_setup.h"
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.buffer_strider;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.interfaces;
+import ks.tier1.intern_pool;
+import ks.tier1.map_ops;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
 
 // preload up to 1 second worth of blocks ahead.
 ConVar mod_load_preload( "mod_load_preload", false ? "1.0" : "1.0", 0, "Indicates how far ahead in seconds to preload animations." );

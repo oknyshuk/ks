@@ -2,7 +2,16 @@
 // Copyright (c) 1996-2011 Valve Corporation
 
 import std;
-import ks.math;
+import ks.core.scratcharena;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.pfns;
+import ks.math.transform;
+import ks.math.vector;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
 
 const CTransform g_TransformIdentity( Vector( 0.0f, 0.0f, 0.0f ), Quaternion( 0.0f, 0.0f, 0.0f, 1.0f ) );
 

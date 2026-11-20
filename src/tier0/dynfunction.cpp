@@ -3,7 +3,9 @@
 
 // Purpose: Shared library loading and symbol lookup.
 
-import ks.core;
+import ks.core.dynfunction;
+import ks.platform;
+import ks.simd;
 
 // First include standard libraries
 import std;

@@ -4,7 +4,12 @@
 // Purpose: noise() primitives.
 
 import std;
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.noise;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 // generate high quality noise based upon "sparse convolution". HIgher quality than perlin noise,
 // and no direcitonal artifacts.

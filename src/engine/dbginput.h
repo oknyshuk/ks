@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import ks.core;
+import ks.core.threadtools;
+import ks.platform;
+import ks.simd;
 import std;
 
 class CDebugInputThread: public CThread

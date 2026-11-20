@@ -1,0 +1,92 @@
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+#pragma once
+
+import std;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.byte_writer;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+
+class CChoreoEvent;
+class CChoreoActor;
+class CChoreoScene;
+class IChoreoStringPool;
+
+//-----------------------------------------------------------------------------
+// Purpose: A channel is owned by an actor and contains zero or more events
+//-----------------------------------------------------------------------------
+class CChoreoChannel
+{
+public:
+	// Construction
+					CChoreoChannel( void );
+					CChoreoChannel( const char *name );
+
+	// Assignment
+	CChoreoChannel&	operator=(const CChoreoChannel& src );
+
+	// Serialization
+	void			SaveToBuffer( ks::byte_writer& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool );
+	bool			RestoreFromBuffer( ks::byte_reader& buf, CChoreoScene *pScene, CChoreoActor *pActor, IChoreoStringPool *pStringPool );
+
+	// Accessors
+	void			SetName( const char *name );
+	const char		*GetName( void );
+
+	// Iterate children
+	int				GetNumEvents( void );
+	CChoreoEvent	*GetEvent( int event );
+
+	// Manipulate children
+	void			AddEvent( CChoreoEvent *event );
+	void			RemoveEvent( CChoreoEvent *event );
+	int				FindEventIndex( CChoreoEvent *event );
+	void			RemoveAllEvents();
+
+	CChoreoActor	*GetActor( void );
+	void			SetActor( CChoreoActor *actor );
+
+	void						SetActive( bool active );
+	bool						GetActive( void ) const;
+
+	// Compute true start/end times for gesture events in this channel, factoring in "null" gestures as needed
+	void			ReconcileGestureTimes();
+	// Compute master/slave, count, endtime info for close captioning data
+	void			ReconcileCloseCaption();
+
+	bool			IsMarkedForSave() const { return m_bMarkedForSave; }
+	void			SetMarkedForSave( bool mark ) { m_bMarkedForSave = mark; }
+
+	void			MarkForSaveAll( bool mark );
+
+	// sorted by start time
+	bool			GetSortedCombinedEventList( char const *cctoken, std::vector< CChoreoEvent * >& sorted );
+
+private:
+	// Initialize fields
+	void			Init( void );
+
+	enum
+	{
+		MAX_CHANNEL_NAME = 128,
+	};
+
+	CChoreoActor	*m_pActor;
+
+	// Channels are just named
+	char			m_szName[ MAX_CHANNEL_NAME ];
+
+	// All of the events for this channel
+	std::vector< CChoreoEvent * > m_Events;
+
+	bool			m_bActive;
+
+	// Purely for save/load
+	bool			m_bMarkedForSave;
+};

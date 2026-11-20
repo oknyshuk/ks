@@ -4,6 +4,10 @@
 // Purpose: Core types for the response rules -- criteria, responses, rules, and matchers.
 
 #include "rrbase.h"
+import ks.core.dbg;
+import ks.core.vprof;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
 
 using namespace ResponseRules;
 

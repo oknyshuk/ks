@@ -3,7 +3,16 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.ssequaternion;
+import ks.platform;
+import ks.simd;
+import ks.tier1.datamanager;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 #include "tier3/tier3.h"
 
 class IDataCache;

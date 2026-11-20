@@ -1,46 +1,89 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2007 Valve Corporation
 
+module;
+#include <math.h>
+#include <stddef.h>
+#include <string.h>
+#include "bsptreedata.h"
+#include "collisionutils.h"
+#include "con_nprint.h"
+#include "edict.h"
+#include "engine/IClientLeafSystem.h"
+#include "engine/ishadowmgr.h"
+#include "iclientalphaproperty.h"
+#include "iclientrenderable.h"
+#include "ivrenderview.h"
+#include "model_types.h"
+#include "cdll_client_int.h"
+module ks.client;
+
+import std;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.game.entity_cast;
+import ks.math.aabb;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vmatrix;
+import ks.math.volumeculler;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bidirectional_set;
+import ks.tier1.convar;
+import ks.tier1.fixed_pool;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import ks.tier1.slot_pool;
+import ks.tier1.small_vector;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
+import :props;
+import :baseanimatedtextureproxy;
+import :iinput;
+import :baseentity;
+import :sharedvar;
+import :util;
+import :particlemgr;
+import :precache;
+import ks.game.shareddefs;
+import :achievements_and_stats_interface;
+import ks.game.gamemovement;
+import ks.game.mapentities_shared;
+import :noopanimcontroller;
+import ks.tier1.refcount;
+
+class CClientAlphaProperty;
+class CClientRenderablesList;
+class CNewParticleEffect;
+class CParticleEffectBinding;
+class CBaseEntity;
+class CBasePlayer;
+
+using namespace ::ks::reflect;
+
 // Purpose: This file contains code to allow us to associate client data with bsp leaves.
 
-#include "rocketui/rmlui.h"
-#include "predictable_entity.h"
-#include "cdll_util.h"
-#include "util_shared.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
-#include "c_basecombatweapon.h"
-#include "c_basecombatcharacter.h"
-#include "gamerules.h"
-#include "c_baseplayer.h"
-#include "cdll_client_int.h"
-#include "engine/ivmodelinfo.h"
-#include "debugoverlay_shared.h"
-#include "clientleafsystem.h"
-#include "model_types.h"
-#include "ivrenderview.h"
-#include "bsptreedata.h"
-#include "detailobjectsystem.h"
-#include "engine/IStaticPropMgr.h"
-#include "engine/ivdebugoverlay.h"
-#include "datacache/imdlcache.h"
-#include "viewrender.h"
-#include "clientalphaproperty.h"
-#include "con_nprint.h"
-#include "collisionutils.h"
-#include "iinput.h"
+static ConVar cl_drawleaf(side_registry(), "cl_drawleaf", "-1", FCVAR_CHEAT );
+static ConVar r_PortalTestEnts( side_registry(), "r_PortalTestEnts", "1", FCVAR_CHEAT, "Clip entities against portal frustums." );
+static ConVar r_portalsopenall( side_registry(), "r_portalsopenall", "0", FCVAR_CHEAT, "Open all portals" );
 
+static ConVar r_shadows_on_renderables_enable( side_registry(), "r_shadows_on_renderables_enable", "0", 0, "Support casting RTT shadows onto other renderables" );
 
-static ConVar cl_drawleaf("cl_drawleaf", "-1", FCVAR_CHEAT );
-static ConVar r_PortalTestEnts( "r_PortalTestEnts", "1", FCVAR_CHEAT, "Clip entities against portal frustums." );
-static ConVar r_portalsopenall( "r_portalsopenall", "0", FCVAR_CHEAT, "Open all portals" );
+static ConVar cl_leafsystemvis( side_registry(), "cl_leafsystemvis", "0", FCVAR_CHEAT );
 
-static ConVar r_shadows_on_renderables_enable( "r_shadows_on_renderables_enable", "0", 0, "Support casting RTT shadows onto other renderables" );
-
-static ConVar cl_leafsystemvis( "cl_leafsystemvis", "0", FCVAR_CHEAT );
-
-static ConVar r_alphafade_usefov( "r_alphafade_usefov", "1", FCVAR_CHEAT, "Account for FOV when computing an entity's distance-based alpha fade" );
-
+static ConVar r_alphafade_usefov( side_registry(), "r_alphafade_usefov", "1", FCVAR_CHEAT, "Account for FOV when computing an entity's distance-based alpha fade" );
 
 extern ConVar cl_csm_disable_culling;
 extern ConVar cl_csm_shadows;
@@ -65,7 +108,6 @@ static void FrameUnlock()
 {
 	mdlcache->EndLock();
 }
-
 
 //-----------------------------------------------------------------------------
 // The client leaf system
@@ -167,7 +209,7 @@ public:
 	virtual RenderGroup_t GenerateRenderListEntry( IClientRenderable *pRenderable, CClientRenderablesList::CEntry &entryOut );
 
 	// Get renderable that render bound intersect with the query box
-	virtual int GetEntitiesInBox( C_BaseEntity **pEntityList, int listMax, const Vector& vWorldSpaceMins, const Vector& vWorldSpaceMaxs );
+	virtual int GetEntitiesInBox( CBaseEntity **pEntityList, int listMax, const Vector& vWorldSpaceMins, const Vector& vWorldSpaceMaxs );
 
 	virtual void ComputeAllBounds( void );
 
@@ -452,14 +494,13 @@ void CClientLeafSystem::DestroyClientAlphaProperty( IClientAlphaProperty *pAlpha
 	}
 }
 
-	
 //-----------------------------------------------------------------------------
 // Expose IClientLeafSystem to the client dll.
 //-----------------------------------------------------------------------------
 CClientLeafSystem CClientLeafSystem::s_ClientLeafSystem;
 IClientLeafSystem *g_pClientLeafSystem = &CClientLeafSystem::s_ClientLeafSystem;
-static InterfaceReg s_Reg_CClientLeafSystem_IClientLeafSystem( []() -> void * { return static_cast<IClientLeafSystem *>( &CClientLeafSystem::s_ClientLeafSystem ); }, CLIENTLEAFSYSTEM_INTERFACE_VERSION );;
-static InterfaceReg s_Reg_CClientLeafSystem_IClientAlphaPropertyMgr( []() -> void * { return static_cast<IClientAlphaPropertyMgr *>( &CClientLeafSystem::s_ClientLeafSystem ); }, CLIENT_ALPHA_PROPERTY_MGR_INTERFACE_VERSION );;
+static InterfaceReg s_Reg_CClientLeafSystem_IClientLeafSystem( side_registry(), []() -> void * { return static_cast<IClientLeafSystem *>( &CClientLeafSystem::s_ClientLeafSystem ); }, CLIENTLEAFSYSTEM_INTERFACE_VERSION );;
+static InterfaceReg s_Reg_CClientLeafSystem_IClientAlphaPropertyMgr( side_registry(), []() -> void * { return static_cast<IClientAlphaPropertyMgr *>( &CClientLeafSystem::s_ClientLeafSystem ); }, CLIENT_ALPHA_PROPERTY_MGR_INTERFACE_VERSION );;
 
 IClientAlphaPropertyMgr *ClientAlphaPropertyMgr()
 {
@@ -467,7 +508,6 @@ IClientAlphaPropertyMgr *ClientAlphaPropertyMgr()
 }
 
 void CalcRenderableWorldSpaceAABB_Fast( IClientRenderable *pRenderable, Vector &absMin, Vector &absMax );
-
 
 //-----------------------------------------------------------------------------
 // Helper functions.
@@ -478,10 +518,10 @@ static void ClientRenderBoundsWorldspace( IClientRenderable *pRenderable, Vector
 
 	// Tracker 37433:  This fixes a bug where if the stunstick is being wielded by a combine soldier, the fact that the stick was
 	//  attached to the soldier's hand would move it such that it would get frustum culled near the edge of the screen.
-	C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( pRenderable->GetIClientUnknown()->GetBaseEntity() );
+	CBaseEntity *pEnt = EntityCast<CBaseEntity>( pRenderable->GetIClientUnknown()->GetBaseEntity() );
 	if ( pEnt && ( pEnt->IsFollowingEntity() || ( pEnt->GetParentAttachment() > 0 ) ) )
 	{
-		C_BaseEntity *pParent = pEnt->GetMoveParent();
+		CBaseEntity *pParent = pEnt->GetMoveParent();
 		if ( pParent )
 		{
 			// Get the parent's abs space world bounds.
@@ -532,7 +572,6 @@ inline void CalcRenderableWorldSpaceAABB(
 	pRenderable->GetRenderBoundsWorldspace( absMins, absMaxs );
 }
 
-
 // This gets an AABB for the renderable, but it doesn't cause a parent's bones to be setup.
 // This is used for placement in the leaves, but the more expensive version is used for culling.
 void CalcRenderableWorldSpaceAABB_Fast( IClientRenderable *pRenderable, Vector &absMin, Vector &absMax )
@@ -543,10 +582,10 @@ void CalcRenderableWorldSpaceAABB_Fast( IClientRenderable *pRenderable, Vector &
 		return;
 	}
 
-	C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( pRenderable->GetIClientUnknown()->GetBaseEntity() );
+	CBaseEntity *pEnt = EntityCast<CBaseEntity>( pRenderable->GetIClientUnknown()->GetBaseEntity() );
 	if ( pEnt && ( pEnt->IsFollowingEntity() || ( pEnt->GetMoveParent() && ( pEnt->GetParentAttachment() > 0 ) ) ) )
 	{
-		C_BaseEntity *pParent = pEnt->GetMoveParent();
+		CBaseEntity *pParent = pEnt->GetMoveParent();
 		if ( pParent )
 		{
 			// Get the parent's abs space world bounds.
@@ -610,7 +649,6 @@ void CClientLeafSystem::DisableLeafReinsertion( bool bDisable )
 	m_bDisableLeafReinsertion = bDisable;
 }
 
-
 //-----------------------------------------------------------------------------
 // Level init, shutdown
 //-----------------------------------------------------------------------------
@@ -671,12 +709,11 @@ void CClientLeafSystem::LevelShutdownPostEntity()
 	m_DirtyRenderables.clear(); m_DirtyRenderables.shrink_to_fit();
 }
 
-
 //-----------------------------------------------------------------------------
 // Computes a bloated bounding box to reduce insertions into the tree
 //-----------------------------------------------------------------------------
-constexpr auto BBOX_GRANULARITY = 32.0f;
-constexpr auto MIN_SHRINK_VOLUME = ( 32.0f * 32.0f * 32.0f );
+static constexpr auto BBOX_GRANULARITY = 32.0f;
+static constexpr auto MIN_SHRINK_VOLUME = ( 32.0f * 32.0f * 32.0f );
 
 void CClientLeafSystem::CalcRenderableWorldSpaceAABB_Bloated( const RenderableInfo_t &info, Vector &absMin, Vector &absMax )
 {
@@ -707,7 +744,6 @@ void CClientLeafSystem::CalcRenderableWorldSpaceAABB_Bloated( const RenderableIn
 		}
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // This is what happens before rendering a particular view
@@ -793,7 +829,6 @@ void CClientLeafSystem::RecomputeRenderableLeaves()
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Creates a new renderable
 //-----------------------------------------------------------------------------
@@ -817,16 +852,6 @@ void CClientLeafSystem::CreateRenderableHandle( IClientRenderable* pRenderable, 
 	}
 	
 	int modelType = modelinfo->GetModelType( pRenderable->GetModel() );
-
-#ifdef _DEBUG
-	// We need to know if it's a brush model for shadows
-	switch ( modelType )
-	{
-	case mod_brush: contract_assert( nModelType == RENDERABLE_MODEL_BRUSH ); break;
-	case mod_studio: contract_assert( nModelType == RENDERABLE_MODEL_STUDIOMDL || nModelType == RENDERABLE_MODEL_STATIC_PROP ); break;
-	case mod_sprite: default: contract_assert( nModelType == RENDERABLE_MODEL_ENTITY ); break;
-	}
-#endif
 
 	info.m_Area = -1;
 	info.m_pRenderable = pRenderable;
@@ -852,7 +877,6 @@ void CClientLeafSystem::CreateRenderableHandle( IClientRenderable* pRenderable, 
 	RenderWithViewModels( handle, bRenderWithViewModels );
 }
 
-
 //-----------------------------------------------------------------------------
 // Call this if the model changes
 //-----------------------------------------------------------------------------
@@ -873,7 +897,6 @@ RenderableTranslucencyType_t CClientLeafSystem::GetTranslucencyType( ClientRende
 	const RenderableInfo_t &info = m_Renderables[handle];
 	return (RenderableTranslucencyType_t)info.m_nTranslucencyType;
 }
-
 
 void CClientLeafSystem::RenderInFastReflections( ClientRenderHandle_t handle, bool bRenderInFastReflections )
 {
@@ -1022,7 +1045,6 @@ void CClientLeafSystem::DisableCachedRenderBounds( ClientRenderHandle_t handle, 
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Draw translucent objects in the opaque renderables pass
 //-----------------------------------------------------------------------------
@@ -1079,7 +1101,6 @@ void CClientLeafSystem::EnableAlternateSorting( ClientRenderHandle_t handle, boo
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Should this render with viewmodels?
 //-----------------------------------------------------------------------------
@@ -1111,15 +1132,12 @@ void CClientLeafSystem::RenderWithViewModels( ClientRenderHandle_t handle, bool 
 	}
 }
 
-
 bool CClientLeafSystem::IsRenderingWithViewModels( ClientRenderHandle_t handle ) const
 {
 	if ( handle == INVALID_CLIENT_RENDER_HANDLE )
 		return false;
 	return ( m_Renderables[handle].m_Flags & RENDER_FLAGS_RENDER_WITH_VIEWMODELS ) != 0;
 }
-
-
 
 //-----------------------------------------------------------------------------
 // Add/remove renderable
@@ -1185,7 +1203,6 @@ void CClientLeafSystem::RemoveRenderable( ClientRenderHandle_t handle )
 	m_Renderables.erase( handle );
 }
 
-
 int CClientLeafSystem::GetRenderableLeaves( ClientRenderHandle_t handle, int leaves[128] )
 {
 	if ( !m_Renderables.contains( handle ) )
@@ -1204,7 +1221,6 @@ int CClientLeafSystem::GetRenderableLeaves( ClientRenderHandle_t handle, int lea
 	}
 	return nLeaves;
 }
-
 
 //-----------------------------------------------------------------------------
 // Retrieve leaf handles to leaves a renderable is in
@@ -1320,7 +1336,6 @@ void CClientLeafSystem::GetDetailObjectsInLeaf( int leaf, int& firstDetailObject
 	detailObjectCount = m_Leaf[leaf].m_DetailPropCount;
 }
 
-
 //-----------------------------------------------------------------------------
 // Create/destroy shadows...
 //-----------------------------------------------------------------------------
@@ -1345,11 +1360,10 @@ void CClientLeafSystem::RemoveShadow( ClientLeafShadowHandle_t handle )
 	m_Shadows.erase( handle );
 }
 
-
 //-----------------------------------------------------------------------------
 // Adds a shadow to a leaf/removes shadow from renderable
 //-----------------------------------------------------------------------------
-inline bool CClientLeafSystem::ShouldRenderableReceiveShadow( ClientRenderHandle_t renderHandle, int nShadowFlags )
+bool CClientLeafSystem::ShouldRenderableReceiveShadow( ClientRenderHandle_t renderHandle, int nShadowFlags )
 {
 	RenderableInfo_t &renderable = m_Renderables[renderHandle];
 	if ( renderable.m_nModelType == RENDERABLE_MODEL_ENTITY )
@@ -1357,7 +1371,6 @@ inline bool CClientLeafSystem::ShouldRenderableReceiveShadow( ClientRenderHandle
 
 	return renderable.m_pRenderable->ShouldReceiveProjectedTextures( nShadowFlags );
 }
-
 
 //-----------------------------------------------------------------------------
 // Adds a shadow to a leaf/removes shadow from renderable
@@ -1399,7 +1412,6 @@ void CClientLeafSystem::RemoveShadowFromRenderables( ClientLeafShadowHandle_t ha
 	m_ShadowsOnRenderable.remove_element( handle );
 }
 
-
 //-----------------------------------------------------------------------------
 // Adds a shadow to a leaf/removes shadow from leaf
 //-----------------------------------------------------------------------------
@@ -1434,7 +1446,6 @@ void CClientLeafSystem::RemoveShadowFromLeaves( ClientLeafShadowHandle_t handle 
 {
 	m_ShadowsInLeaf.remove_element( handle );
 }
-
 
 //-----------------------------------------------------------------------------
 // Adds a shadow to all leaves listed
@@ -1475,7 +1486,6 @@ void CClientLeafSystem::ProjectFlashlight( ClientLeafShadowHandle_t handle, int 
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Find all shadow casters in a set of leaves
 //-----------------------------------------------------------------------------
@@ -1507,7 +1517,6 @@ void CClientLeafSystem::EnumerateShadowsInLeaves( int leafCount, WorldListLeafDa
 		}
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Adds a renderable to a leaf
@@ -1569,7 +1578,6 @@ void CClientLeafSystem::AddRenderableToLeaf( int leaf, ClientRenderHandle_t rend
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Adds a renderable to a set of leaves
 //-----------------------------------------------------------------------------
@@ -1588,7 +1596,6 @@ void CClientLeafSystem::AddRenderableToLeaves( ClientRenderHandle_t handle, int 
 	bool bReceiveShadows = ShouldRenderableReceiveShadow( handle, SHADOW_FLAGS_PROJECTED_TEXTURE_TYPE_MASK );
 	AddRenderableToLeaves( handle, nLeafCount, pLeaves, bReceiveShadows );
 }
-
 
 //-----------------------------------------------------------------------------
 // Inserts an element into the tree
@@ -1635,7 +1642,7 @@ void CClientLeafSystem::InsertIntoTree( ClientRenderHandle_t &handle, const Vect
 	{
 		char pTemp[256];
 		const char *pClassName = "<unknown renderable>";
-		C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( info.m_pRenderable->GetIClientUnknown()->GetBaseEntity() );
+		CBaseEntity *pEnt = EntityCast<CBaseEntity>( info.m_pRenderable->GetIClientUnknown()->GetBaseEntity() );
 		if ( pEnt )
 		{
 			pClassName = pEnt->GetClassname();
@@ -1698,7 +1705,6 @@ void CClientLeafSystem::RemoveFromTree( ClientRenderHandle_t handle )
 
 }
 
-
 //-----------------------------------------------------------------------------
 // Call this when the renderable moves
 //-----------------------------------------------------------------------------
@@ -1743,7 +1749,6 @@ void CClientLeafSystem::RenderableChanged( ClientRenderHandle_t handle )
 //#endif
 }
 
-
 //-----------------------------------------------------------------------------
 // Adds, removes renderables from view model list
 //-----------------------------------------------------------------------------
@@ -1760,7 +1765,6 @@ void CClientLeafSystem::RemoveFromViewModelList( ClientRenderHandle_t handle )
 	ks::swap_remove( m_ViewModels, i );
 }
 
-
 //-----------------------------------------------------------------------------
 // Detail system marks 
 //-----------------------------------------------------------------------------
@@ -1772,7 +1776,6 @@ void CClientLeafSystem::DrawDetailObjectsInLeaf( int leaf, int nFrameNumber, int
 	nDetailObjectCount = leafInfo.m_DetailPropCount;
 }
 
-
 //-----------------------------------------------------------------------------
 // Are we close enough to this leaf to draw detail props *and* are there any props in the leaf?
 //-----------------------------------------------------------------------------
@@ -1783,7 +1786,6 @@ bool CClientLeafSystem::ShouldDrawDetailObjectsInLeaf( int leaf, int frameNumber
 			 ( ( leafInfo.m_DetailPropCount != 0 ) || ( leafInfo.m_pSubSystemData[CLSUBSYSTEM_DETAILOBJECTS] ) ) );
 }
 
-
 //-----------------------------------------------------------------------------
 // Compute which leaf the translucent renderables should render in
 //-----------------------------------------------------------------------------
@@ -1791,20 +1793,12 @@ bool CClientLeafSystem::ShouldDrawDetailObjectsInLeaf( int leaf, int frameNumber
 #define IsLeafMarker( p ) (bool)((reinterpret_cast<size_t>(p)) & 1)
 #define MarkerToLeaf( p ) (int)((reinterpret_cast<size_t>(p)) >> 1)
 
-
 //-----------------------------------------------------------------------------
 // Adds a renderable to the list of renderables to render this frame
 //-----------------------------------------------------------------------------
 inline void AddRenderableToRenderList( CClientRenderablesList &renderList, IClientRenderable *pRenderable, 
 	int iLeaf, RenderGroup_t group,	int nModelType, uint8 nAlphaModulation, bool bShadowDepthNoCache, bool bTwoPass = false )
 {
-#ifdef _DEBUG
-	if (cl_drawleaf.GetInt() >= 0)
-	{
-		if (iLeaf != cl_drawleaf.GetInt())
-			return;
-	}
-#endif
 
 	contract_assert( group >= 0 && group < RENDER_GROUP_COUNT );
 	
@@ -1836,7 +1830,6 @@ inline void AddRenderableToRenderList( CClientRenderablesList &renderList, IClie
 		engine->Con_NPrintf( 10, "Warning: overflowed CClientRenderablesList group %d", group );
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1903,7 +1896,6 @@ void CClientLeafSystem::CollateViewModelRenderables( CViewModelRenderablesList *
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Sort entities in a back-to-front ordering
 //-----------------------------------------------------------------------------
@@ -1958,7 +1950,6 @@ void CClientLeafSystem::SortEntities( const Vector &vecRenderOrigin, const Vecto
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Extracts static props from the list of renderables
 //-----------------------------------------------------------------------------
@@ -1986,7 +1977,6 @@ int CClientLeafSystem::ExtractStaticProps( int nCount, RenderableInfo_t **ppRend
 	}
 	return nUniqueCount;
 }
-
 
 //-----------------------------------------------------------------------------
 // Extracts renderables that are excluded in splitscreen
@@ -2047,7 +2037,6 @@ int CClientLeafSystem::ExtractNonFastReflectedRenderables( int nCount, Renderabl
 
 	return nReflectedCount;
 }
-
 
 //-----------------------------------------------------------------------------
 // Extracts models which are *not* marked for "fast reflections"
@@ -2201,7 +2190,6 @@ int CClientLeafSystem::ExtractDuplicates( int nFrameNumber, int nCount, Renderab
 	return nUniqueCount;
 }
 
-
 //-----------------------------------------------------------------------------
 // Extracts static props from the list of renderables
 //-----------------------------------------------------------------------------
@@ -2226,8 +2214,8 @@ int CClientLeafSystem::ExtractTranslucentRenderables( int nCount, RenderableInfo
 	return nUniqueCount;
 }
 
-static ConVar r_disable_distance_fade_on_big_props( "r_disable_distance_fade_on_big_props", "0", FCVAR_CHEAT, "Completely disable distance fading on large props" );
-static ConVar r_disable_distance_fade_on_big_props_thresh( "r_disable_distance_fade_on_big_props_thresh", "48000", FCVAR_CHEAT, "Distance prop fade disable threshold size" );
+static ConVar r_disable_distance_fade_on_big_props( side_registry(), "r_disable_distance_fade_on_big_props", "0", FCVAR_CHEAT, "Completely disable distance fading on large props" );
+static ConVar r_disable_distance_fade_on_big_props_thresh( side_registry(), "r_disable_distance_fade_on_big_props_thresh", "48000", FCVAR_CHEAT, "Distance prop fade disable threshold size" );
 
 //-----------------------------------------------------------------------------
 // Computes translucency for all renderables
@@ -2236,7 +2224,7 @@ void CClientLeafSystem::ComputeDistanceFade( int nCount, AlphaInfo_t *pAlphaInfo
 {
 	// Distance fade computations
 	float flDistFactorSq = 1.0f;
-	C_BasePlayer *pLocal = C_BasePlayer::GetLocalPlayer();
+	CBasePlayer *pLocal = CBasePlayer::GetLocalPlayer();
 	if ( pLocal && r_alphafade_usefov.GetBool() )
 	{
 		flDistFactorSq = pLocal->GetFOVDistanceAdjustFactor();
@@ -2419,9 +2407,6 @@ void CClientLeafSystem::ComputeScreenFade( const ScreenSizeComputeInfo_t &info, 
 }
 
 extern ConVar cl_leveloverview;
-#ifdef _DEBUG
-extern ConVar r_FadeProps;
-#endif
 
 int CClientLeafSystem::ComputeTranslucency( int nFrameNumber, int nViewID, int nCount, RenderableInfo_t **ppRenderables, BuildRenderListInfo_t *pRLInfo, const ScreenSizeComputeInfo_t &screenSizeInfo, const Vector& vecViewOrigin )
 {
@@ -2466,9 +2451,6 @@ int CClientLeafSystem::ComputeTranslucency( int nFrameNumber, int nViewID, int n
 
 	// If we're taking devshots, don't fade props at all
 	bool bFadeProps = true;
-#ifdef _DEBUG
-	bFadeProps = r_FadeProps.GetBool();
-#endif
 
 	if ( nViewID == VIEW_3DSKY )
 	{
@@ -2526,7 +2508,6 @@ int CClientLeafSystem::ComputeTranslucency( int nFrameNumber, int nViewID, int n
 	return nUniqueCount;
 }
 
-
 //-----------------------------------------------------------------------------
 // Computes bounds for all renderables
 //-----------------------------------------------------------------------------
@@ -2550,17 +2531,6 @@ void CClientLeafSystem::ComputeAllBounds( void )
 				pInfo->m_Flags |= RENDER_FLAGS_BOUNDS_VALID;
 			}
 		}
-#ifdef _DEBUG
-		else
-		{
-			// If these assertions trigger, it means there's some state that GetRenderBounds
-			// depends on which, on change, doesn't call ClientLeafSystem::RenderableChanged().
-			Vector vecTestMins, vecTestMaxs;
-			CalcRenderableWorldSpaceAABB( pInfo->m_pRenderable, vecTestMins, vecTestMaxs );
-			contract_assert( VectorsAreEqual( vecTestMins, pInfo->m_vecAbsMins, 1e-3 ) );
-			contract_assert( VectorsAreEqual( vecTestMaxs, pInfo->m_vecAbsMaxs, 1e-3 ) );
-		}
-#endif
 	}
 }
 
@@ -2642,7 +2612,6 @@ int CClientLeafSystem::ExtractCulledRenderables( int nCount, RenderableInfo_t **
 	return nUniqueCount;
 }
 
-
 //-----------------------------------------------------------------------------
 // Culls renderables based on occlusion
 //-----------------------------------------------------------------------------
@@ -2680,7 +2649,6 @@ int CClientLeafSystem::ExtractOccludedRenderables( int occlusionViewId, int nCou
 	return nUniqueCount;
 }
 
-
 //-----------------------------------------------------------------------------
 // Adds renderables into their final lists
 //-----------------------------------------------------------------------------
@@ -2690,8 +2658,6 @@ void CClientLeafSystem::AddDependentRenderables( const SetupRenderInfo_t &info )
 	// Remove early out if we actually end up needing to use this
 	return;
 }
-
-
 
 //-----------------------------------------------------------------------------
 // Adds renderables into their final lists
@@ -2703,13 +2669,9 @@ void CClientLeafSystem::AddRenderablesToRenderLists( const SetupRenderInfo_t &in
 	// Vitaliy (2/15/2013) -- stop rendering the detail props since the rendering code crashes when they are rendered anyways
 	nDetailCount = 0;
 
-
 	CClientRenderablesList::CEntry *pTranslucentEntries = info.m_pRenderList->m_RenderGroups[RENDER_GROUP_TRANSLUCENT];
 	int &nTranslucentEntries = info.m_pRenderList->m_RenderGroupCounts[RENDER_GROUP_TRANSLUCENT];
 	BuildRenderListInfo_t **pTranslucentRLInfo = scratch.Alloc<BuildRenderListInfo_t*>( nCount );
-
-
-
 
 	int nTranslucent = 0;
 	int nCurDetail = 0;
@@ -2752,7 +2714,6 @@ void CClientLeafSystem::AddRenderablesToRenderLists( const SetupRenderInfo_t &in
 			nWorldListLeafIndex++;
 			continue;
 		}
-
 
 		bool bIsTranslucent = ( pRLInfo[i].m_nAlpha != 255 ) || ( pInfo->m_nTranslucencyType != RENDERABLE_IS_OPAQUE ); 
 		if ( !bIsTranslucent || (pInfo->m_Flags & RENDER_FLAGS_FORCE_OPAQUE_PASS) )
@@ -2815,10 +2776,10 @@ void CClientLeafSystem::AddRenderablesToRenderLists( const SetupRenderInfo_t &in
 	AddDependentRenderables( info );
 }
 
-static ConVar r_drawallrenderables( "r_drawallrenderables", "0", FCVAR_CHEAT, "Draw all renderables, even ones inside solid leaves." );
+static ConVar r_drawallrenderables( side_registry(), "r_drawallrenderables", "0", FCVAR_CHEAT, "Draw all renderables, even ones inside solid leaves." );
 extern ConVar r_flashlight_nostaticgeo;
 
-static ConVar r_fastreflectionfastpath( "r_fastreflectionfastpath", "1" );
+static ConVar r_fastreflectionfastpath( side_registry(), "r_fastreflectionfastpath", "1" );
 
 void CClientLeafSystem::BuildRenderablesListForFastReflections( const SetupRenderInfo_t &info )
 {
@@ -2866,7 +2827,7 @@ void CClientLeafSystem::BuildRenderablesListForFastReflections( const SetupRende
 	}
 }
 
-ConVar r_highlight_translucent_renderables( "r_highlight_translucent_renderables", "0" );
+ConVar r_highlight_translucent_renderables( side_registry(), "r_highlight_translucent_renderables", "0" );
 
 void CClientLeafSystem::HighlightAllTranslucentRenderables()
 {
@@ -2877,7 +2838,7 @@ void CClientLeafSystem::HighlightAllTranslucentRenderables()
 		bool bIsTranslucent = ( nAlpha != 255 ) || ( info.m_nTranslucencyType != RENDERABLE_IS_OPAQUE ); 
 		if ( bIsTranslucent )
 		{
-			C_BaseEntity *pEntity = dynamic_cast< C_BaseEntity * >( info.m_pRenderable );
+			CBaseEntity *pEntity = dynamic_cast< CBaseEntity * >( info.m_pRenderable );
 			if ( pEntity )
 			{
 				Vector vecSurroundMins, vecSurroundMaxs;
@@ -2890,8 +2851,6 @@ void CClientLeafSystem::HighlightAllTranslucentRenderables()
 		}
 	}
 }
-
-
 
 void CClientLeafSystem::BuildRenderablesListForCSMView( const SetupRenderInfo_t &setupInfo )
 {	
@@ -2956,7 +2915,6 @@ void CClientLeafSystem::BuildRenderablesListForCSMView( const SetupRenderInfo_t 
 
 }
 
-
 //-----------------------------------------------------------------------------
 // Main entry point to build renderable lists
 //-----------------------------------------------------------------------------
@@ -2966,19 +2924,16 @@ void CClientLeafSystem::BuildRenderablesList( const SetupRenderInfo_t &info )
 	ks::ScratchArena<> scratch;
 	;
 
-
 	info.m_pWorldListInfo = g_viewBuilder.GetWorldListInfoElement( info.m_nBuildViewID );
 	info.m_pRenderList    = g_viewBuilder.GetRenderablesListElement( info.m_nBuildViewID );
 	info.m_pCSMVolumeCuller = g_viewBuilder.GetBuildViewVolumeCuller( info.m_nBuildViewID );
 	info.m_pFrustum = g_viewBuilder.GetBuildViewFrustum( info.m_nBuildViewID );
 	info.m_ppFrustumList = g_viewBuilder.GetBuildViewFrustumList( info.m_nBuildViewID );
 
-
 	if ( r_highlight_translucent_renderables.GetBool() )
 	{
 		HighlightAllTranslucentRenderables();
 	}
-
 
 	if ( info.m_bFastEntityRendering && r_fastreflectionfastpath.GetBool() )
 	{
@@ -2986,8 +2941,6 @@ void CClientLeafSystem::BuildRenderablesList( const SetupRenderInfo_t &info )
 
 		return;
 	}
-
-
 
 	if ( info.m_bCSMView )
 	{
@@ -3081,17 +3034,9 @@ void CClientLeafSystem::BuildRenderablesList( const SetupRenderInfo_t &info )
 
 	AddRenderablesToRenderLists( info, nCount, ppRenderables, pRLInfo, std::ssize( detailRenderables ), detailRenderables.data() );
 
-
 //	Msg("PPU count = %d, detailcount = %d\n",nCount, detailRenderables.Count() );
 
-
-
-
-
 }
-
-
-
 
 RenderGroup_t CClientLeafSystem::GenerateRenderListEntry( IClientRenderable *pRenderable, CClientRenderablesList::CEntry &entryOut )
 {
@@ -3124,8 +3069,7 @@ RenderGroup_t CClientLeafSystem::GenerateRenderListEntry( IClientRenderable *pRe
 	return RENDER_GROUP_COUNT;
 }
 
-
-int CClientLeafSystem::GetEntitiesInBox( C_BaseEntity **pEntityList, int listMax, const Vector& vWorldSpaceMins, const Vector& vWorldSpaceMaxs )
+int CClientLeafSystem::GetEntitiesInBox( CBaseEntity **pEntityList, int listMax, const Vector& vWorldSpaceMins, const Vector& vWorldSpaceMaxs )
 {
 	// NOTE: The render bounds here are relative to the renderable's coordinate system
 	contract_assert( vWorldSpaceMins.IsValid() && vWorldSpaceMaxs.IsValid() );
@@ -3163,7 +3107,7 @@ int CClientLeafSystem::GetEntitiesInBox( C_BaseEntity **pEntityList, int listMax
 
 			if ( IsBoxIntersectingBox( vWorldSpaceMins, vWorldSpaceMaxs, info.m_vecAbsMins, info.m_vecAbsMaxs ) )
 			{
-				C_BaseEntity *pEnt = EntityCast<C_BaseEntity>( m_Renderables[ handle ].m_pRenderable->GetIClientUnknown()->GetBaseEntity() );
+				CBaseEntity *pEnt = EntityCast<CBaseEntity>( m_Renderables[ handle ].m_pRenderable->GetIClientUnknown()->GetBaseEntity() );
 				if ( pEnt )
 				{
 					pEntityList[totalCount] = pEnt;
@@ -3174,4 +3118,31 @@ int CClientLeafSystem::GetEntitiesInBox( C_BaseEntity **pEntityList, int listMax
 	}
 
 	return totalCount;
+}
+
+CClientRenderablesList::CClientRenderablesList()
+{
+	int i;
+	for( i=0; i < RENDER_GROUP_COUNT; i++ )
+	{
+		m_RenderGroupCounts[i] = 0;
+	}
+	m_nBoneSetupDependencyCount = 0;
+}
+
+SetupRenderInfo_t::SetupRenderInfo_t()
+{
+	m_pWorldListInfo = nullptr;
+	m_pRenderList = nullptr;
+	m_pCSMVolumeCuller = nullptr;
+	m_pFrustum = nullptr;
+	m_ppFrustumList = nullptr;
+	m_nBuildViewID = -1;
+	m_nOcclustionViewID = -1;
+
+	m_bDrawDetailObjects = true;
+	m_bDrawTranslucentObjects = true;
+	m_bFastEntityRendering = false;
+	m_bDrawDepthViewNonCachedObjectsOnly = false;
+	m_bCSMView = false;
 }

@@ -4,7 +4,25 @@
 // Purpose: The VTF file format I/O class to help simplify access to VTF files
 
 #undef fopen
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.mem;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.byte_writer;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.strtools;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.tier1.vector_ops;
 #include "bitmap/imageformat.h"
 #include "cvtf.h"
 import std;

@@ -3,6 +3,11 @@
 // Copyright (c) 1996-2009 Valve Corporation
 
 #include "mm_framework.h"
+import ks.tier1.byte_writer;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 
 class CMatchNetworkMsgControllerBase : public IMatchNetworkMsgController
 {

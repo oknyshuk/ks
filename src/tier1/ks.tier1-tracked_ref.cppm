@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:tracked_ref;
+export module ks.tier1.tracked_ref;
 
 import std;
-import ks.math;
-export import :intrusive_list;
+import ks.core.basetypes;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.intrusive_list;
 
 export extern "C++" {
 

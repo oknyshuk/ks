@@ -1,30 +1,45 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
+module;
+#include "IGameUIFuncs.h"
+#include "game/client/iviewport.h"
+#include "igameevents.h"
+#include "../cdll_client_int.h"
+#include "../cdll_util.h"
+module ks.client;
+
+import std;
+import ks.core.dbg;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.keyvalues;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import ks.tier1.strtools;
+import :props;
+import :baseanimatedtextureproxy;
+import :iinput;
+import :sharedvar;
+import :util;
+import :game_controls.baseviewport;
+import :particlemgr;
+import :precache;
+import ks.game.shareddefs;
+import :achievements_and_stats_interface;
+import :baseentity;
+import ks.game.gamemovement;
+import :noopanimcontroller;
+
+using namespace ::ks::reflect;
+
 // Purpose: Client DLL VGUI2 Viewport
 
-#include "rocketui/rmlui.h"
-#include "predictable_entity.h"
-#include "cdll_util.h"
-#include "util_shared.h"
-#include "baseentity_shared.h"
-#include "c_basecombatweapon.h"
-#include "c_basecombatcharacter.h"
-#include "gamerules.h"
-#include "c_baseplayer.h"
-#include "vphysics_interface.h"
-#include "cdll_client_int.h"
-#include <cdll_client_int.h>
-#include <cdll_util.h>
-
-
-
-#include "IGameUIFuncs.h"
-#include "hud.h"
-
 // our definition
-#include "baseviewport.h"
-#include <filesystem.h>
 
 static IViewPort *s_pFullscreenViewportInterface;
 static IViewPort *s_pViewportInterfaces[ MAX_SPLITSCREEN_PLAYERS ];
@@ -40,12 +55,12 @@ IViewPort *GetFullscreenViewPortInterface()
 	return s_pFullscreenViewportInterface;
 }
 
-ConVar hud_autoreloadscript("hud_autoreloadscript", "0", FCVAR_NONE, "Automatically reloads the animation script each time one is ran");
+ConVar hud_autoreloadscript(side_registry(), "hud_autoreloadscript", "0", FCVAR_NONE, "Automatically reloads the animation script each time one is ran");
 
-static ConVar cl_leveloverviewmarker( "cl_leveloverviewmarker", "0", FCVAR_CHEAT );
+static ConVar cl_leveloverviewmarker( side_registry(), "cl_leveloverviewmarker", "0", FCVAR_CHEAT );
 
 static void showpanel( const CCommand &args );
-static ConCommand showpanel_command( "showpanel", showpanel, "Shows a viewport panel <name>" );
+static ConCommand showpanel_command( side_registry(), "showpanel", showpanel, "Shows a viewport panel <name>" );
 static void showpanel( const CCommand &args )
 {
 	if ( !GetViewPortInterface() )
@@ -58,7 +73,7 @@ static void showpanel( const CCommand &args )
 }
 
 static void hidepanel( const CCommand &args );
-static ConCommand hidepanel_command( "hidepanel", hidepanel, "Hides a viewport panel <name>" );
+static ConCommand hidepanel_command( side_registry(), "hidepanel", hidepanel, "Hides a viewport panel <name>" );
 static void hidepanel( const CCommand &args )
 {
 	if ( !GetViewPortInterface() )
@@ -81,7 +96,6 @@ CBaseViewport::CBaseViewport()
 
 	m_bHasParent = false;
 	m_pActivePanel = nullptr;
-
 
 	m_OldSize[ 0 ] = m_OldSize[ 1 ] = -1;
 }
@@ -107,7 +121,6 @@ IViewPortPanel* CBaseViewport::CreatePanelByName(const char *szPanelName)
 {
 	return nullptr;
 }
-
 
 bool CBaseViewport::AddNewPanel( IViewPortPanel* pPanel, char const *pchDebugName )
 {
@@ -141,7 +154,6 @@ void CBaseViewport::PostMessageToPanel( const char *pName, KeyValues *pKeyValues
 {
 }
 
-
 void CBaseViewport::ShowPanel( const char *pName, bool state, KeyValues *data, bool autoDeleteData )
 {
 	if ( !data )
@@ -168,7 +180,6 @@ void CBaseViewport::ShowPanel( const char *pName, bool state, KeyValues *data, b
 		data->deleteThis();
 	}
 }
-
 
 void CBaseViewport::ShowPanel( const char *pName, bool state )
 {
@@ -291,11 +302,9 @@ void CBaseViewport::RecreatePanel( const char *szPanelName )
 			m_pActivePanel = nullptr;
 		}
 
-
 		AddNewPanel( CreatePanelByName( szPanelName ), szPanelName );
 	}
 }
-
 
 void CBaseViewport::RemoveAllPanels( void)
 {

@@ -4,7 +4,8 @@
 // Switch dispatch over the sound operators: the one place that knows every operator class.
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 
 #include "sound.h"
 #include "snd_channels.h"

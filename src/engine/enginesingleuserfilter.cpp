@@ -4,6 +4,9 @@
 #include "quakedef.h"
 #include "server.h"
 #include "enginesingleuserfilter.h"
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.tier1.vector_ops;
 
 void SV_DetermineMulticastRecipients( bool usepas, const Vector& origin, CPlayerBitVec& playerbits );
 

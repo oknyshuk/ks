@@ -3,7 +3,15 @@
 
 // Purpose: Handles all the functions for implementing remote access to the engine
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.map_ops;
+import ks.tier1.netadr;
+import ks.tier1.ns_address;
 import std;
 #include "sv_ipratelimit.h"
 #include "filesystem.h"

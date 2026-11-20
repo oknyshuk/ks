@@ -3,7 +3,10 @@
 // Copyright (c) 1996-2009 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 struct TitleDataFieldsDescription_t;
 
 struct UserProfileData

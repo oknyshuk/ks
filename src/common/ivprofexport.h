@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.core;
+import ks.core.color;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
 
 inline constexpr const char *VPROF_EXPORT_INTERFACE_VERSION = "VProfExport001";
 import std;

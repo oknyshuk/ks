@@ -3,7 +3,9 @@
 
 // Purpose: Lightmap only shader
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
 #include "BaseVSShader.h"
 import std;
 #include "lightmappedgeneric_dx9_helper.h"

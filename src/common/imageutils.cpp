@@ -7,10 +7,22 @@
 // @note Tom Bui: we need to use fopen below in the jpeg code, so we can't have this on...
 
 import std;
-import ks.core;
-import ks.math;
-import ks.tier1;
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.math.mathlib;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.byte_writer;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.strtools;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 import ks.jpeg;
 #include "const.h"
 

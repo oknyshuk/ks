@@ -18,7 +18,14 @@
 #include <unistd.h>
 #include <signal.h>
 
-import ks.core;
+import ks.core.cmdline;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
 
 // First include standard libraries
 import std;

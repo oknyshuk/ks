@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.core;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
 #include "MPAFile.h"
 
 

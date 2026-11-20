@@ -230,6 +230,15 @@ static IColorCorrectionSystem s_ColorCorrectionSystemFacade;
 IColorCorrectionSystem *g_pColorCorrectionSystem = &s_ColorCorrectionSystemFacade;
 static CColorCorrectionSystem &ColorCorrectionSystemImpl() { return g_ColorCorrectionSystem; }
 #include "facade/icolorcorrectionsystem.inl"
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.types;
+import ks.tier1.filename_table;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
 
 // Don't allow this on the 360.. it doesn't work in mat_queued_mode
 static InterfaceReg s_Reg_CColorCorrectionSystem_IColorCorrectionSystem( []() -> void * { return static_cast<IColorCorrectionSystem *>( &s_ColorCorrectionSystemFacade ); }, COLORCORRECTION_INTERFACE_VERSION );;

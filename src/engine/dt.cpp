@@ -5,7 +5,18 @@
 
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.tslist;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.convar;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
 #include "dt_send.h"
 #include "dt.h"
 #include "dt_recv.h"

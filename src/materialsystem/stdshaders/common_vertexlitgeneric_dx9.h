@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common_ps_fxc.h"
+import ks.math.mathlib;
 
 //  We store four light colors and positions in an
 //  array of three of these structures like so:

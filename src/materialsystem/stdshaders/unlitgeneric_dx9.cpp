@@ -5,6 +5,7 @@
 #include "vertexlitgeneric_dx9_helper.h"
 
 #include "shaderapifast.h"
+import ks.core.basetypes;
 
 BEGIN_VS_SHADER( UnlitGeneric, "Help for UnlitGeneric" )
 	

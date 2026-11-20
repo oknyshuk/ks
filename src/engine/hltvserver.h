@@ -10,7 +10,22 @@
 #include "networkstringtable.h"
 #include <ihltv.h>
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.tslist;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.convar;
+import ks.tier1.createinterface;
+import ks.tier1.keyvalues;
+import ks.tier1.netadr;
+import ks.tier1.ns_address;
+import ks.tier1.playerid;
 
 inline constexpr auto HLTV_BUFFER_VOICE = 0; // player voice data
 inline constexpr auto HLTV_BUFFER_SOUNDS = 1; // unreliable sounds

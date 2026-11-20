@@ -3,7 +3,8 @@
 // Copyright (c) 1996-2007 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 #include "ispsharedmemory.h"
 
 class CSPSharedMemory;

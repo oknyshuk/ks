@@ -4,9 +4,9 @@
 
 // Purpose: Win32 Console API helpers
 
-export module ks.core:console;
+export module ks.core.console;
 
-import :platform;
+import ks.core.platform;
 
 export extern "C++" {
 

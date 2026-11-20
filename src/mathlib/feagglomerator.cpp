@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import ks.tier1;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.small_vector;
+import ks.tier1.vector_ops;
 #include "feagglomerator.h"
 import std;
 

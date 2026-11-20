@@ -1,4 +1,15 @@
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
 #include "r_studiosubd_patches.h"
 import std;
 

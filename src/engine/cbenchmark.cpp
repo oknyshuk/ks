@@ -3,7 +3,13 @@
 
 // main precompiled header for client files
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 
 #include "common.h"
 

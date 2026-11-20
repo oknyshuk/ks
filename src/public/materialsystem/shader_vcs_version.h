@@ -8,7 +8,9 @@
 // 4 = v2 + crc32
 // 5 = v3 + crc32
 // 6 = v5 + duplicate static combo records
-import ks.core;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 
 inline constexpr auto SHADER_VCS_VERSION_NUMBER = 6;
 

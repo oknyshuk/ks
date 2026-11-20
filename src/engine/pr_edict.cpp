@@ -6,6 +6,13 @@
 #include "server.h"
 #include "pr_edict.h"
 #include "framesnapshot.h"
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.wchartypes;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.strtools;
 
 // Edicts won't get reallocated for this many seconds after being freed.
 constexpr auto EDICT_FREETIME = 1.0;

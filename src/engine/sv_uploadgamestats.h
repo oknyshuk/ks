@@ -5,7 +5,9 @@
 // bool UploadGameStats( char const *cserIP, unsigned int buildnumber, char const *exe, char const *gamedir, char const *mapname,
 // 	unsigned int blobversion, unsigned int blobsize, const void *pvBlobData );
 
-import ks.core;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
 
 class IUploadGameStats;
 extern IUploadGameStats *g_pUploadGameStats;

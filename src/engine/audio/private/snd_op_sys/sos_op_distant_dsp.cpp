@@ -5,7 +5,11 @@ import std;
 
 
 
-import ks.tier1;
+import ks.core.color;
+import ks.core.logging;
+import ks.platform;
+import ks.simd;
+import ks.tier1.keyvalues;
 #include "sound.h"
 #include "soundservice.h"
 #include "filesystem.h"

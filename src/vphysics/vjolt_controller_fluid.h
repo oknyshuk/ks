@@ -6,7 +6,11 @@
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/PhysicsSystem.h>
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "vjolt_internal_listeners.h"
 #include "vphysics_interface.h"
 import std;

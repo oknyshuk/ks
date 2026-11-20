@@ -12,7 +12,8 @@ import std;
 // tier 0
 
 // tier 1
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 
 // tier 2
 #include "string_t.h"

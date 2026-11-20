@@ -1,3 +1,7 @@
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 //

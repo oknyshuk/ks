@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2004 Valve Corporation
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 #include "BaseVSShader.h"
 #include "HDRCombineTo16Bit_ps20.inc"
 #include "HDRCombineTo16Bit_ps20b.inc"

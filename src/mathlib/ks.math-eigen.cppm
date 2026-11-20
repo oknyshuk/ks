@@ -3,12 +3,12 @@
 // Purpose: anything remotely related to eigen-[problem,solver,value,vector, whatever] goes here
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:eigen;
+export module ks.math.eigen;
 
 import std;
-import ks.core;
+import ks.platform;
 import ks.simd;
-export import :mathlib;
+export import ks.math.mathlib;
 
 export extern "C++" {
 

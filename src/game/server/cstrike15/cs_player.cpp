@@ -1,141 +1,168 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
+module;
+#include <math.h>
+#include <stdlib.h>
+#include <time.h>
+#include "eiface.h"
+#include "engine/IEngineTrace.h"
+#include "game/client/viewport_panel_names.h"
+#include "igameevents.h"
+#include "irecipientfilter.h"
+#include "networkvar.h"
+#include "reflect.h"
+#include "responserules/response_types.h"
+#include "server_class.h"
+#include "shake.h"
+#include "studio.h"
+#include "tier2/resourceprecacher.h"
+#include "usermessages_schema.h"
+#include "vphysics/player_controller.h"
+#include "vphysics_interface.h"
+#include "../ai_activity.h"
+#include "../ai_criteria.h"
+#include "../baseentity.h"
+#include "cs_gamerules.h"
+#include "../entity_dispatch.h"
+#include "../entity_dispatch_list.h"
+#include "../entity_kinds_dump.h"
+#include "../reflect_datamap.h"
+#include "../reflect_sendtable.h"
+#include "../shareddefs.h"
+#include "../util.h"
+#include "csgo_limits.h"
+#include "reflect_annotations.h"
+#include "../predictable_entity.h"
+module ks.server;
+
+import std;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.random;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.game.cstrike15.cs_achievement_constants;
+import ks.game.cstrike15.cs_achievementdefs;
+import ks.game.cstrike15.cs_player_rank_shared;
+import ks.game.cstrike15.cstrike15_gcconstants;
+import ks.game.cstrike15.playerdecals_signature;
+import ks.game.in_buttons;
+import ks.game.iplayeranimstate;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.transform;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bit_ops;
+import ks.tier1.convar;
+import ks.tier1.cvar;
+import ks.tier1.exprevaluator;
+import ks.tier1.fmtstr;
+import ks.tier1.iconvar;
+import ks.tier1.icvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.playerid;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
+import :fish;
+import :vscript;
+import :player;
+import ks.game.ai_activity;
+import :sharedvar;
+import :baseentity;
+import :cstrike15.Effects.chicken;
+import :cstrike15.cs_player;
+import :cstrike15.bot.bot;
+import :cstrike15.bot.cs_bot;
+import :cstrike15.cs_player_2;
+import :cstrike15.cs_playeranimstate;
+import :cstrike15.cs_team;
+import :cstrike15.hostage.cs_simple_hostage;
+import :nav_4;
+import :econ.econ_item_schema_minimal;
+import :entity_dispatch;
+import :entity_kind;
+import :entityutil;
+import :entity_2;
+import ks.game.shareddefs;
+import ks.game.gamemovement;
+import ks.game.mapentities_shared;
+import ks.tier1.map_ops;
+
+class BotProfile;
+class CAnimationLayer;
+class CBaseAnimating;
+class CBaseAnimatingOverlay;
+class CBaseCombatCharacter;
+class CBaseCombatWeapon;
+class CBaseEntity;
+class CBasePlayer;
+class CBaseTempEntity;
+class CBaseViewModel;
+class CCSBot;
+class CCSBotManager;
+class CCSPlayer;
+class CCSWeaponInfo;
+class CConfigurationForHighPriorityUseEntity_t;
+class CEconItemAttributeDefinition;
+class CEconItemDefinition;
+class CEconItemView;
+class CEconPersonaDataPublic;
+class CEffectData;
+class CHintMessageQueue;
+class CHostage;
+class CItem;
+class CNavArea;
+class CPaintKit;
+class CRecipientFilter;
+class CTakeDamageInfo;
+class CTeam;
+class CUserCmd;
+class CWeaponCSBase;
+class CWorld;
+struct animevent_t;
+struct inputdata_t;
+
+using namespace ::ks::reflect;
+
 // Purpose: Player for HL1.
 
-#include "vphysics_interface.h"
-#include "const.h"
-#include "edict.h"
-#include "eiface.h"
-#include "iserverentity.h"
-#include "dt_send.h"
-#include "shareddefs.h"
-#include "ehandle.h"
-#include "datamap.h"
-#include "util.h"
-#include "predictable_entity.h"
-#include "variant_t.h"
-#include "takedamageinfo.h"
-#include "touchlink.h"
-#include "groundlink.h"
-#include "networkvar.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
-#include "basetoggle.h"
-#include "igameevents.h"
-#include "precache_register.h"
-#include "baseanimating.h"
-#include "basecombatweapon.h"
-#include "basecombatcharacter.h"
-#include "basetempentity.h"
-#include "player.h"
-#include "te.h"
-#include "recipientfilter.h"
-#include "npcevent.h"
-#include "reflect_sendtable.h"
-#include "reflect_annotations.h"
-#include "reflect_datamap.h"
-#include "cs_player.h"
-#include "cs_gamerules.h"
-#include "trains.h"
-#include "vcollide_parse.h"
-#include "in_buttons.h"
-#include "weapon_csbase.h"
-#include "cs_ammodef.h"
-#include "IEffects.h"
-#include "cs_client.h"
-#include "client.h"
-#include "cs_shareddefs.h"
-#include "shake.h"
-#include "team.h"
-#include "items.h"
-#include "weapon_c4.h"
-#include "weapon_parse.h"
-#include "weapon_knife.h"
-#include "movehelper_server.h"
-#include "te_effect_dispatch.h"
-#include "vphysics/player_controller.h"
-#include "weapon_hegrenade.h"
-#include "weapon_flashbang.h"
-#include "weapon_smokegrenade.h"
-#include "weapon_molotov.h"
-#include "weapon_decoy.h"
-#include "weapon_sensorgrenade.h"
 //#include "weapon_carriable_item.h"
-#include "engine/IEngineSound.h"
-#include "bot.h"
-#include "studio.h"
-#include "predicted_viewmodel.h"
-#include "info_camera_link.h"
-#include "hintmessage.h"
-#include "obstacle_pushaway.h"
-#include "movevars_shared.h"
-#include "death_pose.h"
-#include "basecsgrenade_projectile.h"
-#include "hegrenade_projectile.h"
-#include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "CRagdollMagnet.h"
-#include "datacache/imdlcache.h"
-#include "npcevent.h"
-#include "cs_gamestats.h"
-#include "GameStats.h"
-#include "cs_achievement_constants.h"
-#include "cs_simple_hostage.h"
-#include "cs_weapon_parse.h"
-#include "weapon_c4.h"
-#include "cs_shareddefs.h"
-#include "inputsystem/iinputsystem.h"
-#include "Effects/inferno.h"
-#include "cs_entity_spotting.h"
-#include "entityutil.h"
-#include "vehicle_base.h"
-#include "cs_player_resource.h"
-#include "cs_entity_spotting.h"
-#include "particle_parse.h"
-#include "mapinfo.h"
 //#include "particle_parse.h"
-#include "localize/ilocalize.h"
-#include "../shared/cstrike15/flashbang_projectile.h"
-#include "usermessages.h"
-#include "teamplayroundbased_gamerules.h"
-#include "animation.h"
-#include "cs_team.h"
-#include "world.h"
-#include "item_healthshot.h"
-#include "hltvdirector.h"
-#include "netmessages_schema.h"
-#include "playerdecals_signature.h"
-#include "cs_item_inventory.h"
-
-#if defined( CLIENT_DLL )
-
-	#include "custom_material.h"
-
-#endif
-
 
 // HPE TEMP - REMOVE WHEN DONE TESTING
 
-
 // Minimum interval between rate-limited commands that players can run.
-constexpr auto CS_COMMAND_MAX_RATE = 0.3;
-
+static constexpr auto CS_COMMAND_MAX_RATE = 0.3;
 
 const char *g_pszHeavyPhoenixModel = "models/player/custom_player/legacy/tm_phoenix_heavy.mdl";
 
-const float CycleLatchInterval = 0.2f;
+static const float CycleLatchInterval = 0.2f;
 
-const int cGunGameSelectMaxAmmoAmount = 250;
+static const int cGunGameSelectMaxAmmoAmount = 250;
 
-constexpr auto SPOTTED_ENTITY_UPDATE_INTERVAL = 0.5f;
-constexpr auto SPOTTED_ENTITY_COUNT_MESSAGE_MAX = 40;
+static constexpr auto SPOTTED_ENTITY_UPDATE_INTERVAL = 0.5f;
+static constexpr auto SPOTTED_ENTITY_COUNT_MESSAGE_MAX = 40;
 
 inline constexpr const char *CS_PUSHAWAY_THINK_CONTEXT = "CSPushawayThink";
 
 extern ConVar mp_maxrounds;
-ConVar cs_ShowStateTransitions( "cs_ShowStateTransitions", "-2", FCVAR_CHEAT, "cs_ShowStateTransitions <ent index or -1 for all>. Show player state transitions." );
-ConVar sv_max_usercmd_future_ticks( "sv_max_usercmd_future_ticks", "8", 0, "Prevents clients from running usercmds too far in the future. Prevents speed hacks." );
-ConVar mp_logmoney( "mp_logmoney", "0", FCVAR_RELEASE, "Enables money logging.  Values are: 0=off, 1=on", true, 0.0f, true, 1.0f );
+ConVar cs_ShowStateTransitions( side_registry(), "cs_ShowStateTransitions", "-2", FCVAR_CHEAT, "cs_ShowStateTransitions <ent index or -1 for all>. Show player state transitions." );
+ConVar sv_max_usercmd_future_ticks( side_registry(), "sv_max_usercmd_future_ticks", "8", 0, "Prevents clients from running usercmds too far in the future. Prevents speed hacks." );
+ConVar mp_logmoney( side_registry(), "mp_logmoney", "0", FCVAR_RELEASE, "Enables money logging.  Values are: 0=off, 1=on", true, 0.0f, true, 1.0f );
 extern ConVar cs_AssistDamageThreshold;
 extern ConVar mp_spawnprotectiontime;
 extern ConVar mp_td_spawndmgthreshold;
@@ -181,30 +208,28 @@ extern ConVar ff_damage_reduction_grenade_self;
 extern ConVar ff_damage_reduction_bullets;
 extern ConVar ff_damage_reduction_other;
 
+ConVar phys_playerscale( side_registry(), "phys_playerscale", "10.0", FCVAR_REPLICATED, "This multiplies the bullet impact impuse on players for more dramatic results when players are shot." );
+ConVar phys_headshotscale( side_registry(), "phys_headshotscale", "1.3", FCVAR_REPLICATED, "Modifier for the headshot impulse hits on players" );
 
-ConVar phys_playerscale( "phys_playerscale", "10.0", FCVAR_REPLICATED, "This multiplies the bullet impact impuse on players for more dramatic results when players are shot." );
-ConVar phys_headshotscale( "phys_headshotscale", "1.3", FCVAR_REPLICATED, "Modifier for the headshot impulse hits on players" );
+ConVar sv_damage_print_enable( side_registry(), "sv_damage_print_enable", "1", FCVAR_REPLICATED | FCVAR_RELEASE, "Turn this off to disable the player's damage feed in the console after getting killed.");
 
-ConVar sv_damage_print_enable( "sv_damage_print_enable", "1", FCVAR_REPLICATED | FCVAR_RELEASE, "Turn this off to disable the player's damage feed in the console after getting killed.");
-
-ConVar sv_spawn_afk_bomb_drop_time( "sv_spawn_afk_bomb_drop_time", "15", FCVAR_REPLICATED | FCVAR_RELEASE, "Players that have never moved since they spawned will drop the bomb after this amount of time." );
+ConVar sv_spawn_afk_bomb_drop_time( side_registry(), "sv_spawn_afk_bomb_drop_time", "15", FCVAR_REPLICATED | FCVAR_RELEASE, "Players that have never moved since they spawned will drop the bomb after this amount of time." );
 extern ConVar spec_replay_winddown_time;
 
-ConVar mp_drop_knife_enable( "mp_drop_knife_enable", "0", FCVAR_RELEASE, "Allows players to drop knives." );
-ConVar mp_drop_grenade_enable( "mp_drop_grenade_enable", "0", FCVAR_RELEASE, "Allows players to drop grenades." );
+ConVar mp_drop_knife_enable( side_registry(), "mp_drop_knife_enable", "0", FCVAR_RELEASE, "Allows players to drop knives." );
+ConVar mp_drop_grenade_enable( side_registry(), "mp_drop_grenade_enable", "0", FCVAR_RELEASE, "Allows players to drop grenades." );
 
-static ConVar tv_relayradio( "tv_relayradio", "0", FCVAR_RELEASE, "Relay team radio commands to TV: 0=off, 1=on" );
+static ConVar tv_relayradio( side_registry(), "tv_relayradio", "0", FCVAR_RELEASE, "Relay team radio commands to TV: 0=off, 1=on" );
 
 // [Jason] Allow us to turn down the frequency of the damage notification
-ConVar CS_WarnFriendlyDamageInterval( "CS_WarnFriendlyDamageInterval", "3.0", FCVAR_CHEAT, "Defines how frequently the server notifies clients that a player damaged a friend" );
-
+ConVar CS_WarnFriendlyDamageInterval( side_registry(), "CS_WarnFriendlyDamageInterval", "3.0", FCVAR_CHEAT, "Defines how frequently the server notifies clients that a player damaged a friend" );
 
 const char* g_pszLootModelName = "models/props/props_gameplay/money_bag.mdl";
 
-ConVar sv_guardian_min_wave_for_heavy( "sv_guardian_min_wave_for_heavy", "0", FCVAR_RELEASE | FCVAR_GAMEDLL );
-ConVar sv_guardian_max_wave_for_heavy( "sv_guardian_max_wave_for_heavy", "0", FCVAR_RELEASE | FCVAR_GAMEDLL );
-ConVar sv_guardian_heavy_count( "sv_guardian_heavy_count", "0", FCVAR_RELEASE | FCVAR_GAMEDLL );
-ConVar sv_guardian_heavy_all( "sv_guardian_heavy_all", "0", FCVAR_RELEASE | FCVAR_GAMEDLL );
+ConVar sv_guardian_min_wave_for_heavy( side_registry(), "sv_guardian_min_wave_for_heavy", "0", FCVAR_RELEASE | FCVAR_GAMEDLL );
+ConVar sv_guardian_max_wave_for_heavy( side_registry(), "sv_guardian_max_wave_for_heavy", "0", FCVAR_RELEASE | FCVAR_GAMEDLL );
+ConVar sv_guardian_heavy_count( side_registry(), "sv_guardian_heavy_count", "0", FCVAR_RELEASE | FCVAR_GAMEDLL );
+ConVar sv_guardian_heavy_all( side_registry(), "sv_guardian_heavy_all", "0", FCVAR_RELEASE | FCVAR_GAMEDLL );
 
 // [Forrest] Allow MVP to be turned off for a server
 // [Forrest] Allow freezecam to be turned off for a server
@@ -226,23 +251,23 @@ static void SvNoMVPChangeCallback( ConVar *pConVar, const char *pOldValue, float
 		}
 	}
 }
-ConVar sv_nomvp( "sv_nomvp", "0", 0, "Disable MVP awards.", SvNoMVPChangeCallback );
-ConVar sv_disablefreezecam( "sv_disablefreezecam", "0", FCVAR_REPLICATED, "Turn on/off freezecam on server" );
-ConVar sv_nowinpanel( "sv_nowinpanel", "0", 0, "Turn on/off win panel on server" );
+ConVar sv_nomvp( side_registry(), "sv_nomvp", "0", 0, "Disable MVP awards.", SvNoMVPChangeCallback );
+ConVar sv_disablefreezecam( side_registry(), "sv_disablefreezecam", "0", FCVAR_REPLICATED, "Turn on/off freezecam on server" );
+ConVar sv_nowinpanel( side_registry(), "sv_nowinpanel", "0", 0, "Turn on/off win panel on server" );
 
-ConVar sv_show_voip_indicator_for_enemies( "sv_show_voip_indicator_for_enemies", "0", FCVAR_REPLICATED | FCVAR_RELEASE, "Makes it so the voip icon is shown over enemies as well as allies when they are talking" );
+ConVar sv_show_voip_indicator_for_enemies( side_registry(), "sv_show_voip_indicator_for_enemies", "0", FCVAR_REPLICATED | FCVAR_RELEASE, "Makes it so the voip icon is shown over enemies as well as allies when they are talking" );
 
-ConVar bot_mimic( "bot_mimic", "0", FCVAR_CHEAT );
-ConVar bot_freeze( "bot_freeze", "0", FCVAR_CHEAT );
-ConVar bot_crouch( "bot_crouch", "0", FCVAR_CHEAT );
-ConVar bot_mimic_yaw_offset( "bot_mimic_yaw_offset", "180", FCVAR_CHEAT );
+ConVar bot_mimic( side_registry(), "bot_mimic", "0", FCVAR_CHEAT );
+ConVar bot_freeze( side_registry(), "bot_freeze", "0", FCVAR_CHEAT );
+ConVar bot_crouch( side_registry(), "bot_crouch", "0", FCVAR_CHEAT );
+ConVar bot_mimic_yaw_offset( side_registry(), "bot_mimic_yaw_offset", "180", FCVAR_CHEAT );
 
-ConVar bot_chatter_use_rr( "bot_chatter_use_rr", "1", FCVAR_DEVELOPMENTONLY, "0 = Use old bot chatter system, 1 = Use response rules" );
+ConVar bot_chatter_use_rr( side_registry(), "bot_chatter_use_rr", "1", FCVAR_DEVELOPMENTONLY, "0 = Use old bot chatter system, 1 = Use response rules" );
 // [jpaquin] allow buy zones to refill carried ammo automatically
-constexpr auto SECONDS_BETWEEN_AUTOAMMOBUY_CHECKS = .5f;
-ConVar sv_autobuyammo( "sv_autobuyammo", "0", FCVAR_REPLICATED | FCVAR_NOTIFY | FCVAR_RELEASE, "Enable automatic ammo purchase when inside buy zones during buy periods" );
+static constexpr auto SECONDS_BETWEEN_AUTOAMMOBUY_CHECKS = .5f;
+ConVar sv_autobuyammo( side_registry(), "sv_autobuyammo", "0", FCVAR_REPLICATED | FCVAR_NOTIFY | FCVAR_RELEASE, "Enable automatic ammo purchase when inside buy zones during buy periods" );
 
-ConVar gg_knife_kill_demotes( "gg_knife_kill_demotes", "1", FCVAR_REPLICATED, "0 = knife kill in gungame has no effect on player level, 1 = knife kill demotes player by one level" );
+ConVar gg_knife_kill_demotes( side_registry(), "gg_knife_kill_demotes", "1", FCVAR_REPLICATED, "0 = knife kill in gungame has no effect on player level, 1 = knife kill demotes player by one level" );
 
 // [mlowrance] allow adjustment of velocitymodifier based on dmg_burn (molotov )
 // ConVar sv_velocitymod_dmgtype_burn( "sv_velocitymod_dmgtype_burn", "0.7", FCVAR_REPLICATED, "Sets the players speed modifier when hit by Damagetype DMG_BURN" );
@@ -260,21 +285,19 @@ extern ConVar spec_freeze_traveltime;
 extern ConVar spec_freeze_deathanim_time;
 extern ConVar spec_allow_roaming;
 
-ConVar cs_hostage_near_rescue_music_distance( "cs_hostage_near_rescue_music_distance", "2000", FCVAR_CHEAT );
+ConVar cs_hostage_near_rescue_music_distance( side_registry(), "cs_hostage_near_rescue_music_distance", "2000", FCVAR_CHEAT );
 
 // players don't need physics boxes in csgo, but maybe in mods?
-ConVar cs_enable_player_physics_box( "cs_enable_player_physics_box", "0", FCVAR_RELEASE );
+ConVar cs_enable_player_physics_box( side_registry(), "cs_enable_player_physics_box", "0", FCVAR_RELEASE );
 
-ConVar mp_deathcam_skippable( "mp_deathcam_skippable", "1", FCVAR_REPLICATED | FCVAR_RELEASE, "Determines whether a player can early-out of the deathcam." );
+ConVar mp_deathcam_skippable( side_registry(), "mp_deathcam_skippable", "1", FCVAR_REPLICATED | FCVAR_RELEASE, "Determines whether a player can early-out of the deathcam." );
 
-constexpr auto THROWGRENADE_COUNTER_BITS = 3;
-
+static constexpr auto THROWGRENADE_COUNTER_BITS = 3;
 
 EHANDLE g_pLastCTSpawn;
 EHANDLE g_pLastTerroristSpawn;
 
 void TE_RadioIcon( IRecipientFilter& filter, float delay, CBaseEntity *pPlayer );
-
 
 // -------------------------------------------------------------------------------- //
 // Classes
@@ -299,20 +322,21 @@ public:
 
 static CPhysicsPlayerCallback playerCallback;
 
-
 // -------------------------------------------------------------------------------- //
 // Ragdoll entities.
 // -------------------------------------------------------------------------------- //
 
-class [[= ks::reflect::NetTable{ .name = "DT_CSRagdoll", .base = false } ]]
-      [[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = kHighDefault, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::WireEnc::Vector }, SendProxy_Origin>{} ]]
-      [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex }>{} ]]
-      [[= ks::reflect::From<"m_nForceBone", ks::reflect::Net{ .bits = 8 }>{} ]]
-      [[= ks::reflect::From<"m_vecForce", ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector }>{} ]]
-      [[= ks::reflect::From<"m_iTeamNum", ks::reflect::Net{ .bits = TEAMNUM_NUM_BITS }>{} ]]
-      [[= ks::reflect::From<"m_bClientSideAnimation", ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED }>{} ]]
-      CCSRagdoll : public CBaseAnimatingOverlay
+class CCSRagdoll : public CBaseAnimatingOverlay
 {
+	[[= ks::reflect::NetTable{ .name = "DT_CSRagdoll", .base = false } ]]
+	[[= ks::reflect::From<"m_vecOrigin", ks::reflect::Net{ .bits = -1, .low = 0.0f, .high = kHighDefault, .flags = SPROP_COORD|SPROP_CHANGES_OFTEN, .enc = ks::reflect::WireEnc::Vector }, SendProxy_Origin>{} ]]
+	[[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex }>{} ]]
+	[[= ks::reflect::From<"m_nForceBone", ks::reflect::Net{ .bits = 8 }>{} ]]
+	[[= ks::reflect::From<"m_vecForce", ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector }>{} ]]
+	[[= ks::reflect::From<"m_iTeamNum", ks::reflect::Net{ .bits = TEAMNUM_NUM_BITS }>{} ]]
+	[[= ks::reflect::From<"m_bClientSideAnimation", ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED }>{} ]]
+	static constexpr bool ks_class = true;
+
 public:
 	DECLARE_CLASS( CCSRagdoll, CBaseAnimatingOverlay );
 	DECLARE_SERVERCLASS();
@@ -358,14 +382,15 @@ LINK_ENTITY_TO_CLASS( cs_ragdoll, CCSRagdoll );
 
 IMPLEMENT_REFLECT_SERVERCLASS( CCSRagdoll, DT_CSRagdoll )
 
-
 // -------------------------------------------------------------------------------- //
 // Player animation event. Sent to the client when a player fires, jumps, reloads, etc..
 // -------------------------------------------------------------------------------- //
 
-class [[= ks::reflect::NetTable{ .name = "DT_TEPlayerAnimEvent", .base = false } ]]
-      CTEPlayerAnimEvent : public CBaseTempEntity
+class CTEPlayerAnimEvent : public CBaseTempEntity
 {
+	[[= ks::reflect::NetTable{ .name = "DT_TEPlayerAnimEvent", .base = false } ]]
+	static constexpr bool ks_class = true;
+
 public:
 	DECLARE_CLASS( CTEPlayerAnimEvent, CBaseTempEntity );
 	DECLARE_SERVERCLASS();
@@ -401,24 +426,15 @@ void TE_PlayerAnimEvent( CBasePlayer *pPlayer, PlayerAnimEvent_t event, int nDat
 LINK_ENTITY_TO_CLASS( player, CCSPlayer );
 PRECACHE_REGISTER(player );
 
-
-
 IMPLEMENT_REFLECT_TABLE_IN( CCSPlayer, DT_CSLocalPlayerExclusive );
-
 
 IMPLEMENT_REFLECT_TABLE_IN( CCSPlayer, DT_CSNonLocalPlayerExclusive );
 
-
 IMPLEMENT_REFLECT_SERVERCLASS( CCSPlayer, DT_CSPlayer )
-
 
 IMPLEMENT_REFLECT_DATAMAP( CCSPlayer )
 
-
 // has to be included after above macros
-#include "cs_bot.h"
-
-
 
 // -------------------------------------------------------------------------------- //
 
@@ -435,7 +451,7 @@ void cc_CreatePredictionError_f( const CCommand &args )
 	pEnt->SetAbsOrigin( pEnt->GetAbsOrigin() + Vector( distance, 0, 0 ) );
 }
 
-ConCommand cc_CreatePredictionError( "CreatePredictionError", cc_CreatePredictionError_f, "Create a prediction error", FCVAR_CHEAT );
+ConCommand cc_CreatePredictionError( side_registry(), "CreatePredictionError", cc_CreatePredictionError_f, "Create a prediction error", FCVAR_CHEAT );
 
 // -------------------------------------------------------------------------------- //
 // CCSPlayer implementation.
@@ -711,7 +727,6 @@ void CCSPlayer::ClearScore( void )
 	ClearRoundProximityScore();
 }
 
-
 CCSPlayer::~CCSPlayer()
 {
 	delete m_pHintMessageQueue;
@@ -730,13 +745,11 @@ CCSPlayer::~CCSPlayer()
 	m_pPersonaDataPublic = nullptr;
 }
 
-
 CCSPlayer *CCSPlayer::CreatePlayer( const char *className, edict_t *ed )
 {
 	CCSPlayer::s_PlayerEdict = ed;
 	return (CCSPlayer* )CreateEntityByName( className );
 }
-
 
 void CCSPlayer::Precache_Impl()
 {
@@ -868,11 +881,10 @@ void CCSPlayer::Precache_Impl()
 	BaseClass::Precache_Impl();
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Allow pre-frame adjustments on the player
 //-----------------------------------------------------------------------------
-ConVar sv_runcmds( "sv_runcmds", "1" );
+ConVar sv_runcmds( side_registry(), "sv_runcmds", "1" );
 void CCSPlayer::PlayerRunCommand( CUserCmd *ucmd, IMoveHelper *moveHelper )
 {
 	CVProfScope _( "CCSPlayer::PlayerRunCommand", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
@@ -950,7 +962,6 @@ void CCSPlayer::PlayerRunCommand( CUserCmd *ucmd, IMoveHelper *moveHelper )
 	BaseClass::PlayerRunCommand( ucmd, moveHelper );
 }
 
-
 bool CCSPlayer::RunMimicCommand( CUserCmd& cmd )
 {
 	if ( !IsBot() )
@@ -974,7 +985,6 @@ bool CCSPlayer::RunMimicCommand( CUserCmd& cmd )
 
 	return true;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Simulates a single frame of movement for a player
@@ -1002,7 +1012,7 @@ void CCSPlayer::RunPlayerMove( const QAngle& viewangles, float forwardmove, floa
 		cmd.impulse = impulse;
 
 		VectorCopy( viewangles, cmd.viewangles );
-		cmd.random_seed = random->RandomInt( 0, 0x7fffffff );
+		cmd.random_seed = random_valve->RandomInt( 0, 0x7fffffff );
 	}
 
 	MoveHelperServer()->SetHost( this );
@@ -1030,7 +1040,6 @@ void CCSPlayer::RunPlayerMove( const QAngle& viewangles, float forwardmove, floa
 
 	MoveHelperServer()->SetHost( nullptr );
 }
-
 
 void CCSPlayer::InitialSpawn( void )
 {
@@ -1170,7 +1179,6 @@ void CCSPlayer::Spawn_Impl()
 			}
 		}
 
-
 		for ( int i = 1; i <= gpGlobals->maxClients; ++i )
 		{
 			CCSPlayer *player = static_cast< CCSPlayer* >( UTIL_PlayerByIndex( i ) );
@@ -1264,7 +1272,6 @@ void CCSPlayer::Spawn_Impl()
 
 	if ( GetParent() )
 		SetParent( nullptr );
-
 
 	BaseClass::Spawn_Impl();
 
@@ -1565,8 +1572,6 @@ void CCSPlayer::Spawn_Impl()
 
 	engine->ClientResetReplayRequestTime( entindex() - 1 );
 
-
-
 	// coop bots with custom models
 	if ( CSGameRules()->IsPlayingCoopMission() && IsBot() )
 	{
@@ -1674,7 +1679,6 @@ void CCSPlayer::SetHumanPlayerAccountID( uint32 uiAccountId )
 		}
 	}
 }
-
 
 void CCSPlayer::ShowViewPortPanel( const char * name, bool bShow, KeyValues *data )
 {
@@ -1915,7 +1919,6 @@ void CCSPlayer::GiveDefaultItems()
 		return;
 	}
 
-
 	CBaseCombatWeapon *knife = Weapon_GetSlot( WEAPON_SLOT_KNIFE );
 	CBaseCombatWeapon *pistol = Weapon_GetSlot( WEAPON_SLOT_PISTOL );
 	CBaseCombatWeapon *rifle = Weapon_GetSlot( WEAPON_SLOT_RIFLE );
@@ -1944,7 +1947,6 @@ void CCSPlayer::GiveDefaultItems()
 			SendUserMessage( filter, ks::net::CS_UM_DisplayInventory, msg );
 		}
 	}
-
 
 	m_bUsingDefaultPistol = true;
 
@@ -2060,7 +2062,6 @@ void CCSPlayer::GiveDefaultItems()
 		Weapon_GetSlot( WEAPON_SLOT_RIFLE )->GiveReserveAmmo( AMMO_POSITION_PRIMARY, 250 );
 	}
 
-
 	m_bPickedUpWeapon = false; // make sure this is set after getting default weapons
 
 	if ( CSGameRules()->IsPlayingCoopMission() )
@@ -2106,7 +2107,6 @@ void CCSPlayer::GiveWearableFromSlot( loadout_positions_t position )
 {
 	/** Removed for partner depot **/
 }
-
 
 void CCSPlayer::SetClanTag( const char *pTag )
 {
@@ -2307,12 +2307,9 @@ void CCSPlayer::HandleOutOfAmmoKnifeKills( CCSPlayer* pAttackerPlayer, CWeaponCS
 		bool hasValidPrimaryOrSecondary = false; // can't really be out of ammo on anything if we don't have either a primary or a secondary
 		bool allPrimaryAndSecondariesOutOfAmmo = true;
 
-
-
 		if(	pAttackerPlayer->HasPrimaryWeapon() )
 		{
 			hasValidPrimaryOrSecondary = true;
-
 
 			CBaseCombatWeapon *pWeapon = pAttackerPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE );
 			if( !pWeapon || !pAttackerPlayer->DidPlayerEmptyAmmoForWeapon( pWeapon ) )
@@ -2323,7 +2320,6 @@ void CCSPlayer::HandleOutOfAmmoKnifeKills( CCSPlayer* pAttackerPlayer, CWeaponCS
 		if(	pAttackerPlayer->HasSecondaryWeapon() )
 		{
 			hasValidPrimaryOrSecondary = true;
-
 
 			CBaseCombatWeapon *pWeapon = pAttackerPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL );
 			if( !pWeapon || !pAttackerPlayer->DidPlayerEmptyAmmoForWeapon( pWeapon ) )
@@ -2625,7 +2621,6 @@ void CCSPlayer::Event_Killed_Impl( const CTakeDamageInfo &info )
 		}
 	}
 
-
 	if ( IsControllingBot() )	// Should this be here, or at the top?
 	{
 		ReleaseControlOfBot();
@@ -2798,7 +2793,6 @@ void CCSPlayer::Event_KilledOther_Impl( CBaseEntity *pVictim, const CTakeDamageI
 
 			m_NumChickensKilledThisSpawn++;
 		}
-
 
 		// Killed an enemy
 		if ( CSGameRules()->IsPlayingGunGame() && pCSVictim && pCSAttacker )
@@ -3228,12 +3222,10 @@ bool CCSPlayer::HasShield() const
 	return false;
 }
 
-
 bool CCSPlayer::IsShieldDrawn() const
 {
 	return false;
 }
-
 
 extern void FE_PlayerDecal( CCSGameRules::ServerPlayerDecalData_t const &data, std::string const &signature );
 void CCSPlayer::SprayPaint( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature const &msg )
@@ -3322,20 +3314,6 @@ void CCSPlayer::SprayPaint( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature const
 		}
 
 		// Verify the signature of the user's spray paint
-#ifdef _DEBUG
-		{
-			float flendpos[3] = { msg.data->endpos[ 0 ], msg.data->endpos[ 1 ], msg.data->endpos[ 2 ] };
-			float flstartpos[3] = { msg.data->startpos[ 0 ], msg.data->startpos[ 1 ], msg.data->startpos[ 2 ] };
-			float flright[3] = { msg.data->right[ 0 ], msg.data->right[ 1 ], msg.data->right[ 2 ] };
-			float flnormal[3] = { msg.data->normal[ 0 ], msg.data->normal[ 1 ], msg.data->normal[ 2 ] };
-			DevMsg( "Server signature #%u e(%08X,%08X,%08X) s(%08X,%08X,%08X) r(%08X,%08X,%08X) n(%08X,%08X,%08X)\n", data.m_nTraceID,
-				*reinterpret_cast< uint32 * >( &flendpos[0] ), *reinterpret_cast< uint32 * >( &flendpos[1] ), *reinterpret_cast< uint32 * >( &flendpos[2] ),
-				*reinterpret_cast< uint32 * >( &flstartpos[0] ), *reinterpret_cast< uint32 * >( &flstartpos[1] ), *reinterpret_cast< uint32 * >( &flstartpos[2] ),
-				*reinterpret_cast< uint32 * >( &flright[0] ), *reinterpret_cast< uint32 * >( &flright[1] ), *reinterpret_cast< uint32 * >( &flright[2] ),
-				*reinterpret_cast< uint32 * >( &flnormal[0] ), *reinterpret_cast< uint32 * >( &flnormal[1] ), *reinterpret_cast< uint32 * >( &flnormal[2] )
-				);
-		}
-#endif
 		if ( !BValidateClientPlayerDecalSignature( msg.data ) )
 			return;
 
@@ -3460,7 +3438,6 @@ void CCSPlayer::SetupVisibility( CBaseEntity *pViewEntity, unsigned char *pvs, i
 	int area = pViewEntity ? pViewEntity->NetworkProp()->AreaNum() : NetworkProp()->AreaNum();
 	PointCameraSetupVisibility( this, area, pvs, pvssize );
 }
-
 
 bool CCSPlayer::ShouldCheckOcclusion( CBasePlayer *pOtherPlayer )
 {
@@ -3635,7 +3612,6 @@ void CCSPlayer::UpdateAddonBits()
 	m_iAddonBits = iNewBits;
 }
 
-
 void CCSPlayer::AppendSpottedEntityUpdateMessage( int entindex, bool bSpotted,
 	ks::net::CCSUsrMsg_ProcessSpottedEntityUpdate::SpottedEntityUpdate *pMsg )
 {
@@ -3667,7 +3643,6 @@ void CCSPlayer::AppendSpottedEntityUpdateMessage( int entindex, bool bSpotted,
 		}
 	}
 }
-
 
 void CCSPlayer::ProcessSpottedEntityUpdate()
 {
@@ -3834,14 +3809,12 @@ void CCSPlayer::PostThink()
 		}
 	}
 
-
 	// failsafe to show active world model if it fails to unhide by the time deploy is complete
 	CWeaponCSBase *pCSWeapon = GetActiveCSWeapon();
 	if ( pCSWeapon && pCSWeapon->GetActivity() != pCSWeapon->GetDeployActivity() )
 	{
 		pCSWeapon->ShowWeaponWorldModel( true );
 	}
-
 
 	UpdateAddonBits();
 
@@ -3936,9 +3909,6 @@ void CCSPlayer::PostThink()
 			gameeventmanager->FireEvent( event );
 		}
 	}
-
-
-
 
 	// Store the eye angles pitch so the client can compute its animation state correctly.
 	QAngle eyeAngles = EyeAngles();
@@ -4148,7 +4118,6 @@ void CCSPlayer::PushawayThink()
 	PerformObstaclePushaway( this );
 	SetNextThink( gpGlobals->curtime + PUSHAWAY_THINK_INTERVAL, CS_PUSHAWAY_THINK_CONTEXT );
 }
-
 
 void CCSPlayer::SetModel_Impl( const char *szModelName )
 {
@@ -4400,8 +4369,7 @@ void CCSPlayer::Pain( CCSPlayer* pAttacker, bool bHasArmour, int nDmgTypeBits )
 	}
 }
 
-ConVar mp_tagging_scale( "mp_tagging_scale", "1.0", FCVAR_REPLICATED | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Scalar for player tagging modifier when hit. Lower values for greater tagging." );
-
+ConVar mp_tagging_scale( side_registry(), "mp_tagging_scale", "1.0", FCVAR_REPLICATED | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Scalar for player tagging modifier when hit. Lower values for greater tagging." );
 
 class CBombShieldTraceEnum : public IEntityEnumerator
 {
@@ -4435,7 +4403,6 @@ private:
 	Ray_t	*m_pRay;
 	bool m_bHitBombBlocker;
 };
-
 
 static std::vector< CCSPlayer::ITakeDamageListener * > s_arrTakeDamageListeners;
 CCSPlayer::ITakeDamageListener::ITakeDamageListener()
@@ -4886,7 +4853,6 @@ int CCSPlayer::OnTakeDamage_Impl( const CTakeDamageInfo &inputInfo )
 		m_lowHealthGoalTime = gpGlobals->curtime + 30.0f;
 	}
 
-
 	// [menglish] Achievement award for kill stealing i.e. killing an enemy who was very damaged from other players   <--- "LOL" -mtw
 	// [Forrest] Moved this check before RecordDamageTaken so that the damage currently being dealt by this player
 	//           won't disqualify them from getting the achievement.
@@ -4947,7 +4913,6 @@ int CCSPlayer::OnTakeDamage_Impl( const CTakeDamageInfo &inputInfo )
 					}
 				}
 			}
-
 
 		}
 
@@ -5088,7 +5053,6 @@ int CCSPlayer::OnTakeDamage_Impl( const CTakeDamageInfo &inputInfo )
 	return CBaseCombatCharacter::OnTakeDamage_Impl( info );
 }
 
-
 //MIKETODO: this probably should let the shield model catch the trace attacks.
 bool CCSPlayer::IsHittingShield( const Vector &vecDirection, trace_t *ptr )
 {
@@ -5132,7 +5096,7 @@ void CCSPlayer::ClearGunGameImmunity( void )
 	m_fImmuneToGunGameDamageTime = 0.0f;
 }
 
-ConVar mp_flinch_punch_scale( "mp_flinch_punch_scale", "3", FCVAR_REPLICATED | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Scalar for first person view punch when getting hit." );
+ConVar mp_flinch_punch_scale( side_registry(), "mp_flinch_punch_scale", "3", FCVAR_REPLICATED | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Scalar for first person view punch when getting hit." );
 
 //ConVar aimpunch_fix( "aimpunch_fix", "0" );
 
@@ -5141,7 +5105,6 @@ void CCSPlayer::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vec
 	bool bShouldBleed = true;
 	bool bShouldSpark = false;
 	bool bHitShield = IsHittingShield( vecDir, ptr );
-
 
 	CBasePlayer *pAttacker = (CBasePlayer* )ToBasePlayer( info.GetAttacker() );
 
@@ -5243,7 +5206,7 @@ void CCSPlayer::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vec
 					if ( punchAngle.x < mp_flinch_punch_scale.GetFloat() * -12 )
 						punchAngle.x = mp_flinch_punch_scale.GetFloat() * -12;
 
-					punchAngle.z = mp_flinch_punch_scale.GetFloat() * flDamage * random->RandomFloat(-1,1 );
+					punchAngle.z = mp_flinch_punch_scale.GetFloat() * flDamage * random_valve->RandomFloat(-1,1 );
 
 					if ( punchAngle.z < mp_flinch_punch_scale.GetFloat() * -9 )
 						punchAngle.z = mp_flinch_punch_scale.GetFloat() * -9;
@@ -5268,7 +5231,6 @@ void CCSPlayer::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vec
 				else
 					flAng = -0.005;
 
-
 				punchAngle = GetRawAimPunchAngle();
 
 				punchAngle.x += mp_flinch_punch_scale.GetFloat() * flDamage * flAng;
@@ -5290,7 +5252,6 @@ void CCSPlayer::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vec
 				else
 					flAng = -0.005;
 
-
 				punchAngle = GetRawAimPunchAngle();
 
 				punchAngle.x += mp_flinch_punch_scale.GetFloat() * flDamage * flAng;
@@ -5299,7 +5260,6 @@ void CCSPlayer::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vec
 					punchAngle.x = mp_flinch_punch_scale.GetFloat() * -4;
 
 				SetAimPunchAngle( punchAngle );
-
 
 				break;
 
@@ -5339,7 +5299,6 @@ void CCSPlayer::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vec
 				break;
 		}
 	}
-
 
 	// Since this code only runs on the server, make sure it shows the tempents it creates.
 	CDisablePredictionFiltering disabler;
@@ -5398,13 +5357,11 @@ void CCSPlayer::TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vec
 			impulseMultiplier = 0.0f;
 		}
 
-
 		subInfo.SetDamageForce( info.GetDamageForce() * impulseMultiplier );
 
 		AddMultiDamage( subInfo, this );
 	}
 }
-
 
 void CCSPlayer::Reset( bool resetScore )
 {
@@ -5460,7 +5417,6 @@ void CCSPlayer::Reset( bool resetScore )
 	m_fLastGivenDefuserTime = gpGlobals->curtime;
 	m_fLastGivenBombTime = gpGlobals->curtime;
 
-
 }
 
 //-----------------------------------------------------------------------------
@@ -5478,13 +5434,11 @@ void CCSPlayer::HintMessage( const char *pMessage, bool bDisplayIfDead, bool bOv
 		m_pHintMessageQueue->AddMessage( pMessage );
 }
 
-
 void CCSPlayer::ResetAccount()
 {
 	m_iAccount = 0;
 	m_iAccountMoneyEarnedForNextRound = 0;
 }
-
 
 void CCSPlayer::InitializeAccount( int amount )
 {
@@ -5524,7 +5478,6 @@ void CCSPlayer::InitializeAccount( int amount )
 	}
 }
 
-
 bool CCSPlayer::AreAccountAwardsEnabled( PlayerCashAward::Type reason ) const
 {
 	// no awards in the warmup period
@@ -5544,7 +5497,6 @@ void CCSPlayer::AddAccountAward( PlayerCashAward::Type reason )
 	AddAccountAward(reason, CSGameRules()->PlayerCashAwardValue ( reason ) );
 }
 
-
 extern ConVar cash_player_killed_enemy_default;
 extern ConVar cash_player_killed_enemy_factor;
 void CCSPlayer::AddAccountAward( PlayerCashAward::Type reason, int amount, const CWeaponCSBase *pWeapon )
@@ -5558,7 +5510,6 @@ void CCSPlayer::AddAccountAward( PlayerCashAward::Type reason, int amount, const
 	const char* awardReasonToken = nullptr;
 	const char* sign_string = "+$";
 	const char* szWeaponName = nullptr;
-
 
 	int currentround = CSGameRules()->GetTotalRoundsPlayed();
 
@@ -5832,7 +5783,6 @@ int CCSPlayer::AddDeathmatchKillScore( int nScore, CSWeaponID wepID, int iSlot, 
 	else
 		V_snprintf( strnScore, sizeof( strnScore ), "%d", abs( nScore ));
 
-
 	ClientPrint( this, HUD_PRINTTALK, awardReasonToken, strnScore, szWeaponName );
 
 	AddContributionScore( nScore + nBonus );
@@ -6067,7 +6017,6 @@ void CCSPlayer::GiveDefuser( bool bPickedUp /* = false */ )
 	RecalculateCurrentEquipmentValue();
 }
 
-
 // player blinded by a flashbang grenade
 void CCSPlayer::Blind( float holdTime, float fadeTime, float startingAlpha )
 {
@@ -6105,7 +6054,6 @@ void CCSPlayer::Blind( float holdTime, float fadeTime, float startingAlpha )
 		m_flFlashDuration = flNewDuration;
 		m_flFlashMaxAlpha = Max( m_flFlashMaxAlpha.Get(), startingAlpha );
 	}
-
 
 	if ( m_bUseNewAnimstate && m_PlayerAnimStateCSGO )
 	{
@@ -6235,7 +6183,6 @@ void CCSPlayer::ObserverRoundRespawn()
 		m_szNewName[0] = 0;
 	}
 
-
 	m_unRoundStartEquipmentValue = m_unCurrentEquipmentValue = 0;
 
 	// Resets camera mode, specifically for the case where coaches are popped into 3rd to spectate a bomb
@@ -6310,10 +6257,7 @@ void CCSPlayer::RoundRespawn()
 	//if ( m_iMenu != Menu_ChooseAppearance )
 	{
 		// remove them from any vehicle they may be in
-		if ( IsInAVehicle() )
-		{
-			LeaveVehicle();
-		}
+		
 
 		if ( GetParent() )
 			SetParent( nullptr );
@@ -6552,7 +6496,6 @@ void CCSPlayer::MoveToNextIntroCamera()
 		return;
 	}
 
-
 	Vector vCamera = Target->GetAbsOrigin() - m_pIntroCamera->GetAbsOrigin();
 	Vector vIntroCamera = m_pIntroCamera->GetAbsOrigin();
 
@@ -6583,7 +6526,7 @@ public:
 // allows plugins to access the (limited ) VIP functionality already present (scoreboard
 // identification and radar color ).
 static void cs_make_vip( const CCommand &args );
-static ConCommand cs_make_vip_command( "cs_make_vip", cs_make_vip, "Marks a player as the VIP" );
+static ConCommand cs_make_vip_command( side_registry(), "cs_make_vip", cs_make_vip, "Marks a player as the VIP" );
 static void cs_make_vip( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
@@ -6678,7 +6621,6 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool
 			// Track which player was owner of this weapon ( needed to track kills with enemy weapon stats )
 			pCSWeapon->AddPriorOwner( this );
 
-
 			pCSWeapon->SetModel( pCSWeapon->GetWorldDroppedModel() );
 
 			// set silencer bodygroup
@@ -6735,7 +6677,6 @@ bool CCSPlayer::CSWeaponDrop( CBaseCombatWeapon *pWeapon, Vector targetPos, bool
 		int iWeaponBoneIndex = -1;
 
 		MDLCACHE_CRITICAL_SECTION();
-
 
 		if ( !m_bUseNewAnimstate )
 		{
@@ -6981,7 +6922,6 @@ bool CCSPlayer::DropWeaponSlot( int nSlot, bool fromDeath )
 	return bSuccess;
 }
 
-
 bool CCSPlayer::HasPrimaryWeapon( void )
 {
 	bool bSuccess = false;
@@ -6995,7 +6935,6 @@ bool CCSPlayer::HasPrimaryWeapon( void )
 
 	return bSuccess;
 }
-
 
 bool CCSPlayer::HasSecondaryWeapon( void )
 {
@@ -7124,7 +7063,6 @@ BuyResult_e CCSPlayer::AttemptToBuyVest( void )
 		return BUY_BOUGHT;
 	}
 }
-
 
 //************************************
 // Try to buy kevlar vest + helmet
@@ -7420,7 +7358,6 @@ BuyResult_e CCSPlayer::HandleCommand_Buy_Internal( const char * wpnName, int nPo
 			}
 			return BUY_NOT_ALLOWED;
 
-
 		case AcquireResult::NotAllowedByProhibition:
 
 			return BUY_NOT_ALLOWED;
@@ -7594,7 +7531,6 @@ BuyResult_e CCSPlayer::BuyGunAmmo( CBaseCombatWeapon *pWeapon, bool bBlinkMoney 
 	return BUY_CANT_AFFORD;
 }
 
-
 BuyResult_e CCSPlayer::BuyAmmo( int nSlot, bool bBlinkMoney )
 {
 	if ( !CanPlayerBuy( false ) )
@@ -7622,7 +7558,6 @@ BuyResult_e CCSPlayer::BuyAmmo( int nSlot, bool bBlinkMoney )
 
 	return BuyGunAmmo( pSlot, bBlinkMoney );
 }
-
 
 BuyResult_e CCSPlayer::AttemptToBuyAmmo( int iAmmoType )
 {
@@ -7672,7 +7607,6 @@ void CCSPlayer::InternalAutoBuyAmmo( int nSlot )
 		}
 	}
 }
-
 
 void CCSPlayer::AutoBuyAmmo( bool bForce )
 {
@@ -7738,7 +7672,6 @@ const char *RadioEventName[ RADIO_NUM_EVENTS+1 ] =
 	nullptr		// must be NULL-terminated
 };
 
-
 /**
  * Convert name to RadioType
  */
@@ -7750,7 +7683,6 @@ RadioType NameToRadioEvent( const char *name )
 
 	return RADIO_INVALID;
 }
-
 
 void CCSPlayer::HandleMenu_Radio1( int slot )
 {
@@ -7866,7 +7798,7 @@ void CCSPlayer::HandleMenu_Radio3( int slot )
 	switch ( slot )
 	{
 		case RADIO_AFFIRMATIVE :
-			if ( random->RandomInt( 0,1 ) )
+			if ( random_valve->RandomInt( 0,1 ) )
 				Radio( "Radio.Affirmitive",	"#Cstrike_TitlesTXT_Affirmative" );
 			else
 				Radio( "Radio.Roger",		"#Cstrike_TitlesTXT_Roger_that" );
@@ -8175,7 +8107,6 @@ void CCSPlayer::ApplyDeafnessEffect()
 	}
 }
 
-
 void CCSPlayer::NoteWeaponFired()
 {
 	contract_assert( m_pCurrentCommand );
@@ -8191,7 +8122,6 @@ void CCSPlayer::NoteWeaponFired()
 		m_qangLockViewangles = pl.v_angle;
 	}
 }
-
 
 bool CCSPlayer::WantsLagCompensationOnEntity( const CBaseEntity *entity, const CUserCmd *pCmd, const std::bitset<MAX_EDICTS> *pEntityTransmitBits ) const
 {
@@ -8447,9 +8377,9 @@ bool CCSPlayer::ClientCommand( const CCommand &args )
 
 		QAngle punchAngle = GetViewPunchAngle();
 
-		punchAngle.x = flDamage * random->RandomFloat ( -0.15, 0.15 );
-		punchAngle.y = flDamage * random->RandomFloat ( -0.15, 0.15 );
-		punchAngle.z = flDamage * random->RandomFloat ( -0.15, 0.15 );
+		punchAngle.x = flDamage * random_valve->RandomFloat ( -0.15, 0.15 );
+		punchAngle.y = flDamage * random_valve->RandomFloat ( -0.15, 0.15 );
+		punchAngle.z = flDamage * random_valve->RandomFloat ( -0.15, 0.15 );
 
 		clamp( punchAngle.x, -4, punchAngle.x );
 		clamp( punchAngle.y, -5, 5 );
@@ -9005,7 +8935,6 @@ void CCSPlayer::Taunt( void )
 		m_flTauntEndTime = gpGlobals->curtime + SequenceDuration( nSequence );
 	}
 
-
 	//	m_flTauntYaw = BodyAngles().y + 160.0f;
 	// m_bMustNotMoveDuringTaunt = false;
 	*/
@@ -9033,10 +8962,8 @@ void CCSPlayer::LookAtHeldWeapon( void )
 		return;
 	}
 
-#ifdef IRONSIGHT
 	if ( pActiveWeapon->m_iIronSightMode == IronSight_should_approach_sighted )
 		return;
-#endif
 
 	CBaseViewModel *pViewModel = GetViewModel();
 	if ( pViewModel )
@@ -9096,8 +9023,6 @@ void CCSPlayer::SendJoinTeamFailedMessage( int reason, bool raiseTeamScreen )
 	}
 
 }
-
-
 
 // returns true if the selection has been handled and the player's menu
 // can be closed...false if the menu should be displayed again
@@ -9293,7 +9218,7 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team, bool bQueue, int iCoachTeam  )
 			// kick a bot to allow human to join
 			if ( cv_bot_auto_vacate.GetBool() && !IsBot() )
 			{
-				team = ( random->RandomInt( 0, 1 ) == 0 ) ? TEAM_TERRORIST : TEAM_CT;
+				team = ( random_valve->RandomInt( 0, 1 ) == 0 ) ? TEAM_TERRORIST : TEAM_CT;
 				if ( UTIL_KickBotFromTeam( team, bQueue ) == false )
 				{
 					// no bots on that team, try the other
@@ -9422,7 +9347,6 @@ bool CCSPlayer::HandleCommand_JoinTeam( int team, bool bQueue, int iCoachTeam  )
 
 	// If the code gets this far, the team is not TEAM_UNASSIGNED
 
-
 	if (mp->TeamStacked( team, GetTeamNumber() ) )//players are allowed to change to their own team so they can just change their model
 	{
 		// attempt to kick a bot to make room for this player
@@ -9538,7 +9462,6 @@ bool CCSPlayer::HandleCommand_JoinClass( void )
 	return true;
 }
 
-
 /*
 void CheckStartMoney( void )
 {
@@ -9576,7 +9499,6 @@ void CCSPlayer::GetIntoGame()
 //	bool bSpawnNow = IsAbleToInstantRespawn();
 //	if ( CSGameRules() && !CSGameRules()->IsWarmupPeriod() && mp_use_respawn_waves.GetBool() && CSGameRules()->GetNextRespawnWave( GetTeamNumber(), NULL ) > gpGlobals->curtime )
 //		bSpawnNow = false;
-
 
 	//****************New Code by SupraFiend************
 	if ( !MPRules->FPlayerCanRespawn( this ) )
@@ -9653,13 +9575,10 @@ void CCSPlayer::GetIntoGame()
 	}
 }
 
-
 int CCSPlayer::PlayerClass() const
 {
 	return m_iClass;
 }
-
-
 
 bool CCSPlayer::SelectSpawnSpot( const char *pEntClassName, CBaseEntity* &pStartSpot )
 {
@@ -9896,7 +9815,7 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 		{
 			pSpot = g_pLastCTSpawn; // reusing g_pLastCTSpawn.
 			// Randomize the start spot
-			for ( int i = random->RandomInt(1,10); i > 0; i-- )
+			for ( int i = random_valve->RandomInt(1,10); i > 0; i-- )
 			{
 				pSpot = gEntList.FindEntityByClassname( pSpot, "info_deathmatch_spawn" );
 			}
@@ -9956,7 +9875,6 @@ CBaseEntity* CCSPlayer::EntSelectSpawnPoint()
 		}
 	}
 
-
 	// If forced startspot is set, (re )spawn there.
 	// never attempt to use any random spots because we don't want CTs spawning in Ts buyzone
 	if ( !!gpGlobals->startspot && V_strlen( STRING(gpGlobals->startspot ) ) )
@@ -9980,13 +9898,11 @@ ReturnSpot:
 	return pSpot;
 }
 
-
 void CCSPlayer::SetProgressBarTime( int barTime )
 {
 	m_iProgressBarDuration = barTime;
 	m_flProgressBarStartTime = this->m_flSimulationTime;
 }
-
 
 void CCSPlayer::PlayerDeathThink()
 {
@@ -10026,13 +9942,11 @@ void CCSPlayer::PlayerForceTeamThink()
 	}
 }
 
-
 void CCSPlayer::State_Transition( CSPlayerState newState )
 {
 	State_Leave();
 	State_Enter( newState );
 }
-
 
 void CCSPlayer::State_Enter( CSPlayerState newState )
 {
@@ -10052,7 +9966,6 @@ void CCSPlayer::State_Enter( CSPlayerState newState )
 		(this->*m_pCurStateInfo->pfnEnterState )();
 }
 
-
 void CCSPlayer::State_Leave()
 {
 	if ( m_pCurStateInfo && m_pCurStateInfo->pfnLeaveState )
@@ -10061,7 +9974,6 @@ void CCSPlayer::State_Leave()
 	}
 }
 
-
 void CCSPlayer::State_PreThink()
 {
 	if ( m_pCurStateInfo && m_pCurStateInfo->pfnPreThink )
@@ -10069,7 +9981,6 @@ void CCSPlayer::State_PreThink()
 		(this->*m_pCurStateInfo->pfnPreThink )();
 	}
 }
-
 
 CCSPlayerStateInfo* CCSPlayer::State_LookupInfo( CSPlayerState state )
 {
@@ -10096,7 +10007,6 @@ CCSPlayerStateInfo* CCSPlayer::State_LookupInfo( CSPlayerState state )
 	return nullptr;
 }
 
-
 void CCSPlayer::PhysObjectSleep()
 {
 	IPhysicsObject *pObj = VPhysicsGetObject();
@@ -10104,14 +10014,12 @@ void CCSPlayer::PhysObjectSleep()
 		pObj->Sleep();
 }
 
-
 void CCSPlayer::PhysObjectWake()
 {
 	IPhysicsObject *pObj = VPhysicsGetObject();
 	if ( pObj )
 		pObj->Wake();
 }
-
 
 void CCSPlayer::State_Enter_WELCOME()
 {
@@ -10155,7 +10063,6 @@ void CCSPlayer::State_Enter_WELCOME()
 	}
 }
 
-
 void CCSPlayer::State_PreThink_WELCOME()
 {
 	// Verify some state.
@@ -10168,12 +10075,10 @@ void CCSPlayer::State_PreThink_WELCOME()
 	}
 }
 
-
 void CCSPlayer::State_Enter_PICKINGTEAM()
 {
 	ShowViewPortPanel( "team" ); // show the team menu
 }
-
 
 void CCSPlayer::State_Enter_DEATH_ANIM()
 {
@@ -10212,7 +10117,6 @@ void CCSPlayer::State_Enter_DEATH_ANIM()
 		m_iDeathPostEffect = 14; // POST_EFFECT_DEATH_CAM_BODYSHOT;
 	}
 }
-
 
 void CCSPlayer::State_PreThink_DEATH_ANIM()
 {
@@ -10367,7 +10271,6 @@ bool CCSPlayer::StartHltvReplayEvent( const ClientReplayEventParams_t &params )
 	}
 }
 
-
 void CCSPlayer::State_Enter_DEATH_WAIT_FOR_KEY()
 {
 	// Remember when we died, so we can automatically put them into observer mode
@@ -10383,7 +10286,6 @@ void CCSPlayer::State_Enter_DEATH_WAIT_FOR_KEY()
 	// it is easier to cause a less obvious bug than popping ragdolls
 	//AddEffects( EF_NOINTERP );
 }
-
 
 void CCSPlayer::State_PreThink_DEATH_WAIT_FOR_KEY()
 {
@@ -10538,7 +10440,6 @@ void CCSPlayer::State_PreThink_GUNGAME_RESPAWN()
 	TryGungameRespawn();
 }
 
-
 void CCSPlayer::State_Enter_PICKINGCLASS()
 {
 	if ( CommandLine()->FindParm( "-makereslists" ) ) // don't show the menu when making reslists
@@ -10581,7 +10482,6 @@ void CCSPlayer::State_Enter_ACTIVE()
 	m_bRespawning = false;
 }
 
-
 void CCSPlayer::State_PreThink_ACTIVE()
 {
 	// Calculate timeout for gun game immunity
@@ -10619,7 +10519,6 @@ void CCSPlayer::State_PreThink_ACTIVE()
 		AwardAchievement(CSStillAlive );
 	}
 
-
 	// We only allow noclip here only because noclip is useful for debugging.
 	// It would be nice if the noclip command set some flag so we could tell that they
 	// did it intentionally.
@@ -10646,7 +10545,6 @@ bool CCSPlayer::StartObserverMode( int mode )
 
 	return true;
 }
-
 
 bool CCSPlayer::SetObserverTarget(CBaseEntity *target)
 {
@@ -10930,7 +10828,6 @@ bool CCSPlayer::BumpWeapon( CBaseCombatWeapon *pBaseWeapon )
 	return false;
 }
 
-
 void CCSPlayer::ResetStamina( void )
 {
 	m_flStamina = 0.0f;
@@ -10955,7 +10852,7 @@ void CCSPlayer::RescueZoneTouch( inputdata_t &inputdata )
 
 //------------------------------------------------------------------------------------------
 static void timeleft( const CCommand &args );
-static ConCommand timeleft_command( "timeleft", timeleft, "prints the time remaining in the match", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static ConCommand timeleft_command( side_registry(), "timeleft", timeleft, "prints the time remaining in the match", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
 static void timeleft( const CCommand &args )
 {
 	CCSPlayer *pPlayer = ToCSPlayer( UTIL_GetCommandClient() );
@@ -11330,7 +11227,6 @@ bool CCSPlayer::AttemptToBuyDMBonusWeapon( void )
 
 	const CBaseCombatWeapon *pHaveWeapon = Weapon_GetPosition( unPosition );
 
-
 	// If we already have the bonus weapon, switch to it.
 	if ( pHaveWeapon )
 	{
@@ -11407,7 +11303,6 @@ bool CCSPlayer::AttemptToBuyDMBonusWeapon( void )
 // ReBuy
 // system for attempting to buy the weapons you had last round
 //==============================================================
-
 
 void CCSPlayer::AddToRebuy( CSWeaponID weaponId, int nPos )
 {
@@ -11670,7 +11565,6 @@ BuyResult_e CCSPlayer::RebuyNightVision()
 	return BUY_INVALID_ITEM;
 }
 
-
 BuyResult_e CCSPlayer::RebuyArmor()
 {
 	if (m_rebuyStructLastRound.GetArmor() > 0 )
@@ -11698,7 +11592,6 @@ BuyResult_e CCSPlayer::RebuyArmor()
 	return BUY_ALREADY_HAVE;
 }
 
-
 static void BuyRandom( void )
 {
 	CCSPlayer *player = ToCSPlayer( UTIL_GetCommandClient() );
@@ -11709,8 +11602,7 @@ static void BuyRandom( void )
 		player->BuyRandom();
 }
 
-static ConCommand buyrandom( "buyrandom", BuyRandom, "Buy random primary and secondary. Primarily for deathmatch where cost is not an issue.", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
-
+static ConCommand buyrandom( side_registry(), "buyrandom", BuyRandom, "Buy random primary and secondary. Primarily for deathmatch where cost is not an issue.", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
 
 void CCSPlayer::BuyRandom( void )
 {
@@ -11753,8 +11645,8 @@ void CCSPlayer::BuyRandom( void )
 	}
 
 	// randomly pick one of each.
-	int primaryToBuy = random->RandomInt( 1, std::ssize( primaryweapons ) );
-	int secondaryToBuy = random->RandomInt( 1, std::ssize( secondaryweapons ) );
+	int primaryToBuy = random_valve->RandomInt( 1, std::ssize( primaryweapons ) );
+	int secondaryToBuy = random_valve->RandomInt( 1, std::ssize( secondaryweapons ) );
 
 //	Msg( "random pick: p: %i, s: %i", primaryweapons[primaryToBuy], secondaryweapons[secondaryToBuy] );
 
@@ -11764,7 +11656,6 @@ void CCSPlayer::BuyRandom( void )
 	HandleCommand_Buy( WeaponIDToAlias( secondaryweapons[secondaryToBuy - 1] ) );
 	m_bIsInAutoBuy = false;
 }
-
 
 bool CCSPlayer::IsUseableEntity( CBaseEntity *pEntity, unsigned int requiredCaps )
 {
@@ -11788,11 +11679,7 @@ bool CCSPlayer::IsUseableEntity( CBaseEntity *pEntity, unsigned int requiredCaps
 		// we can't USE thrown grenades
 	}
 
-	CPropVehicle *pVehicle = dynamic_cast<CPropVehicle*>(pEntity );
-	if ( pVehicle )
-	{
-		return true;
-	}
+	
 
 	return BaseClass::IsUseableEntity( pEntity, requiredCaps );
 }
@@ -12195,7 +12082,6 @@ void CCSPlayer::DoAnimationEvent( PlayerAnimEvent_t event, int nData )
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 int CCSPlayer::FlashlightIsOn( void )
@@ -12222,7 +12108,6 @@ bool CCSPlayer::FlashlightTurnOn( bool playSound /*= false*/ )
 
 	return true;
 }
-
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -12448,7 +12333,7 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool killedByEnemy )
 				pDefuser = (CBaseAnimating * )CBaseEntity::Create( "item_cutters", WorldSpaceCenter(), GetLocalAngles(), nullptr );
 			else
 				pDefuser = (CBaseAnimating * )CBaseEntity::Create( "item_defuser", WorldSpaceCenter(), GetLocalAngles(), nullptr );
-			pDefuser->ApplyAbsVelocityImpulse( vForward * 200 + vRight * random->RandomFloat( -50, 50 ) );
+			pDefuser->ApplyAbsVelocityImpulse( vForward * 200 + vRight * random_valve->RandomFloat( -50, 50 ) );
 		}
 
 		RemoveDefuser();
@@ -12480,7 +12365,6 @@ void CCSPlayer::DropWeapons( bool fromDeath, bool killedByEnemy )
 
 		}
 	}
-
 
 	// wills: note - this may seem counter-intuitive below,
 	// but the player can only play grenade-related animations
@@ -13246,7 +13130,6 @@ void CCSPlayer::SelectDeathPose( const CTakeDamageInfo &info )
 	SetDeathPoseFrame( iDeathFrame );
 }
 
-
 void CCSPlayer::HandleAnimEvent( animevent_t *pEvent )
 {
 	if ( pEvent->Event() == 4001 || pEvent->Event() == 4002 )
@@ -13284,7 +13167,6 @@ void CCSPlayer::HandleAnimEvent( animevent_t *pEvent )
 		BaseClass::HandleAnimEvent( pEvent );
 	}
 }
-
 
 bool CCSPlayer::CanChangeName( void )
 {
@@ -13387,7 +13269,7 @@ bool CCSPlayer::StartReplayMode( float fDelay, float fDuration, int iEntity )
 }
 
 static void replay_start( const CCommand &args );
-static ConCommand replay_start_command( "replay_start", replay_start, "Start GOTV replay: replay_start <delay> [<player name or index>]", FCVAR_CHEAT );
+static ConCommand replay_start_command( side_registry(), "replay_start", replay_start, "Start GOTV replay: replay_start <delay> [<player name or index>]", FCVAR_CHEAT );
 static void replay_start( const CCommand &args )
 {
 	if ( CBasePlayer *pPlayer = UTIL_GetCommandClient() )
@@ -13427,7 +13309,7 @@ static void replay_start( const CCommand &args )
 }
 
 static void replay_death( const CCommand &args );
-static ConCommand replay_death_command( "replay_death", replay_death, "start hltv replay of last death", FCVAR_CHEAT );
+static ConCommand replay_death_command( side_registry(), "replay_death", replay_death, "start hltv replay of last death", FCVAR_CHEAT );
 static void replay_death( const CCommand &args )
 {
 	CBasePlayer *pBasePlayer = UTIL_GetCommandClient();
@@ -13442,7 +13324,7 @@ static void replay_death( const CCommand &args )
 }
 
 static void replay_stop( const CCommand &args );
-static ConCommand replay_stop_command( "replay_stop", replay_stop, "stop hltv replay", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static ConCommand replay_stop_command( side_registry(), "replay_stop", replay_stop, "stop hltv replay", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
 static void replay_stop( const CCommand &args )
 {
 	if ( CBasePlayer *pPlayer = UTIL_GetCommandClient() )
@@ -13502,7 +13384,6 @@ void CCSPlayer::ResetRoundBasedAchievementVariables()
 		m_NumEnemiesAtRoundStart = numTPlayers;
 	else if(GetTeamNumber() == TEAM_TERRORIST )
 		m_NumEnemiesAtRoundStart = numCTPlayers;
-
 
 	//Clear the previous owner field for currently held weapons
 	CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase * >(Weapon_GetSlot( WEAPON_SLOT_RIFLE ) );
@@ -13713,7 +13594,6 @@ void CCSPlayer::AddBurnDamageDelt( int entityIndex )
 
 }
 
-
 int CCSPlayer::GetNumPlayersDamagedWithFire()
 {
 	return std::ssize( m_BurnDamageDeltVec );
@@ -13897,8 +13777,6 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 				}
 			}
 		}
-
-
 
 		//remove elements older than a certain time
 		while ( !pAttacker->m_killTimes.empty() && pAttacker->m_killTimes[0] + AchievementConsts::KillingSpree_WindowTime < gpGlobals->curtime )
@@ -14465,7 +14343,6 @@ void CCSPlayer::OnCanceledDefuse()
 	}
 }
 
-
 void CCSPlayer::OnStartedDefuse()
 {
 	m_bAttemptedDefusal = true;
@@ -14513,7 +14390,6 @@ void CCSPlayer::SetPlayerDominatingMe( CCSPlayer *pPlayer, bool bDominated )
 	m_bPlayerDominatingMe.Set( iPlayerIndex, bDominated );
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Returns whether this player is dominating the specified other player
 //-----------------------------------------------------------------------------
@@ -14532,7 +14408,6 @@ bool CCSPlayer::IsPlayerDominatingMe( int iPlayerIndex )
 
 	return false;
 }
-
 
 uint32 Helper_AddMusicKitMVPsPendingSend( CEconItemView *pEconItemView, CCSGameRules::CQMMPlayerData_t *pQMM, int nIncBy )
 {
@@ -14695,7 +14570,6 @@ int CCSPlayer::GetNumEnemyDamagers()
 	}
 	return numberOfEnemyDamagers;
 }
-
 
 int CCSPlayer::GetNumEnemiesDamaged()
 {
@@ -14943,8 +14817,6 @@ void CCSPlayer::ResetTRBombModeData( void )
 	m_bMadeFinalGunGameProgressiveKill = false;
 }
 
-
-
 void CCSPlayer::SavePreControlData()
 {
 	m_PreControlData.m_iClass	= GetClass();
@@ -15029,8 +14901,6 @@ bool CCSPlayer::TakeControlOfBot( CCSBot *pBot, bool bSkipTeamCheck )
 	const float flBotDuckAmount = pBot->m_flDuckAmount;
 	const MoveType_t eBotMoveType = pBot->GetMoveType();
 
-
-
 	CWeaponCSBase * pBotWeapon = pBot->GetActiveCSWeapon();
 	CBaseViewModel * pBotVM = pBot->GetViewModel();
 
@@ -15045,7 +14915,6 @@ bool CCSPlayer::TakeControlOfBot( CCSBot *pBot, bool bSkipTeamCheck )
 	const Activity eBotWeaponActivity = pBotWeapon ? pBotWeapon->GetActivity() : ACT_IDLE;
 	//pBotWeapon->m_nSequence;
 	const float flBotWeaponCycle = pBotWeapon ? pBotWeapon->GetCycle() : 0.0f;
-
 
 	const float flBotVMCycle = pBotVM ? pBotVM->GetCycle() : 0.0f;
 	char szBotWeaponClassname[64];
@@ -15093,11 +14962,8 @@ bool CCSPlayer::TakeControlOfBot( CCSBot *pBot, bool bSkipTeamCheck )
 		m_hRagdoll = nullptr;
 	}
 
-
-
 	// Now copy over various things from the bot
 	m_iClass = nBotClass;
-
 
 	// Make the bot dormant, so he no longer thinks, transmits, or simulates
 	pBot->MakeDormant();
@@ -15182,7 +15048,6 @@ bool CCSPlayer::TakeControlOfBot( CCSBot *pBot, bool bSkipTeamCheck )
 			pVM->SetCycle( flBotVMCycle );
 		}
 
-
 		SetNextAttack( flBotNextAttack );
 	}
 
@@ -15242,7 +15107,6 @@ void CCSPlayer::ReleaseControlOfBot()
 		return;
 
 	CCSBot *pBot = ToCSBot( m_hControlledBot.Get() );
-
 
 	if ( pBot )
 	{
@@ -15348,9 +15212,6 @@ CCSBot* CCSPlayer::FindNearestControllableBot( bool bMustBeValidObserverTarget )
 
 	return pNearestBot;
 }
-
-
-
 
 void CCSPlayer::UpdateInventory( bool bInit )
 {
@@ -15474,8 +15335,6 @@ void CCSPlayer::IncrementFragCount( int nCount, int nHeadshots )
 	//	ResetKillStreak();
 	//}
 	SetLastKillTime( gpGlobals->curtime );
-
-
 
 	// Keep track in QMM data
 	if ( m_uiAccountId && CSGameRules() )
@@ -15753,9 +15612,8 @@ int CCSPlayer::GetNumConcurrentDominations( )
 	return numConcurrentDominations;
 }
 
-
 static void observer_use( const CCommand &args );
-static ConCommand observer_use_command( "observer_use", observer_use, "", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
+static ConCommand observer_use_command( side_registry(), "observer_use", observer_use, "", FCVAR_GAMEDLL_FOR_REMOTE_CLIENTS );
 static void observer_use( const CCommand &args )
 {
 	CCSPlayer *pPlayer = ToCSPlayer( UTIL_GetCommandClient() );
@@ -15763,7 +15621,6 @@ static void observer_use( const CCommand &args )
 	if ( pPlayer )
 		pPlayer->ObserverUse( true );
 }
-
 
 //This effectively disables the rendering of the flashbang effect,
 //but allows the server to finish and game rules processing.
@@ -15773,7 +15630,6 @@ void CCSPlayer::Unblind( void )
 	m_flFlashDuration = 0.0f;
 	m_flFlashMaxAlpha = 0.0f;
 }
-
 
 // the client already has a players account, sending a team only message doesn't make it more secure and it breaks GOTV
 // void CCSPlayer::UpdateTeamMoney()
@@ -15971,4 +15827,85 @@ bool CCSPlayer::GetBulletHitLocalBoneOffset( const trace_t &tr, int &boneIndexOu
 	MatrixAngles( matHitLocal, angAngleOut, vecPositionOut );
 
 	return ( angAngleOut.IsValid() && vecPositionOut.IsValid() );
+}
+
+CSPlayerState CCSPlayer::State_Get() const
+{
+	return m_iPlayerState;
+}
+
+bool CCSPlayer::IsReloading( void ) const
+{
+	CBaseCombatWeapon *gun = GetActiveWeapon();
+	if (gun == nullptr)
+		return false;
+
+	return gun->m_bInReload;
+}
+
+bool CCSPlayer::IsProtectedByShield( void ) const
+{ 
+	return HasShield() && IsShieldDrawn();
+}
+
+bool CCSPlayer::IsBlind( void ) const
+{ 
+	return gpGlobals->curtime < m_blindUntilTime;
+}
+
+bool CCSPlayer::IsBlindForAchievement()
+{
+	return (m_blindStartTime + m_flFlashDuration) > gpGlobals->curtime;
+}
+
+bool CCSPlayer::IsAutoFollowAllowed( void ) const		
+{ 
+	return (gpGlobals->curtime > m_allowAutoFollowTime); 
+}
+
+void CCSPlayer::InhibitAutoFollow( float duration )	
+{ 
+	m_allowAutoFollowTime = gpGlobals->curtime + duration; 
+}
+
+void CCSPlayer::AllowAutoFollow( void )	
+{ 
+	m_allowAutoFollowTime = 0.0f; 
+}
+
+int CCSPlayer::GetClass( void ) const
+{
+	return m_iClass;
+}
+
+int CCSPlayer::GetTeammatePreferredColor( void ) const
+{
+	return m_iTeammatePreferredColor;
+}
+
+const char *CCSPlayer::GetClanTag( void ) const
+{
+	return m_szClanTag;
+}
+
+const char *CCSPlayer::GetClanName( void ) const
+{
+	return m_szClanName;
+}
+
+void CDamageRecord::AddDamage( int iDamage, int iCounter, int iActualHealthRemoved)
+{
+	m_iDamage += iDamage;
+	m_iActualHealthRemoved += iActualHealthRemoved;
+
+	if ( m_iLastBulletUpdate != iCounter || GetPlayerDamagerPtr() == nullptr )
+		m_iNumHits++;
+
+	m_iLastBulletUpdate = iCounter;
+}
+
+void CCSPlayer::SetFlinchVelocityModifier( float fVelocityModifier)
+{
+	// this function only allows more flinch (smaller values) to be applied, not less
+	m_flVelocityModifier = Min(m_flVelocityModifier.Get(), fVelocityModifier);
 }

@@ -5,6 +5,8 @@
 import std;
 #include "BaseVSShader.h"
 #include "shaderlib/commandbuilder.h"
+import ks.core.basetypes;
+import ks.core.types;
 
 //-----------------------------------------------------------------------------
 // Forward declarations

@@ -3,7 +3,9 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.netadr;
 
 typedef unsigned int ra_listener_id;
 const ra_listener_id INVALID_LISTENER_ID = 0xffffffff;

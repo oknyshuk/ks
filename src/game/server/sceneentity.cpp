@@ -1,65 +1,98 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-#include "vphysics_interface.h"
-#include "edict.h"
-#include "eiface.h"
-#include "iserverentity.h"
-#include "dt_send.h"
-#include "shareddefs.h"
-#include "ehandle.h"
-#include "datamap.h"
-#include "util.h"
-#include "predictable_entity.h"
-#include "variant_t.h"
-#include "takedamageinfo.h"
-#include "touchlink.h"
-#include "groundlink.h"
-#include "soundflags.h"
-#include "networkvar.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
-#include "basetoggle.h"
-#include "precache_register.h"
-#include "baseanimating.h"
-#include "basecombatweapon.h"
-#include "basecombatcharacter.h"
-#include "basetempentity.h"
-#include "ndebugoverlay.h"
-#include "recipientfilter.h"
-#include "reflect_datamap.h"
-#include "reflect_sendtable.h"
-#include "reflect_annotations.h"
-#include "baseflex.h"
-#include "entitylist.h"
-#include "choreoevent.h"
+module;
+#include <stdarg.h>
 #include "choreoactor.h"
 #include "choreochannel.h"
 #include "choreoscene.h"
-#include "studio.h"
-#include "networkstringtable_gamedll.h"
-#include "ai_basenpc.h"
-#include "engine/IEngineSound.h"
-#include "ai_baseactor.h"
-#include "ai_criteria.h"
-#include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "sceneentity.h"
-#include "datacache/idatacache.h"
-#include "dt_utlvector_send.h"
-#include "ichoreoeventcallback.h"
-#include "scenefilecache/ISceneFileCache.h"
-#include "scripted.h"
-#include "basemultiplayerplayer.h"
-#include "env_debughistory.h"
-#include "datacache/imdlcache.h"
-#include "recipientfilter.h"
-#include "team.h"
-#include "triggers.h"
-#include "soundinfo.h"
 #include "eiface.h"
-#include "usermessages.h"
+#include "ichoreoeventcallback.h"
+#include "irecipientfilter.h"
+#include "networkvar.h"
+#include "reflect.h"
+#include "responserules/response_types.h"
+#include "scenefilecache/ISceneFileCache.h"
+#include "server_class.h"
+#include "studio.h"
+#include "usermessages_schema.h"
+#include "vphysics_interface.h"
+#include "vscript/ivscript.h"
+#include "worldsize.h"
+#include "ai_criteria.h"
+#include "entity_dispatch.h"
+#include "entity_dispatch_list.h"
+#include "entity_kinds_dump.h"
+#include "env_debughistory.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "util.h"
+#include "vscript_game.h"
+#include "vscript_shared.h"
+#include "ai_debug_shared.h"
+#include "edict.h"
+module ks.server;
 
+import std;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.random;
+import ks.core.time;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.convar;
+import ks.tier1.generichash;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.intern_pool;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import ks.tier1.strtools;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.tier1.vector_ops;
+import :fish;
+import ks.game.ai_activity;
+import :player;
+import :vscript;
+import :sharedvar;
+import :baseentity;
+import :entity_dispatch;
+import :entity_kind;
+import :nav_4;
+import :entity_2;
+import ks.game.shareddefs;
+import :cstrike15.bot.bot;
+import :cstrike15.bot.cs_bot;
+import :cstrike15.cs_player;
+import :entityutil;
+import ks.game.gamemovement;
+import ks.game.mapentities_shared;
 
+class CAI_Expresser;
+class CBaseCombatCharacter;
+class CBaseEntity;
+class CBaseFlex;
+class CBaseMultiplayerPlayer;
+class CBasePlayer;
+class CRecipientFilter;
+class CTeam;
+class IEntityFindFilter;
+struct inputdata_t;
+
+using namespace ::ks::reflect;
 
 extern ISoundEmitterSystemBase *soundemitterbase;
 extern ISceneFileCache *scenefilecache;
@@ -70,36 +103,35 @@ bool GetCaptionHash( char const *pchStringName, bool bWarnIfMissing, unsigned in
 bool CanEmitCaption( unsigned int hash );
 
 class CSceneEntity;
-class CBaseFlex;
 
 // VCDS are loaded from their compiled/binary format (much faster)
 // Requies vcds be saved as compiled assets
 //#define COMPILED_VCDS 1
 
-static ConVar scene_forcecombined( "scene_forcecombined", "0", 0, "When playing back, force use of combined .wav files even in english." );
-static ConVar scene_maxcaptionradius( "scene_maxcaptionradius", "1200", 0, "Only show closed captions if recipient is within this many units of speaking actor (0==disabled)." );
-ConVar scene_clientplayback( "scene_clientplayback", "1", 0, "Play all vcds on the clients." );
+static ConVar scene_forcecombined( side_registry(), "scene_forcecombined", "0", 0, "When playing back, force use of combined .wav files even in english." );
+static ConVar scene_maxcaptionradius( side_registry(), "scene_maxcaptionradius", "1200", 0, "Only show closed captions if recipient is within this many units of speaking actor (0==disabled)." );
+ConVar scene_clientplayback( side_registry(), "scene_clientplayback", "1", 0, "Play all vcds on the clients." );
 
 // Assume sound system is 100 msec lagged (only used if we can't find snd_mixahead cvar!)
-constexpr auto SOUND_SYSTEM_LATENCY_DEFAULT = ( 0.1f );
+static constexpr auto SOUND_SYSTEM_LATENCY_DEFAULT = ( 0.1f );
 
 // Think every 50 msec (FIXME: Try 10hz?)
-constexpr auto SCENE_THINK_INTERVAL = 0.001; // FIXME: make scene's think in concert with their npc's
+static constexpr auto SCENE_THINK_INTERVAL = 0.001; // FIXME: make scene's think in concert with their npc's
 
-constexpr auto FINDNAMEDENTITY_MAX_ENTITIES = 32; // max number of entities to be considered for random entity selection in FindNamedEntity
+static constexpr auto FINDNAMEDENTITY_MAX_ENTITIES = 32; // max number of entities to be considered for random entity selection in FindNamedEntity
 
 // List of the last 5 lines of speech from NPCs for bug reports
 static recentNPCSpeech_t speechListSounds[ SPEECH_LIST_MAX_SOUNDS ] = { { 0, "", "" }, { 0, "", "" }, { 0, "", "" }, { 0, "", "" }, { 0, "", "" } };
 static int  speechListIndex = 0;
 
 // Only allow scenes to change their pitch within a range of values
-constexpr auto SCENE_MIN_PITCH = 0.25f;
-constexpr auto SCENE_MAX_PITCH = 2.5f;
+static constexpr auto SCENE_MIN_PITCH = 0.25f;
+static constexpr auto SCENE_MAX_PITCH = 2.5f;
 
 //===========================================================================================================
 // SCENE LIST MANAGER
 //===========================================================================================================
-constexpr auto SCENE_LIST_MANAGER_MAX_SCENES = 16;
+static constexpr auto SCENE_LIST_MANAGER_MAX_SCENES = 16;
 
 //-----------------------------------------------------------------------------
 // Purpose: Entity that manages a list of scenes
@@ -165,7 +197,6 @@ public:
 			bool			IsRunningScriptedSceneAndNotPaused( CBaseFlex *pActor, bool bIgnoreInstancedScenes );
 			bool			IsRunningScriptedSceneWithSpeech( CBaseFlex *pActor, bool bIgnoreInstancedScenes );
 			bool			IsRunningScriptedSceneWithSpeechAndNotPaused( CBaseFlex *pActor, bool bIgnoreInstancedScenes );
-
 
 private:
 
@@ -315,10 +346,12 @@ void SceneManager_ClientActive( CBasePlayer *player )
 //-----------------------------------------------------------------------------
 // Purpose: FIXME, need to deal with save/restore
 //-----------------------------------------------------------------------------
-class [[= ks::reflect::NetTable{ .name = "DT_SceneEntity", .base = false } ]]
-      [[= ks::reflect::UtlVec<"m_hActorList", MAX_ACTORS_IN_SCENE, nullptr>{} ]]
-      CSceneEntity : public CPointEntity, public IChoreoEventCallback
+class CSceneEntity : public CPointEntity, public IChoreoEventCallback
 {
+	[[= ks::reflect::NetTable{ .name = "DT_SceneEntity", .base = false } ]]
+	[[= ks::reflect::UtlVec<"m_hActorList", MAX_ACTORS_IN_SCENE, nullptr>{} ]]
+	static constexpr bool ks_class = true;
+
 	friend class CInstancedSceneEntity;
 	friend class CSceneManager;
 public:
@@ -338,9 +371,6 @@ public:
 		SCENE_BUSYACTOR_INTERRUPT_CANCEL,
 	};
 
-
-
-
 	DECLARE_CLASS( CSceneEntity, CPointEntity );
 	DECLARE_SERVERCLASS();
 	// script description
@@ -354,7 +384,6 @@ public:
 	virtual void			EndEvent( float currenttime, CChoreoScene *scene, CChoreoEvent *event );
 	virtual void			ProcessEvent( float currenttime, CChoreoScene *scene, CChoreoEvent *event );
 	virtual bool			CheckEvent( float currenttime, CChoreoScene *scene, CChoreoEvent *event );
-
 
 	int				UpdateTransmitState_Impl();
 	int				ShouldTransmit_Impl( const CCheckTransmitInfo *pInfo );
@@ -477,7 +506,6 @@ public:
 	virtual void			DispatchStartPermitResponses( CChoreoScene *scene, CBaseFlex *actor, CChoreoEvent *event );
 	virtual void			DispatchEndPermitResponses( CChoreoScene *scene, CBaseFlex *actor, CChoreoEvent *event );
 
-
 	// Global events
 	virtual void			DispatchProcessLoop( CChoreoScene *scene, CChoreoEvent *event );
 	virtual void			DispatchPauseScene( CChoreoScene *scene, const char *parameters );
@@ -585,7 +613,6 @@ private:
 	public: void			Think_Impl( void ) {}
 	private:;
 
-
 	void					ClearSceneEvents( CChoreoScene *scene, bool canceled );
 	void					ClearSchedules( CChoreoScene *scene );
 
@@ -670,7 +697,6 @@ LINK_ENTITY_TO_CLASS_ALIAS( scripted_scene, CSceneEntity );
 IMPLEMENT_REFLECT_SERVERCLASS( CSceneEntity, DT_SceneEntity )
 
 IMPLEMENT_REFLECT_DATAMAP( CSceneEntity )
-
 
 BEGIN_ENT_SCRIPTDESC( CSceneEntity, CBaseEntity, "Choreographed scene which controls animation and/or dialog on one or more actors." )
 	DEFINE_SCRIPTFUNC( EstimateLength, "Returns length of this scene in seconds." )
@@ -776,7 +802,6 @@ CChoreoScene *CSceneEntity::GenerateSceneForSound( CBaseFlex *pFlexActor, const 
 	else
 	{
 		scene->SetPrintFunc( LocalScene_Printf );
-
 
 		CChoreoActor *actor = scene->AllocActor();
 		CChoreoChannel *channel = scene->AllocChannel();
@@ -970,7 +995,6 @@ bool CSceneEntity::HasFlexAnimation( void )
 	return false;
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose:
 // Output :
@@ -996,7 +1020,6 @@ bool CSceneEntity::IsBackground( void )
 
 	return false;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -1092,7 +1115,6 @@ void CSceneEntity::OnRestore_Impl()
 	NetworkProp()->NetworkStateForceUpdate();
 }
 
-
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 void CSceneEntity::SetRestoring( bool bRestoring )
@@ -1103,7 +1125,6 @@ void CSceneEntity::SetRestoring( bool bRestoring )
 		m_pScene->SetRestoring( bRestoring );
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -1419,7 +1440,6 @@ void CSceneEntity::DispatchStartGesture( CChoreoScene *scene, CBaseFlex *actor, 
 	actor->AddSceneEvent( scene, event, nullptr, this );
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose:
 // Input  : *actor -
@@ -1445,7 +1465,6 @@ void CSceneEntity::DispatchStartGeneric( CChoreoScene *scene, CBaseFlex *actor, 
 	actor->AddSceneEvent( scene, event, pTarget, this );
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose:
 // Input  : *actor -
@@ -1466,12 +1485,10 @@ void CSceneEntity::DispatchStartLookAt( CChoreoScene *scene, CBaseFlex *actor, C
 	actor->AddSceneEvent( scene, event, actor2, this );
 }
 
-
 void CSceneEntity::DispatchEndLookAt( CChoreoScene *scene, CBaseFlex *actor, CChoreoEvent *event )
 {
 	actor->RemoveSceneEvent( scene, event, m_bRestoring );
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Move to spot/actor
@@ -1484,7 +1501,6 @@ void CSceneEntity::DispatchStartMoveTo( CChoreoScene *scene, CBaseFlex *actor, C
 {
 	actor->AddSceneEvent( scene, event, actor2, this );
 }
-
 
 void CSceneEntity::DispatchEndMoveTo( CChoreoScene *scene, CBaseFlex *actor, CChoreoEvent *event )
 {
@@ -1595,11 +1611,7 @@ bool CSceneEntity::GetSoundNameForPlayer( CChoreoEvent *event, CBasePlayer *play
 	return false;
 }
 
-static CAI_BaseActor *ToBaseActor( CBaseFlex *actor )
-{
-	return dynamic_cast<CAI_BaseActor*>( actor );
 
-}
 
  //-----------------------------------------------------------------------------
 // Purpose: Playback sound file that contains phonemes
@@ -1665,16 +1677,6 @@ void CSceneEntity::DispatchStartSpeak( CChoreoScene *scene, CBaseFlex *actor, CC
 		float flDuration = event->GetDuration() - time_in_past;
 
 		float fPostSpeakDelay = GetPostSpeakDelay() - fLatency;
-		CAI_BaseActor *pBaseActor = ToBaseActor( actor );
-		if ( pBaseActor )
-		{
-			pBaseActor->NoteSpeaking( flDuration, fPostSpeakDelay );
-		}
-		else if ( actor->IsNPC() )
-		{
-			GetSpeechSemaphore( actor->MyNPCPointer() )->Acquire( flDuration + fPostSpeakDelay, actor );
-		}
-
 		EmitSound_t es;
 		es.m_nChannel = CHAN_VOICE;
 		es.m_flVolume = 1;
@@ -1737,7 +1739,6 @@ void CSceneEntity::DispatchStartSpeak( CChoreoScene *scene, CBaseFlex *actor, CC
 
 				es.m_nFlags |= SND_CHANGE_PITCH;
 			}
-
 
 			int nGuid = EmitSound( filter2, actor->entindex(), es );
 			if ( nGuid == 0 )
@@ -1846,7 +1847,6 @@ void CSceneEntity::DispatchEndSpeak( CChoreoScene *scene, CBaseFlex *actor, CCho
 	actor->RemoveSceneEvent( scene, event, m_bRestoring );
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose:
 // Input  : *actor -
@@ -1856,8 +1856,6 @@ void CSceneEntity::DispatchStartFace( CChoreoScene *scene, CBaseFlex *actor, CBa
 {
 	actor->AddSceneEvent( scene, event, actor2, this );
 }
-
-
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -1869,8 +1867,6 @@ void CSceneEntity::DispatchEndFace( CChoreoScene *scene, CBaseFlex *actor, CChor
 	actor->RemoveSceneEvent( scene, event, m_bRestoring );
 }
 
-
-
 //-----------------------------------------------------------------------------
 // Purpose:
 // Input  : *actor -
@@ -1879,8 +1875,6 @@ void CSceneEntity::DispatchStartSequence( CChoreoScene *scene, CBaseFlex *actor,
 {
 	actor->AddSceneEvent( scene, event, nullptr, this );
 }
-
-
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -2055,6 +2049,13 @@ void CSceneEntity::InputCancelPlayback( inputdata_t &inputdata )
 	CancelPlayback();
 }
 
+// What the scene does when the player dies (keyvalue onplayerdeath)
+enum SCRIPT_PLAYER_DEATH
+{
+	SCRIPT_DO_NOTHING = 0,
+	SCRIPT_CANCEL = 1,
+};
+
 void CSceneEntity::InputScriptPlayerDeath( inputdata_t &inputdata )
 {
 	if ( m_iPlayerDeathBehavior == SCRIPT_CANCEL )
@@ -2171,110 +2172,13 @@ void CSceneEntity::InputTriggerEvent( inputdata_t &inputdata )
 	}
 }
 
-struct NPCInterjection
-{
-	AI_Response response;
-	CAI_BaseActor *npc;
-};
 //-----------------------------------------------------------------------------
 // Purpose:
 // Input  : &inputdata -
 //-----------------------------------------------------------------------------
 void CSceneEntity::InputInterjectResponse( inputdata_t &inputdata )
 {
-	// Not currently playing a scene
-	if ( !m_pScene )
-	{
-		return;
-	}
-
-	std::vector< CAI_BaseActor * >	candidates;
-	int i;
-	for ( i = 0 ; i < m_pScene->GetNumActors(); i++ )
-	{
-		CBaseFlex *pTestActor = FindNamedActor( i );
-		if ( !pTestActor )
-			continue;
-
-		CAI_BaseActor *pBaseActor = ToBaseActor( pTestActor );
-		if ( !pBaseActor )
-			continue;
-
-		if ( !pBaseActor->IsAlive() )
-			continue;
-
-		candidates.push_back( pBaseActor );
-	}
-
-	int c = std::ssize( candidates );
-
-	if ( !c )
-	{
-		return;
-	}
-
-	int useIndex = 0;
-	if ( !m_bIsPlayingBack )
-	{
-		// Use any actor if not playing a scene
-		useIndex = RandomInt( 0, c - 1 );
-	}
-	else
-	{
-		std::vector< NPCInterjection > validResponses;
-
-		char modifiers[ 512 ];
-		V_snprintf( modifiers, sizeof( modifiers ), "scene:%s", STRING( GetEntityName() ) );
-
-		AIConcept_t conc(inputdata.value.String());
-		for ( int i = 0; i < c; i++ )
-		{
-			CAI_BaseActor *npc = candidates[ i ];
-			contract_assert( npc );
-
-			AI_CriteriaSet set;
-			npc->GatherCriteria( &set, conc, modifiers );
-			AI_Response response;
-			if ( !npc->FindResponse( response, conc, &set ) )
-				continue;
-
-			float duration = npc->GetResponseDuration( &response );
-			// Couldn't look it up
-			if ( duration <= 0.0f )
-				continue;
-
-			if ( !npc->PermitResponse( duration ) )
-			{
-				continue;
-			}
-
-			//
-			NPCInterjection inter;
-			inter.response = response;
-			inter.npc = npc;
-
-			validResponses.push_back( inter );
-		}
-
-		int rcount = std::ssize( validResponses );
-		if ( rcount >= 1 )
-		{
-			int slot = RandomInt( 0, rcount - 1 );
-
-			for ( int i = 0; i < rcount; i++ )
-			{
-				NPCInterjection *pInterjection = &validResponses[ i ];
-				if ( i == slot )
-				{
-					pInterjection->npc->SpeakDispatchResponse( inputdata.value.String(), &pInterjection->response, nullptr );
-				}
-				else
-				{
-					// delete pInterjection->response;
-				}
-			}
-		}
-	}
+	// Only NPC actors could interject a response, and there are none.
 }
 
 //-----------------------------------------------------------------------------
@@ -2311,34 +2215,8 @@ bool CSceneEntity::CheckActors()
 
 		if ( m_BusyActor == SCENE_BUSYACTOR_WAIT )
 		{
-			CAI_BaseNPC *pActor = pTestActor->MyNPCPointer();
 
-			if ( pActor )
-			{
-				bool bShouldWait = false;
-				if ( hl2_episodic.GetBool() )
-				{
-					// Episodic waits until the NPC is fully finished with any .vcd with speech in it
-					if ( IsRunningScriptedSceneWithSpeech( pActor ) )
-					{
-						bShouldWait = true;
-					}
-
-				}
-
-				if ( pActor->GetExpresser() && pActor->GetExpresser()->IsSpeaking() )
-				{
-					bShouldWait = true;
-				}
-
-				if ( bShouldWait )
-				{
-					// One of the actors for this scene is talking already.
-					// Try again next think.
-					m_bWaitingForActor = true;
-					return false;
-				}
-			}
+			
 		}
 		else if ( m_BusyActor == SCENE_BUSYACTOR_INTERRUPT || m_BusyActor == SCENE_BUSYACTOR_INTERRUPT_CANCEL )
 		{
@@ -2370,7 +2248,7 @@ bool CSceneEntity::CheckActors()
 	return true;
 }
 
-static ConVar scene_async_prefetch_spew( "scene_async_prefetch_spew", "0", 0, "Display async .ani file loading info." );
+static ConVar scene_async_prefetch_spew( side_registry(), "scene_async_prefetch_spew", "0", 0, "Display async .ani file loading info." );
 
 void CSceneEntity::PrefetchAnimBlocks( CChoreoScene *scene )
 {
@@ -2768,18 +2646,7 @@ void CSceneEntity::QueueResumePlayback( void )
 			CBaseFlex *pActor = FindNamedActor( 0 );
 			if ( pActor )
 			{
-				CAI_BaseActor *pBaseActor = ToBaseActor( pActor );
-				if ( pBaseActor )
-				{
-					AI_Response result ;
-					AIConcept_t tmpConcept( STRING( m_iszResumeSceneFile ) );
-					if ( pBaseActor->FindResponse( result, tmpConcept, nullptr ) )
-					{
-						char response[ 256 ];
-						result.GetResponse( response, sizeof( response ) );
-						bStartedScene = InstancedScriptedScene( nullptr, response, &m_hWaitingForThisResumeScene, 0, false ) != 0;
-					}
-				}
+				
 			}
 		}
 
@@ -2851,7 +2718,6 @@ void CSceneEntity::StartEvent( float currenttime, CChoreoScene *scene, CChoreoEv
  		LocalScene_Printf( "%s : %8.2f:  ignored %s\n", STRING( m_iszSceneFile ), currenttime, event->GetDescription() );
  		return;
  	}
-
 
 	CBaseFlex *pActor = nullptr;
 	CChoreoActor *actor = event->GetActor();
@@ -3274,7 +3140,6 @@ void CSceneEntity::EndEvent( float currenttime, CChoreoScene *scene, CChoreoEven
 		}
 		break;
 
-
 	case CChoreoEvent::GESTURE:
 		{
 			if ( pActor )
@@ -3368,8 +3233,6 @@ void CSceneEntity::EndEvent( float currenttime, CChoreoScene *scene, CChoreoEven
 		break;
 	}
 }
-
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Only spew one time per missing scene!!!
@@ -3563,8 +3426,6 @@ void CSceneEntity::ProcessEvent( float currenttime, CChoreoScene *scene, CChoreo
 	return;
 }
 
-
-
 //-----------------------------------------------------------------------------
 // Purpose: Called for events that are part of a pause condition
 // Input  : *event -
@@ -3601,7 +3462,6 @@ bool CSceneEntity::CheckEvent( float currenttime, CChoreoScene *scene, CChoreoEv
 
 	return true;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Get a sticky version of a named actor
@@ -3660,7 +3520,6 @@ CBaseFlex *CSceneEntity::FindNamedActor( CChoreoActor *pChoreoActor )
 	}
 	return nullptr;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Search for an actor by name, make sure it can do face poses
@@ -3768,7 +3627,6 @@ private:
 	EHANDLE		m_hEntityFound;
 };
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Finds the entity nearest to both entities, and is clear
 //-----------------------------------------------------------------------------
@@ -3860,12 +3718,10 @@ private:
 	CBaseEntity *m_pNearestToActor;
 };
 
-
 HSCRIPT CSceneEntity::ScriptFindNamedEntity( const char *name )
 {
 	return ToHScript(FindNamedEntity( name, nullptr, false, false ));
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Search for an actor by name, make sure it can do face poses
@@ -3944,23 +3800,7 @@ CBaseEntity *CSceneEntity::FindNamedEntity( const char *name, CBaseEntity *pActo
 		}
 		return m_hTarget8;
 	}
-	else if (pActor && pActor->MyNPCPointer())
-	{
-		CSceneFindMarkFilter *pFilter = nullptr;
-		if ( bUseClear )
-		{
-			pFilter = new CSceneFindMarkFilter();
-			pFilter->SetActor( pActor );
-		}
-
-		entity = pActor->MyNPCPointer()->FindNamedEntity( name, pFilter );
-		if ( !entity && pFilter )
-		{
-			entity = pFilter->GetFilterResult();
-		}
-	}
-	else
-	{
+	else {
 		// search for up to 32 entities with the same name and choose one randomly
 		CBaseEntity *entityList[ FINDNAMEDENTITY_MAX_ENTITIES ];
 		int	iCount;
@@ -3988,7 +3828,6 @@ CBaseEntity *CSceneEntity::FindNamedEntity( const char *name, CBaseEntity *pActo
 
 	return entity;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Search for an actor by name, make sure it can do face poses
@@ -4037,40 +3876,6 @@ CBaseEntity *CSceneEntity::FindNamedEntityClosest( const char *name, CBaseEntity
 		name = STRING( m_iszTarget7 );
 	}
 
-	if (pActor && pActor->MyNPCPointer())
-	{
-		if (pszSecondary && std::strlen( pszSecondary ) > 0)
-		{
-			CBaseEntity *pActor2 = FindNamedEntityClosest( pszSecondary, pActor, false, false, nullptr );
-
-			if (pActor2)
-			{
-				CSceneFindNearestMarkFilter *pFilter = new CSceneFindNearestMarkFilter( pActor, pActor2->GetAbsOrigin() );
-
-				entity = pActor->MyNPCPointer()->FindNamedEntity( name, pFilter );
-				if (!entity && pFilter)
-				{
-					entity = pFilter->GetFilterResult();
-				}
-			}
-		}
-		if (!entity)
-		{
-			CSceneFindMarkFilter *pFilter = nullptr;
-			if ( bUseClear )
-			{
-				pFilter = new CSceneFindMarkFilter();
-				pFilter->SetActor( pActor );
-			}
-
-			entity = pActor->MyNPCPointer()->FindNamedEntity( name, pFilter );
-			if (!entity && pFilter)
-			{
-				entity = pFilter->GetFilterResult();
-			}
-		}
-	}
-	else
 	{
 		// search for up to 32 entities with the same name and choose one randomly
 		int	iCount;
@@ -4091,7 +3896,6 @@ CBaseEntity *CSceneEntity::FindNamedEntityClosest( const char *name, CBaseEntity
 
 	return entity;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Remove all "scene" expressions from all actors in this scene
@@ -4143,7 +3947,6 @@ void CSceneEntity::ClearSceneEvents( CChoreoScene *scene, bool canceled )
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Remove all imposed schedules from all actors in this scene
 //-----------------------------------------------------------------------------
@@ -4159,16 +3962,7 @@ void CSceneEntity::ClearSchedules( CChoreoScene *scene )
 		if ( !pActor )
 			continue;
 
-		CAI_BaseNPC *pNPC = pActor->MyNPCPointer();
 
-		if ( pNPC )
-		{
-			/*
-			if ( pNPC->IsCurSchedule( SCHED_SCENE_GENERIC ) )
-				pNPC->ClearSchedule( "Scene entity clearing all actor schedules" );
-			*/
-		}
-		else
 		{
 			pActor->ResetSequence( pActor->SelectWeightedSequence( ACT_IDLE ) );
 			pActor->SetCycle( 0 );
@@ -4256,7 +4050,7 @@ void scene_interrupt( const CCommand &args )
 	}
 }
 
-static ConCommand interruptscene( "int", scene_interrupt, "interrupt scene 1 with scene 2.", FCVAR_CHEAT );
+static ConCommand interruptscene( side_registry(), "int", scene_interrupt, "interrupt scene 1 with scene 2.", FCVAR_CHEAT );
 */
 
 //-----------------------------------------------------------------------------
@@ -4442,14 +4236,9 @@ void CSceneEntity::OnSceneFinished( bool canceled, bool fireoutput )
 				CAI_Expresser *pExpresser = pAsPlayer->GetExpresser();
 				pExpresser->OnSpeechFinished();
 			}
-			else if ( CAI_BaseActor *pActor = ToBaseActor( pFlex ) )
-			{
-				CAI_Expresser *pExpresser = pActor->GetExpresser();
-				pExpresser->OnSpeechFinished();
-			}
+			
 		}
 	}
-
 
 	// Put face back in neutral pose
 	ClearSceneEvents( m_pScene, canceled );
@@ -4536,7 +4325,6 @@ void CSceneEntity::SetRecipientFilter( IRecipientFilter *filter )
 		m_pRecipientFilter->CopyFrom( (CRecipientFilter &)( *filter ) );
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -4718,7 +4506,7 @@ int SceneNameAutocomplete( char const *partial, char commands[ COMMAND_COMPLETIO
 }
 
 static void scene_playvcd( const CCommand &args );
-static ConCommand scene_playvcd_command( "scene_playvcd", scene_playvcd, "Play the given VCD as an instanced scripted scene.", FCVAR_CHEAT, SceneNameAutocomplete );
+static ConCommand scene_playvcd_command( side_registry(), "scene_playvcd", scene_playvcd, "Play the given VCD as an instanced scripted scene.", FCVAR_CHEAT, SceneNameAutocomplete );
 static void scene_playvcd( const CCommand &args )
 {
 	char vcdPath[ 512 ];
@@ -4726,7 +4514,6 @@ static void scene_playvcd( const CCommand &args )
 
 	InstancedScriptedScene( nullptr, vcdPath );
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: create a one-shot scene, no movement, sequences, etc.
@@ -5053,7 +4840,6 @@ CBaseFlex *CInstancedSceneEntity::FindNamedActor( const char *name )
 	return BaseClass::FindNamedActor( name );
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Search for an actor by name, make sure it can do face poses
 // Input  : *name -
@@ -5065,13 +4851,8 @@ CBaseEntity *CInstancedSceneEntity::FindNamedEntity( const char *name )
 
 	if (m_hOwner != nullptr)
 	{
-		CAI_BaseNPC	*npc = m_hOwner->MyNPCPointer();
 
-		if (npc)
-		{
-			pOther = npc->FindNamedEntity( name );
-		}
-		else if ( m_hOwner->MyCombatCharacterPointer() )
+		if ( m_hOwner->MyCombatCharacterPointer() )
 		{
 			pOther = m_hOwner;
 		}
@@ -5084,7 +4865,6 @@ CBaseEntity *CInstancedSceneEntity::FindNamedEntity( const char *name )
 	return pOther;
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Suppress certain events when it's instanced since they're can cause odd problems
 // Input  : actor
@@ -5096,32 +4876,17 @@ bool CInstancedSceneEntity::PassThrough( CBaseFlex *actor )
 	if (!actor)
 		return false;
 
-	CAI_BaseNPC *myNpc = actor->MyNPCPointer( );
 
-	if (!myNpc)
-		return false;
+	return false;
 
-	if (myNpc->IsCurSchedule( SCHED_SCENE_GENERIC ))
-	{
-		return true;
-	}
+	
 
-	if (myNpc->GetCurSchedule())
-	{
-		CAI_ScheduleBits testBits;
-		myNpc->GetCurSchedule()->GetInterruptMask( &testBits );
-
-		if (testBits[COND_IDLE_INTERRUPT])
-		{
-			return true;
-		}
-	}
+	
 
 	LocalScene_Printf( "%s : event suppressed\n", STRING( m_iszSceneFile ) );
 
 	return false;
 }
-
 
 //-----------------------------------------------------------------------------
 void CInstancedSceneEntity::OnRestore_Impl()
@@ -5148,7 +4913,6 @@ float CInstancedSceneEntity::EstimateLength( void )
 	return (BaseClass::EstimateLength() + GetPreDelay());
 }
 
-
 void CInstancedSceneEntity::OnLoaded()
 {
 	BaseClass::OnLoaded();
@@ -5171,10 +4935,6 @@ void CSceneManager::Think_Impl()
 	SetNextThink( gpGlobals->curtime + SCENE_THINK_INTERVAL );
 	float frameTime = ( gpGlobals->curtime - GetLastThink() );
 	frameTime = std::min<std::common_type_t<double, float>>( 0.1, frameTime );
-
-	// stop if AI is disabled
-	if (CAI_BaseNPC::m_nDebugBits & bits_debugDisableAI)
-		return;
 
 	bool needCleanupPass = false;
 	int c = std::ssize( m_ActiveScenes );
@@ -5302,7 +5062,6 @@ void CSceneManager::DeactivateScene( CSceneEntity *scene )
 
 	ks::erase_first( m_ActiveScenes, h );
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -5567,7 +5326,6 @@ bool CSceneManager::IsRunningScriptedSceneWithSpeech( CBaseFlex *pActor, bool bI
 	return false;
 }
 
-
 bool CSceneManager::IsRunningScriptedSceneWithSpeechAndNotPaused( CBaseFlex *pActor, bool bIgnoreInstancedScenes )
 {
 	int c = std::ssize( m_Scenes );
@@ -5592,7 +5350,6 @@ bool CSceneManager::IsRunningScriptedSceneWithSpeechAndNotPaused( CBaseFlex *pAc
 	return false;
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose:
 // Input  : *actor -
@@ -5610,7 +5367,6 @@ void CSceneManager::QueueRestoredSound( CBaseFlex *actor, char const *soundname,
 
 	m_QueuedSceneSounds.push_back( e );
 }
-
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -5671,14 +5427,12 @@ bool IsRunningScriptedSceneWithSpeechAndNotPaused( CBaseFlex *pActor, bool bIgno
 	return GetSceneManager()->IsRunningScriptedSceneWithSpeechAndNotPaused( pActor, bIgnoreInstancedScenes );
 }
 
-
 //===========================================================================================================
 // SCENE LIST MANAGER
 //===========================================================================================================
 LINK_ENTITY_TO_CLASS( logic_scene_list_manager, CSceneListManager );
 
 IMPLEMENT_REFLECT_DATAMAP( CSceneListManager )
-
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -5911,10 +5665,10 @@ static void ListRecentNPCSpeech( void )
 	Msg( "Current time: %6.3f\n", gpGlobals->curtime );
 }
 
-static ConCommand ListRecentNPCSpeechCmd( "listRecentNPCSpeech", ListRecentNPCSpeech, "Displays a list of the last 5 lines of speech from NPCs.", FCVAR_DONTRECORD|FCVAR_GAMEDLL );
+static ConCommand ListRecentNPCSpeechCmd( side_registry(), "listRecentNPCSpeech", ListRecentNPCSpeech, "Displays a list of the last 5 lines of speech from NPCs.", FCVAR_DONTRECORD|FCVAR_GAMEDLL );
 
 static void scene_flush( const CCommand &args );
-static ConCommand scene_flush_command( "scene_flush", scene_flush, "Flush all .vcds from the cache and reload from disk." );
+static ConCommand scene_flush_command( side_registry(), "scene_flush", scene_flush, "Flush all .vcds from the cache and reload from disk." );
 static void scene_flush( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
@@ -5924,3 +5678,152 @@ static void scene_flush( const CCommand &args )
 	scenefilecache->Reload();
 	Msg( "   done\n" );
 }
+
+#undef LocalScene_Printf
+
+class CBaseEntity;
+class CSceneEventInfo;
+
+using namespace ::ks::reflect;
+
+ConVar scene_print( side_registry(), "scene_print", "0", FCVAR_REPLICATED, "When playing back a scene, print timing and event info to console." );
+ConVar scene_clientflex( side_registry(), "scene_clientflex", "1", FCVAR_REPLICATED, "Do client side flex animation." );
+
+CSceneEventInfo::CSceneEventInfo()
+	:
+m_pEvent( 0 ),
+m_pScene( 0 ),
+m_pActor( 0 ),
+m_hSceneEntity( INVALID_EHANDLE ),
+m_bStarted( false ),
+m_iLayer( -1 ),
+m_iPriority( 0 ),
+m_nSequence( 0 ),
+m_bIsGesture( false ),
+m_flWeight( 0.0f ),
+m_hTarget(),
+m_bIsMoving( false ),
+m_bHasArrived( false ),
+m_flInitialYaw( 0.0f ),
+m_flTargetYaw( 0.0f ),
+m_flFacingYaw( 0.0f ),
+m_nType( 0 ),
+m_flNext( 0.0f ),
+m_bClientSide( false ),
+m_pExpHdr( nullptr )
+{
+}
+
+CSceneEventInfo::~CSceneEventInfo()
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *pFormat - 
+//			... - 
+// Output : static void
+//-----------------------------------------------------------------------------
+void Scene_Printf( const char *pFormat, ... )
+{
+	int val = scene_print.GetInt();
+	if ( !val )
+		return;
+
+	if ( val >= 2 )
+	{
+		if ( CBaseEntity::IsServer() && val != 2 )
+		{
+			return;
+		}
+        else if ( !CBaseEntity::IsServer() && val != 3 )
+		{
+			return;
+		}
+	}
+
+	std::va_list marker;
+	char msg[8192];
+
+	__builtin_va_start(marker, pFormat);
+	V_vsnprintf(msg, sizeof(msg), pFormat, marker);
+	__builtin_va_end(marker);	
+	
+	Msg( "%8.3f[%d] %s:  %s", gpGlobals->curtime, gpGlobals->tickcount, CBaseEntity::IsServer() ? "sv" : "cl", msg );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : const char
+//-----------------------------------------------------------------------------
+const char *CSceneTokenProcessor::CurrentToken( void )
+{
+	return m_szToken;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : crossline - 
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool CSceneTokenProcessor::GetToken( bool crossline )
+{
+	// NOTE: crossline is ignored here, may need to implement if needed
+	m_pBuffer = engine->ParseFile( m_pBuffer, m_szToken, sizeof( m_szToken ) );
+	if ( 0 <= (int)std::strlen( m_szToken ) )
+		return true;
+	return false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool CSceneTokenProcessor::TokenAvailable( void )
+{
+	char const *search_p = m_pBuffer;
+
+	while ( *search_p <= 32)
+	{
+		if (*search_p == '\n')
+			return false;
+		search_p++;
+		if ( !*search_p )
+			return false;
+
+	}
+
+	if (*search_p == ';' || *search_p == '#' ||		 // semicolon and # is comment field
+		(*search_p == '/' && *((search_p)+1) == '/')) // also make // a comment field
+		return false;
+
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *fmt - 
+//			... - 
+//-----------------------------------------------------------------------------
+void CSceneTokenProcessor::Error( const char *fmt, ... )
+{
+	char string[ 2048 ];
+	std::va_list argptr;
+	__builtin_va_start( argptr, fmt );
+	V_vsnprintf( string, sizeof(string), fmt, argptr );
+	__builtin_va_end( argptr );
+
+	Warning( "%s", string );
+	contract_assert( 0 );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *buffer - 
+//-----------------------------------------------------------------------------
+void CSceneTokenProcessor::SetBuffer( char *buffer )
+{
+	m_pBuffer = buffer;
+}
+
+CSceneTokenProcessor g_TokenProcessor;

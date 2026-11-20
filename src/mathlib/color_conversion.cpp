@@ -4,7 +4,13 @@
 // Purpose: Color conversion routines.
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 //-----------------------------------------------------------------------------
 // Gamma conversion support

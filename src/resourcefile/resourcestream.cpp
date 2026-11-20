@@ -3,7 +3,13 @@
 
 // Purpose: Implementation of various variants of resource stream
 
-import ks.core;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 #include "resourcefile/resourcestream.h"
 import std;
 

@@ -3,6 +3,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "bitmap/imageformat.h"
+import ks.core.types;
 enum ImageFormat;
 
 

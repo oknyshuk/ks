@@ -1,4 +1,5 @@
 #pragma once
+import ks.core.basetypes;
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 

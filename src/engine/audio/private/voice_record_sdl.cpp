@@ -9,7 +9,8 @@
 #define min(a,b)  (((a) < (b)) ? (a) : (b))
 #include <AL/al.h>
 #include <AL/alc.h>
-import ks.core;
+import ks.platform;
+import ks.simd;
 
 // ------------------------------------------------------------------------------
 // IVoiceRecord

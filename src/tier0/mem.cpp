@@ -3,7 +3,13 @@
 
 // Purpose: Memory allocation!
 
-import ks.core;
+import ks.core.mem;
+import ks.core.memalloc;
+import ks.core.minidump;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 
 // First include standard libraries
 import std;

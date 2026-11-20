@@ -21,6 +21,10 @@
 #include "icliententitylist.h"
 #include "client_class.h"
 #include "icliententity.h"
+import ks.core.platform;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.tier1.interfaces;
 
 //-----------------------------------------------------------------------------
 // Method to convert edict to index

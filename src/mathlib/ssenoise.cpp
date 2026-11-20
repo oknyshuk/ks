@@ -4,7 +4,13 @@
 // Purpose: Fast low quality noise suitable for real time use
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.ssemath;
+import ks.platform;
+import ks.simd;
 
 #include "noisedata.h"
 

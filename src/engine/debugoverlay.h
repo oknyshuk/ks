@@ -5,7 +5,12 @@
 // Purpose: Debugging overlay functions
 
 import std;
-import ks.math;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 namespace CDebugOverlay
 {

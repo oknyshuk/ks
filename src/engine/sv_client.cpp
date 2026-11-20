@@ -3,7 +3,27 @@
 
 // main precompiled header for server files
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.checksum_crc;
+import ks.tier1.checksum_md5;
+import ks.tier1.convar;
+import ks.tier1.cvar;
+import ks.tier1.fmtstr;
+import ks.tier1.iconvar;
+import ks.tier1.icvar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.string_token;
+import ks.tier1.strtools;
 
 #include "common.h"
 #include "quakedef.h"

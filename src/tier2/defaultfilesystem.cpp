@@ -5,7 +5,11 @@
 
 #include <tier2/tier2.h>
 #include <filesystem_init.h>
-import ks.core;
+import ks.platform;
+import ks.simd;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 
 
 static CSysModule *g_pFullFileSystemModule = nullptr;

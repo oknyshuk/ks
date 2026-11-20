@@ -2,13 +2,19 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:mathlib;
+export module ks.math.mathlib;
 
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.numeric;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.platform;
 import ks.simd;
-export import :vector;
-export import :fltx4;
+export import ks.math.vector;
+export import ks.math.fltx4;
 
 export extern "C++" {
 

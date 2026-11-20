@@ -1,8 +1,20 @@
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.reflect_wirevar;
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
 #ifndef NETWORKVAR_H
 #define NETWORKVAR_H
+
+import std;
 
 
 #if defined( CLIENT_DLL ) || defined( GAME_DLL )
@@ -50,21 +62,18 @@ inline constexpr auto NETWORKVAR_VECTOR_XY_SEPARATEZ_FLAG = 0x0004; // Is it a C
 	
 	// These macros setup an entity pointer in your class. Use IMPLEMENT_NETWORKVAR_CHAIN before you do
 	// anything inside the class itself.
-	class CBaseEntity;
+	// The entity type is the user's: game entities belong to the side module that defines them.
+	template< class Entity >
 	class CAutoInitEntPtr
 	{
 	public:
-		CAutoInitEntPtr()
-		{
-			m_pEnt = nullptr;
-		}
-		CBaseEntity *m_pEnt;
+		Entity *m_pEnt = nullptr;
 	};
 
 	//TODO: Currently, these don't get the benefit of tracking changes to individual vars.
 	// Would be nice if they did.
 	#define DECLARE_NETWORKVAR_CHAIN() \
-		CAutoInitEntPtr __m_pChainEntity; \
+		CAutoInitEntPtr< CBaseEntity > __m_pChainEntity; \
 		void NetworkStateChanged() { CHECK_USENETWORKVARS __m_pChainEntity.m_pEnt->NetworkStateChanged(); } \
 		void NetworkStateChanged( void *pVar ) { CHECK_USENETWORKVARS __m_pChainEntity.m_pEnt->NetworkStateChanged(); }
 
@@ -75,12 +84,12 @@ inline constexpr auto NETWORKVAR_VECTOR_XY_SEPARATEZ_FLAG = 0x0004; // Is it a C
 
 // Use this macro when you want to embed a structure inside your entity and have CNetworkVars in it.
 template< class T >
-static inline void DispatchNetworkStateChanged( T *pObj )
+inline void DispatchNetworkStateChanged( T *pObj )
 {
 	CHECK_USENETWORKVARS pObj->NetworkStateChanged();
 }
 template< class T >
-static inline void DispatchNetworkStateChanged( T *pObj, void *pVar )
+inline void DispatchNetworkStateChanged( T *pObj, void *pVar )
 {
 	CHECK_USENETWORKVARS pObj->NetworkStateChanged( pVar );
 }
@@ -189,8 +198,10 @@ inline bool NetworkParanoidUnequal( const double &a, const double &b )
 
 // The wire payload is the single data member this class declares; see reflect_wirevar.h.
 template< class Type, class Changer >
-class [[= ks::reflect::WireVar{} ]] CNetworkVarBase : public CNetworkVarFlagsBase
+class CNetworkVarBase : public CNetworkVarFlagsBase
 {
+	[[= ks::reflect::WireVar{} ]] static constexpr bool ks_class = true;
+
 public:
 	CNetworkVarBase()
 	{
@@ -483,8 +494,8 @@ private:
 
 // Network ehandle wrapper.
 #if defined( CLIENT_DLL ) || defined( GAME_DLL )
-	// Defined in the game's ehandle.h.
-	inline IHandleEntity *EntityFromHandle( const CBaseHandle &handle );
+	// EntityFromHandle is the game's (ehandle.cppm of each side): every call below depends on the
+	// template, so it is found where the template is instantiated.
 
 	template< class Type, class Changer >
 	class CNetworkHandleBase : public CNetworkVarBase< CBaseHandle, Changer >
@@ -498,8 +509,7 @@ private:
 			
 		const Type& operator=( const CNetworkHandleBase<Type,Changer> &val ) 
 		{ 
-			const CBaseHandle &handle = CNetworkVarBase<CBaseHandle,Changer>::Set( val.m_Value );
-			return *(const Type*)EntityFromHandle( handle );
+			return *(const Type*)EntityFromHandle( CNetworkVarBase<CBaseHandle,Changer>::Set( val.m_Value ) );
 		}
 
 		bool operator !() const 
@@ -559,43 +569,56 @@ private:
 	NETWORK_VAR_END( type, name, CNetworkVarBase, NetworkStateChanged __VA_OPT__(,) __VA_ARGS__ )
 
 
-// Use this macro when you have a base class with a variable, and it doesn't have that variable in a SendTable,
-// but a derived class does. Then, the entity is only flagged as changed when the variable is changed in
-// an entity that wants to transmit the variable.
-	#define CNetworkVarForDerived( type, name, ... ) \
-		virtual void NetworkStateChanged_##name() {} \
-		virtual void NetworkStateChanged_##name( void *pVar ) {} \
-		NETWORK_VAR_START( type, name ) \
-		NETWORK_VAR_END( type, name, CNetworkVarBase, NetworkStateChanged_##name __VA_OPT__(,) __VA_ARGS__ )
+// A base class's variable that only some derived classes send. Changes mark the entity only once a
+// derived class has said it sends the variable, with IMPLEMENT_NETWORK_VAR_FOR_DERIVED. The switch is
+// a flag on the entity rather than a virtual override, so a base without a vtable (CEntityCore) can
+// declare one too.
+#define NETWORK_VAR_FOR_DERIVED_HOOK( name ) \
+	bool m_bNetworkVarForDerived_##name = false; \
+	void NetworkStateChanged_##name( void *pVar ) { CHECK_USENETWORKVARS if ( m_bNetworkVarForDerived_##name ) NetworkStateChanged( pVar ); }
 
-	#define CNetworkHandleForDerived( type, name, ... ) \
-		virtual void NetworkStateChanged_##name() {} \
-		virtual void NetworkStateChanged_##name( void *pVar ) {} \
-		CNetworkHandleInternal( type, name, NetworkStateChanged_##name __VA_OPT__(,) __VA_ARGS__ )
-		
-	#define CNetworkArrayForDerived( type, name, count, ... ) \
-		virtual void NetworkStateChanged_##name() {} \
-		virtual void NetworkStateChanged_##name( void *pVar ) {} \
-		CNetworkArrayInternal( type, name, count, NetworkStateChanged_##name __VA_OPT__(,) __VA_ARGS__ )
+#define CNetworkVarForDerived( type, name, ... ) \
+	NETWORK_VAR_FOR_DERIVED_HOOK( name ) \
+	NETWORK_VAR_START( type, name ) \
+	NETWORK_VAR_END( type, name, CNetworkVarBase, NetworkStateChanged_##name __VA_OPT__(,) __VA_ARGS__ )
 
-	#define IMPLEMENT_NETWORK_VAR_FOR_DERIVED( name ) \
-		virtual void NetworkStateChanged_##name() { CHECK_USENETWORKVARS NetworkStateChanged(); } \
-		virtual void NetworkStateChanged_##name( void *pVar ) { CHECK_USENETWORKVARS NetworkStateChanged( pVar ); }
+#define CNetworkHandleForDerived( type, name, ... ) \
+	NETWORK_VAR_FOR_DERIVED_HOOK( name ) \
+	CNetworkHandleInternal( type, name, NetworkStateChanged_##name __VA_OPT__(,) __VA_ARGS__ )
 
+#define CNetworkArrayForDerived( type, name, count, ... ) \
+	NETWORK_VAR_FOR_DERIVED_HOOK( name ) \
+	CNetworkArrayInternal( type, name, count, NetworkStateChanged_##name __VA_OPT__(,) __VA_ARGS__ )
 
-// This virtualizes the change detection on the variable, but it is ON by default.
-// Use this when you have a base class in which MOST of its derived classes use this variable
-// in their SendTables, but there are a couple that don't (and they
-// can use DISABLE_NETWORK_VAR_FOR_DERIVED).
-	#define CNetworkVarForDerived_OnByDefault( type, name, ... ) \
-		virtual void NetworkStateChanged_##name() { CHECK_USENETWORKVARS NetworkStateChanged(); } \
-		virtual void NetworkStateChanged_##name( void *pVar ) { CHECK_USENETWORKVARS NetworkStateChanged( pVar ); } \
-		NETWORK_VAR_START( type, name ) \
-		NETWORK_VAR_END( type, name, CNetworkVarBase, NetworkStateChanged_##name __VA_OPT__(,) __VA_ARGS__ )
+// The flag a ForDerived variable's hook checks, found in the class or a base. A splice is not
+// access-checked, so a derived class can switch on a variable its base declares private.
+consteval std::meta::info find_network_var_for_derived_flag( std::meta::info t, std::string_view name )
+{
+	for ( auto m : std::meta::nonstatic_data_members_of( t, std::meta::access_context::unchecked() ) )
+		if ( std::meta::has_identifier( m ) && std::meta::identifier_of( m ) == name ) return m;
+	for ( auto b : std::meta::bases_of( t, std::meta::access_context::unchecked() ) )
+	{
+		const std::meta::info r = find_network_var_for_derived_flag( std::meta::type_of( b ), name );
+		if ( r != std::meta::info{} ) return r;
+	}
+	return {};
+}
 
-	#define DISABLE_NETWORK_VAR_FOR_DERIVED( name ) \
-		virtual void NetworkStateChanged_##name() {} \
-		virtual void NetworkStateChanged_##name( void *pVar ) {}
+consteval std::meta::info network_var_for_derived_flag( std::meta::info t, std::string_view name )
+{
+	const std::meta::info r = find_network_var_for_derived_flag( t, name );
+	if ( r == std::meta::info{} )
+		throw std::meta::exception( "no ForDerived network var of that name", t );
+	return r;
+}
+
+// Set during construction, from a default member initialiser, once the bases exist. The member is
+// empty and of its own type, so it takes no space.
+#define IMPLEMENT_NETWORK_VAR_FOR_DERIVED( name ) \
+	struct NetworkVarForDerivedOn_##name {}; \
+	[[no_unique_address]] NetworkVarForDerivedOn_##name m_NetworkVarForDerivedOn_##name = \
+		( this->[: network_var_for_derived_flag( ^^ThisClass, "m_bNetworkVarForDerived_" #name ) :] = true, \
+		  NetworkVarForDerivedOn_##name{} );
 
 
 
@@ -613,8 +636,9 @@ private:
 	class NetworkVar_##name; \
 	friend class NetworkVar_##name; \
 	typedef ThisClass MakeANetworkVar_##name; \
-	class [[= ks::reflect::WireVar{} ]] NetworkVar_##name : public CNetworkVarFlagsBase\
+	class NetworkVar_##name : public CNetworkVarFlagsBase\
 	{ \
+		[[= ks::reflect::WireVar{} ]] static constexpr bool ks_class = true; \
 	public: \
 		operator const char*() const { return m_Value; } \
 		const char* Get() const { return m_Value; } \
@@ -646,8 +670,9 @@ private:
 	class NetworkVar_##name; \
 	friend class NetworkVar_##name; \
 	typedef ThisClass MakeANetworkVar_##name; \
-	class [[= ks::reflect::WireVar{} ]] NetworkVar_##name \
+	class NetworkVar_##name \
 	{ \
+		[[= ks::reflect::WireVar{} ]] static constexpr bool ks_class = true; \
 	public: \
 		template <typename T> friend int ServerClassInit(T *);	\
 		const type& operator[]( int i ) const \

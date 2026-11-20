@@ -17,7 +17,7 @@ target_compile_definitions(vstdlib PRIVATE VSTDLIB_DLL_EXPORT=1)
 add_library(ks_vstdlib STATIC)
 target_sources(ks_vstdlib PUBLIC
     FILE_SET CXX_MODULES
-    FILES ks.vstdlib.cppm
+    FILES
           ks.vstdlib-ikeyvaluessystem.cppm
           ks.vstdlib-vcover.cppm
           ks.vstdlib-vstrtools.cppm

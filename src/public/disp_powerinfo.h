@@ -9,6 +9,8 @@
 
 #include "disp_vertindex.h"
 #include "bspfile.h"
+import ks.math.compressed_vector;
+import ks.math.vector;
 
 inline constexpr auto NUM_POWERINFOS = (MAX_MAP_DISP_POWER+1);
 

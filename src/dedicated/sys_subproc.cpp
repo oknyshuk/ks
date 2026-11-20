@@ -4,7 +4,17 @@
 
 // linux has a multi-processing forked server mode.
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.netadr;
+import ks.tier1.strtools;
 #include "dedicated.h"
 #include "engine_hlds_api.h"
 #include "tier2/socketcreator.h"

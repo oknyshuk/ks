@@ -5,7 +5,10 @@
 // Purpose: A registry of strings and associated ints
 
 import std;
-import ks.tier1;
+import ks.core.tslist;
+import ks.platform;
+import ks.simd;
+import ks.tier1.map_ops;
 
 //-----------------------------------------------------------------------------
 // Purpose: Just a convenience/legacy wrapper for ks::idict<> .

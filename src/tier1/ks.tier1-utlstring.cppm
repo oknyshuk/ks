@@ -2,12 +2,14 @@
 // Copyright (c) 1996-2004 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:utlstring;
+export module ks.tier1.utlstring;
 
 import std;
-import ks.math;
-export import :string_ops;
-export import :strtools;
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.string_ops;
+export import ks.tier1.strtools;
 
 export extern "C++" {
 

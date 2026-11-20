@@ -14,6 +14,9 @@
 
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/ishaderapi.h"
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.wchartypes;
 
 //-----------------------------------------------------------------------------
 // forward declarations

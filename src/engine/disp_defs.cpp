@@ -2,6 +2,8 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "disp_defs.h"
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 
 // ---------------------------------------------------------------------- //
 // Global tables.

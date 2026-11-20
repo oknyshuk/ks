@@ -3,7 +3,10 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.threadtools;
+import ks.platform;
+import ks.simd;
 
 // This class can be used for fast access to an object from multiple threads,
 // and the main thread can wait until the threads are done using the object before it frees the object.

@@ -3,7 +3,25 @@
 
 // Purpose: Defines the entry point for the application.
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.characterset;
+import ks.tier1.commandbuffer;
+import ks.tier1.fmtstr;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
+import ks.tier1.text_reader;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 #include "reslistgenerator.h"
 #include "filesystem.h"
 import std;

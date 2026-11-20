@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2012 Valve Corporation
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 #include "togl/rendermechanism.h"
 #include "togl/dxabstract_types.h"
 

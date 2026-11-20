@@ -1,40 +1,82 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-// Purpose: Draws grasses and other small objects
-
-#include "rocketui/rmlui.h"
-#include "predictable_entity.h"
-#include "cdll_util.h"
-#include "util_shared.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
-#include "c_basecombatweapon.h"
-#include "c_basecombatcharacter.h"
-#include "gamerules.h"
-#include "c_baseplayer.h"
-#include "cdll_client_int.h"
-#include "engine/ivmodelinfo.h"
-#undef max
-#undef min
-#include "detailobjectsystem.h"
-#include "gamebspfile.h"
-#include "view.h"
-#include "clientmode.h"
-#include "iviewrender.h"
+module;
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
 #include "bsptreedata.h"
-#include "engine/ivmodelinfo.h"
+#include "declare_class.h"
+#include "gamebspfile.h"
+#include "iclientalphaproperty.h"
+#include "icliententity.h"
+#include "ivrenderview.h"
+#include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/imesh.h"
 #include "model_types.h"
-#include "env_detail_controller.h"
-#include "c_world.h"
+#include "netmessages.h"
+module ks.client;
 
-#if defined(CSTRIKE_DLL)
-#endif
+import std;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.random;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vector4d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.convar;
+import ks.tier1.envelope;
+import ks.tier1.exprevaluator;
+import ks.tier1.functors;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.map_ops;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.tier1.vector_ops;
+import ks.vstdlib.callqueue;
+import ks.vstdlib.jobthread;
+import :props;
+import :iinput;
+import :baseanimatedtextureproxy;
+import :baseentity;
+import :sharedvar;
+import :util;
+import :particlemgr;
+import :precache;
+import :achievements_and_stats_interface;
+import ks.game.gamemovement;
+import ks.game.mapentities_shared;
+import :noopanimcontroller;
+import ks.game.shareddefs;
 
-#include "playerenumerator.h"
+class CBaseEntity;
+class CBasePlayer;
+struct DistanceFadeInfo_t;
 
-#include "materialsystem/imaterialsystemhardwareconfig.h"
+using namespace ::ks::reflect;
+
+// Purpose: Draws grasses and other small objects
+
+#undef max
+#undef min
 
 inline constexpr const char *DETAIL_SPRITE_MATERIAL = "detail/detailsprites";
 
@@ -42,14 +84,13 @@ inline constexpr const char *DETAIL_SPRITE_MATERIAL = "detail/detailsprites";
 // forward declarations
 //-----------------------------------------------------------------------------
 
+ConVar cl_detail_max_sway( side_registry(), "cl_detail_max_sway", "0", FCVAR_ARCHIVE, "Amplitude of the detail prop sway" );
+ConVar cl_detail_avoid_radius( side_registry(), "cl_detail_avoid_radius", "0", FCVAR_ARCHIVE, "radius around detail sprite to avoid players" );
+ConVar cl_detail_avoid_force( side_registry(), "cl_detail_avoid_force", "0", FCVAR_ARCHIVE, "force with which to avoid players ( in units, percentage of the width of the detail sprite )" );
+ConVar cl_detail_avoid_recover_speed( side_registry(), "cl_detail_avoid_recover_speed", "0", FCVAR_ARCHIVE, "how fast to recover position after avoiding players" );
 
-ConVar cl_detail_max_sway( "cl_detail_max_sway", "0", FCVAR_ARCHIVE, "Amplitude of the detail prop sway" );
-ConVar cl_detail_avoid_radius( "cl_detail_avoid_radius", "0", FCVAR_ARCHIVE, "radius around detail sprite to avoid players" );
-ConVar cl_detail_avoid_force( "cl_detail_avoid_force", "0", FCVAR_ARCHIVE, "force with which to avoid players ( in units, percentage of the width of the detail sprite )" );
-ConVar cl_detail_avoid_recover_speed( "cl_detail_avoid_recover_speed", "0", FCVAR_ARCHIVE, "how fast to recover position after avoiding players" );
-
-ConVar r_FlashlightDetailProps( "r_FlashlightDetailProps", "1", 0, "Enable a flashlight drawing pass on detail props. 0 = off, 1 = single pass, 2 = multipass (multipass is PC ONLY)" );
-ConVar r_ThreadedDetailProps( "r_threadeddetailprops", "1", 0, "enable threading of detail prop drawing" );
+ConVar r_FlashlightDetailProps( side_registry(), "r_FlashlightDetailProps", "1", 0, "Enable a flashlight drawing pass on detail props. 0 = off, 1 = single pass, 2 = multipass (multipass is PC ONLY)" );
+ConVar r_ThreadedDetailProps( side_registry(), "r_threadeddetailprops", "1", 0, "enable threading of detail prop drawing" );
 
 enum DetailPropFlashlightMode_t
 {
@@ -136,7 +177,6 @@ public:
 	CDetailModel( const CDetailModel & ) = delete;
 	CDetailModel &operator=( const CDetailModel & ) = delete;
 
-
 	// Initialization
 	bool InitCommon( int index, const Vector& org, const QAngle& angles );
 	bool Init( int index, const Vector& org, const QAngle& angles, model_t* pModel, 
@@ -157,7 +197,7 @@ public:
 	virtual IClientNetworkable*	GetClientNetworkable()	{ return 0; }
 	virtual IClientRenderable*	GetClientRenderable()	{ return this; }
 	virtual IClientEntity*		GetIClientEntity()		{ return 0; }
-	virtual C_BaseEntity*		GetBaseEntity()			{ return 0; }
+	virtual CBaseEntity*		GetBaseEntity()			{ return 0; }
 	virtual IClientThinkable*	GetClientThinkable()	{ return 0; }
 	virtual IClientModelRenderable*	GetClientModelRenderable()	{ return 0; }
 	virtual IClientAlphaProperty*	GetClientAlphaProperty()	{ return 0; }
@@ -222,7 +262,6 @@ public:
 	// Draw functions for the different types of sprite
 	void DrawTypeSprite( CMeshBuilder &meshBuilder, uint8 nAlpha );
 
-
 	void DrawTypeShapeCross( CMeshBuilder &meshBuilder, uint8 nAlpha );
 	void DrawTypeShapeTri( CMeshBuilder &meshBuilder, uint8 nAlpha );
 
@@ -279,9 +318,8 @@ protected:
 	std::unique_ptr< DetailModelAdvInfo_t > m_pAdvInfo;
 };
 
-static ConVar mat_fullbright( "mat_fullbright", "0", FCVAR_CHEAT ); // hook into engine's cvars..
+static ConVar mat_fullbright( side_registry(), "mat_fullbright", "0", FCVAR_CHEAT ); // hook into engine's cvars..
 extern ConVar r_DrawDetailProps;
-
 
 //-----------------------------------------------------------------------------
 // Dictionary for detail sprites
@@ -320,7 +358,6 @@ struct FastSpriteX4_t
 
 };
 
-
 struct FastSpriteQuadBuildoutBufferX4_t
 {
 	// mess with this structure without care and you'll be in a world of trouble. layout matters.
@@ -344,7 +381,6 @@ struct FastSpriteQuadBuildoutBufferNonSIMDView_t
 	DetailPropSpriteDict_t *m_pSpriteDefs[4];
 	Vector4D m_Normal;
 };
-
 
 FourVectors vgarbage;
 
@@ -379,7 +415,7 @@ class CFastDetailLeafSpriteList : public CClientLeafSubSystemData
 
 };
 
-constexpr auto CACHED_SPRITE_SUB_SPLIT_COUNT = 16;
+static constexpr auto CACHED_SPRITE_SUB_SPLIT_COUNT = 16;
 
 //-----------------------------------------------------------------------------
 // Responsible for managing detail objects
@@ -443,7 +479,6 @@ public:
 
 	void UpdateDetailFadeValues();
 
-
 private:
 	struct DetailModelDict_t
 	{
@@ -469,7 +504,6 @@ private:
 								Vector const &viewForward,
 								Vector const &viewRight,
 								Vector const &viewUp );
-
 
 	void UnserializeFastSprite( FastSpriteX4_t *pSpritex4, int nSubField, DetailObjectLump_t const &lump, bool bFlipped, Vector const &posOffset );
 
@@ -534,13 +568,11 @@ private:
 
 };
 
-
 //-----------------------------------------------------------------------------
 // System for dealing with detail objects
 //-----------------------------------------------------------------------------
 static CDetailObjectSystem s_DetailObjectSystem;
 IDetailObjectSystem *g_pDetailObjectSystem = &s_DetailObjectSystem;
-
 
 static void DetailFadeCallback( ConVar *var, const char *pOldValue, float flOldValue )
 {
@@ -549,7 +581,6 @@ static void DetailFadeCallback( ConVar *var, const char *pOldValue, float flOldV
 								   
 //ConVar cl_detaildist( "cl_detaildist", "2000", FCVAR_DEVELOPMENTONLY, "Distance at which detail props are no longer visible", DetailFadeCallback );
 //ConVar cl_detailfade( "cl_detailfade", "400", FCVAR_DEVELOPMENTONLY, "Distance across which detail props fade in", DetailFadeCallback );
-
 
 //-----------------------------------------------------------------------------
 // Initialization
@@ -564,7 +595,6 @@ bool CDetailModel::InitCommon( int index, const Vector& org, const QAngle& angle
 	return true;
 }
 
-
 //-----------------------------------------------------------------------------
 // Inline methods
 //-----------------------------------------------------------------------------
@@ -578,12 +608,11 @@ static int s_pQuadCount[4] =
 	3, //DETAIL_PROP_TYPE_SHAPE_TRI
 };
 
-inline int CDetailModel::QuadsToDraw() const
+int CDetailModel::QuadsToDraw() const
 {
 	return s_pQuadCount[m_Type];
 }
 
-	
 //-----------------------------------------------------------------------------
 // Data accessors
 //-----------------------------------------------------------------------------
@@ -632,7 +661,6 @@ bool CDetailModel::ComputeLightingOrigin( int nAttachmentIndex, Vector modelLigh
 	}
 	return true;
 }
-
 
 bool CDetailModel::ShouldDraw()
 {
@@ -690,7 +718,6 @@ int CDetailModel::GetRenderFlags( void )
 	return 0;
 }
 
-
 void CDetailModel::GetShadowRenderBounds( Vector &mins, Vector &maxs, ShadowType_t shadowType )
 {
 	GetRenderBounds( mins, maxs );
@@ -706,7 +733,6 @@ ClientRenderHandle_t& CDetailModel::RenderHandle()
 	contract_assert( false && "CDetailModel has no render handle" );
 	return *((ClientRenderHandle_t*)nullptr);
 }	
-
 
 //-----------------------------------------------------------------------------
 // Render setup
@@ -743,7 +769,6 @@ void	CDetailModel::DoAnimationEvents( void )
 {
 }
 
-
 //-----------------------------------------------------------------------------
 // Render baby!
 //-----------------------------------------------------------------------------
@@ -772,7 +797,6 @@ int CDetailModel::DrawModel( int flags, const RenderableInstance_t &instance )
 		);
 	return drawn;
 }
-
 
 //-----------------------------------------------------------------------------
 // Detail models stuff
@@ -836,7 +860,6 @@ void CDetailModel::MoveFrom( CDetailModel &src )
 		src.m_bHasLightStyle = 0;
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Initialization
@@ -908,7 +931,7 @@ void CDetailModel::InitShapedSprite( unsigned char shapeAngle, unsigned char sha
 		m_pAdvInfo->m_flSwayAmount = (float)swayAmount / 255.0f;
 		m_pAdvInfo->m_flShapeSize = (float)shapeSize / 255.0f;
 		m_pAdvInfo->m_vecCurrentAvoid = vec3_origin;
-		m_pAdvInfo->m_flSwayYaw = random->RandomFloat( 0, 180 );
+		m_pAdvInfo->m_flSwayYaw = random_valve->RandomFloat( 0, 180 );
 	}
 
 	switch ( m_Type )
@@ -1006,7 +1029,6 @@ void CDetailModel::GetColorModulation( float *color )
 	engine->LinearToGamma( color, color );
 }
 
-
 //-----------------------------------------------------------------------------
 // Is the model itself translucent, regardless of modulation?
 //-----------------------------------------------------------------------------
@@ -1018,7 +1040,6 @@ bool CDetailModel::IsDetailModelTranslucent()
 
 	return modelinfo->IsTranslucent(GetModel());
 }
-
 
 //-----------------------------------------------------------------------------
 // Computes the render angles for screen alignment
@@ -1049,7 +1070,6 @@ void CDetailModel::ComputeAngles( void )
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Select which rendering func to call
 //-----------------------------------------------------------------------------
@@ -1073,7 +1093,6 @@ void CDetailModel::DrawSprite( CMeshBuilder &meshBuilder, uint8 nAlpha )
 		break;
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Draws the single sprite type
@@ -1375,7 +1394,7 @@ void CDetailModel::UpdatePlayerAvoid( void )
 	float flRecoverSpeed = cl_detail_avoid_recover_speed.GetFloat();
 
 	Vector vecAvoid;
-	C_BaseEntity *pEnt;
+	CBaseEntity *pEnt;
 
 	float flMaxForce = 0;
 	Vector vecMaxAvoid(0,0,0);
@@ -1389,7 +1408,7 @@ void CDetailModel::UpdatePlayerAvoid( void )
 	{
 		if ( i == c )
 		{
-			pEnt = C_BasePlayer::GetLocalPlayer();
+			pEnt = CBasePlayer::GetLocalPlayer();
 			if ( !pEnt ) continue;
 		}
 		else
@@ -1519,7 +1538,6 @@ CDetailObjectSystem::~CDetailObjectSystem()
 	DestroyCachedSpriteMeshes();
 }
 
-	   
 //-----------------------------------------------------------------------------
 // Level init, shutdown
 //-----------------------------------------------------------------------------
@@ -1535,7 +1553,7 @@ void CDetailObjectSystem::LevelInitPreEntity()
 
 	// Prepare the translucent detail sprite material; we only have 1!
 	const char *pDetailSpriteMaterial = DETAIL_SPRITE_MATERIAL;
-	C_World *pWorld = GetClientWorldEntity();
+	CWorld *pWorld = GetClientWorldEntity();
 	if ( pWorld && pWorld->GetDetailSpriteMaterial() && *(pWorld->GetDetailSpriteMaterial()) )
 	{
 		pDetailSpriteMaterial = pWorld->GetDetailSpriteMaterial(); 
@@ -1550,7 +1568,6 @@ void CDetailObjectSystem::LevelInitPreEntity()
 		Warning("Map uses old detail prop file format.. ignoring detail props\n");
 		return;
 	}
-
 
 	// Unserialize
 	int size = engine->GameLumpSize( GAMELUMP_DETAIL_PROPS );
@@ -1607,7 +1624,6 @@ void CDetailObjectSystem::LevelInitPreEntity()
 	}
 }
 
-
 void CDetailObjectSystem::UpdateDetailFadeValues()
 {
 	// FIXME: pipe through to the vertex shader
@@ -1628,7 +1644,7 @@ void CDetailObjectSystem::UpdateDetailFadeValues()
 void CDetailObjectSystem::LevelInitPostEntity()
 {
 	const char *pDetailSpriteMaterial = DETAIL_SPRITE_MATERIAL;
-	C_World *pWorld = GetClientWorldEntity();
+	CWorld *pWorld = GetClientWorldEntity();
 	if ( pWorld && pWorld->GetDetailSpriteMaterial() && *(pWorld->GetDetailSpriteMaterial()) )
 	{
 		pDetailSpriteMaterial = pWorld->GetDetailSpriteMaterial(); 
@@ -1654,11 +1670,10 @@ void CDetailObjectSystem::LevelShutdownPostEntity()
 	DestroyCachedSpriteMeshes();
 }
 
-
 //-----------------------------------------------------------------------------
 // Computes distance fade
 //-----------------------------------------------------------------------------
-inline uint8 CDetailObjectSystem::ComputeDistanceFade( float *pDistSqr, const DistanceFadeInfo_t &info, const Vector &vecViewOrigin, const Vector &vecRenderOrigin ) const
+uint8 CDetailObjectSystem::ComputeDistanceFade( float *pDistSqr, const DistanceFadeInfo_t &info, const Vector &vecViewOrigin, const Vector &vecRenderOrigin ) const
 {
 	float flDistSq = vecViewOrigin.DistToSqr( vecRenderOrigin );
 	*pDistSqr = flDistSq;
@@ -1673,7 +1688,6 @@ inline uint8 CDetailObjectSystem::ComputeDistanceFade( float *pDistSqr, const Di
 	return nAlpha;
 }
 
-
 //-----------------------------------------------------------------------------
 // Before each view, blat out the stored detail sprite state
 //-----------------------------------------------------------------------------
@@ -1683,7 +1697,6 @@ void CDetailObjectSystem::BeginTranslucentDetailRendering( )
 	m_bFirstLeaf = true;
 	m_nSpriteCount = m_nFirstSprite = 0;
 }
-
 
 //-----------------------------------------------------------------------------
 // Gets a particular detail object
@@ -1698,13 +1711,11 @@ IClientRenderable* CDetailObjectSystem::GetDetailModel( int idx )
 	return &m_DetailObjects[idx];
 }
 
-
 // How many detail models (as opposed to sprites) are there in the level?
 int CDetailObjectSystem::GetDetailModelCount() const
 {
 	return std::ssize( m_DetailObjects );
 }
-
 
 //-----------------------------------------------------------------------------
 // Unserialization
@@ -1747,7 +1758,6 @@ void CDetailObjectSystem::UnserializeDetailSprites( ks::byte_reader& buf )
 	}
 }
 
-
 void CDetailObjectSystem::UnserializeModelLighting( ks::byte_reader& buf )
 {
 	int count = buf.read<int>();
@@ -1759,12 +1769,11 @@ void CDetailObjectSystem::UnserializeModelLighting( ks::byte_reader& buf )
 	}
 }
 
-
-ConVar cl_detail_multiplier( "cl_detail_multiplier", "1", FCVAR_CHEAT, "extra details to create" );
+ConVar cl_detail_multiplier( side_registry(), "cl_detail_multiplier", "1", FCVAR_CHEAT, "extra details to create" );
 
 inline const auto SPRITE_MULTIPLIER = ( cl_detail_multiplier.GetInt() );
 
-ConVar cl_fastdetailsprites( "cl_fastdetailsprites", "1", FCVAR_CHEAT, "whether to use new detail sprite system");
+ConVar cl_fastdetailsprites( side_registry(), "cl_fastdetailsprites", "1", FCVAR_CHEAT, "whether to use new detail sprite system");
 
 static bool DetailObjectIsFastSprite( DetailObjectLump_t const & lump )
 {
@@ -1780,7 +1789,6 @@ static bool DetailObjectIsFastSprite( DetailObjectLump_t const & lump )
 	//	( lump.m_ShapeSize == 0 ) &&
 	//	( lump.m_SwayAmount == 0 ) );
 }
-
 
 void CDetailObjectSystem::ScanForCounts( ks::byte_reader& buf,
 										 int *pNumOldStyleObjects,
@@ -2008,7 +2016,6 @@ void CDetailObjectSystem::UnserializeModels( ks::byte_reader& buf )
 		}
 	}
 
-	
 	if (detailObjectLeaf != -1)
 	{
 		if ( nNumFastObjectsInCurLeaf )
@@ -2028,7 +2035,6 @@ void CDetailObjectSystem::UnserializeModels( ks::byte_reader& buf )
 	engine->RecalculateBSPLeafFlags();
 
 }
-
 
 Vector CDetailObjectSystem::GetSpriteMiddleBottomPosition( DetailObjectLump_t const &lump ) const
 {
@@ -2061,7 +2067,6 @@ Vector CDetailObjectSystem::GetSpriteMiddleBottomPosition( DetailObjectLump_t co
 	return vecOrigin + dy + 0.5 * dx;
 }
 
-
 void CDetailObjectSystem::UnserializeFastSprite( FastSpriteX4_t *pSpritex4, int nSubField, DetailObjectLump_t const &lump, bool bFlipped, Vector const &posOffset )
 {
 	Vector pos = GetSpriteMiddleBottomPosition( lump ) + posOffset;
@@ -2091,8 +2096,6 @@ void CDetailObjectSystem::UnserializeFastSprite( FastSpriteX4_t *pSpritex4, int 
 
 	pSpritex4->m_pSpriteDefs[nSubField] = pSDef;
 }
-
-
 
 //-----------------------------------------------------------------------------
 // Count the number of detail sprites in the leaf list
@@ -2136,7 +2139,6 @@ int CDetailObjectSystem::CountFastSpritesInLeafList( int nLeafCount, LeafIndex_t
 	return nCount;
 }
 
-
 //-----------------------------------------------------------------------------
 // Count the number of detail sprite quads in the leaf list
 //-----------------------------------------------------------------------------
@@ -2159,17 +2161,15 @@ int CDetailObjectSystem::CountSpriteQuadsInLeafList( int nLeafCount, LeafIndex_t
 	return nQuadCount;
 }
 
-
 #define TREATASINT(x) ( *(  ( (int32 const *)( &(x) ) ) ) )
 
 //-----------------------------------------------------------------------------
 // Sorts sprites in back-to-front order
 //-----------------------------------------------------------------------------
-inline bool CDetailObjectSystem::SortLessFunc( const CDetailObjectSystem::SortInfo_t &left, const CDetailObjectSystem::SortInfo_t &right )
+bool CDetailObjectSystem::SortLessFunc( const CDetailObjectSystem::SortInfo_t &left, const CDetailObjectSystem::SortInfo_t &right )
 {
 	return TREATASINT( left.m_flDistance ) > TREATASINT( right.m_flDistance );
 }
-
 
 int CDetailObjectSystem::SortSpritesBackToFront( int nLeaf, const Vector &viewOrigin, const DistanceFadeInfo_t &fadeInfo, SortInfo_t *pSortInfo )
 {
@@ -2213,9 +2213,8 @@ int CDetailObjectSystem::SortSpritesBackToFront( int nLeaf, const Vector &viewOr
 	return nCount;
 }
 
-
-constexpr auto MAGIC_NUMBER = (1<<23);
-constexpr auto MANTISSA_LSB_OFFSET = 0;
+static constexpr auto MAGIC_NUMBER = (1<<23);
+static constexpr auto MANTISSA_LSB_OFFSET = 0;
 
 static fltx4 Four_MagicNumbers={ MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER };
 static fltx4 Four_255s={ 255.0, 255.0, 255.0, 255.0 };
@@ -2333,7 +2332,6 @@ int CDetailObjectSystem::BuildOutSortedSprites( CFastDetailLeafSpriteList *pData
 	return nCount;
 }
 
-
 static void s_RenderFastSpriteGuts( CDetailObjectSystem *pThis, DistanceFadeInfo_t info, Vector viewOrigin, Vector viewForward, Vector viewRight, Vector viewUp, int nNumLeafs, ks::envelope<LeafIndex_t> const &leaflist )
 {
 	pThis->RenderFastSprites( info, viewOrigin, viewForward, viewRight, viewUp, nNumLeafs, leaflist );
@@ -2363,7 +2361,7 @@ static void UTIL_MeshBuildSpriteQuad( CMeshBuilder* meshBuilder, const Vector &v
 	meshBuilder->AdvanceVertexF<VTX_HAVEPOS | VTX_HAVECOLOR, 1>();
 }
 
-constexpr auto CACHED_SPRITE_MESH_QUADS_PER_BATCH = 4096;
+static constexpr auto CACHED_SPRITE_MESH_QUADS_PER_BATCH = 4096;
 
 void CDetailObjectSystem::RenderFastSprites( const DistanceFadeInfo_t &info, const Vector &viewOrigin, const Vector &viewForward, const Vector &viewRight, const Vector &viewUp, int nLeafCount, LeafIndex_t const * pLeafList )
 {
@@ -2634,7 +2632,6 @@ void CDetailObjectSystem::RenderTranslucentDetailObjects( const DistanceFadeInfo
 	pRenderContext->PopMatrix();
 }
 
-
 void CDetailObjectSystem::RenderFastTranslucentDetailObjectsInLeaf( CFastDetailLeafSpriteList *pData, const DistanceFadeInfo_t &info, const Vector &viewOrigin, const Vector &viewForward, const Vector &viewRight, const Vector &viewUp, int nLeaf, const Vector &vecClosestPoint, bool bFirstCallThisFrame )
 {
 	if ( bFirstCallThisFrame || ( m_nSortedFastLeaf != nLeaf ) )
@@ -2658,9 +2655,7 @@ void CDetailObjectSystem::RenderFastTranslucentDetailObjectsInLeaf( CFastDetailL
 		return;
 	}
 
-
 	int nCount = pData->m_nNumPendingSprites;
-
 
 	CMatRenderContextPtr pRenderContext( materials );
 	pRenderContext->MatrixMode( MATERIAL_MODEL );
@@ -2676,8 +2671,6 @@ void CDetailObjectSystem::RenderFastTranslucentDetailObjectsInLeaf( CFastDetailL
 	CMeshBuilder meshBuilder;
 	DetailPropFlashlightMode_t flashlightMode = DetailPropFlashlightMode();
 	IMesh *pMesh = pRenderContext->GetDynamicMesh( false /*flashlightMode != DPFM_MULTIPASS*/, nullptr, nullptr, pMaterial );
-
-
 
 	int nMaxVerts, nMaxIndices;
 	pRenderContext->GetMaxToRender( pMesh, false, &nMaxVerts, &nMaxIndices );
@@ -2769,7 +2762,6 @@ void CDetailObjectSystem::RenderFastTranslucentDetailObjectsInLeaf( CFastDetailL
 	pMesh->Draw();
 	if( flashlightMode == DPFM_MULTIPASS )
 		shadowmgr->FlashlightDrawCallback( DrawMeshCallback, pMesh );
-
 
 	pRenderContext->PopMatrix();
 
@@ -2929,13 +2921,12 @@ void CDetailObjectSystem::RenderTranslucentDetailObjectsInLeaf( const DistanceFa
  	pRenderContext->PopMatrix();
 }
 
-
 //-----------------------------------------------------------------------------
 // Computes a distance fade factor (returns fade distance)
 //-----------------------------------------------------------------------------
 float CDetailObjectSystem::ComputeDetailFadeInfo( DistanceFadeInfo_t *pInfo )
 {
-	C_BasePlayer *pLocal = C_BasePlayer::GetLocalPlayer();
+	CBasePlayer *pLocal = CBasePlayer::GetLocalPlayer();
 	float flFactor = pLocal ? pLocal->GetFOVDistanceAdjustFactor() : 1.0f;
 	float flDetailDist = m_flDetailFadeEnd / flFactor;
 	pInfo->m_flMaxDistSqr = flDetailDist * flDetailDist;
@@ -2946,7 +2937,6 @@ float CDetailObjectSystem::ComputeDetailFadeInfo( DistanceFadeInfo_t *pInfo )
 
 	return flDetailDist;
 }
-
 
 //-----------------------------------------------------------------------------
 // Builds a list of renderable info for all detail objects to render

@@ -12,7 +12,12 @@
 // types below), so it is checked at every use site rather than only inside a table.
 
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "datamap.h"
 import std;
 
@@ -238,6 +243,11 @@ template <name_t Name, Key K = Key{}> struct KeyFrom {};
 // Class-level. The table name is not derivable: aliased classes send under a name unrelated
 // to the identifier. `base` is the BEGIN_SEND_TABLE / _NOBASE distinction.
 struct NetTable { name_t name{}; bool base = true; };
+
+// A base marked Flatten owns no table of its own: its tagged members belong to the tables of the
+// class deriving from it. CEntityCore is one, so each side's CBaseEntity sends, saves and predicts
+// the core's fields as if it had declared them.
+struct Flatten {};
 
 // ---- semantic types ----------------------------------------------------------
 // The compiler derives structure, never meaning: that a float is a time, or a Vector a

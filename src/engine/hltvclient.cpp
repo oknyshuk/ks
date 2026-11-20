@@ -3,7 +3,19 @@
 
 // Purpose: hltvclient.cpp: implementation of the CHLTVClient class.
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.convar;
+import ks.tier1.fmtstr;
+import ks.tier1.iconvar;
+import ks.tier1.ns_address;
+import ks.tier1.playerid;
+import ks.tier1.strtools;
 #include "hltvclient.h"
 #include "netmessages.h"
 #include "hltvserver.h"

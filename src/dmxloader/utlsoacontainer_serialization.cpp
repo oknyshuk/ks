@@ -4,7 +4,16 @@
 // Purpose: see utlsoacontainer_serialization.h
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.serialization;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.tier1.utlsoacontainer;
 #include "dmxloader/dmxloader.h"
 #include "dmxloader/dmxelement.h"
 

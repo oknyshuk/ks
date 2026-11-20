@@ -7,6 +7,16 @@
 #include "bspfile.h"
 #include "filesystem.h"
 #include "filesystem_engine.h"
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.tier1.checksum_crc;
+import ks.tier1.checksum_md5;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 
 //-----------------------------------------------------------------------------
 // Purpose: For proxy protecting

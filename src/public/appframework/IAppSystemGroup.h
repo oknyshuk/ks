@@ -5,7 +5,16 @@
 // Purpose: Defines a group of app systems that all have the same lifetime
 // that need to be connected/initialized, etc. in a well-defined order
 
-import ks.tier1;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.cvar;
+import ks.tier1.exprevaluator;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.map_ops;
 import std;
 
 //-----------------------------------------------------------------------------

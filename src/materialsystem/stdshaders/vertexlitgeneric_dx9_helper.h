@@ -4,6 +4,7 @@
 
 import std;
 #include "materialsystem/imaterialsystemhardwareconfig.h"
+import ks.core.basetypes;
 class CBasePerMaterialContextData;
 
 //-----------------------------------------------------------------------------

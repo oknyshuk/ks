@@ -7,6 +7,9 @@
 #include "vjolt_object.h"
 #include "vjolt_environment.h"
 #include "vphysics/player_controller.h"
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.vector;
 
 class JoltPhysicsPlayerController : public IPhysicsPlayerController
 {

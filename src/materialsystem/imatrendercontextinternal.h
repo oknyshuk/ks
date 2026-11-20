@@ -3,7 +3,12 @@
 // Copyright (c) 2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.exprevaluator;
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/imesh.h"
 #include "shaderapi/shareddefs.h"

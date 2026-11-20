@@ -3,7 +3,13 @@
 
 // Purpose: Memory allocation!
 
-import ks.core;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.minidump;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 import std;
 
 constexpr auto DEF_REGION = 0;

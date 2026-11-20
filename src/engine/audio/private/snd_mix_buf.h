@@ -4,7 +4,10 @@
 
 // OPTIMIZE: note that making this larger will not increase performance (12/27/03)
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.exprevaluator;
 
 inline constexpr auto PAINTBUFFER_SIZE = 1020; // 44k: was 512
 

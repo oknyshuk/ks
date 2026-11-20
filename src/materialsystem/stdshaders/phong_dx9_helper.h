@@ -6,6 +6,8 @@ import std;
 
 #include "vertexlitgeneric_dx9_helper.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
+import ks.core.basetypes;
+import ks.core.dbg;
 
 //-----------------------------------------------------------------------------
 // Forward declarations

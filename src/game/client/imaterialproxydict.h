@@ -1,22 +1,7 @@
-#pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2008 Valve Corporation
 
-
-typedef IMaterialProxy *MaterialProxyFactory_t();
-
-class IMaterialProxyDict
-{
-public:
-	// This is used to instance a proxy.
-	virtual IMaterialProxy *CreateProxy( const char *proxyName ) = 0;
-	// virtual destructor
-	virtual	~IMaterialProxyDict() {}
-	// Used by EXPOSE_MATERIAL_PROXY to insert all proxies into the dictionary.
-	virtual void Add( const char *pMaterialProxyName, MaterialProxyFactory_t *pMaterialProxyFactory ) = 0;
-};
-
-extern IMaterialProxyDict &GetMaterialProxyDict();
+#pragma once
 
 #define EXPOSE_MATERIAL_PROXY( className, proxyName )						\
 	static IMaterialProxy *C##className##Factory( void )					\

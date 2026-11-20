@@ -4,7 +4,9 @@
 import std;
 
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.platform;
+import ks.simd;
 
 
 #include "materialsystem_global.h"

@@ -6,6 +6,8 @@
 #include "customcharacter_ps30.inc"
 
 #include "../materialsystem_global.h"
+import ks.core.basetypes;
+import ks.math.mathlib;
 
 BEGIN_VS_SHADER( CustomCharacter, "Help for CustomCharacter Shader" )
 	

@@ -9,6 +9,9 @@ import std;
 #include "cs_grass_ps20.inc"
 #include "cs_grass_ps20b.inc"
 #include "cs_grass_ps30.inc"
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.interfaces;
 
 ConVar cl_detail_scale( "cl_detail_scale", "2", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT, "" );
 

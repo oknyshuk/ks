@@ -4,7 +4,14 @@
 
 // Purpose: Core types for the response rules -- criteria, responses, rules, and matchers.
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.tslist;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.platform;
+import ks.simd;
 #include "responserules/response_types.h"
 import std;
 

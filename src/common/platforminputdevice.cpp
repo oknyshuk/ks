@@ -4,6 +4,7 @@
 // Purpose: Provides Cross-Platform Input Device information
 
 #include "platforminputdevice.h"
+import ks.core.types;
 
 class CAutoInit
 {

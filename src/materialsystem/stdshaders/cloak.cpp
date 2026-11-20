@@ -3,7 +3,8 @@
 
 // Purpose: Cloaking shader for Spy in TF2 (and probably many other things to come)
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 #include "BaseVSShader.h"
 import std;
 #include "cloak_dx9_helper.h"

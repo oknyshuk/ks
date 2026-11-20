@@ -7,7 +7,15 @@
 #include <SDL3/SDL_haptic.h>
 
 /* For force feedback testing. */
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.threadtools;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.interfaces;
 #include "inputsystem.h"
 import std;
 

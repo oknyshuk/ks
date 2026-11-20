@@ -5,7 +5,20 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bit_ops;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.tier1.tokenset;
+import ks.tier1.vector_ops;
 #include "GameEventManager.h"
 import std;
 #include "filesystem_engine.h"

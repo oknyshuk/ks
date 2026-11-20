@@ -3,7 +3,9 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.keyvalues;
 
 inline constexpr const char *IMATERIAL_PROXY_INTERFACE_VERSION = "_IMaterialProxy003";
 

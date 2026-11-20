@@ -8,7 +8,13 @@ import std;
 #if defined(CLIENT_DLL)
 #elif defined(GAME_DLL)
 #endif
-import ks.tier1;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.appinstance;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 #include "platform/linux/linux_support.h"
 
 

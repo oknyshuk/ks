@@ -5,7 +5,14 @@
 //=============================================================================
 
 import std;
-import ks.tier1;
+import ks.core.time;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
 #include "idispinfo.h"
 #include "bspfile.h"
 #include "dispnode.h"

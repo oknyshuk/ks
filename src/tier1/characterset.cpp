@@ -2,7 +2,9 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.characterset;
 
 //-----------------------------------------------------------------------------
 // Purpose: builds a simple lookup table of a group of important characters

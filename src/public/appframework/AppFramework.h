@@ -6,6 +6,7 @@
 
 #include "appframework/IAppSystemGroup.h"
 #include "ilaunchabledll.h"
+import ks.tier1.interfaces;
 
 //-----------------------------------------------------------------------------
 // Gets the application instance..

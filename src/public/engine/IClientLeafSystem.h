@@ -4,7 +4,9 @@
 
 // Purpose: This file contains code to allow us to associate client data with bsp leaves.
 
-import ks.core;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 #include "client_render_handle.h"
 #include "engine/ivmodelinfo.h"
 

@@ -2,10 +2,12 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:heapsort;
+export module ks.tier1.heapsort;
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
 
 export extern "C++" {
 

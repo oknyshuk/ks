@@ -7,6 +7,9 @@
 // that need to be connected/initialized, etc. in a well-defined order
 
 #include "appframework/tier3app.h"
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 
 //-----------------------------------------------------------------------------
 // Forward declarations 

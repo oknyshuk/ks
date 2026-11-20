@@ -12,6 +12,9 @@
 //
 
 #include "mm_session.h"
+import ks.core.threadtools;
+import ks.core.types;
+import ks.tier1.keyvalues;
 
 class CMatchSessionOfflineCustom : public IMatchSessionInternal
 {

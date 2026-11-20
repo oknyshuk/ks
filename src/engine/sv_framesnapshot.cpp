@@ -3,7 +3,15 @@
 
 // main precompiled header for server files
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.fixed_pool;
+import ks.tier1.iconvar;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
 
 #include "decal.h"
 #include "cmodel_engine.h"

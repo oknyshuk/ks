@@ -3,7 +3,10 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 // CSimplePhysics is a framework for simplified physics simulation.
 // It simulates at a fixed timestep and uses the Verlet integrator.

@@ -4,7 +4,10 @@
 
 #pragma once
 
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "vphysics_interface.h"
 #include "vphysics/friction.h"
 import std;

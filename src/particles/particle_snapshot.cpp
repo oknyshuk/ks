@@ -3,7 +3,11 @@
 
 // Purpose: see CParticleSnapshot declaration (in particles.h)
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
+import ks.tier1.utlsoacontainer;
 #include "particles/particles.h"
 import std;
 #include "dmxloader/dmxloader.h"

@@ -3,7 +3,12 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.checksum_crc;
+import ks.tier1.strtools;
 #include "qlimits.h"
 
 inline constexpr const char *CUSTOM_FILES_FOLDER = "downloads";

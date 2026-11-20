@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2007 Valve Corporation
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 #include "BaseVSShader.h"
 import std;
 

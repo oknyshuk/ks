@@ -3,7 +3,11 @@
 
 // Purpose: Win32 Console API helpers
 
-import ks.core;
+import ks.core.console;
+import ks.core.dbg;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 
 // First include standard libraries
 import std;

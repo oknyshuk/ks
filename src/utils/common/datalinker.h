@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2008 Valve Corporation
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.map_ops;
 #include "datalinker_interface.h"
 import std;
 

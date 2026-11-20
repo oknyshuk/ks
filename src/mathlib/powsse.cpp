@@ -2,7 +2,12 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.platform;
+import ks.simd;
 
 fltx4 Pow_FixedPoint_Exponent_SIMD( const fltx4 & x, int exponent)
 {

@@ -3,7 +3,13 @@
 //			http://www.darkside.com.au/ice/
 
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 #include "mathlib/IceKey.H"
 import std;
 

@@ -3,7 +3,11 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.core;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.fmtstr;
+import ks.tier1.interfaces;
 
 
 //=============================================================================

@@ -5,7 +5,14 @@
 // Purpose: model loading and caching
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
 
 #include "filesystem.h"
 #include "string_t.h"

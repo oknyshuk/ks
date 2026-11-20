@@ -123,12 +123,11 @@ file(WRITE "${_patched}/WidgetTextInput.cpp" "${_wt}")
 file(GLOB_RECURSE _rmlcore CONFIGURE_DEPENDS "${_rmlui_dir}/Source/Core/*.cpp")
 list(FILTER _rmlcore EXCLUDE REGEX "WidgetTextInput[.]cpp$")
 list(APPEND _rmlcore "${_patched}/WidgetTextInput.cpp")
-add_library(RmlCore SHARED ${_rmlcore})
+add_library(RmlCore STATIC ${_rmlcore})
 target_include_directories(RmlCore PRIVATE
     "${_rmlui_dir}/Include" "${_rmlui_dir}/Source/Core/Elements")
 target_link_libraries(RmlCore PRIVATE ks_common PkgConfig::FREETYPE)
-target_compile_definitions(RmlCore PRIVATE RMLUI_FONT_ENGINE_FREETYPE)
-set_target_properties(RmlCore PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+target_compile_definitions(RmlCore PRIVATE RMLUI_FONT_ENGINE_FREETYPE PUBLIC RMLUI_STATIC_LIB)
 
 file(GLOB_RECURSE _rmldbg CONFIGURE_DEPENDS "${_rmlui_dir}/Source/Debugger/*.cpp")
 add_library(RmlDebugger STATIC ${_rmldbg})
@@ -165,16 +164,12 @@ set(_dxvk_inc
 set(_dxvk_def DXVK_NATIVE DXVK_WSI_SDL3 DXVK_PLATFORM_LINUX)
 
 function(dxvk_lib name src)
-    cmake_parse_arguments(A "SHARED" "" "INC;USE;EXCL;OPT" ${ARGN})
+    cmake_parse_arguments(A "" "" "INC;USE;EXCL;OPT" ${ARGN})
     file(GLOB_RECURSE _src CONFIGURE_DEPENDS "${src}/*.cpp" "${src}/*.c")
     foreach(e IN LISTS A_EXCL)
         list(FILTER _src EXCLUDE REGEX "${e}")
     endforeach()
-    if(A_SHARED)
-        add_library(${name} SHARED ${_src})
-    else()
-        add_library(${name} STATIC ${_src})
-    endif()
+    add_library(${name} STATIC ${_src})
     target_compile_options(${name} PRIVATE -std=c++17 -fno-reflection ${A_OPT})
     target_include_directories(${name} PRIVATE ${_dxvk_inc} ${A_INC})
     target_compile_definitions(${name} PRIVATE ${_dxvk_def})
@@ -206,10 +201,9 @@ dxvk_lib(dxvk "${_dxvk_dir}/src/dxvk"
 dxvk_lib(wsi "${_dxvk_dir}/src/wsi"
     INC "${_dxvk_dir}/src/wsi" "${_dxvk_dir}/subprojects/libdisplay-info/include"
     USE display-info)
-dxvk_lib(d3d9 "${_dxvk_dir}/src/d3d9" SHARED
+dxvk_lib(d3d9 "${_dxvk_dir}/src/d3d9"
     INC "${_dxvk_dir}/src/d3d9" "${_dxvk_dir}/src" "${_dxvk_dir}/subprojects/dxbc-spirv"
     USE dxvk_headers dxbc_spv display-info dxvk_vulkan dxvk dxvk_util wsi spirv PkgConfig::SDL3)
-set_target_properties(d3d9 PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 add_dependencies(dxvk dxvk_generated)
 add_dependencies(d3d9 dxvk_generated)

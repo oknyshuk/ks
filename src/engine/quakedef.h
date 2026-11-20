@@ -7,7 +7,8 @@
 // OPTIONAL DEFINES
 //#define	PARANOID		// speed sapping error checking
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 #include "qlimits.h"
 
 //===========================================

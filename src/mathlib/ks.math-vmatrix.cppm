@@ -18,14 +18,15 @@
 //=============================================================================
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:vmatrix;
+export module ks.math.vmatrix;
 
 import std;
-import ks.core;
+import ks.core.numeric;
+import ks.platform;
 import ks.simd;
-export import :vplane;
-export import :vector4d;
-export import :mathlib;
+export import ks.math.vplane;
+export import ks.math.vector4d;
+export import ks.math.mathlib;
 
 export extern "C++" {
 

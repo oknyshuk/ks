@@ -4,6 +4,12 @@
 // Purpose: This is analogous to RnWorld from source2, but only for softbodies
 
 #include "mathlib/softbodyenvironment.h"
+import ks.core.types;
+import ks.math.aabb;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.tier1.exprevaluator;
+import ks.tier1.strtools;
 
 //-----------------------------------------------------------------------------------------------------------------------------
 CSoftbodyCollisionFilter::CSoftbodyCollisionFilter()

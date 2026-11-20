@@ -19,7 +19,8 @@
 				}
 			}
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 		#include "emissive_scroll_blended_pass_helper.h"
 
 		In :

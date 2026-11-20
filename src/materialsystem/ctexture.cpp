@@ -5,7 +5,37 @@ import std;
 
 // HACK: Need ShellExecute for PSD updates
 
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.mem;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.polyhedron;
+import ks.math.ssequaternion;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.convar;
+import ks.tier1.exprevaluator;
+import ks.tier1.iconvar;
+import ks.tier1.interfaces;
+import ks.tier1.intern_pool;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.map_ops;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.vstdlib.callqueue;
+import ks.vstdlib.jobthread;
 #include "shaderapi/ishaderapi.h"
 #include "materialsystem_global.h"
 #include "itextureinternal.h"

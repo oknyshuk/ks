@@ -28,7 +28,6 @@
             vulkan-loader
             (zlib-ng.override { withZlibCompat = true; })
             libjpeg
-            libpng
           ];
 
           nativeBuildInputs = with pkgs; [

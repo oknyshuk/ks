@@ -1,3 +1,4 @@
+import ks.core.types;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 //

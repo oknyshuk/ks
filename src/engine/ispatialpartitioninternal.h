@@ -3,6 +3,8 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "ispatialpartition.h"
+import ks.math.compressed_vector;
+import ks.math.vector;
 
 //-----------------------------------------------------------------------------
 // These methods of the spatial partition manager are only used in the engine

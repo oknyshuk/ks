@@ -8,6 +8,17 @@
 #include "s3tc_decode.h"
 #include "vtf/vtf.h"
 #include "filesystem.h"
+import ks.core.basetypes;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.tier1.byte_reader;
+import ks.tier1.byte_writer;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.serialization;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 
 class CEdgePos
 {

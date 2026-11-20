@@ -3,7 +3,24 @@
 
 
 import std;
-import ks.tier1;
+import ks.core.memalloc;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.lightdesc;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.byte_writer;
+import ks.tier1.convar;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.serialization;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 
 // fast SSE-ONLY ray tracing module. Based upon various "real time ray tracing" research.
 //#define DEBUG_RAYTRACE 1

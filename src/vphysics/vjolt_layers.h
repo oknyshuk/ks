@@ -8,6 +8,7 @@
 #include <Jolt/Physics/Collision/ObjectLayerPairFilterTable.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayerInterfaceTable.h>
 #include <Jolt/Physics/Collision/BroadPhase/ObjectVsBroadPhaseLayerFilterTable.h>
+import ks.core.platform;
 
 // The layer an object lives in decides what it may collide with. Each layer also gets its own
 // broad phase tree, so the static world is not in a tree that has to be rebuilt every frame.

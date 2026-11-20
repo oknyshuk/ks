@@ -3,10 +3,12 @@
 // Purpose: A color format which works on 360 + PC
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:vertexcolor;
+export module ks.math.vertexcolor;
 
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.platform;
 import ks.simd;
 
 export extern "C++" {

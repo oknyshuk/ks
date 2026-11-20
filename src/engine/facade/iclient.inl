@@ -1,3 +1,7 @@
+import ks.core.vprof;
+import ks.tier1.cvar;
+import ks.tier1.icvar;
+import ks.tier1.interfaces;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 //

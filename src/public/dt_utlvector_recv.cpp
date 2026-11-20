@@ -5,9 +5,11 @@
 #endif
 #if defined(CLIENT_DLL)
 import std;
-import ks.core;
 #endif
 #include "dt_utlvector_recv.h"
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
 
 extern char const *s_ClientElementNames[MAX_ARRAY_ELEMENTS];
 

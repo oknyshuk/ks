@@ -2,7 +2,15 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #define DISABLE_PROTECTED_THINGS
-import ks.tier1;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.math.mathlib;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 #include "togl/rendermechanism.h"
 #include "hardwareconfig.h"
 #include "shaderapi/ishaderutil.h"

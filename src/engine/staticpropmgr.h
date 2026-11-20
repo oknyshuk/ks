@@ -5,7 +5,11 @@
 // Purpose: This file contains a little interface to deal with static prop collisions
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.logging;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
 #include "engine/IStaticPropMgr.h"
 
 // FIXME: Remove! Only here for the test against old code

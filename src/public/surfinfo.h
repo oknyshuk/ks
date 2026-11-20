@@ -3,7 +3,11 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.math.vplane;
+import ks.platform;
+import ks.simd;
 
 //#include "mathlib/vector.h"
 inline constexpr auto MAX_SURFINFO_VERTS = 16;

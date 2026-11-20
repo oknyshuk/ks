@@ -8,7 +8,13 @@
 
 
 
-import ks.core;
+#include <cstdio>
+import ks.core.cmdline;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
 #include "TextConsoleUnix.h"
 
 // un-needed include...

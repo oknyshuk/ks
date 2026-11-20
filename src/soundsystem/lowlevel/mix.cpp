@@ -1,5 +1,14 @@
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.platform;
+import ks.simd;
 #include "soundsystem/lowlevel.h"
 
 // simple inline to test alignemnt of a value

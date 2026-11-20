@@ -6,7 +6,13 @@ inline constexpr auto MAX_VALENCE = 19;
 inline constexpr auto CORNER_WITH_SMOOTHBNDTANGENTS = 2;
 
 import std;
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
 
 // Undef this to use the unoptimized conversion routines
 

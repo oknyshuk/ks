@@ -1,3 +1,6 @@
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.vprof;
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 

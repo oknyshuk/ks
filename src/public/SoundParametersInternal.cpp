@@ -6,13 +6,20 @@
 #endif
 #if defined(CLIENT_DLL)
 import std;
-import ks.core;
 #elif defined(GAME_DLL)
 #endif
 
-import ks.tier1;
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "tier2/interval.h"
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 
 struct SoundChannels
 {

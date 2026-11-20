@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:fixed_pool;
+export module ks.tier1.fixed_pool;
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.memalloc;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
 
 export extern "C++" {
 

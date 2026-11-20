@@ -1,5 +1,18 @@
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.types;
+import ks.math.box_buoyancy;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
 
 inline const Vector ToVector( const fltx4 & f4 )
 {

@@ -3,7 +3,17 @@
 
 // Purpose: particle system code
 
-import ks.core;
+import ks.core.basetypes;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
 #include "particles/particles.h"
 #include "filesystem.h"
 #include "tier2/tier2.h"

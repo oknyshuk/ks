@@ -25,7 +25,35 @@ mat_fullbright 1 doesn't work properly on alpha materials in testroom_standards
 #define GPU_RESOLVE_ALIGNMENT 1
 #endif
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.perfstats;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.lightdesc;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.exprevaluator;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.intern_pool;
+import ks.tier1.keyvalues;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
 #include "shaderapidx8.h"
 #include "shaderapidx8_global.h"
 #include "shadershadowdx8.h"

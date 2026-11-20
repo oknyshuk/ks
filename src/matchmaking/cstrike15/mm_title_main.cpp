@@ -3,6 +3,9 @@
 
 #include "mm_title.h"
 #include "../mm_title_main.h"
+import ks.core.threadtools;
+import ks.tier1.iappsystem;
+import ks.tier1.keyvalues;
 
 
 LINK_MATCHMAKING_LIB();

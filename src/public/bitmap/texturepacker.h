@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.core;
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.icvar;
 import std;
 
 #define DEFAULT_TEXTURE_PAGE_WIDTH	1024

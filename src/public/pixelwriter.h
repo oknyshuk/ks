@@ -6,7 +6,14 @@
 // (like DXT1) without spewing errors.  The only actions that are available for
 // these formats are direct access to the bitstream.
 
-import ks.math;
+import ks.core.basetypes;
+import ks.core.numeric;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.ssemath;
+import ks.platform;
+import ks.simd;
 #include "bitmap/imageformat.h"
 import std;
 

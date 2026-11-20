@@ -6,7 +6,38 @@
 
 
 
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.color;
+import ks.core.dbg;
+import ks.core.logging;
+import ks.core.memalloc;
+import ks.core.numeric;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.tslist;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.exprevaluator;
+import ks.tier1.filename_table;
+import ks.tier1.fixed_pool;
+import ks.tier1.iconvar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
+import ks.tier1.strtools;
+import ks.tier1.text_writer;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.vstdlib.jobthread;
 #include "tier2/riff.h"
 #include "sound.h"
 #include "soundservice.h"

@@ -1,4 +1,11 @@
 #pragma once
+import ks.core.basetypes;
+import ks.core.wchartypes;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.tier1.text_writer;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 

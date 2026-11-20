@@ -1,61 +1,111 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-#include "vphysics_interface.h"
-#include "edict.h"
-#include "eiface.h"
-#include "iserverentity.h"
-#include "dt_send.h"
-#include "shareddefs.h"
-#include "ehandle.h"
-#include "datamap.h"
-#include "util.h"
-#include "predictable_entity.h"
-#include "variant_t.h"
-#include "takedamageinfo.h"
-#include "touchlink.h"
-#include "groundlink.h"
-#include "networkvar.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
-#include "basetoggle.h"
-#include "igameevents.h"
-#include "precache_register.h"
-#include "baseanimating.h"
-#include "basecombatweapon.h"
-#include "basecombatcharacter.h"
-#include "entitylist.h"
-#include "basetempentity.h"
-#include "physics.h"
-#include "ndebugoverlay.h"
-#include "recipientfilter.h"
-#include "reflect_sendtable.h"
-#include "reflect_datamap.h"
-#include "reflect_annotations.h"
-#include "animation.h"
-#include "baseflex.h"
-#include "filesystem.h"
-#include "studio.h"
-#include "choreoevent.h"
-#include "choreoscene.h"
+module;
+#include <math.h>
 #include "choreoactor.h"
-#include "engine/IEngineSound.h"
-#include "ai_basenpc.h"
-#include "ai_navigator.h"
-#include "ai_moveprobe.h"
-#include "sceneentity.h"
-#include "ai_baseactor.h"
-#include "datacache/imdlcache.h"
-#include "flexcycler.h"
+#include "choreoscene.h"
+#include "eiface.h"
+#include "irecipientfilter.h"
+#include "networkvar.h"
+#include "reflect.h"
+#include "responserules/response_types.h"
+#include "server_class.h"
+#include "studio.h"
+#include "vphysics_interface.h"
+#include "vscript/ivscript.h"
+#include "ai_criteria.h"
+#include "entity_dispatch.h"
+#include "entity_dispatch_list.h"
+#include "entity_kinds_dump.h"
+#include "reflect_datamap.h"
+#include "reflect_sendtable.h"
+#include "util.h"
+#include "vscript_game.h"
+#include "vscript_shared.h"
+#include "reflect_annotations.h"
+#include "predictable_entity.h"
+#include "shake.h"
+#include "baseentity.h"
+#include "edict.h"
+#include "igameevents.h"
+#include "usermessages_schema.h"
+#include "declare_class.h"
+#include "engine/IEngineTrace.h"
+#include "vphysics/player_controller.h"
+#include "baseplayer_shared.h"
+#include "shareddefs.h"
+module ks.server;
 
-static ConVar scene_showlook( "scene_showlook", "0", FCVAR_ARCHIVE, "When playing back, show the directions of look events." );
-static ConVar scene_showmoveto( "scene_showmoveto", "0", FCVAR_ARCHIVE, "When moving, show the end location." );
-static ConVar scene_showunlock( "scene_showunlock", "0", FCVAR_ARCHIVE, "Show when a vcd is playing but normal AI is running." );
+import std;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.time;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.exprevaluator;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
+import :fish;
+import :baseentity;
+import ks.game.ai_activity;
+import :player;
+import :vscript;
+import :sharedvar;
+import :nav_4;
+import :entity_dispatch;
+import :entity_kind;
+import :entity_2;
+import ks.game.shareddefs;
+import :cstrike15.bot.bot;
+import :entityutil;
+import ks.game.gamemovement;
+import ks.game.mapentities_shared;
+import ks.game.tempentity;
+import ks.core.types;
+import ks.tier1.playerid;
+import ks.core.scratcharena;
+import ks.game.in_buttons;
+import ks.math.transform;
+import ks.math.vector2d;
+import :cstrike15.cs_player;
+import :cstrike15.cs_playeranimstate;
+import :cstrike15.bot.cs_bot;
+import :cstrike15.cs_player_2;
+import :cstrike15.hostage.cs_simple_hostage;
+import :econ.econ_item_schema_minimal;
+
+class CBaseAnimating;
+class CBaseEntity;
+class CBaseFlex;
+class CFlexCycler;
+class CSceneEventInfo;
+class CTakeDamageInfo;
+
+using namespace ::ks::reflect;
+
+static ConVar scene_showlook( side_registry(), "scene_showlook", "0", FCVAR_ARCHIVE, "When playing back, show the directions of look events." );
+static ConVar scene_showmoveto( side_registry(), "scene_showmoveto", "0", FCVAR_ARCHIVE, "When moving, show the end location." );
+static ConVar scene_showunlock( side_registry(), "scene_showunlock", "0", FCVAR_ARCHIVE, "Show when a vcd is playing but normal AI is running." );
 
 // static ConVar scene_checktagposition( "scene_checktagposition", "0", FCVAR_ARCHIVE, "When playing back a choreographed scene, check the current position of the tags relative to where they were authored." );
 
 // Fake layer # to force HandleProcessSceneEvent to actually allocate the layer during npc think time instead of in between.
-constexpr auto REQUEST_DEFERRED_LAYER_ALLOCATION = -2;
+static constexpr auto REQUEST_DEFERRED_LAYER_ALLOCATION = -2;
 
 extern bool g_bClientFlex;
 
@@ -79,7 +129,6 @@ REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_FlexWeights );
 // SendTable stuff.
 IMPLEMENT_REFLECT_SERVERCLASS( CBaseFlex, DT_BaseFlex )
 
-
 IMPLEMENT_REFLECT_DATAMAP( CBaseFlex )
 
 BEGIN_ENT_SCRIPTDESC( CBaseFlex, CBaseAnimating, "Animated characters who have vertex flex capability." )
@@ -87,15 +136,10 @@ BEGIN_ENT_SCRIPTDESC( CBaseFlex, CBaseAnimating, "Animated characters who have v
 	DEFINE_SCRIPTFUNC_NAMED( ScriptGetSceneByIndex, "GetSceneByIndex", "Returns the instance of the scene entity at the specified index." )
 END_SCRIPTDESC();
 
-
 LINK_ENTITY_TO_CLASS( funCBaseFlex, CBaseFlex ); // meaningless independant class!!
 
 CBaseFlex::CBaseFlex( void )
 {
-#ifdef _DEBUG
-	// default constructor sets the viewtarget to NAN
-	m_viewtarget.Init();
-#endif
 	m_bUpdateLayerPriorities = true;
 	m_flLastFlexAnimationTime = 0.0;
 }
@@ -185,7 +229,6 @@ LocalFlexController_t CBaseFlex::FindFlexController( const char *szName )
 	return LocalFlexController_t(0);
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
@@ -200,7 +243,6 @@ void CBaseFlex::StartChoreoScene( CChoreoScene *scene )
 	m_bUpdateLayerPriorities = true;
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
@@ -213,15 +255,9 @@ void CBaseFlex::RemoveChoreoScene( CChoreoScene *scene, bool canceled )
 
 	if (canceled)
 	{
-		CAI_BaseNPC *myNpc = MyNPCPointer( );
-		if ( myNpc )
-		{
-			myNpc->ClearSceneLock( );
-		}
+		
 	}
 }
-
-
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -249,9 +285,6 @@ int CBaseFlex::GetScenePriority( CChoreoScene *scene )
 	}
 	return iPriority;
 }
-
-
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Remove all active SceneEvents
@@ -289,7 +322,6 @@ void CBaseFlex::ClearSceneEvents( CChoreoScene *scene, bool canceled )
 		m_SceneEvents.erase( m_SceneEvents.begin() + i );
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Stop specifics of expression
@@ -335,9 +367,7 @@ bool CBaseFlex::ClearSceneEvent( CSceneEventInfo *info, bool fastKill, bool canc
 
 	case CChoreoEvent::MOVETO:
 		{
-			CAI_BaseNPC *myNpc = MyNPCPointer( );
-			if (!myNpc)
-				return true;
+			return true;
 
 			// cancel moveto if it's distance based, of if the event was part of a canceled vcd
 			if (IsMoving() && (canceled || info->m_pEvent->GetDistanceToTarget() > 0.0))
@@ -349,7 +379,6 @@ bool CBaseFlex::ClearSceneEvent( CSceneEventInfo *info, bool fastKill, bool canc
 						Scene_Printf( "%s : %8.2f: MOVETO canceled but actor %s not at goal\n", info->m_pScene->GetFilename(), info->m_pScene->GetTime(), info->m_pEvent->GetActor()->GetName() );
 					}
 				}
-				myNpc->GetNavigator()->StopMoving( false );		// Stop moving
 			}
 		}
 		return true;
@@ -378,7 +407,6 @@ bool CBaseFlex::ClearSceneEvent( CSceneEventInfo *info, bool fastKill, bool canc
 	return false;
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Add string indexed scene/expression/duration to list of active SceneEvents
 // Input  : scenefile -
@@ -400,7 +428,6 @@ void CBaseFlex::AddSceneEvent( CChoreoScene *scene, CChoreoEvent *event, CBaseEn
 		return;
 	}
 
-
 	CSceneEventInfo info;
 
 	std::memset( (void *)&info, 0, sizeof( info ) );
@@ -421,7 +448,6 @@ void CBaseFlex::AddSceneEvent( CChoreoScene *scene, CChoreoEvent *event, CBaseEn
 		// Assert( 0 ); // expression failed to start
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Starting various expression types
@@ -682,9 +708,7 @@ bool CBaseFlex::StartFacingSceneEvent( CSceneEventInfo *info, CChoreoScene *scen
 	if ( pTarget )
 	{
 		// Don't allow FACE commands while sitting in the vehicle
-		CAI_BaseNPC *myNpc = MyNPCPointer();
-		if ( myNpc && myNpc->IsInAVehicle() )
-			return false;
+		
 
 		info->m_bIsMoving = false;
 		return true;
@@ -692,15 +716,12 @@ bool CBaseFlex::StartFacingSceneEvent( CSceneEventInfo *info, CChoreoScene *scen
 	return false;
 }
 
-
 bool CBaseFlex::StartMoveToSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event, CChoreoActor *actor, CBaseEntity *pTarget )
 {
 	if (pTarget)
 	{
 		info->m_bIsMoving = false;
 		info->m_bHasArrived = false;
-		CAI_BaseNPC *myNpc = MyNPCPointer( );
-		if (!myNpc)
 		{
 			return false;
 		}
@@ -712,17 +733,13 @@ bool CBaseFlex::StartMoveToSceneEvent( CSceneEventInfo *info, CChoreoScene *scen
 		// Don't stop them during restore because that will set a stopping path very
 		// nearby, causing us to signal arrival prematurely in CheckSceneEventCompletion.
 		// BEWARE: the behavior of this bug depended on the order in which the entities were restored!!
-		if ( myNpc->IsMoving() && !scene->IsRestoring() )
-		{
-			myNpc->GetNavigator()->StopMoving( false );
-		}
+		
 
 		return true;
 	}
 
 	return false;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -761,7 +778,6 @@ bool CBaseFlex::StartSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CCh
 
 	return false;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Remove expression
@@ -823,57 +839,14 @@ bool CBaseFlex::CheckSceneEvent( float currenttime, CChoreoScene *scene, CChoreo
 	return true;
 }
 
-
-
 bool CBaseFlex::CheckSceneEventCompletion( CSceneEventInfo *info, float currenttime, CChoreoScene *scene, CChoreoEvent *event )
 {
 	switch ( event->GetType() )
 	{
 	case CChoreoEvent::MOVETO:
 		{
-			CAI_BaseNPC *npc = MyNPCPointer( );
 
-			if (npc)
-			{
-				// check movement, check arrival
-				if (npc->GetNavigator()->IsGoalActive())
-				{
-					const Task_t *pCurTask = npc->GetTask();
-					if ( pCurTask && (pCurTask->iTask == TASK_PLAY_SCENE || pCurTask->iTask == TASK_WAIT_FOR_MOVEMENT ) )
-					{
-						float preload = event->GetEndTime() - currenttime;
-						if (preload < 0)
-						{
-							//Msg("%.1f: no preload\n", currenttime );
-							return false;
-						}
-						float t = npc->GetTimeToNavGoal();
-
-						// Msg("%.1f: preload (%s:%.1f) %.1f %.1f\n", currenttime, event->GetName(), event->GetEndTime(), preload, t );
-
-						// FIXME: t is zero if no path can be built!
-
-						if (t > 0.0f && t <= preload)
-						{
-							return true;
-						}
-						return false;
-					}
-				}
-				else if (info->m_bHasArrived)
-				{
-					return true;
-				}
-				else if (info->m_bStarted && !npc->IsCurSchedule( SCHED_SCENE_GENERIC ))
-				{
-					// FIXME: There's still a hole in the logic is the save happens immediately after the SS steals the npc but before their AI has run again
-					Warning( "%s : %8.2f: waiting for actor %s to complete MOVETO but actor not in SCHED_SCENE_GENERIC\n", scene->GetFilename(), scene->GetTime(), event->GetActor()->GetName() );
-					// no longer in a scene :P
-					return true;
-				}
-				// still trying
-				return false;
-			}
+			
 		}
 		break;
 	default:
@@ -881,7 +854,6 @@ bool CBaseFlex::CheckSceneEventCompletion( CSceneEventInfo *info, float currentt
 	}
 	return true;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Default implementation
@@ -922,17 +894,8 @@ void CBaseFlex::ProcessSceneEvents( void )
 
 	if ( bHasForegroundEvents && scene_showunlock.GetBool())
 	{
-		CAI_BaseNPC *myNpc = MyNPCPointer( );
-		if ( myNpc && !(myNpc->GetState() == NPC_STATE_SCRIPT  || myNpc->IsCurSchedule( SCHED_SCENE_GENERIC )) )
-		{
-			Vector p0 = myNpc->GetHullMins();
-			Vector p1 = myNpc->GetHullMaxs();
-			p0.z = p1.z + 2;
-			p1.z = p1.z + 2;
-			NDebugOverlay::Box( myNpc->GetAbsOrigin(), p0, p1, 255, 0, 0, 0, 0.12 );
-		}
+		
 	}
-
 
 	// any needed layer priorites have now been reset
 	m_bUpdateLayerPriorities = false;
@@ -1197,8 +1160,8 @@ const void *CBaseFlex::FindSceneFile( const char *filename )
 	return pSceneFile;
 }
 
-ConVar	ai_expression_optimization( "ai_expression_optimization", "0", FCVAR_NONE, "Disable npc background expressions when you can't see them." );
-ConVar	ai_expression_frametime( "ai_expression_frametime", "0.05", FCVAR_NONE, "Maximum frametime to still play background expressions." );
+ConVar	ai_expression_optimization( side_registry(), "ai_expression_optimization", "0", FCVAR_NONE, "Disable npc background expressions when you can't see them." );
+ConVar	ai_expression_frametime( side_registry(), "ai_expression_frametime", "0.05", FCVAR_NONE, "Maximum frametime to still play background expressions." );
 
 //-----------------------------------------------------------------------------
 // Various methods to process facial SceneEvents:
@@ -1210,41 +1173,7 @@ bool CBaseFlex::ProcessFlexAnimationSceneEvent( CSceneEventInfo *info, CChoreoSc
 	if ( event->HasEndTime() )
 	{
 		// don't bother with flex animation if the player can't see you
-		CAI_BaseNPC *myNpc = MyNPCPointer( );
-		if (myNpc)
-		{
-			if (!myNpc->HasCondition( COND_IN_PVS ))
-				return true;
-
-			if (ai_expression_optimization.GetBool())
-			{
-				if (scene->IsBackground())
-				{
-					// if framerate too slow, disable
-					if (gpGlobals->frametime > ai_expression_frametime.GetFloat())
-					{
-						info->m_bHasArrived = true;
-						info->m_flNext = gpGlobals->curtime + RandomFloat( 0.7, 1.2 );
-					}
-					// only check occasionally
-					else if (info->m_flNext <= gpGlobals->curtime)
-					{
-						CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
-
-						// if not in view, disable
-						info->m_bHasArrived = (pPlayer && !pPlayer->FInViewCone( this ) );
-						info->m_flNext = gpGlobals->curtime + RandomFloat( 0.7, 1.2 );
-					}
-
-					if (info->m_bHasArrived)
-					{
-						// NDebugOverlay::Box( myNpc->GetAbsOrigin(), myNpc->GetHullMins(), myNpc->GetHullMaxs(), 255, 0, 0, 0, 0.22 );
-						return true;
-					}
-					// NDebugOverlay::Box( myNpc->GetAbsOrigin(), myNpc->GetHullMins(), myNpc->GetHullMaxs(), 0, 255, 0, 0, 0.22 );
-				}
-			}
-		}
+		
 
 		AddFlexAnimation( info );
 	}
@@ -1310,266 +1239,22 @@ bool CBaseFlex::ProcessFacingSceneEvent( CSceneEventInfo *info, CChoreoScene *sc
 		return true;
 	}
 
-	CAI_BaseNPC *myNpc = MyNPCPointer( );
-	if (myNpc)
-	{
-		if (info->m_bIsMoving != IsMoving())
-		{
-			info->m_flInitialYaw = GetLocalAngles().y;
-		}
-		info->m_bIsMoving = IsMoving();
-
-		// Msg("%f : %f - %f\n", scene->GetTime(), event->GetStartTime(), event->GetEndTime() );
-		// FIXME: why are the splines ill behaved at the end?
-		float intensity = event->GetIntensity( scene->GetTime() );
-		if (info->m_bIsMoving)
-		{
-			myNpc->AddFacingTarget( info->m_hTarget, intensity, 0.2 );
-		}
-		else
-		{
-			float goalYaw = myNpc->CalcIdealYaw( info->m_hTarget->EyePosition() );
-
-			float diff = UTIL_AngleDiff( goalYaw, info->m_flInitialYaw );
-
-			float idealYaw = UTIL_AngleMod( info->m_flInitialYaw + diff * intensity );
-
-			// Msg("yaw %.1f : %.1f (%.1f)\n", info->m_flInitialYaw, idealYaw, intensity );
-
-			myNpc->GetMotor()->SetIdealYawAndUpdate( idealYaw );
-		}
-
-		return true;
-	}
+	
 	return false;
-}
-
-static Activity DetermineExpressionMoveActivity( CChoreoEvent *event, CAI_BaseNPC *pNPC )
-{
-	Activity activity = ACT_WALK;
-	const char *sParam2 = event->GetParameters2();
-	if ( !sParam2 || !sParam2[0] )
-		return activity;
-
-	// Custom distance styles are appended to param2 with a space as a separator
-	const char *pszAct = V_strstr( sParam2, " " );
-	if ( pszAct )
-	{
-		char szActName[256];
-		V_strncpy( szActName, sParam2, sizeof(szActName) );
-		szActName[ (pszAct-sParam2) ] = '\0';
-		pszAct = szActName;
-	}
-	else
-	{
-		pszAct = sParam2;
-	}
-
-	if ( !V_stricmp( pszAct, "Walk" ) )
-	{
-		activity = ACT_WALK;
-	}
-	else if ( !V_stricmp( pszAct, "Run" ) )
-	{
-		activity = ACT_RUN;
-	}
-	else if ( !V_stricmp( pszAct, "CrouchWalk" ) )
-	{
-		activity = ACT_WALK_CROUCH;
-	}
-	else
-	{
-		// Try and resolve the activity name
-		activity = (Activity)ActivityList_IndexForName( pszAct );
-		if ( activity == ACT_INVALID )
-		{
-			// Assume it's a sequence name
-			pNPC->m_iszSceneCustomMoveSeq = AllocPooledString( pszAct );
-			activity = ACT_SCRIPT_CUSTOM_MOVE;
-		}
-	}
-
-	return activity;
 }
 
 bool CBaseFlex::ProcessMoveToSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event )
 {
-	// make sure target exists
-	if (info->m_hTarget == nullptr)
-		return false;
-
-	// FIXME: move to CBaseActor or BaseNPC
-	CAI_BaseNPC *myNpc = MyNPCPointer( );
-	if (!myNpc)
-		return false;
-
-	CVProfScope _( "CBaseFlex::ProcessMoveToSceneEvent", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
-
-	// make sure we're still able to play this command
-	if (!EnterSceneSequence( scene, event, true ))
-	{
-		return false;
-	}
-
-	// lock in place if aiming at self
-	if (info->m_hTarget == this)
-	{
-		return true;
-	}
-
-	// If we're in a vehicle, make us exit and *then* begin the run
-	if ( myNpc->IsInAVehicle() )
-	{
-		// Make us exit and wait
-		myNpc->ExitVehicle();
-		return false;
-	}
-
-	const Task_t *pCurTask = myNpc->GetTask();
-	if (!info->m_bIsMoving && (!IsMoving() || pCurTask->iTask == TASK_STOP_MOVING) )
-	{
-		if ( pCurTask && (pCurTask->iTask == TASK_PLAY_SCENE || pCurTask->iTask == TASK_WAIT_FOR_MOVEMENT || pCurTask->iTask == TASK_STOP_MOVING ) )
-		{
-			Activity moveActivity = DetermineExpressionMoveActivity( event, myNpc );
-			// AI_NavGoal_t goal( info->m_hTarget->EyePosition(), moveActivity, AIN_HULL_TOLERANCE );
-			myNpc->SetTarget( info->m_hTarget );
-
-			float flDistTolerance;
-			flDistTolerance = myNpc->GetHullWidth() / 2.0;
-			// flDistTolerance = AIN_HULL_TOLERANCE;
-
-			if (event->m_bForceShortMovement)
-			{
-				flDistTolerance = 0.1f;
-			}
-
-			AI_NavGoal_t goal( GOALTYPE_TARGETENT, moveActivity, flDistTolerance, AIN_UPDATE_TARGET_POS );
-
-			float flDist = (info->m_hTarget->EyePosition() - GetAbsOrigin()).Length2D();
-
-			if (flDist > std::max( std::max( flDistTolerance, 0.1f ), event->GetDistanceToTarget()))
-			{
-				// Msg("flDist %.1f\n", flDist );
-				int result = false;
-
-				if ( !myNpc->IsUnreachable( info->m_hTarget ) )
-				{
-					result = myNpc->GetNavigator()->SetGoal( goal, AIN_CLEAR_TARGET );
-					if ( !result )
-					{
-						myNpc->RememberUnreachable( info->m_hTarget, 1.5 );
-					}
-				}
-
-				if (result)
-				{
-					myNpc->GetNavigator()->SetMovementActivity( moveActivity );
-					myNpc->GetNavigator()->SetArrivalDistance( event->GetDistanceToTarget() );
-					info->m_bIsMoving = true;
-				}
-				else
-				{
-					// need route build failure case
-					// Msg("actor %s unable to build route\n", STRING( myNpc->GetEntityName() ) );
-					// Assert(0);
-
-					if (developer.GetInt() > 0 && scene_showmoveto.GetBool())
-					{
-						Vector vTestPoint;
-						myNpc->GetMoveProbe()->FloorPoint( info->m_hTarget->EyePosition(), myNpc->GetAITraceMask(), 0, -64, &vTestPoint );
-						NDebugOverlay::HorzArrow( GetAbsOrigin() + Vector( 0, 0, 1 ), vTestPoint + Vector( 0, 0, 1 ), 4, 255, 0, 255, 0, false, 0.12 );
-						NDebugOverlay::Box( vTestPoint, myNpc->GetHullMins(), myNpc->GetHullMaxs(), 255, 0, 255, 0, 0.12 );
-					}
-				}
-			}
-			else
-			{
-				info->m_bHasArrived = true;
-			}
-		}
-	}
-	else if (IsMoving())
-	{
-		// float flDist = (myNpc->GetNavigator()->GetGoalPos() - GetAbsOrigin()).Length2D();
-		float flDist = (info->m_hTarget->EyePosition() - GetAbsOrigin()).Length2D();
-
-		if (flDist <= event->GetDistanceToTarget())
-		{
-			myNpc->GetNavigator()->StopMoving( false );		// Stop moving
-			info->m_bHasArrived = true;
-		}
-	}
-	else
-	{
-		info->m_bIsMoving = false;
-	}
-
-	// show movement target
-	if (developer.GetInt() > 0 && scene_showmoveto.GetBool() && IsMoving())
-	{
-		Vector vecStart, vTestPoint;
-		vecStart = myNpc->GetNavigator()->GetGoalPos();
-
-		myNpc->GetMoveProbe()->FloorPoint( vecStart, myNpc->GetAITraceMask(), 0, -64, &vTestPoint );
-
-		int r, g, b;
-		r = b = g = 0;
-		if ( myNpc->GetNavigator()->CanFitAtPosition( vTestPoint, myNpc->GetAITraceMask() ) )
-		{
-			if ( myNpc->GetMoveProbe()->CheckStandPosition( vTestPoint, myNpc->GetAITraceMask() ) )
-			{
-				if (event->IsResumeCondition())
-				{
-					g = 255;
-				}
-				else
-				{
-					r = 255; g = 255;
-				}
-			}
-			else
-			{
-				b = 255; g = 255;
-			}
-		}
-		else
-		{
-			r = 255;
-		}
-
-		NDebugOverlay::HorzArrow( GetAbsOrigin() + Vector( 0, 0, 1 ), vTestPoint + Vector( 0, 0, 1 ), 4, r, g, b, 0, false, 0.12 );
-		NDebugOverlay::Box( vTestPoint, myNpc->GetHullMins(), myNpc->GetHullMaxs(), r, g, b, 0, 0.12 );
-	}
-
-	// handled in task
-	return true;
+	// Moving to a target is what NPCs did; nothing here moves on its own.
+	return false;
 }
 
 bool CBaseFlex::ProcessLookAtSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event )
 {
 	CVProfScope _( "CBaseFlex::ProcessLookAtSceneEvent", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
-	CAI_BaseNPC *myNpc = MyNPCPointer( );
-	if (myNpc && info->m_hTarget != nullptr)
-	{
-		float intensity = event->GetIntensity( scene->GetTime() );
-
-		// clamp in-ramp to 0.3 seconds
-		float flDuration = scene->GetTime() - event->GetStartTime();
-		float flMaxIntensity = flDuration < 0.3f ? SimpleSpline( flDuration / 0.3f ) : 1.0f;
-		intensity = clamp( intensity, 0.0f, flMaxIntensity );
-
-		myNpc->AddLookTarget( info->m_hTarget, intensity, 0.1 );
-		if (developer.GetInt() > 0 && scene_showlook.GetBool() && info->m_hTarget)
-		{
-			Vector tmp = info->m_hTarget->EyePosition() - myNpc->EyePosition();
-			VectorNormalize( tmp );
-			Vector p0 = myNpc->EyePosition();
-			NDebugOverlay::VertArrow( p0, p0 + tmp * (4 + 16 * intensity ), 4, 255, 255, 255, 0, true, 0.12 );
-		}
-	}
+	
 	return true;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -1628,7 +1313,6 @@ bool CBaseFlex::IsRunningSceneMoveToEvent()
 	return false;
 }
 
-
 flexsetting_t const *CBaseFlex::FindNamedSetting( flexsettinghdr_t const *pSettinghdr, const char *expr )
 {
 	int i;
@@ -1664,9 +1348,7 @@ void CBaseFlex::AddFlexAnimation( CSceneEventInfo *info )
 		return;
 
 	// don't bother with flex animation if the player can't see you
-	CAI_BaseNPC *myNpc = MyNPCPointer( );
-	if (myNpc && !myNpc->HasCondition( COND_IN_PVS ))
-		return;
+	
 
 	CChoreoEvent *event = info->m_pEvent;
 	if ( !event )
@@ -1693,27 +1375,19 @@ void CBaseFlex::AddFlexAnimation( CSceneEventInfo *info )
 
 				track->SetFlexControllerIndex( FindFlexController( name ), 0, 0 );
 
-				if ( CAI_BaseActor::IsServerSideFlexController( name ) )
-				{
-					track->SetServerSide( true );
-				}
 
 				V_strncpy( name, "left_" ,sizeof(name));
 				V_strncat( name, track->GetFlexControllerName(),sizeof(name), COPY_ALL_CHARACTERS );
 
 				track->SetFlexControllerIndex( FindFlexController( name ), 0, 1 );
 
-				if ( CAI_BaseActor::IsServerSideFlexController( name ) )
-				{
-					track->SetServerSide( true );
-				}
 			}
 			else
 			{
 				track->SetFlexControllerIndex( FindFlexController( (char *)track->GetFlexControllerName() ), 0 );
 
 				// Only non-combo tracks can be server side
-				track->SetServerSide( CAI_BaseActor::IsServerSideFlexController( track->GetFlexControllerName() ) );
+				track->SetServerSide( false );
 			}
 		}
 
@@ -1825,10 +1499,6 @@ void CBaseFlex::AddFlexSetting( const char *expr, float scale,
 	}
 }
 
-
-
-
-
 //-----------------------------------------------------------------------------
 // Purpose:
 // Input  : *actor -
@@ -1901,9 +1571,6 @@ bool CBaseFlex::ProcessGestureSceneEvent( CSceneEventInfo *info, CChoreoScene *s
 	return true;
 }
 
-
-
-
 //-----------------------------------------------------------------------------
 // Purpose:
 // Input  : *actor -
@@ -1931,18 +1598,9 @@ bool CBaseFlex::ProcessSequenceSceneEvent( CSceneEventInfo *info, CChoreoScene *
 		if (bNewlyAllocated)
 			flWeight = 0.0;
 
-
 		// fade out/in if npc is moving
 		bool bFadeOut = IsMoving();
-		CAI_BaseNPC *myNpc = MyNPCPointer( );
-		if (myNpc && !(myNpc->IsCurSchedule( SCHED_SCENE_GENERIC ) || myNpc->GetActivity() == ACT_IDLE_ANGRY || myNpc->GetActivity() == ACT_IDLE) )
-		{
-			bFadeOut = true;
-			if (info->m_flWeight == 1.0)
-			{
-				Warning( "%s playing CChoreoEvent::SEQUENCE but AI has forced them to do something different\n", STRING(GetEntityName()) );
-			}
-		}
+		
 
 		if (bFadeOut)
 		{
@@ -1966,10 +1624,7 @@ bool CBaseFlex::ProcessSequenceSceneEvent( CSceneEventInfo *info, CChoreoScene *
 			SetLayerCycle( info->m_iLayer, flCycle );
 		}
 
-		if (myNpc)
-		{
-			myNpc->AddSceneLock( 0.2 );
-		}
+		
 
 		// update layer priority
 		if (m_bUpdateLayerPriorities)
@@ -1982,7 +1637,6 @@ bool CBaseFlex::ProcessSequenceSceneEvent( CSceneEventInfo *info, CChoreoScene *
 	return true;
 
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns true if the actor is not currently in a scene OR if the actor
@@ -2045,7 +1699,6 @@ float CBaseFlex::PlayAutoGeneratedSoundScene( const char *soundname )
 	return InstancedAutoGeneratedSoundScene( this, soundname );
 }
 
-
 //--------------------------------------------------------------------------------------------------
 // Returns the script instance of the scene entity associated with our oldest ("top level") scene event
 //--------------------------------------------------------------------------------------------------
@@ -2078,51 +1731,21 @@ HSCRIPT CBaseFlex::ScriptGetSceneByIndex( int index )
 	}
 }
 
-
 // FIXME: move to CBaseActor
 bool CBaseFlex::EnterSceneSequence( CChoreoScene *scene, CChoreoEvent *event, bool bRestart )
 {
-	CAI_BaseNPC *myNpc = MyNPCPointer( );
 
-	if (!myNpc)
-		return false;
+	return false;
 
 	// 2 seconds past current event, or 0.2 seconds past end of scene, whichever is shorter
 	float flDuration = std::min( 2.0, std::min( event->GetEndTime() - scene->GetTime() + 2.0, scene->FindStopTime() - scene->GetTime() + 0.2 ) );
 
-	if (myNpc->IsCurSchedule( SCHED_SCENE_GENERIC ))
-	{
-		myNpc->AddSceneLock( flDuration );
-		return true;
-	}
+	
 
 	// for now, don't interrupt sequences that don't understand being interrupted
-	if (myNpc->GetCurSchedule())
-	{
-		CAI_ScheduleBits testBits;
-		myNpc->GetCurSchedule()->GetInterruptMask( &testBits );
+	
 
-		testBits.reset( COND_PROVOKED );
-
-		if (testBits.none())
-		{
-			return false;
-		}
-	}
-
-	if (myNpc->IsInterruptable())
-	{
-		if (myNpc->m_hCine)
-		{
-			// Assert( !(myNpc->GetFlags() & FL_FLY ) );
-			myNpc->ExitScriptedSequence( );
-		}
-
-		myNpc->OnStartScene();
-		myNpc->SetSchedule( SCHED_SCENE_GENERIC );
-		myNpc->AddSceneLock( flDuration );
-		return true;
-	}
+	
 
 	return false;
 }
@@ -2131,7 +1754,6 @@ bool CBaseFlex::ExitSceneSequence( void )
 {
 	return true;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: keep track of last valid flex animation time and returns if the current info should play theirs
@@ -2150,7 +1772,6 @@ bool CBaseFlex::IsSuppressedFlexAnimation( CSceneEventInfo *info )
 	return false;
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Clear out body lean states that are invalidated with Teleport
 //-----------------------------------------------------------------------------
@@ -2167,7 +1788,6 @@ void CBaseFlex::Teleport_Impl( const Vector *newPosition, const QAngle *newAngle
 void CBaseFlex::DoBodyLean( void )
 {
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: initialize weight for background events
@@ -2207,10 +1827,8 @@ IMPLEMENT_REFLECT_DATAMAP( CFlexCycler )
 
 LINK_ENTITY_TO_CLASS( cycler_flex, CGenericFlexCycler );
 
-
-
-ConVar	flex_expression( "flex_expression","-" );
-ConVar	flex_talk( "flex_talk","0" );
+ConVar	flex_expression( side_registry(), "flex_expression","-" );
+ConVar	flex_talk( side_registry(), "flex_talk","0" );
 
 // Cycler member functions
 
@@ -2264,12 +1882,11 @@ void CFlexCycler::Spawn_Impl( )
 	m_flPlaybackRate	= 1.0f;
 	m_flGroundSpeed		= 0;
 
-
 	SetNextThink( gpGlobals->curtime + 1.0f );
 
 	ResetSequenceInfo( );
 
-	m_flCycle = random->RandomFloat( 0, 1.0 );
+	m_flCycle = random_valve->RandomFloat( 0, 1.0 );
 }
 
 const char *predef_flexcontroller_names[] = {
@@ -2332,10 +1949,9 @@ int CFlexCycler::OnTakeDamage_Impl( const CTakeDamageInfo &info )
 	return 0;
 }
 
-
 void CFlexCycler::SetFlexTarget( LocalFlexController_t flexnum )
 {
-	m_flextarget[flexnum] = random->RandomFloat( 0.5, 1.0 );
+	m_flextarget[flexnum] = random_valve->RandomFloat( 0.5, 1.0 );
 
 	const char *pszType = GetFlexControllerType( flexnum );
 
@@ -2363,7 +1979,6 @@ void CFlexCycler::SetFlexTarget( LocalFlexController_t flexnum )
 	}
 }
 
-
 LocalFlexController_t CFlexCycler::LookupFlex( const char *szTarget  )
 {
 	for (LocalFlexController_t i = LocalFlexController_t(0); i < GetNumFlexControllers(); i++)
@@ -2376,7 +1991,6 @@ LocalFlexController_t CFlexCycler::LookupFlex( const char *szTarget  )
 	}
 	return LocalFlexController_t(-1);
 }
-
 
 void CFlexCycler::Think_Impl( void )
 {
@@ -2494,8 +2108,8 @@ void CFlexCycler::Think_Impl( void )
 		else if (m_flextime < gpGlobals->curtime)
 		{
 			// m_flextime = gpGlobals->curtime + 1.0; // RandomFloat( 0.1, 0.5 );
-			m_flextime = gpGlobals->curtime + random->RandomFloat( 0.3, 0.5 ) * (30.0 / GetNumFlexControllers());
-			m_flexnum = (LocalFlexController_t)random->RandomInt( 0, GetNumFlexControllers() - 1 );
+			m_flextime = gpGlobals->curtime + random_valve->RandomFloat( 0.3, 0.5 ) * (30.0 / GetNumFlexControllers());
+			m_flexnum = (LocalFlexController_t)random_valve->RandomInt( 0, GetNumFlexControllers() - 1 );
 
 			// m_flexnum = (pflex->num + 1) % r_psubmodel->numflexes;
 
@@ -2522,7 +2136,7 @@ void CFlexCycler::Think_Impl( void )
 
 			if (weight != m_flextarget[i])
 			{
-				weight = weight + (m_flextarget[i] - weight) / random->RandomFloat( 2.0, 4.0 );
+				weight = weight + (m_flextarget[i] - weight) / random_valve->RandomFloat( 2.0, 4.0 );
 			}
 			weight = clamp( weight, 0.0f, 1.0f );
 			SetFlexWeight( i, weight );
@@ -2562,10 +2176,9 @@ void CFlexCycler::Think_Impl( void )
 		if (m_blinktime < gpGlobals->curtime)
 		{
 			Blink();
-			m_blinktime = gpGlobals->curtime + random->RandomFloat( 1.5, 4.5 );
+			m_blinktime = gpGlobals->curtime + random_valve->RandomFloat( 1.5, 4.5 );
 		}
 	}
-
 
 	Vector forward, right, up;
 	GetVectors( &forward, &right, &up );
@@ -2576,14 +2189,14 @@ void CFlexCycler::Think_Impl( void )
 		if (pPlayer->GetSmoothedVelocity().Length() != 0 && DotProduct( forward, pPlayer->EyePosition() - EyePosition()) > 0.5)
 		{
 			m_lookTarget = pPlayer->EyePosition();
-			m_looktime = gpGlobals->curtime + random->RandomFloat(2.0,4.0);
+			m_looktime = gpGlobals->curtime + random_valve->RandomFloat(2.0,4.0);
 		}
 		else if (m_looktime < gpGlobals->curtime)
 		{
-			if ((!m_istalking) && random->RandomInt( 0, 1 ) == 0)
+			if ((!m_istalking) && random_valve->RandomInt( 0, 1 ) == 0)
 			{
-				m_lookTarget = EyePosition() + forward * 128 + right * random->RandomFloat(-64,64) + up * random->RandomFloat(-32,32);
-				m_looktime = gpGlobals->curtime + random->RandomFloat(0.3,1.0);
+				m_lookTarget = EyePosition() + forward * 128 + right * random_valve->RandomFloat(-64,64) + up * random_valve->RandomFloat(-32,32);
+				m_looktime = gpGlobals->curtime + random_valve->RandomFloat(0.3,1.0);
 
 				if (m_blinktime - 0.5 < gpGlobals->curtime)
 				{
@@ -2593,10 +2206,9 @@ void CFlexCycler::Think_Impl( void )
 			else
 			{
 				m_lookTarget = pPlayer->EyePosition();
-				m_looktime = gpGlobals->curtime + random->RandomFloat(1.0,4.0);
+				m_looktime = gpGlobals->curtime + random_valve->RandomFloat(1.0,4.0);
 			}
 		}
-
 
 		SetViewtarget( m_lookTarget );
 	}
@@ -2606,8 +2218,3470 @@ void CFlexCycler::Think_Impl( void )
 	// AddSceneSceneEvents();
 }
 
-
 void CFlexCycler::ProcessSceneEvents( void )
 {
 	// Don't do anything since we handle facial stuff in Think()
 }
+
+//-----------------------------------------------------------------------------
+// For toggling blinking
+//-----------------------------------------------------------------------------
+void CBaseFlex::Blink()
+{
+	m_blinktoggle = !m_blinktoggle;
+}
+
+//-----------------------------------------------------------------------------
+// Do we have active expressions?
+//-----------------------------------------------------------------------------
+bool CBaseFlex::HasSceneEvents() const
+{
+	return !m_SceneEvents.empty();
+}
+
+//-----------------------------------------------------------------------------
+// Other inlines
+//-----------------------------------------------------------------------------
+const Vector &CBaseFlex::GetViewtarget( ) const
+{
+	return m_viewtarget.Get();	// bah
+}
+
+void CBaseFlex::SetFlexWeight( char *szName, float value )
+{
+	SetFlexWeight( FindFlexController( szName ), value );
+}
+
+float CBaseFlex::GetFlexWeight( char *szName )
+{
+	return GetFlexWeight( FindFlexController( szName ) );
+}
+
+KS_ENTITY_ABSTRACT_KIND( CFlexCycler )
+
+class CBaseCombatCharacter;
+class CBaseEntity;
+class CBaseGrenade;
+class CBasePlayer;
+class CTakeDamageInfo;
+
+using namespace ::ks::reflect;
+
+extern int	g_sModelIndexFireball;		// (in combatweapon.cpp) holds the index for the fireball 
+extern int	g_sModelIndexWExplosion;	// (in combatweapon.cpp) holds the index for the underwater explosion
+extern int	g_sModelIndexSmoke;			// (in combatweapon.cpp) holds the index for the smoke cloud
+extern ConVar    sk_plr_dmg_grenade;
+
+// Global Savedata for friction modifier
+IMPLEMENT_REFLECT_DATAMAP( CBaseGrenade )
+
+void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const void *pStruct, const void *pVarData, DVariant *pOut, int iElement, int objectID);
+
+IMPLEMENT_NETWORKCLASS_ALIASED( BaseGrenade, DT_BaseGrenade )
+
+IMPLEMENT_REFLECT_TABLE( CBaseGrenade, DT_BaseGrenade );
+
+LINK_ENTITY_TO_CLASS_ALIASED( grenade, BaseGrenade );
+
+// Grenades flagged with this will be triggered when the owner calls detonateSatchelCharges
+static constexpr auto SF_DETONATE = 0x0001;
+
+static constexpr auto MAX_WATER_SURFACE_DISTANCE = 512;
+
+// UNDONE: temporary scorching for PreAlpha - find a less sleazy permenant solution.
+void CBaseGrenade::Explode( trace_t *pTrace, int bitsDamageType )
+{
+	
+	SetModelName( NULL_STRING );//invisible
+	AddSolidFlags( FSOLID_NOT_SOLID );
+
+	m_takedamage = DAMAGE_NO;
+
+	// Pull out of the wall a bit
+	if ( pTrace->fraction != 1.0 )
+	{
+		SetAbsOrigin( pTrace->endpos + (pTrace->plane.normal * 0.6) );
+	}
+
+	Vector vecAbsOrigin = GetAbsOrigin();
+	int contents = UTIL_PointContents ( vecAbsOrigin, MASK_ALL );
+
+	// Try using the new particle system instead of temp ents
+	surfacedata_t *pSurfaceData = physprops->GetSurfaceData( pTrace->surface.surfaceProps );
+	const char *pEffectName = GetParticleSystemName( contents, pSurfaceData );
+	if ( pEffectName != nullptr )
+	{
+		Vector vecParticleOrigin = vecAbsOrigin;
+
+		if ( contents & MASK_WATER )
+		{
+			// Find our water surface by tracing up till we're out of the water
+			trace_t tr;
+			Vector vecTrace( 0, 0, MAX_WATER_SURFACE_DISTANCE );
+			UTIL_TraceLine( vecParticleOrigin, vecParticleOrigin + vecTrace, MASK_WATER, nullptr, COLLISION_GROUP_NONE, &tr );
+
+			// If we didn't start in water, we're above it
+			if ( tr.startsolid == false )
+			{
+				// Look downward to find the surface
+				vecTrace.Init( 0, 0, -MAX_WATER_SURFACE_DISTANCE );
+				UTIL_TraceLine( vecParticleOrigin, vecParticleOrigin + vecTrace, MASK_WATER, nullptr, COLLISION_GROUP_NONE, &tr );
+
+				// If we hit it, setup the explosion
+				if ( tr.fraction < 1.0f )
+				{
+					vecParticleOrigin = tr.endpos;
+				}
+			}
+			else if ( tr.fractionleftsolid )
+			{
+				// Otherwise we came out of the water at this point
+				vecParticleOrigin = vecParticleOrigin + (vecTrace * tr.fractionleftsolid);
+			}
+		}
+
+		QAngle	vecAngles;
+		DispatchParticleEffect( pEffectName, vecParticleOrigin, vecAngles );
+	}
+	else
+	{
+		if ( pTrace->fraction != 1.0 )
+		{
+			Vector vecNormal = pTrace->plane.normal;
+			surfacedata_t *pdata = physprops->GetSurfaceData( pTrace->surface.surfaceProps );	
+			CPASFilter filter( vecAbsOrigin );
+
+			te->Explosion( filter, -1.0, // don't apply cl_interp delay
+				vecAbsOrigin,
+				!( contents & MASK_WATER ) ? g_sModelIndexFireball : g_sModelIndexWExplosion,
+				m_DmgRadius * .03, 
+				25,
+				TE_EXPLFLAG_NONE,
+				m_DmgRadius,
+				m_flDamage,
+				&vecNormal,
+				(char) pdata->game.material );
+		}
+		else
+		{
+			CPASFilter filter( vecAbsOrigin );
+			te->Explosion( filter, -1.0, // don't apply cl_interp delay
+				vecAbsOrigin, 
+				!( contents & MASK_WATER ) ? g_sModelIndexFireball : g_sModelIndexWExplosion,
+				m_DmgRadius * .03, 
+				25,
+				TE_EXPLFLAG_NONE,
+				m_DmgRadius,
+				m_flDamage );
+		}
+	}
+
+	CSoundEnt::InsertSound ( SOUND_COMBAT, GetAbsOrigin(), BASEGRENADE_EXPLOSION_VOLUME, 3.0 );
+
+	// Use the thrower's position as the reported position
+	Vector vecReported = m_hThrower ? m_hThrower->GetAbsOrigin() : vec3_origin;
+	
+	EmitSound( "BaseGrenade.Explode" );
+	CTakeDamageInfo info( this, m_hThrower, GetBlastForce(), GetAbsOrigin(), m_flDamage, bitsDamageType, 0, &vecReported );
+
+	RadiusDamage( info, GetAbsOrigin(), m_DmgRadius, CLASS_NONE, nullptr );
+
+	UTIL_DecalTrace( pTrace, "Scorch" );
+
+	SetThink( &CBaseGrenade::SUB_Remove );
+	SetTouch( nullptr );
+	SetSolid( SOLID_NONE );
+	
+	AddEffects( EF_NODRAW );
+	SetAbsVelocity( vec3_origin );
+
+	SetNextThink( gpGlobals->curtime );
+
+}
+
+void CBaseGrenade::Smoke( void )
+{
+	Vector vecAbsOrigin = GetAbsOrigin();
+	if ( UTIL_PointContents ( vecAbsOrigin, MASK_WATER ) & MASK_WATER )
+	{
+		UTIL_Bubbles( vecAbsOrigin - Vector( 64, 64, 64 ), vecAbsOrigin + Vector( 64, 64, 64 ), 100 );
+	}
+	else
+	{
+		CPVSFilter filter( vecAbsOrigin );
+
+		te->Smoke( filter, 0.0, 
+			&vecAbsOrigin, g_sModelIndexSmoke,
+			m_DmgRadius * 0.03,
+			24 );
+	}
+	SetThink ( &CBaseGrenade::SUB_Remove );
+	SetNextThink( gpGlobals->curtime );
+}
+
+void CBaseGrenade::Event_Killed_Impl( const CTakeDamageInfo &info )
+{
+	Detonate( );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBaseGrenade::Use_Impl( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	// Support player pickup
+	if ( useType == USE_TOGGLE )
+	{
+		CBasePlayer *pPlayer = ToBasePlayer( pActivator );
+		if ( pPlayer )
+		{
+			pPlayer->PickupObject( this );
+			return;
+		}
+	}
+
+	// Pass up so we still call any custom Use function
+	BaseClass::Use_Impl( pActivator, pCaller, useType, value );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Timed grenade, this think is called when time runs out.
+//-----------------------------------------------------------------------------
+void CBaseGrenade::DetonateUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	SetThink( &CBaseGrenade::Detonate );
+	SetNextThink( gpGlobals->curtime );
+}
+
+void CBaseGrenade::PreDetonate( void )
+{
+	CSoundEnt::InsertSound ( SOUND_DANGER, GetAbsOrigin(), 400, 1.5, this );
+
+	SetThink( &CBaseGrenade::Detonate );
+	SetNextThink( gpGlobals->curtime + 1.5 );
+}
+
+void CBaseGrenade::Detonate( void )
+{
+	trace_t		tr;
+	Vector		vecSpot;// trace starts here!
+
+	SetThink( nullptr );
+
+	vecSpot = GetAbsOrigin() + Vector ( 0 , 0 , 8 );
+	UTIL_TraceLine ( vecSpot, vecSpot + Vector ( 0, 0, -32 ), MASK_SHOT_HULL, this, COLLISION_GROUP_NONE, & tr);
+
+	if( tr.startsolid )
+	{
+		// Since we blindly moved the explosion origin vertically, we may have inadvertently moved the explosion into a solid,
+		// in which case nothing is going to be harmed by the grenade's explosion because all subsequent traces will startsolid.
+		// If this is the case, we do the downward trace again from the actual origin of the grenade. (sjb) 3/8/2007  (for ep2_outland_09)
+		UTIL_TraceLine( GetAbsOrigin(), GetAbsOrigin() + Vector( 0, 0, -32), MASK_SHOT_HULL, this, COLLISION_GROUP_NONE, &tr );
+	}
+
+	Explode( &tr, DMG_BLAST );
+
+	if ( GetShakeAmplitude() )
+	{
+		UTIL_ScreenShake( GetAbsOrigin(), GetShakeAmplitude(), 150.0, 1.0, GetShakeRadius(), SHAKE_START );
+	}
+}
+
+//
+// Contact grenade, explode when it touches something
+// 
+void CBaseGrenade::ExplodeTouch( CBaseEntity *pOther )
+{
+	trace_t		tr;
+	Vector		vecSpot;// trace starts here!
+
+	contract_assert( pOther );
+	if ( !pOther->IsSolid() )
+		return;
+
+	Vector velDir = GetAbsVelocity();
+	VectorNormalize( velDir );
+	vecSpot = GetAbsOrigin() - velDir * 32;
+	UTIL_TraceLine( vecSpot, vecSpot + velDir * 64, MASK_SOLID_BRUSHONLY, this, COLLISION_GROUP_NONE, &tr );
+
+	Explode( &tr, DMG_BLAST );
+}
+
+void CBaseGrenade::DangerSoundThink( void )
+{
+	if (!IsInWorld())
+	{
+		Remove( );
+		return;
+	}
+
+	CSoundEnt::InsertSound ( SOUND_DANGER, GetAbsOrigin() + GetAbsVelocity() * 0.5, GetAbsVelocity().Length( ), 0.2, this );
+
+	SetNextThink( gpGlobals->curtime + 0.2 );
+
+	if (GetWaterLevel() != WL_NotInWater)
+	{
+		SetAbsVelocity( GetAbsVelocity() * 0.5 );
+	}
+}
+
+void CBaseGrenade::BounceTouch( CBaseEntity *pOther )
+{
+	if ( pOther->IsSolidFlagSet(FSOLID_TRIGGER | FSOLID_VOLUME_CONTENTS) )
+		return;
+
+	// don't hit the guy that launched this grenade
+	if ( pOther == GetThrower() )
+		return;
+
+	// only do damage if we're moving fairly fast
+	if ( (pOther->m_takedamage != DAMAGE_NO) && (m_flNextAttack < gpGlobals->curtime && GetAbsVelocity().Length() > 100))
+	{
+		if (m_hThrower)
+		{
+			trace_t tr;
+			tr = CBaseEntity::GetTouchTrace( );
+			ClearMultiDamage( );
+			Vector forward;
+			AngleVectors( GetLocalAngles(), &forward, nullptr, nullptr );
+			CTakeDamageInfo info( this, m_hThrower, 1, DMG_CLUB );
+			CalculateMeleeDamageForce( &info, GetAbsVelocity(), GetAbsOrigin() );
+			pOther->DispatchTraceAttack( info, forward, &tr ); 
+			ApplyMultiDamage();
+		}
+		m_flNextAttack = gpGlobals->curtime + 1.0; // debounce
+	}
+
+	Vector vecTestVelocity;
+	// m_vecAngVelocity = Vector (300, 300, 300);
+
+	// this is my heuristic for modulating the grenade velocity because grenades dropped purely vertical
+	// or thrown very far tend to slow down too quickly for me to always catch just by testing velocity. 
+	// trimming the Z velocity a bit seems to help quite a bit.
+	vecTestVelocity = GetAbsVelocity(); 
+	vecTestVelocity.z *= 0.45;
+
+	if ( !m_bHasWarnedAI && vecTestVelocity.Length() <= 60 )
+	{
+		// grenade is moving really slow. It's probably very close to where it will ultimately stop moving. 
+		// emit the danger sound.
+		
+		// register a radius louder than the explosion, so we make sure everyone gets out of the way
+		CSoundEnt::InsertSound ( SOUND_DANGER, GetAbsOrigin(), m_flDamage / 0.4, 0.3, this );
+		m_bHasWarnedAI = true;
+	}
+
+	if (GetFlags() & FL_ONGROUND)
+	{
+		// add a bit of static friction
+//		SetAbsVelocity( GetAbsVelocity() * 0.8 );
+
+		// SetSequence( random->RandomInt( 1, 1 ) ); // FIXME: missing tumble animations
+	}
+	else
+	{
+		// play bounce sound
+		BounceSound();
+	}
+	m_flPlaybackRate = GetAbsVelocity().Length() / 200.0;
+	if (GetPlaybackRate() > 1.0)
+		m_flPlaybackRate = 1;
+	else if (GetPlaybackRate() < 0.5)
+		m_flPlaybackRate = 0;
+
+}
+
+void CBaseGrenade::SlideTouch( CBaseEntity *pOther )
+{
+	// don't hit the guy that launched this grenade
+	if ( pOther == GetThrower() )
+		return;
+
+	// m_vecAngVelocity = Vector (300, 300, 300);
+
+	if (GetFlags() & FL_ONGROUND)
+	{
+		// add a bit of static friction
+//		SetAbsVelocity( GetAbsVelocity() * 0.95 );  
+
+		if (GetAbsVelocity().x != 0 || GetAbsVelocity().y != 0)
+		{
+			// maintain sliding sound
+		}
+	}
+	else
+	{
+		BounceSound();
+	}
+}
+
+void CBaseGrenade ::BounceSound( void )
+{
+	// Doesn't need to do anything anymore! Physics makes the sound.
+}
+
+void CBaseGrenade ::TumbleThink( void )
+{
+	if (!IsInWorld())
+	{
+		Remove( );
+		return;
+	}
+
+	StudioFrameAdvance( );
+	SetNextThink( gpGlobals->curtime + 0.1f );
+
+	//
+	// Emit a danger sound one second before exploding.
+	//
+	if (m_flDetonateTime - 1 < gpGlobals->curtime)
+	{
+		CSoundEnt::InsertSound ( SOUND_DANGER, GetAbsOrigin() + GetAbsVelocity() * (m_flDetonateTime - gpGlobals->curtime), 400, 0.1, this );
+	}
+
+	if (m_flDetonateTime <= gpGlobals->curtime)
+	{
+		SetThink( &CBaseGrenade::Detonate );
+	}
+
+	if (GetWaterLevel() != WL_NotInWater)
+	{
+		SetAbsVelocity( GetAbsVelocity() * 0.5 );
+		m_flPlaybackRate = 0.2;
+	}
+}
+
+void CBaseGrenade::Precache_Impl( void )
+{
+	BaseClass::Precache_Impl( );
+
+	PrecacheScriptSound( "BaseGrenade.Explode" );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : CBaseCombatCharacter
+//-----------------------------------------------------------------------------
+CBaseCombatCharacter *CBaseGrenade::GetThrower( void )
+{
+	CBaseCombatCharacter *pResult = ToBaseCombatCharacter( m_hThrower );
+	if ( !pResult && GetOwnerEntity() != nullptr )
+	{
+		pResult = ToBaseCombatCharacter( GetOwnerEntity() );
+	}
+	return pResult;
+}
+
+//-----------------------------------------------------------------------------
+
+void CBaseGrenade::SetThrower( CBaseCombatCharacter *pThrower )
+{
+	m_hThrower = pThrower;
+
+	// if this is the first thrower, set it as the original thrower
+	if ( nullptr == m_hOriginalThrower )
+	{
+		m_hOriginalThrower = pThrower;
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Destructor
+// Input  :
+// Output :
+//-----------------------------------------------------------------------------
+CBaseGrenade::~CBaseGrenade(void)
+{
+};
+
+//-----------------------------------------------------------------------------
+// Purpose: Constructor
+// Input  :
+// Output :
+//-----------------------------------------------------------------------------
+CBaseGrenade::CBaseGrenade(void)
+{
+	m_hThrower			= nullptr;
+	m_hOriginalThrower	= nullptr;
+	m_bIsLive			= false;
+	m_DmgRadius			= 100;
+	m_flDetonateTime	= 0;
+	m_bHasWarnedAI		= false;
+
+	SetSimulatedEveryTick( true );
+};
+
+class CAI_Expresser;
+class CBaseMultiplayerPlayer;
+class CBasePlayer;
+
+using namespace ::ks::reflect;
+
+ConVar sv_allchat(side_registry(), "sv_allchat", "1", FCVAR_NOTIFY, "Players can receive all other players' text chat, team restrictions apply");
+
+CBaseMultiplayerPlayer::CBaseMultiplayerPlayer()
+{
+	m_iCurrentConcept = MP_CONCEPT_NONE;
+	m_flLastForcedChangeTeamTime = -1;
+	m_iBalanceScore = 0;
+	m_flConnectionTime = gpGlobals->curtime;
+	m_pExpresser = nullptr;
+
+	// per life achievement counters
+	m_pAchievementKV = new KeyValues( "achievement_counts" );
+
+	m_flAreaCaptureScoreAccumulator = 0.0f;
+}
+
+CBaseMultiplayerPlayer::~CBaseMultiplayerPlayer()
+{
+	m_pAchievementKV->deleteThis();
+	delete m_pExpresser;
+}
+
+BEGIN_ENT_SCRIPTDESC( CBaseMultiplayerPlayer, CBasePlayer, "Player" )
+END_SCRIPTDESC();
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+CAI_Expresser *CBaseMultiplayerPlayer::CreateExpresser( void )
+{
+	m_pExpresser = new CMultiplayer_Expresser(this);
+	if ( !m_pExpresser)
+		return nullptr;
+
+	m_pExpresser->Connect(this);
+	return m_pExpresser;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void CBaseMultiplayerPlayer::PostConstructor_Impl( const char *szClassname )
+{
+	BaseClass::PostConstructor_Impl( szClassname );
+	CreateExpresser();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void CBaseMultiplayerPlayer::ModifyOrAppendCriteria_Impl( AI_CriteriaSet& criteriaSet )
+{
+	BaseClass::ModifyOrAppendCriteria_Impl( criteriaSet );
+
+	ModifyOrAppendPlayerCriteria( criteriaSet );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+bool CBaseMultiplayerPlayer::SpeakIfAllowed( AIConcept_t conc, SpeechPriorityType priority, const char *modifiers, char *pszOutResponseChosen, std::size_t bufsize, IRecipientFilter *filter )
+{
+	if ( !IsAlive() )
+		return false;
+
+	//if ( IsAllowedToSpeak( conc, bRespondingToPlayer ) )
+	return Speak( conc, modifiers, pszOutResponseChosen, bufsize, filter );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Fill out given response with the appropriate one for this concept
+//-----------------------------------------------------------------------------
+void CBaseMultiplayerPlayer::SpeakConcept( AI_Response &outResponse, int iConcept )
+{
+	m_iCurrentConcept = iConcept;
+	AIConcept_t conc( g_pszMPConcepts[iConcept] );
+	FindResponse( outResponse, conc );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+bool CBaseMultiplayerPlayer::SpeakConceptIfAllowed( int iConcept, const char *modifiers, char *pszOutResponseChosen, std::size_t bufsize, IRecipientFilter *filter )
+{
+	// Save the current concept.
+	m_iCurrentConcept = iConcept;
+	return SpeakIfAllowed( g_pszMPConcepts[iConcept], SPEECH_PRIORITY_NORMAL, modifiers, pszOutResponseChosen, bufsize, filter );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+bool CBaseMultiplayerPlayer::CanHearAndReadChatFrom( CBasePlayer *pPlayer )
+{
+	// can always hear the console unless we're ignoring every chat
+	if ( !pPlayer )
+		return m_iIgnoreGlobalChat != CHAT_IGNORE_EVERYTHING;
+
+	// check if we're ignoring all chat
+	if ( m_iIgnoreGlobalChat == CHAT_IGNORE_BROADCAST_AND_TEAM )
+		return false;
+
+	// check if we're ignoring all but teammates
+	if ( m_iIgnoreGlobalChat == CHAT_IGNORE_BROADCAST && g_pGameRules->PlayerRelationship( this, pPlayer ) != GR_TEAMMATE )
+		return false;
+
+	// can't hear dead players if we're alive
+	if ( pPlayer->m_lifeState != LIFE_ALIVE && m_lifeState == LIFE_ALIVE )
+		return false;
+
+	return true;
+}
+
+bool CBaseMultiplayerPlayer::ClientCommand( const CCommand &args )
+{
+	const char *pcmd = args[0];
+
+	if ( FStrEq( pcmd, "ignoremsg" ) )
+	{
+		m_iIgnoreGlobalChat = (m_iIgnoreGlobalChat + 1) % 4;
+		switch( m_iIgnoreGlobalChat )
+		{
+		case CHAT_IGNORE_NONE:
+			ClientPrint( this, HUD_PRINTTALK, "#Accept_All_Messages" );
+			break;
+		case CHAT_IGNORE_BROADCAST:
+			ClientPrint( this, HUD_PRINTTALK, "#Ignore_Broadcast_Messages" );
+			break;
+		case CHAT_IGNORE_BROADCAST_AND_TEAM:
+			ClientPrint( this, HUD_PRINTTALK, "#Ignore_Broadcast_Team_Messages" );
+			break;
+		case CHAT_IGNORE_EVERYTHING:
+			ClientPrint( this, HUD_PRINTTALK, "#Ignore_All_Messages" );
+			break;
+		default:
+			break;
+		}
+		return true;
+	}
+
+	return BaseClass::ClientCommand( args );
+}
+
+bool CBaseMultiplayerPlayer::ShouldShowVoiceSubtitleToEnemy( void )
+{
+	return false;
+}
+
+//-----------------------------------------------------------------------------
+// calculate a score for this player. higher is more likely to be switched
+//-----------------------------------------------------------------------------
+int	CBaseMultiplayerPlayer::CalculateTeamBalanceScore( void )
+{
+	// base score is 0 - ( seconds on server )
+	float flTimeConnected = gpGlobals->curtime - m_flConnectionTime;
+	int iScore = 0 - (int)flTimeConnected;
+
+	// if we were switched recently, score us way down
+	float flLastSwitchedTime = GetLastForcedChangeTeamTime();
+	if ( flLastSwitchedTime > 0 && ( gpGlobals->curtime - flLastSwitchedTime ) < 300 )
+	{
+		iScore -= 10000;
+	}
+	return iScore;
+}
+
+void CBaseMultiplayerPlayer::Spawn_Impl( void )
+{
+	ResetPerLifeCounters();
+
+	BaseClass::Spawn_Impl();
+}
+
+void CBaseMultiplayerPlayer::AwardAchievement( int iAchievement, int iCount )
+{
+	contract_assert( iAchievement >= 0 && iAchievement < 0xFFFF );		// must fit in short
+
+	CSingleUserRecipientFilter filter( this );
+
+	int userID = GetPlayerInfo()->GetUserID();
+
+	ks::net::CCSUsrMsg_AchievementEvent msg;
+	msg.achievement = iAchievement;
+	msg.count = iCount;
+	msg.user_id = userID;
+	SendUserMessage( filter, ks::net::CS_UM_AchievementEvent, msg );
+}
+
+int	CBaseMultiplayerPlayer::GetPerLifeCounterKV( const char *name )
+{
+	return m_pAchievementKV->GetInt( name, 0 );
+}
+
+void CBaseMultiplayerPlayer::SetPerLifeCounterKV( const char *name, int value )
+{
+	m_pAchievementKV->SetInt( name, value );
+}
+
+void CBaseMultiplayerPlayer::ResetPerLifeCounters( void )
+{
+	m_pAchievementKV->Clear();
+}
+
+inline constexpr const char *ESCORT_SCORE_CONTEXT = "AreaScoreContext";
+static constexpr auto ESCORT_SCORE_INTERVAL = 0.1;
+
+//-----------------------------------------------------------------------------
+// Purpose: think to accumulate and award points for escorting the train
+//-----------------------------------------------------------------------------
+void CBaseMultiplayerPlayer::EscortScoringThink( void )
+{
+	m_flAreaCaptureScoreAccumulator += ESCORT_SCORE_INTERVAL;
+
+	if ( m_flCapPointScoreRate > 0 )
+	{
+		float flTimeForOnePoint = 1.0f / m_flCapPointScoreRate;
+
+		int iPoints = 0;
+
+		while ( m_flAreaCaptureScoreAccumulator >= flTimeForOnePoint )
+		{
+			m_flAreaCaptureScoreAccumulator -= flTimeForOnePoint;
+			iPoints++;
+		}
+
+		if ( iPoints > 0 )
+		{
+			IGameEvent *event = gameeventmanager->CreateEvent( "player_escort_score" );
+			if ( event )
+			{
+				event->SetInt( "player", entindex() );
+				event->SetInt( "points", iPoints );
+				gameeventmanager->FireEvent( event, true /* only to server */ );
+			}
+		}
+	}
+
+	SetContextThink( &CBaseMultiplayerPlayer::EscortScoringThink, gpGlobals->curtime + ESCORT_SCORE_INTERVAL, ESCORT_SCORE_CONTEXT );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: We're escorting the train, start giving points
+//-----------------------------------------------------------------------------
+void CBaseMultiplayerPlayer::StartScoringEscortPoints( float flRate )
+{
+	contract_assert( flRate > 0.0f );
+	m_flCapPointScoreRate = flRate;
+	SetContextThink( &CBaseMultiplayerPlayer::EscortScoringThink, gpGlobals->curtime + ESCORT_SCORE_INTERVAL, ESCORT_SCORE_CONTEXT );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Stopped escorting the train
+//-----------------------------------------------------------------------------
+void CBaseMultiplayerPlayer::StopScoringEscortPoints( void )
+{
+	SetContextThink( nullptr, 0, ESCORT_SCORE_CONTEXT );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+bool CBaseMultiplayerPlayer::GetPlayerID( CPlayerId *pID ) const
+{
+	const CPlayerId *pClientID = engine->GetClientPlayerID( edict() );
+	if ( pClientID )
+	{
+		*pID = *pClientID;
+		return true;
+	}
+
+	return false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+uint64 CBaseMultiplayerPlayer::GetPlayerIDAsUInt64( void ) const
+{
+	CPlayerId playerIDForPlayer;
+	if ( GetPlayerID( &playerIDForPlayer ) )
+		return playerIDForPlayer.ConvertToUint64();
+	return 0;
+}
+
+void CBaseMultiplayerPlayer::Precache_Impl( void)
+{
+	PrecacheParticleSystem( "achieved" );
+
+	BaseClass::Precache_Impl();
+}
+
+class CBaseEntity;
+
+using namespace ::ks::reflect;
+
+IMPLEMENT_NETWORKCLASS_ALIASED( BaseParticleEntity, DT_BaseParticleEntity )
+
+IMPLEMENT_REFLECT_TABLE( CBaseParticleEntity, DT_BaseParticleEntity );
+
+CBaseParticleEntity::CBaseParticleEntity( void )
+{
+}
+
+CBaseParticleEntity::~CBaseParticleEntity( void )
+{
+}
+
+int CBaseParticleEntity::UpdateTransmitState_Impl( void )
+{
+	if ( IsEffectActive( EF_NODRAW ) )
+		return SetTransmitState( FL_EDICT_DONTSEND );
+
+	if ( IsEFlagSet( EFL_IN_SKYBOX ) )
+		return SetTransmitState( FL_EDICT_ALWAYS );
+
+	// cull against PVS
+	return SetTransmitState( FL_EDICT_PVSCHECK );
+}
+
+void CBaseParticleEntity::Activate_Impl()
+{
+	BaseClass::Activate_Impl();
+}	
+
+void CBaseParticleEntity::Think_Impl()
+{
+	Remove( );
+}
+
+void CBaseParticleEntity::FollowEntity(CBaseEntity *pEntity)
+{
+	BaseClass::FollowEntity( pEntity );
+	SetLocalOrigin( vec3_origin );
+}
+
+void CBaseParticleEntity::SetLifetime(float lifetime)
+{
+	if(lifetime == -1)
+		SetNextThink( TICK_NEVER_THINK );
+	else
+		SetNextThink( gpGlobals->curtime + lifetime );
+}
+
+KS_ENTITY_ABSTRACT_KIND( CBaseMultiplayerPlayer )
+
+KS_ENTITY_ABSTRACT_KIND( CBaseParticleEntity )
+
+class CBaseCombatWeapon;
+class CBaseEntity;
+class CBasePlayer;
+class CBaseViewModel;
+class CCSPlayer;
+class CRecipientFilter;
+class CUserCmd;
+class CWeaponCSBase;
+struct fogparams_t;
+
+using namespace ::ks::reflect;
+
+// Purpose: Implements shared baseplayer class functionality
+
+	extern int TrainSpeed(int iSpeed, int iMax);
+	
+//----------------------------------------------------
+// Player Physics Shadow
+//----------------------------------------------------
+static constexpr auto VPHYS_MAX_DISTANCE = 2.0;
+static constexpr auto VPHYS_MAX_VEL = 10;
+inline constexpr auto VPHYS_MAX_DISTSQR = (VPHYS_MAX_DISTANCE*VPHYS_MAX_DISTANCE);
+inline constexpr auto VPHYS_MAX_VELSQR = (VPHYS_MAX_VEL*VPHYS_MAX_VEL);
+
+ConVar sv_infinite_ammo( side_registry(), "sv_infinite_ammo", "0", FCVAR_RELEASE | FCVAR_REPLICATED, "Player's active weapon will never run out of ammo. If set to 2 then player has infinite total ammo but still has to reload the magazine." );
+
+ConVar view_punch_decay( side_registry(), "view_punch_decay", "18", FCVAR_RELEASE | FCVAR_CHEAT | FCVAR_REPLICATED, "Decay factor exponent for view punch" );
+ConVar view_recoil_tracking( side_registry(), "view_recoil_tracking", "0.45", FCVAR_RELEASE | FCVAR_CHEAT | FCVAR_REPLICATED, "How closely the view tracks with the aim punch from weapon recoil" );
+
+ConVar sv_footstep_sound_frequency( side_registry(), "sv_footstep_sound_frequency", "0.97", FCVAR_CHEAT | FCVAR_REPLICATED, "How frequent to hear the player's step sound or how fast they appear to be running from first person." );
+
+	static ConVar physicsshadowupdate_render( side_registry(), "physicsshadowupdate_render", "0" );
+
+	extern ConVar sv_pushaway_max_force;
+	extern ConVar sv_pushaway_force;
+	extern ConVar sv_turbophysics;
+
+	class CUsePushFilter : public CTraceFilterEntitiesOnly
+	{
+	public:
+		bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
+		{
+			CBaseEntity *pEntity = EntityFromEntityHandle( pHandleEntity );
+
+			// Static prop case...
+			if ( !pEntity )
+				return false;
+
+			// Only impact on physics objects
+			if ( !pEntity->VPhysicsGetObject() )
+				return false;
+
+			return g_pGameRules->CanEntityBeUsePushed( pEntity );
+		}
+	};
+
+extern ConVar sv_turbophysics;
+extern CMoveData *g_pMoveData;
+
+extern ConVar sv_coaching_enabled;
+
+bool UseHWMorphModels()
+{
+	return false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : float
+//-----------------------------------------------------------------------------
+float CBasePlayer::GetTimeBase( void ) const
+{
+	return m_nTickBase * TICK_INTERVAL;
+}
+
+float CBasePlayer::GetPlayerMaxSpeed()
+{
+	// player max speed is the lower limit of m_flMaxSpeed and sv_maxspeed
+	float fMaxSpeed = sv_maxspeed.GetFloat();
+	if ( MaxSpeed() > 0.0f && MaxSpeed() < fMaxSpeed )
+		fMaxSpeed = MaxSpeed();
+
+	return fMaxSpeed;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Called every usercmd by the player PreThink
+//-----------------------------------------------------------------------------
+void CBasePlayer::ItemPreFrame()
+{
+	// Handle use events
+	PlayerUse();
+
+	CBaseCombatWeapon *pActive = GetActiveWeapon();
+
+	// Allow all the holstered weapons to update
+	for ( int i = 0; i < WeaponCount(); ++i )
+	{
+		CBaseCombatWeapon *pWeapon = GetWeapon( i );
+
+		if ( pWeapon == nullptr )
+			continue;
+
+		if ( pActive == pWeapon )
+			continue;
+
+		pWeapon->ItemHolsterFrame();
+	}
+
+    if ( gpGlobals->curtime < m_flNextAttack )
+		return;
+
+	if (!pActive)
+		return;
+
+	pActive->ItemPreFrame();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : Returns true on success, false on failure.
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Called every usercmd by the player PostThink
+//-----------------------------------------------------------------------------
+extern ConVar sv_infinite_ammo;
+void CBasePlayer::ItemPostFrame()
+{
+	CVProfScope _( "CBasePlayer::ItemPostFrame", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+
+	// Put viewmodels into basically correct place based on new player origin
+	CalcViewModelView( EyePosition(), EyeAngles() );
+
+	// Don't process items while in a vehicle.
+	
+
+	// check if the player is using something
+	if ( m_hUseEntity != nullptr )
+	{
+		contract_assert( !nullptr );
+		ImpulseCommands();// this will call playerUse
+		return;
+	}
+
+    if ( gpGlobals->curtime < m_flNextAttack )
+	{
+		if ( GetActiveWeapon() )
+		{
+			GetActiveWeapon()->ItemBusyFrame();
+		}
+	}
+	else
+	{
+		if ( GetActiveWeapon() )
+		{
+
+			{
+				GetActiveWeapon()->ItemPostFrame( );
+			}
+		}
+	}
+
+	ImpulseCommands();
+
+	if( ( sv_infinite_ammo.GetInt() == 1 ) && (GetActiveWeapon() != nullptr) )
+	{
+		CBaseCombatWeapon *pWeapon = GetActiveWeapon();
+
+		pWeapon->m_iClip1 = pWeapon->GetMaxClip1();
+		pWeapon->m_iClip2 = pWeapon->GetMaxClip2();
+
+ 		if ( pWeapon->GetWpnData().iFlags & ITEM_FLAG_EXHAUSTIBLE )
+		{
+			int iPrimaryAmmoType = pWeapon->GetPrimaryAmmoType();
+			if ( iPrimaryAmmoType >= 0 )
+				SetAmmoCount( GetAmmoDef()->MaxCarry( iPrimaryAmmoType, this ), iPrimaryAmmoType );
+
+			int iSecondaryAmmoType = pWeapon->GetSecondaryAmmoType();
+			if ( iSecondaryAmmoType >= 0 )
+				SetAmmoCount( GetAmmoDef()->MaxCarry( iSecondaryAmmoType, this ), iSecondaryAmmoType );
+		}
+		else
+		{
+			pWeapon->SetReserveAmmoCount( AMMO_POSITION_PRIMARY, pWeapon->GetReserveAmmoMax( AMMO_POSITION_PRIMARY ), true );
+			pWeapon->SetReserveAmmoCount( AMMO_POSITION_SECONDARY, pWeapon->GetReserveAmmoMax( AMMO_POSITION_SECONDARY ), true );
+		}
+
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Eye angles
+//-----------------------------------------------------------------------------
+const QAngle &CBasePlayer::EyeAngles_Impl( )
+{
+	// NOTE: Viewangles are measured *relative* to the parent's coordinate system
+	CBaseEntity *pMoveParent = const_cast<CBasePlayer*>(this)->GetMoveParent();
+
+	if ( !pMoveParent )
+	{
+		// if in camera mode, use that
+		if ( GetViewEntity() != nullptr )
+		{
+			return GetViewEntity()->EyeAngles();
+		}
+		return pl.v_angle;
+	}
+
+	// FIXME: Cache off the angles?
+	matrix3x4_t eyesToParent, eyesToWorld;
+	AngleMatrix( pl.v_angle, eyesToParent );
+	ConcatTransforms( pMoveParent->EntityToWorldTransform(), eyesToParent, eyesToWorld );
+
+	static QAngle angEyeWorld;
+	MatrixAngles( eyesToWorld, angEyeWorld );
+	return angEyeWorld;
+}
+
+const QAngle &CBasePlayer::LocalEyeAngles_Impl()
+{
+	return pl.v_angle;
+}
+
+//-----------------------------------------------------------------------------
+// Actual Eye position + angles
+//-----------------------------------------------------------------------------
+Vector CBasePlayer::EyePosition_Impl( )
+{
+	{
+		// if in camera mode, use that
+		if ( GetViewEntity() != nullptr )
+		{
+			return GetViewEntity()->EyePosition();
+		}
+
+		return BaseClass::EyePosition_Impl();
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : 
+// Output : const Vector
+//-----------------------------------------------------------------------------
+const Vector CBasePlayer::GetPlayerMins( void ) const
+{
+	if ( IsObserver() )
+	{
+		return VEC_OBS_HULL_MIN;	
+	}
+	else
+	{
+		if ( GetFlags() & FL_DUCKING )
+		{
+			return VEC_DUCK_HULL_MIN;
+		}
+		else
+		{
+			return VEC_HULL_MIN;
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : 
+// Output : const Vector
+//-----------------------------------------------------------------------------
+const Vector CBasePlayer::GetPlayerMaxs( void ) const
+{	
+	if ( IsObserver() )
+	{
+		return VEC_OBS_HULL_MAX;	
+	}
+	else
+	{
+		if ( GetFlags() & FL_DUCKING )
+		{
+			return VEC_DUCK_HULL_MAX;
+		}
+		else
+		{
+			return VEC_HULL_MAX;
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBasePlayer::UpdateCollisionBounds( void )
+{
+	if ( GetFlags() & FL_DUCKING )
+	{
+		SetCollisionBounds( VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
+	}
+	else
+	{
+		SetCollisionBounds( VEC_HULL_MIN, VEC_HULL_MAX );
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Update the vehicle view, or simply return the cached position and angles
+
+
+//-----------------------------------------------------------------------------
+// Returns eye vectors
+//-----------------------------------------------------------------------------
+void CBasePlayer::EyeVectors( Vector *pForward, Vector *pRight, Vector *pUp )
+{
+	{
+		AngleVectors( EyeAngles(), pForward, pRight, pUp );
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Returns the eye position and angle vectors.
+//-----------------------------------------------------------------------------
+void CBasePlayer::EyePositionAndVectors( Vector *pPosition, Vector *pForward,
+										 Vector *pRight, Vector *pUp )
+{
+	// Handle the view in the vehicle
+	{
+		VectorCopy( EyePosition(), *pPosition );
+		AngleVectors( EyeAngles(), pForward, pRight, pUp );
+	}
+}
+
+surfacedata_t *CBasePlayer::GetLadderSurface( const Vector &origin )
+{
+	return physprops->GetSurfaceData( physprops->GetSurfaceIndex( "ladder" ) );
+}
+
+void CBasePlayer::UpdateStepSound( surfacedata_t *psurface, const Vector &vecOrigin, const Vector &vecVelocity )
+{
+	bool bWalking;
+	float fvol;
+	Vector knee;
+	Vector feet;
+	float height;
+	float speed;
+	float velrun;
+	float velwalk;
+	bool fLadder;
+
+	if ( m_flStepSoundTime > 0 )
+	{
+		m_flStepSoundTime -= 1000.0f * gpGlobals->frametime;
+		if ( m_flStepSoundTime < 0 )
+		{
+			m_flStepSoundTime = 0;
+		}
+	}
+
+	if ( m_flStepSoundTime > 0 )
+		return;
+
+	if ( GetFlags() & (FL_FROZEN|FL_ATCONTROLS))
+		return;
+
+	if ( GetMoveType() == MOVETYPE_NOCLIP || GetMoveType() == MOVETYPE_OBSERVER )
+		return;
+
+	if ( !sv_footsteps.GetFloat() )
+		return;
+
+	speed = VectorLength( vecVelocity );
+	float groundspeed = Vector2DLength( vecVelocity.AsVector2D() );
+
+	// determine if we are on a ladder
+	fLadder = ( GetMoveType() == MOVETYPE_LADDER );
+
+	GetStepSoundVelocities( &velwalk, &velrun );
+
+	bool onground = ( GetFlags() & FL_ONGROUND );
+	bool movingalongground = ( groundspeed > 0.0001f );
+	bool moving_fast_enough =  ( speed >= velwalk );
+
+	// To hear step sounds you must be either on a ladder or moving along the ground AND
+	// You must be moving fast enough
+
+	if ( !moving_fast_enough || !(fLadder || ( onground && movingalongground )) )
+			return;
+
+//	MoveHelper()->PlayerSetAnimation( PLAYER_WALK );
+
+	bWalking = speed < velrun;
+
+	VectorCopy( vecOrigin, knee );
+	VectorCopy( vecOrigin, feet );
+
+	height = GetPlayerMaxs()[ 2 ] - GetPlayerMins()[ 2 ];
+
+	knee[2] = vecOrigin[2] + 0.2 * height;
+
+	// find out what we're stepping in or on...
+	if ( fLadder )
+	{
+		psurface = GetLadderSurface(vecOrigin);
+		fvol = 0.5;
+
+		SetStepSoundTime( STEPSOUNDTIME_ON_LADDER, bWalking );
+	}
+	else if ( enginetrace->GetPointContents( knee ) & MASK_WATER )  // we want to use the knee for Cstrike, not the waist
+	{
+		static int iSkipStep = 0;
+
+		if ( iSkipStep == 0 )
+		{
+			iSkipStep++;
+			return;
+		}
+
+		if ( iSkipStep++ == 3 )
+		{
+			iSkipStep = 0;
+		}
+		psurface = physprops->GetSurfaceData( physprops->GetSurfaceIndex( "wade" ) );
+		fvol = 0.65;
+		SetStepSoundTime( STEPSOUNDTIME_WATER_KNEE, bWalking );
+	}
+	else if ( GetWaterLevel() == WL_Feet )
+	{
+		psurface = physprops->GetSurfaceData( physprops->GetSurfaceIndex( "water" ) );
+		fvol = bWalking ? 0.2 : 0.5;
+
+		SetStepSoundTime( STEPSOUNDTIME_WATER_FOOT, bWalking );
+	}
+	else
+	{
+		if ( !psurface )
+			return;
+
+		SetStepSoundTime( STEPSOUNDTIME_NORMAL, bWalking );
+
+		switch ( psurface->game.material )
+		{
+		default:
+		case CHAR_TEX_CONCRETE:						
+			fvol = bWalking ? 0.2 : 0.5;
+			break;
+
+		case CHAR_TEX_METAL:	
+			fvol = bWalking ? 0.2 : 0.5;
+			break;
+
+		case CHAR_TEX_DIRT:
+			fvol = bWalking ? 0.25 : 0.55;
+			break;
+
+		case CHAR_TEX_VENT:	
+			fvol = bWalking ? 0.4 : 0.7;
+			break;
+
+		case CHAR_TEX_GRATE:
+			fvol = bWalking ? 0.2 : 0.5;
+			break;
+
+		case CHAR_TEX_TILE:	
+			fvol = bWalking ? 0.2 : 0.5;
+			break;
+
+		case CHAR_TEX_SLOSH:
+			fvol = bWalking ? 0.2 : 0.5;
+			break;
+		}
+	}
+	
+	// play the sound
+	// 65% volume if ducking
+	if ( GetFlags() & FL_DUCKING )
+	{
+		fvol *= 0.65;
+	}
+
+	PlayStepSound( feet, psurface, fvol, false );
+}
+
+ConVar sv_max_distance_transmit_footsteps( side_registry(), "sv_max_distance_transmit_footsteps", "1250.0", FCVAR_REPLICATED, "Maximum distance to transmit footstep sound effects." );
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : step - 
+//			fvol - 
+//			force - force sound to play
+//-----------------------------------------------------------------------------
+extern ISoundEmitterSystemBase *soundemitterbase;
+void CBasePlayer::PlayStepSound( Vector &vecOrigin, surfacedata_t *psurface, float fvol, bool bForce )
+{
+	ks::ScratchArena<> scratch;
+	if ( gpGlobals->maxClients > 1 && !sv_footsteps.GetFloat() )
+		return;
+
+	if ( !psurface )
+		return;
+
+	int nSide = m_Local.m_nStepside;
+	unsigned short stepSoundName = nSide ? psurface->sounds.runStepLeft : psurface->sounds.runStepRight;
+	if ( !stepSoundName )
+		return;
+
+	m_Local.m_nStepside = !nSide;
+
+	CSoundParameters params;
+
+	contract_assert( nSide == 0 || nSide == 1 );
+
+	if ( m_StepSoundCache[ nSide ].m_usSoundNameIndex == stepSoundName )
+	{
+		params = m_StepSoundCache[ nSide ].m_SoundParameters;
+	}
+	else
+	{
+		IPhysicsSurfaceProps *physprops = MoveHelper()->GetSurfaceProps();
+		
+// footstep sounds
+		const char *pRawSoundName = physprops->GetString( stepSoundName );
+		const char *pSoundName = nullptr;
+		int const nStepCopyLen = V_strlen(pRawSoundName) + 4;
+		char *szStep = ( char * ) scratch.AllocBytes( nStepCopyLen );
+		if ( GetTeamNumber() == TEAM_CT )
+		{
+			V_snprintf(szStep, nStepCopyLen, "ct_%s", pRawSoundName);
+		}
+		else
+		{
+			V_snprintf(szStep, nStepCopyLen, "t_%s", pRawSoundName);
+		}
+
+		pSoundName = szStep;
+		if ( !CBaseEntity::GetParametersForSound( pSoundName, params, nullptr ) )
+		{
+			DevMsg( "Can't find specific footstep sound! (%s) - Using the default instead. (%s)\n", pSoundName, pRawSoundName );
+			pSoundName = pRawSoundName;
+		}
+		if ( !CBaseEntity::GetParametersForSound( pSoundName, params, nullptr ) )
+			return;
+
+		// Only cache if there's one option.  Otherwise we'd never here any other sounds
+		if ( params.count == 1 )
+		{
+			m_StepSoundCache[ nSide ].m_usSoundNameIndex = stepSoundName;
+			m_StepSoundCache[ nSide ].m_SoundParameters = params;
+		}
+	}
+
+	CRecipientFilter filter;
+	
+	if( !bForce )
+	{
+		filter.AddRecipientsByPAS( vecOrigin );
+	}
+
+	// in MP, server removes all players in the vecOrigin's PVS, these players generate the footsteps client side
+	if ( gpGlobals->maxClients > 1 && !bForce )
+	{
+		filter.RemoveRecipientsByPVS( vecOrigin );
+	}
+	
+	if( bForce )
+	{
+		filter.AddAllPlayers();
+	}
+	// the client plays it's own sound
+	filter.RemoveRecipient( this );
+
+	// Don't transmit footsteps if they are outside maximum footstep transmission range.
+	for ( int i = 0; i < filter.GetRecipientCount(); ++i )
+	{
+		int entIndex = filter.GetRecipientIndex( i );
+		IHandleEntity* entity = gEntList.LookupEntityByNetworkIndex( entIndex );
+		if ( entity )
+		{
+			CBasePlayer* player = dynamic_cast<CBasePlayer*>( gEntList.GetBaseEntity( entity->GetRefEHandle() ) );
+			if ( player != nullptr )
+			{
+				float dist = vecOrigin.DistTo( player->EyePosition() );
+				if ( dist > sv_max_distance_transmit_footsteps.GetFloat() )
+				{
+					filter.RemoveRecipient( player );
+				}
+			}
+		}
+	}
+
+// #if defined( CLIENT_DLL )
+// 	Msg( "CLIENT_DLL: (PlayStepSound) filter recipients = %d\n", filter.GetRecipientCount() );
+// #else
+// 	Msg( "GAME_DLL: (PlayStepSound) filter recipients = %d\n", filter.GetRecipientCount() );
+// #endif
+
+	EmitSound_t ep;
+	ep.m_nChannel = CHAN_BODY;
+	ep.m_pSoundName = params.soundname;
+	ep.m_flVolume = fvol;
+	ep.m_SoundLevel = params.soundlevel;
+	ep.m_nFlags = 0;
+	ep.m_nPitch = params.pitch;
+	ep.m_pOrigin = &vecOrigin;
+	ep.m_hSoundScriptHash = params.m_hSoundScriptHash;
+	ep.m_nSoundEntryVersion = params.m_nSoundEntryVersion;
+
+	EmitSound( filter, entindex(), ep );
+
+	// Step Suit
+	if (CCSPlayer *pThisCsPlayer = dynamic_cast<CCSPlayer *>(this))
+	{
+		if (pThisCsPlayer->IsBot() && pThisCsPlayer->HasHeavyArmor())
+		{
+			static const char * const k_HeavyStepSoundName = "Heavy.Step";
+			static HSOUNDSCRIPTHASH const k_HeavyStepSoundHash = soundemitterbase->HashSoundName( k_HeavyStepSoundName );
+			ep.m_pSoundName = k_HeavyStepSoundName;
+			ep.m_hSoundScriptHash = k_HeavyStepSoundHash;
+			EmitSound(filter, entindex(), ep);
+		}
+	}
+	CSoundParameters paramsSuitSound;
+	if (!CBaseEntity::GetParametersForSound((GetTeamNumber() == TEAM_CT) ? "CT_Default.Suit" : "T_Default.Suit", paramsSuitSound, nullptr))
+		return;
+
+	EmitSound_t epSuitSound;
+	epSuitSound.m_nChannel = CHAN_AUTO;
+	epSuitSound.m_pSoundName = paramsSuitSound.soundname;
+	epSuitSound.m_flVolume = fvol;
+	epSuitSound.m_SoundLevel = paramsSuitSound.soundlevel;
+	epSuitSound.m_nFlags = 0;
+	epSuitSound.m_nPitch = paramsSuitSound.pitch;
+	epSuitSound.m_pOrigin = &vecOrigin;
+	epSuitSound.m_hSoundScriptHash = paramsSuitSound.m_hSoundScriptHash;
+	epSuitSound.m_nSoundEntryVersion = paramsSuitSound.m_nSoundEntryVersion;
+
+	EmitSound(filter, entindex(), epSuitSound);
+
+}
+
+void CBasePlayer::UpdateButtonState( int nUserCmdButtonMask )
+{
+	// Track button info so we can detect 'pressed' and 'released' buttons next frame
+	m_afButtonLast = m_nButtons;
+
+	// Get button states
+	m_nButtons = nUserCmdButtonMask;
+ 	int buttonsChanged = m_afButtonLast ^ m_nButtons;
+	
+	// Debounced button codes for pressed/released
+	// UNDONE: Do we need auto-repeat?
+	m_afButtonPressed =  buttonsChanged & m_nButtons;		// The changed ones still down are "pressed"
+	m_afButtonReleased = buttonsChanged & (~m_nButtons);	// The ones not down are "released"
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBasePlayer::GetStepSoundVelocities( float *velwalk, float *velrun )
+{
+	// UNDONE: need defined numbers for run, walk, crouch, crouch run velocities!!!!	
+	if ( ( GetFlags() & FL_DUCKING) || ( GetMoveType() == MOVETYPE_LADDER ) )
+	{
+		*velwalk = 60;		// These constants should be based on cl_movespeedkey * cl_forwardspeed somehow
+		*velrun = 80;		
+	}
+	else
+	{
+		*velwalk = 90;
+		*velrun = 220;
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBasePlayer::SetStepSoundTime( stepsoundtimes_t iStepSoundTime, bool bWalking )
+{
+	switch ( iStepSoundTime )
+	{
+	case STEPSOUNDTIME_NORMAL:
+	case STEPSOUNDTIME_WATER_FOOT:
+		m_flStepSoundTime = bWalking ? 400 : 300;
+		break;
+
+	case STEPSOUNDTIME_ON_LADDER:
+		m_flStepSoundTime = 200;
+		break;
+
+	case STEPSOUNDTIME_WATER_KNEE:
+		m_flStepSoundTime = 600;
+		break;
+
+	default:
+		contract_assert( 0 );
+		break;
+	}
+
+	m_flStepSoundTime *= sv_footstep_sound_frequency.GetFloat();
+
+	// UNDONE: need defined numbers for run, walk, crouch, crouch run velocities!!!!	
+	if ( ( GetFlags() & FL_DUCKING) || ( GetMoveType() == MOVETYPE_LADDER ) )
+	{
+		m_flStepSoundTime += 100;
+	}
+}
+
+Vector CBasePlayer::Weapon_ShootPosition( )
+{
+	return EyePosition();
+}
+
+bool CBasePlayer::Weapon_CanUse( CBaseCombatWeapon *pWeapon )
+{
+	return true;
+}
+
+void CBasePlayer::SetAnimationExtension( const char *pExtension )
+{
+	V_strncpy( m_szAnimExtension, pExtension, sizeof(m_szAnimExtension) );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Set the weapon to switch to when the player uses the 'lastinv' command
+//-----------------------------------------------------------------------------
+void CBasePlayer::Weapon_SetLast( CBaseCombatWeapon *pWeapon )
+{
+	m_hLastWeapon = pWeapon;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Override to clear dropped weapon from the hud
+//-----------------------------------------------------------------------------
+void CBasePlayer::Weapon_Drop( CBaseCombatWeapon *pWeapon, const Vector *pvecTarget /* = NULL */, const Vector *pVelocity /* = NULL */ )
+{
+	bool bWasActiveWeapon = false;
+	if ( pWeapon == GetActiveWeapon() )
+	{
+		bWasActiveWeapon = true;
+	}
+
+	if ( pWeapon )
+	{
+		if ( bWasActiveWeapon )
+		{
+			pWeapon->SendWeaponAnim( ACT_VM_IDLE );
+		}
+	}
+	BaseClass::Weapon_Drop( pWeapon, pvecTarget, pVelocity );
+
+	if ( bWasActiveWeapon )
+	{
+		if (!SwitchToNextBestWeapon( nullptr ))
+		{
+			CBaseViewModel *vm = GetViewModel();
+			if ( vm )
+			{
+				vm->AddEffects( EF_NODRAW );
+			}
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Override base class so player can reset autoaim
+// Input  :
+// Output :
+//-----------------------------------------------------------------------------
+bool CBasePlayer::Weapon_Switch( CBaseCombatWeapon *pWeapon, int viewmodelindex /*=0*/ ) 
+{
+	CBaseCombatWeapon *pLastWeapon = GetActiveWeapon();
+
+	if ( BaseClass::Weapon_Switch( pWeapon, viewmodelindex ))
+	{
+		if ( pLastWeapon && Weapon_ShouldSetLast( pLastWeapon, GetActiveWeapon() ) )
+		{
+			Weapon_SetLast( pLastWeapon->GetLastWeapon() );
+		}
+
+		CBaseViewModel *pViewModel = GetViewModel( viewmodelindex );
+		contract_assert( pViewModel );
+		if ( pViewModel )
+			pViewModel->RemoveEffects( EF_NODRAW );
+		ResetAutoaim( );
+		OnSwitchWeapons( pWeapon );
+		return true;
+	}
+	return false;
+}
+
+void CBasePlayer::SelectLastItem(void)
+{
+	if ( m_hLastWeapon.Get() == nullptr )
+		return;
+
+	if ( GetActiveWeapon() && !GetActiveWeapon()->CanHolster() )
+		return;
+
+	SelectItem( m_hLastWeapon.Get()->GetClassname(), m_hLastWeapon.Get()->GetSubType() );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Abort any reloads we're in
+//-----------------------------------------------------------------------------
+void CBasePlayer::AbortReload( void )
+{
+	if ( GetActiveWeapon() )
+	{
+		GetActiveWeapon()->AbortReload();
+	}
+}
+
+void CBasePlayer::AddToPlayerSimulationList( CBaseEntity *other )
+{
+	CHandle< CBaseEntity > h;
+	h = other;
+	// Already in list
+	if ( ks::find_index( m_SimulatedByThisPlayer, h ) != -1 )
+		return;
+
+	contract_assert( other->IsPlayerSimulated() );
+
+	m_SimulatedByThisPlayer.push_back( h );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Fixme, this should occur if the player fails to drive simulation
+//  often enough!!!
+// Input  : *other - 
+//-----------------------------------------------------------------------------
+void CBasePlayer::RemoveFromPlayerSimulationList( CBaseEntity *other )
+{
+	if ( !other )
+		return;
+
+	contract_assert( other->IsPlayerSimulated() );
+	contract_assert( other->GetSimulatingPlayer() == this );
+
+	CHandle< CBaseEntity > h;
+	h = other;
+
+	ks::erase_first( m_SimulatedByThisPlayer, h );
+}
+
+void CBasePlayer::SimulatePlayerSimulatedEntities( void )
+{
+	int c = std::ssize( m_SimulatedByThisPlayer );
+	int i;
+
+	for ( i = c - 1; i >= 0; i-- )
+	{
+		CHandle< CBaseEntity > h;
+		
+		h = m_SimulatedByThisPlayer[ i ];
+		CBaseEntity *e = h;
+
+		if ( !e || !e->IsPlayerSimulated() )
+		{
+			m_SimulatedByThisPlayer.erase( m_SimulatedByThisPlayer.begin() + i );
+			continue;
+		}
+
+		contract_assert( e->IsPlayerSimulated() );
+		contract_assert( e->GetSimulatingPlayer() == this );
+
+		e->PhysicsSimulate();
+	}
+
+	// Loop through all entities again, checking their untouch if flagged to do so
+	c = std::ssize( m_SimulatedByThisPlayer );
+
+	for ( i = c - 1; i >= 0; i-- )
+	{
+		CHandle< CBaseEntity > h;
+		
+		h = m_SimulatedByThisPlayer[ i ];
+
+		CBaseEntity *e = h;
+		if ( !e || !e->IsPlayerSimulated() )
+		{
+			m_SimulatedByThisPlayer.erase( m_SimulatedByThisPlayer.begin() + i );
+			continue;
+		}
+
+		contract_assert( e->IsPlayerSimulated() );
+		contract_assert( e->GetSimulatingPlayer() == this );
+
+		if ( !e->GetCheckUntouch() )
+			continue;
+
+		e->PhysicsCheckForEntityUntouch();
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBasePlayer::ClearPlayerSimulationList( void )
+{
+	int c = std::ssize( m_SimulatedByThisPlayer );
+	int i;
+
+	for ( i = c - 1; i >= 0; i-- )
+	{
+		CHandle< CBaseEntity > h;
+		
+		h = m_SimulatedByThisPlayer[ i ];
+		CBaseEntity *e = h;
+		if ( e )
+		{
+			e->UnsetPlayerSimulated();
+		}
+	}
+
+	m_SimulatedByThisPlayer.clear();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Return true if we should allow selection of the specified item
+//-----------------------------------------------------------------------------
+bool CBasePlayer::Weapon_ShouldSelectItem( CBaseCombatWeapon *pWeapon )
+{
+	return ( pWeapon != GetActiveWeapon() );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBasePlayer::SelectItem( const char *pstr, int iSubType )
+{
+	if (!pstr)
+		return;
+
+	CBaseCombatWeapon *pItem = Weapon_OwnsThisType( pstr, iSubType );
+
+	if (!pItem)
+		return;
+
+	if( GetObserverMode() != OBS_MODE_NONE )
+		return;// Observers can't select things.
+
+	if ( !Weapon_ShouldSelectItem( pItem ) )
+		return;
+
+	// FIX, this needs to queue them up and delay
+	// Make sure the current weapon can be holstered
+	if ( GetActiveWeapon() )
+	{
+		if ( !GetActiveWeapon()->CanHolster() )
+			return;
+
+		ResetAutoaim( );
+	}
+
+	Weapon_Switch( pItem );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+ConVar sv_debug_player_use( side_registry(), "sv_debug_player_use", "0", FCVAR_REPLICATED, "Visualizes +use logic. Green cross=trace success, Red cross=trace too far, Green box=radius success" );
+float IntervalDistance( float x, float x0, float x1 )
+{
+	// swap so x0 < x1
+	if ( x0 > x1 )
+	{
+		float tmp = x0;
+		x0 = x1;
+		x1 = tmp;
+	}
+
+	if ( x < x0 )
+		return x0-x;
+	else if ( x > x1 )
+		return x - x1;
+	return 0;
+}
+
+CBaseEntity *CBasePlayer::FindUseEntity()
+{
+	Vector forward, up;
+	// NOTE: This doesn't handle the case when the player is in a vehicle.
+	AngleVectors( GetFinalAimAngle(), &forward, nullptr, &up );
+
+	trace_t tr;
+	// Search for objects in a sphere (tests for entities that are not solid, yet still useable)
+	Vector searchCenter = EyePosition();
+
+	// NOTE: Some debris objects are useable too, so hit those as well
+	// A button, etc. can be made out of clip brushes, make sure it's +useable via a traceline, too.
+	int useableContents = MASK_SOLID | CONTENTS_DEBRIS | CONTENTS_PLAYERCLIP;
+
+	useableContents = (MASK_NPCSOLID_BRUSHONLY | MASK_OPAQUE_AND_NPCS) & ~CONTENTS_OPAQUE;
+
+	CBaseEntity *pFoundByTrace = nullptr;
+
+	// UNDONE: Might be faster to just fold this range into the sphere query
+	CBaseEntity *pObject = nullptr;
+
+	float nearestDist = std::numeric_limits<float>::max();
+	// try the hit entity if there is one, or the ground entity if there isn't.
+	CBaseEntity *pNearest = nullptr;
+
+	const int NUM_TANGENTS = 8;
+
+	const int NUM_TRACES = 1;
+	// trace a box at successive angles down
+	//							forward, 45 deg, 30 deg, 20 deg, 15 deg, 10 deg, -10, -15
+	const float tangents[NUM_TANGENTS] = { 0, 1, 0.57735026919f, 0.3639702342f, 0.267949192431f, 0.1763269807f, -0.1763269807f, -0.267949192431f };
+	for ( int i = 0; i < NUM_TRACES; i++ )
+	{
+		if ( i == 0 )
+		{
+			UTIL_TraceLine( searchCenter, searchCenter + forward * 1024, useableContents, this, COLLISION_GROUP_NONE, &tr );
+		}
+		else
+		{
+			Vector down = forward - tangents[i]*up;
+			VectorNormalize(down);
+			UTIL_TraceHull( searchCenter, searchCenter + down * 72, -Vector(16,16,16), Vector(16,16,16), useableContents, this, COLLISION_GROUP_NONE, &tr );
+		}
+		pObject = tr.Ent<CBaseEntity>();
+
+		pFoundByTrace = pObject;
+		bool bUsable = IsUseableEntity(pObject, 0);
+		while ( pObject && !bUsable && pObject->GetMoveParent() )
+		{
+			pObject = pObject->GetMoveParent();
+			bUsable = IsUseableEntity(pObject, 0);
+		}
+
+		if ( bUsable )
+		{
+			Vector delta = tr.endpos - tr.startpos;
+			float centerZ = CollisionProp()->WorldSpaceCenter().z;
+			delta.z = IntervalDistance( tr.endpos.z, centerZ + CollisionProp()->OBBMins().z, centerZ + CollisionProp()->OBBMaxs().z );
+			float dist = delta.Length();
+			CCSPlayer *pPlayer = dynamic_cast<CCSPlayer*>( pObject );
+			if ( (pPlayer && pPlayer->IsBot() && dist < PLAYER_USE_BOT_RADIUS) || dist < PLAYER_USE_RADIUS )
+			{
+
+				if ( sv_debug_player_use.GetBool() )
+				{
+					NDebugOverlay::Line( searchCenter, tr.endpos, 0, 255, 0, true, 30 );
+					NDebugOverlay::Cross3D( tr.endpos, 16, 0, 255, 0, true, 30 );
+				}
+
+				
+				if ( sv_debug_player_use.GetBool() )
+				{
+					Msg( "Trace using: %s\n", pObject ? pObject->GetDebugName() : "no usable entity found" );
+				}
+
+				pNearest = pObject;
+				
+				// if this is directly under the cursor just return it now
+				if ( i == 0 )
+					return pObject;
+			}
+		}
+	}
+
+	// check ground entity first
+	// if you've got a useable ground entity, then shrink the cone of this search to 45 degrees
+	// otherwise, search out in a 90 degree cone (hemisphere)
+	if ( GetGroundEntity() && IsUseableEntity(GetGroundEntity(), FCAP_USE_ONGROUND) )
+	{
+		pNearest = GetGroundEntity();
+	}
+	if ( pNearest )
+	{
+		// estimate nearest object by distance from the view vector
+		Vector point;
+		pNearest->CollisionProp()->CalcNearestPoint( searchCenter, &point );
+		nearestDist = CalcDistanceToLine( point, searchCenter, forward );
+		if ( sv_debug_player_use.GetBool() )
+		{
+			Msg("Trace found %s, dist %.2f\n", pNearest->GetClassname(), nearestDist );
+		}
+	}
+
+	CCSPlayer* pPlayer = ToCSPlayer( this );
+	const float MIN_DOT_FOR_WEAPONS = 0.99f;
+
+	for ( CEntitySphereQuery sphere( searchCenter, PLAYER_USE_RADIUS ); ( pObject = sphere.GetCurrentEntity() ) != nullptr; sphere.NextEntity() )
+	{
+		if ( !pObject )
+			continue;
+
+		if ( !IsUseableEntity( pObject, FCAP_USE_IN_RADIUS ) )
+			continue;
+
+		// see if it's more roughly in front of the player than previous guess
+		Vector point;
+		pObject->CollisionProp()->CalcNearestPoint( searchCenter, &point );
+
+		float fMinimumDot = pObject->GetUseLookAtAngle();
+
+		CWeaponCSBase *pWeapon = dynamic_cast<CWeaponCSBase*>( pObject );
+		CSWeaponType nWepType = WEAPONTYPE_UNKNOWN;
+		if ( pWeapon )
+		{
+			nWepType = pWeapon->GetWeaponType();
+
+			if ( pPlayer->IsPrimaryOrSecondaryWeapon( nWepType ) )
+				fMinimumDot = MIN_DOT_FOR_WEAPONS;
+		}
+
+		Vector dir = point - searchCenter;
+		VectorNormalize(dir);
+		float dot = DotProduct( dir, forward );
+
+		// Need to be looking at the object more or less
+		if ( dot < fMinimumDot )
+			continue;
+
+		float dist = CalcDistanceToLine( point, searchCenter, forward );
+
+		if ( sv_debug_player_use.GetBool() )
+		{
+			Msg("Radius found %s, dist %.2f\n", pObject->GetClassname(), dist );
+		}
+
+		if ( dist < nearestDist )
+		{
+			// Since this has purely been a radius search to this point, we now
+			// make sure the object isn't behind glass or a grate.
+			trace_t trCheckOccluded;
+			UTIL_TraceLine( searchCenter, point, useableContents, this, COLLISION_GROUP_NONE, &trCheckOccluded );
+
+			if ( trCheckOccluded.fraction == 1.0 || trCheckOccluded.Ent<CBaseEntity>() == pObject )
+			{
+				pNearest = pObject;
+				nearestDist = dist;
+			}
+		}
+	}
+
+
+	
+
+	if ( sv_debug_player_use.GetBool() )
+	{
+		if ( !pNearest )
+		{
+			NDebugOverlay::Line( searchCenter, tr.endpos, 255, 0, 0, true, 30 );
+			NDebugOverlay::Cross3D( tr.endpos, 16, 255, 0, 0, true, 30 );
+		}
+		else if ( pNearest == pFoundByTrace )
+		{
+			NDebugOverlay::Line( searchCenter, tr.endpos, 0, 255, 0, true, 30 );
+			NDebugOverlay::Cross3D( tr.endpos, 16, 0, 255, 0, true, 30 );
+		}
+		else
+		{
+			NDebugOverlay::Box( pNearest->WorldSpaceCenter(), Vector(-8, -8, -8), Vector(8, 8, 8), 0, 255, 0, true, 30 );
+		}
+	}
+
+	if ( sv_debug_player_use.GetBool() )
+	{
+		Msg( "Radial using: %s\n", pNearest ? pNearest->GetDebugName() : "no usable entity found" );
+	}
+
+	return pNearest;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Handles USE keypress
+//-----------------------------------------------------------------------------
+void CBasePlayer::PlayerUse ( void )
+{
+	// Was use pressed or released?
+	if ( ! ((m_nButtons | m_afButtonPressed | m_afButtonReleased) & IN_USE) )
+		return;
+
+	if ( IsObserver() )
+	{
+		// do special use operation in oberserver mode
+		if ( m_afButtonPressed & IN_USE )
+			ObserverUse( true );
+		else if ( m_afButtonReleased & IN_USE )
+			ObserverUse( false );
+		
+		return;
+	}
+
+	// push objects in turbo physics mode
+	if ( (m_nButtons & IN_USE) && sv_turbophysics.GetBool() )
+	{
+		Vector forward, up;
+		EyeVectors( &forward, nullptr, &up );
+
+		trace_t tr;
+		// Search for objects in a sphere (tests for entities that are not solid, yet still useable)
+		Vector searchCenter = EyePosition();
+
+		CUsePushFilter filter;
+
+		UTIL_TraceLine( searchCenter, searchCenter + forward * 96.0f, MASK_SOLID, &filter, &tr );
+
+		// try the hit entity if there is one, or the ground entity if there isn't.
+		CBaseEntity *entity = tr.Ent<CBaseEntity>();
+
+		if ( entity )
+		{
+			IPhysicsObject *pObj = entity->VPhysicsGetObject();
+
+			if ( pObj )
+			{
+				Vector vPushAway = (entity->WorldSpaceCenter() - WorldSpaceCenter());
+				vPushAway.z = 0;
+
+				float flDist = VectorNormalize( vPushAway );
+				flDist = std::max<std::common_type_t<float, int>>( flDist, 1 );
+
+				float flForce = sv_pushaway_force.GetFloat() / flDist;
+				flForce = std::min( flForce, sv_pushaway_max_force.GetFloat() );
+
+				pObj->ApplyForceOffset( vPushAway * flForce, WorldSpaceCenter() );
+			}
+		}
+	}
+
+	if ( m_afButtonPressed & IN_USE )
+	{
+		// Controlling some latched entity?
+		if ( ClearUseEntity() )
+		{
+			return;
+		}
+		else
+		{
+			if ( m_afPhysicsFlags & PFLAG_DIROVERRIDE )
+			{
+				m_afPhysicsFlags &= ~PFLAG_DIROVERRIDE;
+				m_iTrain = TRAIN_NEW|TRAIN_OFF;
+				return;
+			}
+			else
+			{	// Start controlling the train!
+				CBaseEntity *pTrain = GetGroundEntity();
+				if ( pTrain && !(m_nButtons & IN_JUMP) && (GetFlags() & FL_ONGROUND) && (pTrain->ObjectCaps() & FCAP_DIRECTIONAL_USE) && pTrain->OnControls(this) )
+				{
+					m_afPhysicsFlags |= PFLAG_DIROVERRIDE;
+					m_iTrain = TrainSpeed(pTrain->m_flSpeed, ((CFuncTrackTrain*)pTrain)->GetMaxSpeed());
+					m_iTrain |= TRAIN_NEW;
+					EmitSound( "Player.UseTrain" );
+					return;
+				}
+			}
+		}
+	}
+
+	CBaseEntity *pUseEntity = FindUseEntity();
+
+	// in counterstrike 15, we need to allow the buy menu to open more easily
+	// The old code defaulted to using whatever you were pointing at.
+	// This code first checks to see if you're in a buy zone.  If that's true, 
+	// then it ignores any weapon you may be pointing at. (the planted c4 is
+	// not a weapon).
+
+	if ( m_afButtonPressed & IN_USE ) 
+	{
+		CCSPlayer* pPlayer = ToCSPlayer( this );
+		CWeaponCSBase *pWeapon = dynamic_cast<CWeaponCSBase*>( pUseEntity );
+		CSWeaponType nWepType = WEAPONTYPE_UNKNOWN;
+		if ( pWeapon )
+			nWepType = pWeapon->GetWeaponType();
+
+		bool bOpenBuyWithUse = true;
+		if ( pPlayer )
+		{
+			const char *cl_useopensbuymenu = engine->GetClientConVarValue( ENTINDEX( pPlayer->edict() ), "cl_use_opens_buy_menu" );
+			if ( cl_useopensbuymenu && std::atoi( cl_useopensbuymenu ) <= 0 )
+				bOpenBuyWithUse = false;
+		}
+
+		if ( pWeapon && pWeapon->CanBePickedUp() && pPlayer->IsPrimaryOrSecondaryWeapon( nWepType ) )
+		{
+			bool bPickupIsPrimary = IsPrimaryWeapon( pWeapon->GetCSWeaponID() );
+			CBaseCombatWeapon *pPlayerWeapon = nullptr;
+
+			if ( bPickupIsPrimary )
+			{
+				pPlayerWeapon = pPlayer->Weapon_GetSlot( WEAPON_SLOT_RIFLE );
+			}
+			else
+			{
+				pPlayerWeapon = pPlayer->Weapon_GetSlot( WEAPON_SLOT_PISTOL );
+			}
+
+			// if the player has a weapon in the slot that occupies the weapon that they'd like to pick up
+			// AND they are able to drop it, pick up the new weapon
+			// OR if they don't have a weapon in that slot, go ahead and pick up the new weapon
+			if ( (pPlayerWeapon && pPlayer->HandleDropWeapon( pPlayerWeapon, true )) || !pPlayerWeapon )
+			{	
+				pWeapon->Touch( this );
+			}		
+		}
+		else if ( pPlayer && bOpenBuyWithUse && pPlayer->IsInBuyZone() && pPlayer->CanPlayerBuy( false ) && !CSGameRules()->IsPlayingGunGame() )
+		{
+			bool bItemIsNullOrWeapon = true;
+
+			if ( pUseEntity )
+			{
+				bItemIsNullOrWeapon = ( pWeapon != 0 );
+			}
+
+			if ( bItemIsNullOrWeapon )
+			{
+				engine->ClientCommand( edict(), "buymenu\n" );
+				return;
+			}
+		}
+		else if( !pUseEntity && pPlayer && pPlayer->HasC4() && pPlayer->GetActiveCSWeapon() )
+		{
+			if( pPlayer->m_bInBombZone && !( pPlayer->GetActiveCSWeapon()->IsA( WEAPON_C4 ) ) )
+			{
+				// we're in a bomb zone with C4, but it's not equipped.  Equip it.
+				CWeaponCSBase	*pC4Weapon = nullptr;
+
+				//Search for the c4 weapon to use
+				for ( int i = 0; i < pPlayer->WeaponCount(); i++ )
+				{
+					CBaseCombatWeapon* pWeaponBase = pPlayer->GetWeapon(i);
+					CWeaponCSBase* pWeapon = dynamic_cast< CWeaponCSBase* > ( pWeaponBase );
+
+					if ( pWeapon == nullptr )
+					{
+						continue;
+					}
+
+					if ( !pWeapon->IsA( WEAPON_C4 ) )
+					{
+						continue;
+					}
+
+					// Must be eligible for switching to.
+					if ( !pPlayer->Weapon_CanSwitchTo( pWeapon ) )
+					{
+						continue;
+					}
+
+					pC4Weapon = pWeapon;
+				}
+
+				if ( pC4Weapon != nullptr )
+				{
+					//pPlayer->SetLastWeaponBeforeAutoSwitchToC4( pPlayer->GetActiveCSWeapon() );
+					pPlayer->Weapon_Switch(pC4Weapon);
+
+					static_cast<CC4*>(pC4Weapon)->m_bIsPlantingViaUse = true;
+				}
+			}
+			else if( pPlayer->GetActiveCSWeapon()->IsA( WEAPON_C4 ) )
+			{
+				static_cast<CC4*>(pPlayer->GetActiveWeapon())->m_bIsPlantingViaUse = true;
+			}
+		}
+		else if ( pUseEntity && pUseEntity->IsPlayer() )
+		{
+			// Bots can give their C4 to the requesting human.
+
+			CCSPlayer* pPlayer = ToCSPlayer( this );
+			CCSPlayer* pBot = ToCSPlayer( pUseEntity );
+
+			if ( pPlayer && pPlayer->IsAlive() && pBot && pBot->IsBot() && pBot->IsOtherSameTeam(pPlayer->GetTeamNumber()) && pBot->HasC4() )
+			{
+			
+				//distance check is implicit in +use, but check it anyway
+				if ( (pBot->WorldSpaceCenter() - pPlayer->WorldSpaceCenter()).Length() < 200 )
+				{
+					CBaseCombatWeapon *pC4 = pBot->Weapon_OwnsThisType( "weapon_c4" );
+					if ( pC4 )
+					{
+						pBot->SetBombDroppedTime( gpGlobals->curtime );
+						pBot->CSWeaponDrop( pC4, WorldSpaceCenter(), false );
+						pBot->Radio( "Radio.YouTakeThePoint",   "#Cstrike_TitlesTXT_Game_afk_bomb_drop" );
+					}
+				}
+				
+			}
+
+		}
+	}
+
+	if ( pUseEntity )
+	{
+		//!!!UNDONE: traceline here to prevent +USEing buttons through walls			
+
+		int caps = pUseEntity->ObjectCaps();
+		variant_t emptyVariant;
+		if ( ( (m_nButtons & IN_USE) && (caps & FCAP_CONTINUOUS_USE) ) || ( (m_afButtonPressed & IN_USE) && (caps & (FCAP_IMPULSE_USE|FCAP_ONOFF_USE)) ) )
+		{
+			if ( caps & FCAP_CONTINUOUS_USE )
+			{
+				m_afPhysicsFlags |= PFLAG_USING;
+			}
+
+			if ( pUseEntity->ObjectCaps() & FCAP_ONOFF_USE )
+			{
+				pUseEntity->AcceptInput( "Use", this, this, emptyVariant, USE_ON );
+			}
+			else
+			{
+				pUseEntity->AcceptInput( "Use", this, this, emptyVariant, USE_TOGGLE );
+			}
+		}
+		// UNDONE: Send different USE codes for ON/OFF.  Cache last ONOFF_USE object to send 'off' if you turn away
+		else if ( (m_afButtonReleased & IN_USE) && (pUseEntity->ObjectCaps() & FCAP_ONOFF_USE) )	// BUGBUG This is an "off" use
+		{
+			pUseEntity->AcceptInput( "Use", this, this, emptyVariant, USE_OFF );
+		}
+	}
+}
+
+ConVar	sv_suppress_viewpunch( side_registry(), "sv_suppress_viewpunch", "0", FCVAR_REPLICATED | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBasePlayer::ViewPunch( const QAngle &angleOffset )
+{
+	//See if we're suppressing the view punching
+	if ( sv_suppress_viewpunch.GetBool() )
+		return;
+
+	// We don't allow view kicks in the vehicle
+	
+
+	m_Local.m_viewPunchAngle += angleOffset;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBasePlayer::ViewPunchReset( float tolerance )
+{
+	if ( tolerance != 0 )
+	{
+		tolerance *= tolerance;	// square
+		float check = m_Local.m_viewPunchAngle->LengthSqr();
+		if ( check > tolerance )
+			return;
+	}
+	m_Local.m_viewPunchAngle = vec3_angle;
+}
+
+static ConVar smoothstairs( side_registry(), "smoothstairs", "1", FCVAR_REPLICATED, "Smooth player eye z coordinate when traversing stairs." );
+
+//-----------------------------------------------------------------------------
+// Handle view smoothing when going up or down stairs
+//-----------------------------------------------------------------------------
+void CBasePlayer::SmoothViewOnStairs( Vector& eyeOrigin )
+{
+	CBaseEntity *pGroundEntity = GetGroundEntity();
+	float flCurrentPlayerZ = GetLocalOrigin().z;
+	float flCurrentPlayerViewOffsetZ = GetViewOffset().z;
+
+	// Smooth out stair step ups
+	// NOTE: Don't want to do this when the ground entity is moving the player
+	if ( ( pGroundEntity != nullptr && pGroundEntity->GetMoveType() == MOVETYPE_NONE ) && ( flCurrentPlayerZ != m_flOldPlayerZ ) && smoothstairs.GetBool() &&
+		 m_flOldPlayerViewOffsetZ == flCurrentPlayerViewOffsetZ )
+	{
+		int dir = ( flCurrentPlayerZ > m_flOldPlayerZ ) ? 1 : -1;
+
+		float steptime = gpGlobals->frametime;
+		if (steptime < 0)
+		{
+			steptime = 0;
+		}
+
+		m_flOldPlayerZ += steptime * 150 * dir;
+
+		const float stepSize = 18.0f;
+
+		if ( dir > 0 )
+		{
+			if (m_flOldPlayerZ > flCurrentPlayerZ)
+			{
+				m_flOldPlayerZ = flCurrentPlayerZ;
+			}
+			if (flCurrentPlayerZ - m_flOldPlayerZ > stepSize)
+			{
+				m_flOldPlayerZ = flCurrentPlayerZ - stepSize;
+			}
+		}
+		else
+		{
+			if (m_flOldPlayerZ < flCurrentPlayerZ)
+			{
+				m_flOldPlayerZ = flCurrentPlayerZ;
+			}
+			if (flCurrentPlayerZ - m_flOldPlayerZ < -stepSize)
+			{
+				m_flOldPlayerZ = flCurrentPlayerZ + stepSize;
+			}
+		}
+
+		eyeOrigin[2] += m_flOldPlayerZ - flCurrentPlayerZ;
+	}
+	else
+	{
+		m_flOldPlayerZ = flCurrentPlayerZ;
+		m_flOldPlayerViewOffsetZ = flCurrentPlayerViewOffsetZ;
+	}
+}
+
+static bool IsWaterContents( int contents )
+{
+	if ( contents & MASK_WATER )
+		return true;
+
+//	if ( contents & CONTENTS_TESTFOGVOLUME )
+//		return true;
+
+	return false;
+}
+
+void CBasePlayer::ResetObserverMode()
+{
+	m_hObserverTarget.Set( 0 );
+	m_iObserverMode = (int)OBS_MODE_NONE;
+
+	m_iObserverLastMode = OBS_MODE_ROAMING;
+	m_bForcedObserverMode = false;
+	m_afPhysicsFlags &= ~PFLAG_OBSERVER;
+	m_bIsSpecLerping = false;
+	m_vecSpecLerpIdealPos = Vector( 0, 0, 0 );
+	m_angSpecLerpIdealAng = QAngle( 0, 0, 0 );
+	m_vecSpecLerpOldPos = Vector( 0, 0, 0 );
+	m_angSpecLerpOldAng = QAngle( 0, 0, 0 );
+	m_flSpecLerpEndTime = 0.0f;
+	m_flSpecLerpTime = 1.0f;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : eyeOrigin - 
+//			eyeAngles - 
+//			zNear - 
+//			zFar - 
+//			fov - 
+//-----------------------------------------------------------------------------
+extern Vector g_cameraFollowPos;
+void CBasePlayer::CalcView( Vector &eyeOrigin, QAngle &eyeAngles, float &zNear, float &zFar, float &fov )
+{
+	if ( IsObserver() )
+	{
+		CalcObserverView( eyeOrigin, eyeAngles, fov );
+	}
+	else
+	{
+		CalcPlayerView( eyeOrigin, eyeAngles, fov );
+	}
+
+}
+
+void CBasePlayer::CalcViewModelView( const Vector& eyeOrigin, const QAngle& eyeAngles)
+{
+	for ( int i = 0; i < MAX_VIEWMODELS; i++ )
+	{
+		CBaseViewModel *vm = GetViewModel( i );
+		if ( !vm )
+			continue;
+	
+		vm->CalcViewModelView( this, eyeOrigin, eyeAngles );
+	}
+}
+
+void CBasePlayer::CalcPlayerView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov )
+{
+
+	// TrackIR
+	if ( IsHeadTrackingEnabled() )
+	{
+		VectorCopy( EyePosition() + GetEyeOffset(), eyeOrigin );
+	}
+	else
+	{
+		VectorCopy( EyePosition(), eyeOrigin );
+	}
+	
+	VectorCopy( EyeAngles(), eyeAngles );
+
+	{
+		SmoothViewOnStairs( eyeOrigin );
+	}
+
+	// Snack off the origin before bob + water offset are applied
+	Vector vecBaseEyePosition = eyeOrigin;
+	QAngle baseEyeAngles = eyeAngles;
+
+	CalcViewBob( eyeOrigin );
+	CalcViewRoll( eyeAngles );
+
+	CalcAddViewmodelCameraAnimation( eyeOrigin, eyeAngles );
+
+	// Apply punch angles
+	VectorAdd( eyeAngles, m_Local.m_viewPunchAngle, eyeAngles );
+
+	// TODO[pmf]: apply a scaling factor to this
+	VectorAdd( eyeAngles, GetAimPunchAngle() * view_recoil_tracking.GetFloat(), eyeAngles );
+
+	// calc current FOV
+	fov = GetFOV();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: The main view setup function for vehicles
+
+
+void CBasePlayer::CalcObserverView( Vector& eyeOrigin, QAngle& eyeAngles, float& fov )
+{
+	// on server just copy target postions, final view positions will be calculated on client
+	VectorCopy( EyePosition(), eyeOrigin );
+	VectorCopy( EyeAngles(), eyeAngles );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Compute roll angle for a particular lateral velocity
+// Input  : angles - 
+//			velocity - 
+//			rollangle - 
+//			rollspeed - 
+// Output : float CViewRender::CalcRoll
+//-----------------------------------------------------------------------------
+float CBasePlayer::CalcRoll (const QAngle& angles, const Vector& velocity, float rollangle, float rollspeed)
+{
+    float   sign;
+    float   side;
+    float   value;
+	
+	Vector  forward, right, up;
+	
+    AngleVectors (angles, &forward, &right, &up);
+	
+	// Get amount of lateral movement
+    side = DotProduct( velocity, right );
+	// Right or left side?
+    sign = side < 0 ? -1 : 1;
+    side = fabs(side);
+    
+	value = rollangle;
+	// Hit 100% of rollangle at rollspeed.  Below that get linear approx.
+    if ( side < rollspeed )
+	{
+		side = side * value / rollspeed;
+	}
+    else
+	{
+		side = value;
+	}
+
+	// Scale by right/left sign
+    return side*sign;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Allow the viewmodel to layer in artist-authored additive camera animation (to make some first-person anims 'punchier')
+//-----------------------------------------------------------------------------
+static constexpr auto CAM_DRIVER_RETURN_TO_NORMAL = 0.25f;
+static constexpr auto CAM_DRIVER_RETURN_TO_NORMAL_GAIN = 0.8f;
+void CBasePlayer::CalcAddViewmodelCameraAnimation( Vector& eyeOrigin, QAngle& eyeAngles )
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Determine view roll, including data kick
+//-----------------------------------------------------------------------------
+void CBasePlayer::CalcViewRoll( QAngle& eyeAngles )
+{
+	if ( GetMoveType() == MOVETYPE_NOCLIP )
+		return;
+
+	float side = CalcRoll( GetAbsAngles(), GetAbsVelocity(), sv_rollangle.GetFloat(), sv_rollspeed.GetFloat() );
+	eyeAngles[ROLL] += side;
+}
+
+void CBasePlayer::CalcViewBob( Vector& eyeOrigin )
+{
+}
+
+void CBasePlayer::DoMuzzleFlash()
+{
+	for ( int i = 0; i < MAX_VIEWMODELS; i++ )
+	{
+		CBaseViewModel *vm = GetViewModel( i );
+		if ( !vm )
+			continue;
+
+		vm->DoMuzzleFlash();
+	}
+
+	BaseClass::DoMuzzleFlash();
+}
+
+float CBasePlayer::GetFOVDistanceAdjustFactor()
+{
+	float defaultFOV	= (float)GetDefaultFOV();
+	float localFOV		= (float)GetFOV();
+
+	if ( localFOV == defaultFOV || defaultFOV < 0.001f )
+	{
+		return 1.0f;
+	}
+
+	// If FOV is lower, then we're "zoomed" in and this will give a factor < 1 so apparent LOD distances can be
+	//  shorted accordingly
+	return localFOV / defaultFOV;
+
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : &vecTracerSrc - 
+//			&tr - 
+//			iTracerType - 
+//-----------------------------------------------------------------------------
+void CBasePlayer::MakeTracer_Impl( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType )
+{
+	if ( GetActiveWeapon() )
+	{
+		GetActiveWeapon()->MakeTracer( vecTracerSrc, tr, iTracerType );
+		return;
+	}
+
+	BaseClass::MakeTracer_Impl( vecTracerSrc, tr, iTracerType );
+}
+
+void CBasePlayer::SharedSpawn()
+{
+	SetMoveType( MOVETYPE_WALK );
+	SetSolid( SOLID_BBOX );
+	AddSolidFlags( FSOLID_NOT_STANDABLE );
+	SetFriction( 1.0f );
+
+	pl.deadflag	= false;
+	m_lifeState	= LIFE_ALIVE;
+	m_iHealth = 100;
+	m_takedamage		= DAMAGE_YES;
+
+	m_Local.m_bDrawViewmodel = true;
+	m_Local.m_flStepSize = sv_stepsize.GetFloat();
+	m_Local.m_bAllowAutoMovement = true;
+
+	SetRenderFX( kRenderFxNone );
+	m_flNextAttack	= gpGlobals->curtime;
+	m_flMaxspeed		= 0.0f;
+
+	MDLCACHE_CRITICAL_SECTION();
+	int iIdleSequence = SelectWeightedSequence( ACT_IDLE );
+	if( iIdleSequence < 0 )
+	{
+		iIdleSequence = 0;
+	}
+	SetSequence( iIdleSequence );
+
+	if ( GetFlags() & FL_DUCKING ) 
+		SetCollisionBounds( VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
+	else
+		SetCollisionBounds( VEC_HULL_MIN, VEC_HULL_MAX );
+
+	// dont let uninitialized value here hurt the player
+	m_Local.m_flFallVelocity = 0;
+
+	SetBloodColor( BLOOD_COLOR_RED );
+
+	m_hUseEntity = nullptr;
+
+	m_flDuckAmount = 0;
+	m_flDuckSpeed = CS_PLAYER_DUCK_SPEED_IDEAL;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : int
+//-----------------------------------------------------------------------------
+int CBasePlayer::GetDefaultFOV( void ) const
+{
+
+	int iFOV = ( m_iDefaultFOV == 0 ) ? g_pGameRules->DefaultFOV() : m_iDefaultFOV;
+
+	return iFOV;
+}
+
+void CBasePlayer::AvoidPhysicsProps( CUserCmd *pCmd )
+{
+	// Don't avoid if noclipping or in movetype none
+	switch ( GetMoveType() )
+	{
+	case MOVETYPE_NOCLIP:
+	case MOVETYPE_NONE:
+	case MOVETYPE_OBSERVER:
+		return;
+	default:
+		break;
+	}
+
+	if ( GetObserverMode() != OBS_MODE_NONE || !IsAlive() )
+		return;
+
+	AvoidPushawayProps( this, pCmd );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : const char
+//-----------------------------------------------------------------------------
+const char *CBasePlayer::GetTracerType_Impl( void )
+{
+	if ( GetActiveWeapon() )
+	{
+		return GetActiveWeapon()->GetTracerType();
+	}
+
+	return BaseClass::GetTracerType_Impl();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBasePlayer::ClearZoomOwner( void )
+{
+	m_hZoomOwner = nullptr;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Sets the FOV of the client, doing interpolation between old and new if requested
+// Input  : FOV - New FOV
+//			zoomRate - Amount of time (in seconds) to move between old and new FOV
+//-----------------------------------------------------------------------------
+bool CBasePlayer::SetFOV( CBaseEntity *pRequester, int FOV, float zoomRate, int iZoomStart /* = 0 */ )
+{
+	//NOTENOTE: You MUST specify who is requesting the zoom change
+	contract_assert( pRequester != nullptr );
+	if ( pRequester == nullptr )
+		return false;
+
+	// If we already have an owner, we only allow requests from that owner
+	if ( ( m_hZoomOwner.Get() != nullptr ) && ( m_hZoomOwner.Get() != pRequester ) )
+	{
+		if ( CanOverrideEnvZoomOwner( m_hZoomOwner.Get() ) == false )
+			return false;
+	}
+	else
+	{
+		//FIXME: Maybe do this is as an accessor instead
+		if ( FOV == 0 )
+		{
+			m_hZoomOwner = nullptr;
+		}
+		else
+		{
+			m_hZoomOwner = pRequester;
+		}
+	}
+
+	// Setup our FOV and our scaling time
+
+	if ( iZoomStart > 0 )
+	{
+		m_iFOVStart = iZoomStart;
+	}
+	else
+	{
+		m_iFOVStart = GetFOV();
+	}
+
+	m_flFOVTime = gpGlobals->curtime;
+	m_iFOV = FOV;
+
+	m_Local.m_flFOVRate	= zoomRate;
+
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CBasePlayer::UpdateUnderwaterState( void )
+{
+	if ( GetWaterLevel() == WL_Eyes )
+	{
+		if ( IsPlayerUnderwater() == false )
+		{
+			SetPlayerUnderwater( true );
+		}
+		return;
+	}
+
+	if ( IsPlayerUnderwater() )
+	{
+		SetPlayerUnderwater( false );
+	}
+
+	if ( GetWaterLevel() == WL_NotInWater )
+	{
+		if ( GetFlags() & FL_INWATER )
+		{
+			if ( m_iHealth > 0 && IsAlive() )
+			{
+				if ( GetAbsVelocity().Length() >= 135 )
+				{
+					EmitSound( "Player.Wade" );
+				}				
+			}
+			RemoveFlag( FL_INWATER );
+		}
+	}
+	else if ( !(GetFlags() & FL_INWATER) )
+	{
+		// player enter water sound
+		if (GetWaterType() == CONTENTS_WATER)
+		{
+			if ( GetAbsVelocity().Length() >= 135 )
+			{
+				EmitSound( "Player.Wade" );
+			}	
+		}
+
+		AddFlag( FL_INWATER );
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: data accessor
+// ensure that for every emitsound there is a matching stopsound
+//-----------------------------------------------------------------------------
+void CBasePlayer::SetPlayerUnderwater( bool state )
+{
+	if ( m_bPlayerUnderwater != state )
+	{
+		m_bPlayerUnderwater = state;
+
+	}
+}
+
+void CBasePlayer::SetPreviouslyPredictedOrigin( const Vector &vecAbsOrigin )
+{
+	m_vecPreviouslyPredictedOrigin = vecAbsOrigin;
+}
+
+const Vector &CBasePlayer::GetPreviouslyPredictedOrigin() const
+{
+	return m_vecPreviouslyPredictedOrigin;
+}
+
+bool fogparams_t::operator !=( const fogparams_t& other ) const
+{
+	if ( this->enable != other.enable ||
+		this->blend != other.blend ||
+		!VectorsAreEqual(this->dirPrimary, other.dirPrimary, 0.01f ) || 
+		this->colorPrimary.Get() != other.colorPrimary.Get() ||
+		this->colorSecondary.Get() != other.colorSecondary.Get() ||
+		this->start != other.start ||
+		this->end != other.end ||
+		this->farz != other.farz ||
+		this->maxdensity != other.maxdensity ||
+		this->colorPrimaryLerpTo.Get() != other.colorPrimaryLerpTo.Get() ||
+		this->colorSecondaryLerpTo.Get() != other.colorSecondaryLerpTo.Get() ||
+		this->startLerpTo != other.startLerpTo ||
+		this->endLerpTo != other.endLerpTo ||
+		this->maxdensityLerpTo != other.maxdensityLerpTo ||
+		this->lerptime != other.lerptime ||
+		this->duration != other.duration ||
+		this->HDRColorScale != other.HDRColorScale ||
+		this->ZoomFogScale != other.ZoomFogScale)
+		return true;
+
+	return false;
+}
+
+void CBasePlayer::IncrementEFNoInterpParity()
+{
+	// Only matters in multiplayer
+	if ( gpGlobals->maxClients == 1 )
+		return;
+	m_ubEFNoInterpParity = (m_ubEFNoInterpParity + 1) % NOINTERP_PARITY_MAX;
+}
+
+int CBasePlayer::GetEFNoInterpParity() const
+{
+	return (int)m_ubEFNoInterpParity;
+}
+
+void CBasePlayer::AddSplitScreenPlayer( CBasePlayer *pOther )
+{
+	CHandle< CBasePlayer > h;
+	h = pOther;
+	if ( ks::find_index( m_hSplitScreenPlayers, h ) == -1 )
+	{
+		m_hSplitScreenPlayers.push_back( h );
+	}
+
+	UpdateSplitScreenAndPictureInPicturePlayerList();
+}
+
+void CBasePlayer::RemoveSplitScreenPlayer( CBasePlayer *pOther )
+{
+	CHandle< CBasePlayer > h;
+	h = pOther;
+	ks::erase_first( m_hSplitScreenPlayers, h );
+
+	UpdateSplitScreenAndPictureInPicturePlayerList();
+}
+
+std::vector< CHandle< CBasePlayer > > &CBasePlayer::GetSplitScreenPlayers()
+{
+	return m_hSplitScreenPlayers;
+}
+
+bool CBasePlayer::HasAttachedSplitScreenPlayers() const
+{
+	return ( !m_hSplitScreenPlayers.empty() );
+}
+
+void CBasePlayer::AddPictureInPicturePlayer( CBasePlayer *pOther )
+{
+	CHandle< CBasePlayer > h;
+	h = pOther;
+	if ( ks::find_index( m_hPipPlayers, h ) == -1 )
+	{
+		m_hPipPlayers.push_back( h );
+	}
+
+	UpdateSplitScreenAndPictureInPicturePlayerList();
+}
+
+void CBasePlayer::RemovePictureInPicturePlayer( CBasePlayer *pOther )
+{
+	CHandle< CBasePlayer > h;
+	h = pOther;
+	ks::erase_first( m_hPipPlayers, h );
+
+	UpdateSplitScreenAndPictureInPicturePlayerList();
+}
+
+std::vector< CHandle< CBasePlayer > > &CBasePlayer::GetSplitScreenAndPictureInPicturePlayers()
+{
+	return m_hSplitScreenAndPipPlayers;
+}
+
+std::vector< CHandle< CBasePlayer > >& CBasePlayer::GetPictureInPicturePlayers( void )
+{
+	return m_hPipPlayers;
+}
+
+void CBasePlayer::UpdateSplitScreenAndPictureInPicturePlayerList()
+{
+	// Make m_hSplitScreenAndPipPlayers the union of m_hSplitScreenPlayers and m_hPipPlayers
+	m_hSplitScreenAndPipPlayers.clear();
+	m_hSplitScreenAndPipPlayers.append_range( m_hSplitScreenPlayers );
+
+	for ( int i = 0; i < std::ssize( m_hPipPlayers ); i++ )
+	{
+		CHandle< CBasePlayer > h = m_hPipPlayers[i];
+		if ( ks::find_index( m_hSplitScreenAndPipPlayers, h ) == -1 )
+		{
+			m_hSplitScreenAndPipPlayers.push_back( h );
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Strips off IN_xxx flags from the player's input
+//-----------------------------------------------------------------------------
+void CBasePlayer::ForceButtons( int nButtons )
+{
+	m_afButtonForced |= nButtons;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Re-enables stripped IN_xxx flags to the player's input
+//-----------------------------------------------------------------------------
+void CBasePlayer::UnforceButtons( int nButtons )
+{
+	m_afButtonForced &= ~nButtons;
+}
+
+CBaseEntity* CBasePlayer::GetSoundscapeListener()
+{
+	return this;
+}
+
+void CBasePlayer::SetUseEntity( CBaseEntity *pUseEntity ) 
+{ 
+	m_hUseEntity = pUseEntity; 
+}
+
+bool CBasePlayer::ClearUseEntity()
+{
+	if ( m_hUseEntity != nullptr )
+	{
+
+		if( !m_bDropEnabled )
+		{
+			return false;
+		}
+
+		// Stop controlling the train/object
+		// TODO: Send HUD Update
+		GetUseEntity()->Use( this, this, USE_OFF, 0 );
+	}
+
+	return false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+bool CBasePlayer::CanPickupObject( CBaseEntity *pObject, float massLimit, float sizeLimit )
+{
+	// UNDONE: Make this virtual and move to HL2 player
+	return false;
+}
+
+float CBasePlayer::GetHeldObjectMass( IPhysicsObject *pHeldObject )
+{
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void CBasePlayer::VPhysicsShadowUpdate_Impl( IPhysicsObject *pPhysics )
+{
+	if ( sv_turbophysics.GetBool() )
+		return;
+
+	Vector newPosition;
+
+	bool physicsUpdated = m_pPhysicsController->GetShadowPosition( &newPosition, nullptr ) > 0 ? true : false;
+
+	// UNDONE: If the player is penetrating, but the player's game collisions are not stuck, teleport the physics shadow to the game position
+	if ( pPhysics->GetGameFlags() & FVPHYSICS_PENETRATING )
+	{
+		std::vector< CBaseEntity * > list;
+		PhysGetListOfPenetratingEntities( this, list );
+		for ( int i = std::ssize( list )-1; i >= 0; --i )
+		{
+			// filter out anything that isn't simulated by vphysics
+			// UNDONE: Filter out motion disabled objects?
+			if ( list[i]->GetMoveType() == MOVETYPE_VPHYSICS )
+			{
+				// I'm currently stuck inside a moving object, so allow vphysics to 
+				// apply velocity to the player in order to separate these objects
+				m_bTouchedPhysObject = true;
+			}
+		}
+	}
+
+	bool bCheckStuck = false;
+	if ( m_afPhysicsFlags & PFLAG_GAMEPHYSICS_ROTPUSH )
+	{
+		bCheckStuck = true;
+		m_afPhysicsFlags &= ~PFLAG_GAMEPHYSICS_ROTPUSH;
+	}
+	uint32 nContactState = m_pPhysicsController->GetContactState( FVPHYSICS_PUSH_PLAYER );
+	if ( (nContactState & PLAYER_CONTACT_PHYSICS) || (m_afPhysicsFlags & PFLAG_VPHYSICS_MOTIONCONTROLLER) )
+	{
+		m_bTouchedPhysObject = true;
+	}
+
+	if ( IsFollowingPhysics() )
+	{
+		m_bTouchedPhysObject = true;
+	}
+
+	if ( GetMoveType() == MOVETYPE_NOCLIP || pl.deadflag )
+	{
+		m_oldOrigin = GetAbsOrigin();
+		return;
+	}
+
+	if ( phys_timescale.GetFloat() == 0.0f )
+	{
+		physicsUpdated = false;
+	}
+
+	if ( !physicsUpdated )
+		return;
+
+	IPhysicsObject *pPhysGround = GetGroundVPhysics();
+
+	Vector newVelocity;
+	pPhysics->GetPosition( &newPosition, 0 );
+	m_pPhysicsController->GetShadowVelocity( &newVelocity );
+	
+	// assume vphysics gave us back a position without penetration
+	Vector lastValidPosition = newPosition;
+
+	if ( physicsshadowupdate_render.GetBool() )
+	{
+		NDebugOverlay::Box( GetAbsOrigin(), WorldAlignMins(), WorldAlignMaxs(), 255, 0, 0, 24, 15.0f );
+		NDebugOverlay::Box( newPosition, WorldAlignMins(), WorldAlignMaxs(), 0,0,255, 24, 15.0f);
+		//	NDebugOverlay::Box( newPosition, WorldAlignMins(), WorldAlignMaxs(), 0,0,255, 24, .01f);
+	}
+
+	Vector tmp = GetAbsOrigin() - newPosition;
+	if ( !m_bTouchedPhysObject && !(GetFlags() & FL_ONGROUND) )
+	{
+		tmp.z *= 0.5f;	// don't care about z delta as much
+	}
+
+	float dist = tmp.LengthSqr();
+	float deltaV = (newVelocity - GetAbsVelocity()).LengthSqr();
+
+	float maxDistErrorSqr = VPHYS_MAX_DISTSQR;
+	float maxVelErrorSqr = VPHYS_MAX_VELSQR;
+	if ( IsRideablePhysics(pPhysGround) )
+	{
+		maxDistErrorSqr *= 0.25;
+		maxVelErrorSqr *= 0.25;
+	}
+
+	// player's physics was frozen, try moving to the game's simulated position if possible
+	if ( m_pPhysicsController->WasFrozen() )
+	{
+		m_bPhysicsWasFrozen = true;
+		// check my position (physics object could have simulated into my position
+		// physics is not very far away, check my position
+		trace_t trace;
+		UTIL_TraceEntity( this, GetAbsOrigin(), GetAbsOrigin(), PhysicsSolidMaskForEntity(), this, COLLISION_GROUP_PLAYER_MOVEMENT, &trace );
+		if ( !trace.startsolid )
+			return;
+
+		// The physics shadow position is probably not in solid, try to move from there to the desired position
+		UTIL_TraceEntity( this, newPosition, GetAbsOrigin(), PhysicsSolidMaskForEntity(), this, COLLISION_GROUP_PLAYER_MOVEMENT, &trace );
+		if ( !trace.startsolid )
+		{
+			// found a valid position between the two?  take it.
+			SetAbsOrigin( trace.endpos );
+			UpdateVPhysicsPosition(trace.endpos, vec3_origin, 0);
+			return;
+		}
+
+	}
+	if ( dist >= maxDistErrorSqr || deltaV >= maxVelErrorSqr || (pPhysGround && !m_bTouchedPhysObject) )
+	{
+		if ( m_bTouchedPhysObject || pPhysGround )
+		{
+			// BUGBUG: Rewrite this code using fixed timestep
+			if ( deltaV >= maxVelErrorSqr && !m_bPhysicsWasFrozen )
+			{
+				if ( !IsRideablePhysics(pPhysGround) )
+				{
+					Vector dir = GetAbsVelocity();
+					float len = VectorNormalize(dir);
+					float dot = DotProduct( newVelocity, dir );
+					if ( dot > len )
+					{
+						dot = len;
+					}
+					else if ( dot < -len )
+					{
+						dot = -len;
+					}
+
+					VectorMA( newVelocity, -dot, dir, newVelocity );
+
+					if ( m_afPhysicsFlags & PFLAG_VPHYSICS_MOTIONCONTROLLER )
+					{
+						float val = Lerp( 0.1f, len, dot );
+						VectorMA( newVelocity, val - len, dir, newVelocity );
+					}
+
+					if ( !(m_afPhysicsFlags & PFLAG_VPHYSICS_MOTIONCONTROLLER ) && IsSimulatingOnAlternateTicks() )
+					{
+						newVelocity *= 0.5f;
+					}
+	
+					ApplyAbsVelocityImpulse( newVelocity );
+				}
+				else
+				{
+					Vector forward, right, up;
+
+					AngleVectors (g_pMoveData->m_vecViewAngles, &forward, &right, &up);  // Determine movement angles
+
+					// Copy movement amounts
+					float fmove = g_pMoveData->m_flForwardMove;
+					float smove = g_pMoveData->m_flSideMove;
+
+					// Keep movement vectors in our plane of movement
+					forward -= Vector(0,0,-1) * DotProduct( forward, Vector(0,0,-1) );
+					VectorNormalize( forward );
+
+					right -= Vector(0,0,-1) * DotProduct( right, Vector(0,0,-1) );
+					VectorNormalize( right );
+
+					// Determine velocity
+					Vector wishvel = fmove * forward + smove * right;
+
+					// HACK!:  This code let's the player walk around with a little more control when on a func_physbox.
+					//		   They still slide around more than physical objects, but at least you can actually
+					//		   control yourself.
+					// Trying to walk around
+					if( wishvel.Length2DSqr() )
+					{
+						Vector vVel = -newVelocity;
+						vVel += GetAbsVelocity() + wishvel;
+
+						// Clamp or else this can get wildy huge and I don't know why
+						for( int i=0; i<3; ++i )
+						{
+							vVel[i] = clamp( vVel[i], newVelocity[i] - 180, newVelocity[i] + 180 );
+						}
+
+						SetAbsVelocity( vVel );
+					}
+
+				}
+			}
+
+			trace_t trace;
+			UTIL_TraceEntity( this, newPosition, newPosition, PhysicsSolidMaskForEntity(), this, COLLISION_GROUP_PLAYER_MOVEMENT, &trace );
+			if ( !trace.allsolid && !trace.startsolid )
+			{
+				SetAbsOrigin( newPosition );
+			}
+		}
+		else
+		{
+			{
+				bCheckStuck = true;
+			}
+		}
+	}
+	else
+	{
+		if ( m_bTouchedPhysObject || (nContactState & PLAYER_CONTACT_GAMEOBJECT) )
+		{
+			// check my position (physics object could have simulated into my position
+			// physics is not very far away, check my position
+			trace_t trace;
+			UTIL_TraceEntity( this, GetAbsOrigin(), GetAbsOrigin(),
+				PhysicsSolidMaskForEntity(), this, COLLISION_GROUP_PLAYER_MOVEMENT, &trace );
+
+			// is current position ok?
+			if ( trace.allsolid || trace.startsolid )
+			{
+				// no use the final stuck check to move back to old if this stuck fix didn't work
+				bCheckStuck = true;
+				lastValidPosition = m_oldOrigin;
+				SetAbsOrigin( newPosition );
+			}
+		}
+	}
+
+	if ( bCheckStuck )
+	{
+		trace_t trace;
+		UTIL_TraceEntity( this, GetAbsOrigin(), GetAbsOrigin(), PhysicsSolidMaskForEntity(), this, COLLISION_GROUP_PLAYER_MOVEMENT, &trace );
+
+		// current position is not ok, fixup
+		if ( trace.allsolid || trace.startsolid )
+		{
+			// STUCK!?!?!
+			//Warning( "Checkstuck failed.  Stuck on %s!!\n", trace.Ent<CBaseEntity>()->GetClassname() );
+			SetAbsOrigin( lastValidPosition );
+		}
+	}
+	m_oldOrigin = GetAbsOrigin();
+	m_bPhysicsWasFrozen = false;
+
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void CBasePlayer::PostThinkVPhysics( void )
+{
+	// Check to see if things are initialized!
+	if ( !m_pPhysicsController )
+	{
+		return;
+	}
+
+	Vector newPosition = GetAbsOrigin();
+	float frametime = gpGlobals->frametime;
+	if ( frametime <= 0 || frametime > 0.1f )
+		frametime = 0.1f;
+
+	IPhysicsObject *pPhysGround = GetGroundVPhysics();
+
+	if ( !pPhysGround && m_bTouchedPhysObject && g_pMoveData->m_outStepHeight <= 0.f && (GetFlags() & FL_ONGROUND) )
+	{
+		newPosition = m_oldOrigin + frametime * g_pMoveData->m_outWishVel;
+		newPosition = (GetAbsOrigin() * 0.5f) + (newPosition * 0.5f);
+	}
+
+	int collisionState = VPHYS_WALK;
+	if ( GetMoveType() == MOVETYPE_NOCLIP || GetMoveType() == MOVETYPE_OBSERVER )
+	{
+		collisionState = VPHYS_NOCLIP;
+	}
+	else if ( GetFlags() & FL_DUCKING )
+	{
+		collisionState = VPHYS_CROUCH;
+	}
+
+	if ( collisionState != m_vphysicsCollisionState )
+	{
+		SetVCollisionState( GetAbsOrigin(), GetAbsVelocity(), collisionState );
+	}
+
+	if ( !(TouchedPhysics() || pPhysGround) )
+	{
+		float maxSpeed = m_flMaxspeed > 0.0f ? m_flMaxspeed : sv_maxspeed.GetFloat();
+		g_pMoveData->m_outWishVel.Init( maxSpeed, maxSpeed, maxSpeed );
+	}
+
+	// teleport the physics object up by stepheight (game code does this - reflect in the physics)
+	if ( g_pMoveData->m_outStepHeight > 0.1f )
+	{
+		if ( g_pMoveData->m_outStepHeight > 4.0f )
+		{
+			VPhysicsGetObject()->SetPosition( GetAbsOrigin(), vec3_angle, true );
+		}
+		else
+		{
+			// don't ever teleport into solid
+			Vector position, end;
+			VPhysicsGetObject()->GetPosition( &position, nullptr );
+			end = position;
+			end.z += g_pMoveData->m_outStepHeight;
+			trace_t trace;
+			UTIL_TraceEntity( this, position, end, PhysicsSolidMaskForEntity(), this, COLLISION_GROUP_PLAYER_MOVEMENT, &trace );
+			if ( trace.DidHit() )
+			{
+				g_pMoveData->m_outStepHeight = trace.endpos.z - position.z;
+			}
+			m_pPhysicsController->StepUp( g_pMoveData->m_outStepHeight );
+		}
+		m_pPhysicsController->Jump();
+	}
+	g_pMoveData->m_outStepHeight = 0.0f;
+
+	// Store these off because after running the usercmds, it'll pass them
+	// to UpdateVPhysicsPosition.	
+	m_vNewVPhysicsPosition = newPosition;
+	m_vNewVPhysicsVelocity = g_pMoveData->m_outWishVel;
+
+	m_oldOrigin = GetAbsOrigin();
+}
+
+IPhysicsObject *CBasePlayer::GetGroundVPhysics()
+{
+	CBaseEntity *pGroundEntity = GetGroundEntity();
+	if ( pGroundEntity && pGroundEntity->GetMoveType() == MOVETYPE_VPHYSICS )
+	{
+		IPhysicsObject *pPhysGround = pGroundEntity->VPhysicsGetObject();
+		if ( pPhysGround && pPhysGround->IsMoveable() )
+			return pPhysGround;
+	}
+	return nullptr;
+}
+
+// UNDONE: Look and see if the ground entity is in hierarchy with a MOVETYPE_VPHYSICS?
+// Behavior in that case is not as good currently when the parent is rideable
+bool CBasePlayer::IsRideablePhysics( IPhysicsObject *pPhysics )
+{
+	if ( pPhysics )
+	{
+		if ( pPhysics->GetMass() > (VPhysicsGetObject()->GetMass()*2) )
+			return true;
+	}
+
+	return false;
+}
+
+void CBasePlayer::UpdateVPhysicsPosition( const Vector &position, const Vector &velocity, float secondsToArrival )
+{
+	if( !m_pPhysicsController )
+		return;
+
+	bool onground = (GetFlags() & FL_ONGROUND) ? true : false;
+	IPhysicsObject *pPhysGround = GetGroundVPhysics();
+
+	// if the object is much heavier than the player, treat it as a local coordinate system
+	// the player controller will solve movement differently in this case.
+	if ( !IsRideablePhysics(pPhysGround) )
+	{
+		pPhysGround = nullptr;
+	}
+
+	m_pPhysicsController->Update( position, velocity, secondsToArrival, onground, pPhysGround );
+}
+
+// used by the physics gun and game physics... is there a better interface?
+void CBasePlayer::SetPhysicsFlag( int nFlag, bool bSet )
+{
+	if (bSet)
+		m_afPhysicsFlags |= nFlag;
+	else
+		m_afPhysicsFlags &= ~nFlag;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
+void CBasePlayer::SetVCollisionState( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity, int collisionState )
+{
+	m_vphysicsCollisionState = collisionState;
+	if( m_pShadowStand == nullptr )
+		return;
+
+	switch( collisionState )
+	{
+	case VPHYS_WALK:
+		m_pShadowStand->SetPosition( vecAbsOrigin, vec3_angle, true );
+		m_pShadowStand->SetVelocity( &vecAbsVelocity, nullptr );
+		m_pShadowCrouch->EnableCollisions( false );
+		m_pPhysicsController->SetObject( m_pShadowStand );
+		VPhysicsSwapObject( m_pShadowStand );
+		m_pShadowStand->EnableCollisions( true );
+		break;
+
+	case VPHYS_CROUCH:
+		m_pShadowCrouch->SetPosition( vecAbsOrigin, vec3_angle, true );
+		m_pShadowCrouch->SetVelocity( &vecAbsVelocity, nullptr );
+		m_pShadowStand->EnableCollisions( false );
+		m_pPhysicsController->SetObject( m_pShadowCrouch );
+		VPhysicsSwapObject( m_pShadowCrouch );
+		m_pShadowCrouch->EnableCollisions( true );
+		break;
+
+	case VPHYS_NOCLIP:
+		m_pShadowCrouch->EnableCollisions( false );
+		m_pShadowStand->EnableCollisions( false );
+		break;
+	}
+}
+
+void CBasePlayer::UpdatePhysicsShadowToCurrentPosition()
+{
+	UpdateVPhysicsPosition( GetAbsOrigin(), vec3_origin, gpGlobals->frametime );
+}
+
+void CBasePlayer::UpdatePhysicsShadowToPosition( const Vector &vecAbsOrigin )
+{
+	UpdateVPhysicsPosition( vecAbsOrigin, vec3_origin, gpGlobals->frametime );
+}
+
+const char *CBasePlayer::GetPlayerModelName( void )
+{
+	return "models/player.mdl";
+}
+
+float CBasePlayer::GetAirTime( void )
+{
+	return m_flTimeLastTouchedGround == 0.0f ? 0.0f : gpGlobals->curtime - m_flTimeLastTouchedGround;
+}
+
+const Vector& CBasePlayer::GetEyeOffset() const 
+{ 
+	return m_vecEyeOffset; 
+}
+
+void CBasePlayer::SetEyeOffset( const Vector& v ) 
+{ 
+	m_vecEyeOffset = v; 
+}
+
+const QAngle & CBasePlayer::GetEyeAngleOffset() const 
+{ 
+	return m_EyeAngleOffset; 
+}
+
+void CBasePlayer::SetEyeAngleOffset( const QAngle& qa ) 
+{ 
+	m_EyeAngleOffset = qa; 
+}
+
+const Vector & CBasePlayer::GetAimDirection() const
+{
+	return m_AimDirection;
+}
+
+void CBasePlayer::SetAimDirection( const Vector& v )
+{
+	m_AimDirection = v; 
+}
+
+bool CBasePlayer::IsCoach( void ) const
+{
+	return ( GetCoachingTeam() != 0 );
+}
+
+int CBasePlayer::GetCoachingTeam( void ) const
+{
+	if ( sv_coaching_enabled.GetBool() && ( GetTeamNumber() == TEAM_SPECTATOR ) )
+	{
+		return m_iCoachingTeam;
+	}
+	else
+	{ 
+		return 0;
+	}
+}
+
+// returns the player's team or, if coach, coaching team.
+int CBasePlayer::GetAssociatedTeamNumber( void ) const
+{
+	return ( IsCoach() ? GetCoachingTeam() : GetTeamNumber() ); 
+}
+
+// is a true spectator, i.e. NOT a team coach
+bool CBasePlayer::IsSpectator( void ) const
+{
+	return ( GetTeamNumber() == TEAM_SPECTATOR && !IsCoach() );
+}
+
+autoaim_params_t::autoaim_params_t()
+{
+	m_fScale = 0;
+	m_fMaxDist = 0;
+	m_fMaxDeflection = -1.0f;
+	m_bOnTargetQueryOnly = false;
+}
+
+KS_ENTITY_ABSTRACT_KIND( CBasePlayer )

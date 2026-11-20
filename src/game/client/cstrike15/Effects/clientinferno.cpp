@@ -1,61 +1,76 @@
+// Copyright (c) 2005 Turtle Rock Studios, Inc. - All Rights Reserved
+
+module;
+#include "client_class.h"
+#include "dlight.h"
+#include "edict.h"
+#include "particles/particles.h"
+#include "tier2/resourceprecacher.h"
+#include "../../reflect_recvtable.h"
+module ks.client;
+
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.exprevaluator;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import :props;
+import :baseanimatedtextureproxy;
+import :iinput;
+import :sharedvar;
+import :util;
+import :particlemgr;
+import :cstrike15.Effects.clientinferno;
+import :cstrike15.cs_player;
+import :precache;
+import :noopanimcontroller;
+import :baseentity;
+import :achievements_and_stats_interface;
+import ks.game.gamemovement;
+
+class CEngineSprite;
+class CNewParticleEffect;
+
+using namespace ::ks::reflect;
+
 // ClientInferno.cpp
 // Render client-side Inferno effects
 // Author: Michael Booth, February 2005
-// Copyright (c) 2005 Turtle Rock Studios, Inc. - All Rights Reserved
-
-#include "rocketui/rmlui.h"
-#include "predictable_entity.h"
-#include "cdll_util.h"
-#include "util_shared.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
-#include "c_basecombatweapon.h"
-#include "c_basecombatcharacter.h"
-#include "gamerules.h"
-#include "c_baseplayer.h"
-#include "vphysics_interface.h"
-#include "cdll_client_int.h"
-#include "engine/ivmodelinfo.h"
-#include "reflect_recvtable.h"
-#include "reflect_annotations.h"
-#include "hud_macros.h"
-#include "view.h"
-#include "enginesprite.h"
-#include "precache_register.h"
-#include "iefx.h"
-#include "dlight.h"
-#include "basecsgrenade_projectile.h"
-#include "clientinferno.h"
-
-
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, InfernoMaterials )
 	PRECACHE( MATERIAL, "sprites/white" )
 PRECACHE_REGISTER_END()
 
-ConVar InfernoDlightSpacing( "inferno_dlight_spacing", "200", FCVAR_CHEAT, "Inferno dlights are at least this far apart" );
-ConVar InfernoDlights( "inferno_dlights", "30", 0, "Min FPS at which molotov dlights will be created" );
+ConVar InfernoDlightSpacing( side_registry(), "inferno_dlight_spacing", "200", FCVAR_CHEAT, "Inferno dlights are at least this far apart" );
+ConVar InfernoDlights( side_registry(), "inferno_dlights", "30", 0, "Min FPS at which molotov dlights will be created" );
 //ConVar InfernoParticles( "inferno_particles", "molotov_groundfire", FCVAR_REPLICATED | FCVAR_CHEAT );
-ConVar InfernoFire( "inferno_fire", "2" );
+ConVar InfernoFire( side_registry(), "inferno_fire", "2" );
 enum FireMaskType
 {
 	OLD_FIRE_MASK = 1,
 	NEW_FIRE_MASK = 2
 };
 
-IMPLEMENT_REFLECT_CLIENTCLASS( C_Inferno, DT_Inferno, CInferno )
+IMPLEMENT_REFLECT_CLIENTCLASS( CInferno, DT_Inferno, CInferno )
 
 //-----------------------------------------------------------------------------------------------
-C_Inferno::C_Inferno()
+CInferno::CInferno()
 {
 	m_maxFireHalfWidth = 30.0f;
 	m_maxFireHeight = 80.0f;
 	m_burnParticleEffect = nullptr;
 }
 
-
 //-----------------------------------------------------------------------------------------------
-C_Inferno::~C_Inferno()
+CInferno::~CInferno()
 {
 	if ( m_burnParticleEffect.IsValid() )
 	{
@@ -63,12 +78,10 @@ C_Inferno::~C_Inferno()
 	}
 }
 
-
 //-----------------------------------------------------------------------------------------------
-void C_Inferno::Spawn( void )
+void CInferno::Spawn( void )
 {
 	BaseClass::Spawn();
-
 
 	m_fireCount = 0;
 	m_lastFireCount = 0;
@@ -82,14 +95,13 @@ void C_Inferno::Spawn( void )
 	SetNextClientThink( CLIENT_THINK_ALWAYS );
 }
 
-
 //-----------------------------------------------------------------------------------------------
 /**
  * Monitor changes and recompute render bounds
  */
-void C_Inferno::ClientThink()
+void CInferno::ClientThink()
 {
-	CVProfScope _( "C_Inferno::ClientThink", 0, "Magic", false, BUDGETFLAG_OTHER );
+	CVProfScope _( "CInferno::ClientThink", 0, "Magic", false, BUDGETFLAG_OTHER );
 
 	bool bIsAttachedToMovingObject = (GetMoveParent() != nullptr) ? true : false;
 
@@ -146,9 +158,8 @@ void C_Inferno::ClientThink()
 	UpdateParticles(); 
 }
 
-
 //--------------------------------------------------------------------------------------------------------
-void C_Inferno::OnNewParticleEffect( const char *pszParticleName, CNewParticleEffect *pNewParticleEffect )
+void CInferno::OnNewParticleEffect( const char *pszParticleName, CNewParticleEffect *pNewParticleEffect )
 {
 	if ( FStrEq( pszParticleName, GetParticleEffectName() ) )
 	{
@@ -156,9 +167,8 @@ void C_Inferno::OnNewParticleEffect( const char *pszParticleName, CNewParticleEf
 	}
 }
 
-
 //--------------------------------------------------------------------------------------------------------
-void C_Inferno::OnParticleEffectDeleted( CNewParticleEffect *pParticleEffect )
+void CInferno::OnParticleEffectDeleted( CNewParticleEffect *pParticleEffect )
 {
 	if ( m_burnParticleEffect == pParticleEffect )
 	{
@@ -166,9 +176,8 @@ void C_Inferno::OnParticleEffectDeleted( CNewParticleEffect *pParticleEffect )
 	}
 }
 
-
 //--------------------------------------------------------------------------------------------------------
-void C_Inferno::UpdateParticles( void )
+void CInferno::UpdateParticles( void )
 {
 	if ( m_drawableCount > 0 && (InfernoFire.GetInt() & NEW_FIRE_MASK) != 0 )
 	{
@@ -223,8 +232,8 @@ void C_Inferno::UpdateParticles( void )
 						el->color.r = 254;
 						el->color.g = 100;
 						el->color.b = 10;
-						el->radius = random->RandomFloat(60, 120);
-						el->die = gpGlobals->curtime + random->RandomFloat( 0.01, 0.025 );
+						el->radius = random_valve->RandomFloat(60, 120);
+						el->die = gpGlobals->curtime + random_valve->RandomFloat( 0.01, 0.025 );
 						el->color.exponent = 5;
 					}
 				}
@@ -253,7 +262,7 @@ void C_Inferno::UpdateParticles( void )
 }
 
 //-----------------------------------------------------------------------------------------------
-void C_Inferno::GetRenderBounds( Vector& mins, Vector& maxs )
+void CInferno::GetRenderBounds( Vector& mins, Vector& maxs )
 {
 	if (m_drawableCount)
 	{
@@ -267,12 +276,11 @@ void C_Inferno::GetRenderBounds( Vector& mins, Vector& maxs )
 	}
 }
 
-
 //-----------------------------------------------------------------------------------------------
 /**
  * Returns the bounds as an AABB in worldspace
  */
-void C_Inferno::GetRenderBoundsWorldspace( Vector& mins, Vector& maxs )
+void CInferno::GetRenderBoundsWorldspace( Vector& mins, Vector& maxs )
 {
 	if (m_drawableCount)
 	{
@@ -286,9 +294,8 @@ void C_Inferno::GetRenderBoundsWorldspace( Vector& mins, Vector& maxs )
 	}
 }
 
-
 //-----------------------------------------------------------------------------------------------
-void C_Inferno::RecomputeBounds( void )
+void CInferno::RecomputeBounds( void )
 {
 	m_minBounds = GetAbsOrigin() + Vector( 64.9f, 64.9f, 64.9f );
 	m_maxBounds = GetAbsOrigin() + Vector( -64.9f, -64.9f, -64.9f );
@@ -320,12 +327,11 @@ void C_Inferno::RecomputeBounds( void )
 	}
 }
 
-
 //-----------------------------------------------------------------------------------------------
 /**
  * Given a position, return the fire there
  */
-C_Inferno::Drawable *C_Inferno::GetDrawable( const Vector &pos )
+CInferno::Drawable *CInferno::GetDrawable( const Vector &pos )
 {
 	for( int i=0; i<m_drawableCount; ++i )
 	{
@@ -340,14 +346,13 @@ C_Inferno::Drawable *C_Inferno::GetDrawable( const Vector &pos )
 	return nullptr;
 }
 
-
 //-----------------------------------------------------------------------------------------------
 /**
  * Compare m_fireX etc to m_drawable and update states
  */
-void C_Inferno::SynchronizeDrawables( void )
+void CInferno::SynchronizeDrawables( void )
 {
-	CVProfScope _( "C_Inferno::SynchronizeDrawables", 0, "Magic", false, BUDGETFLAG_OTHER );
+	CVProfScope _( "CInferno::SynchronizeDrawables", 0, "Magic", false, BUDGETFLAG_OTHER );
 
 	int i;
 
@@ -408,10 +413,10 @@ void C_Inferno::SynchronizeDrawables( void )
 			info->m_pos = firePos;
 			info->m_normal = fireNormal;
 			info->m_frame = 0;
-			info->m_framerate = random->RandomFloat( 0.04f, 0.06f );
-			info->m_mirror = (random->RandomInt( 0, 100 ) < 50);
+			info->m_framerate = random_valve->RandomFloat( 0.04f, 0.06f );
+			info->m_mirror = (random_valve->RandomInt( 0, 100 ) < 50);
 			info->m_size = 0.0f;
-			info->m_maxSize = random->RandomFloat( 70.0f, 90.0f );
+			info->m_maxSize = random_valve->RandomFloat( 70.0f, 90.0f );
 
 			bool closeDlight = false;
 			for ( int i=0; i<m_drawableCount; ++i )
@@ -459,11 +464,10 @@ void C_Inferno::SynchronizeDrawables( void )
 	}
 }
 
-
 //-----------------------------------------------------------------------------------------------
-int C_Inferno::DrawModel( int flags, const RenderableInstance_t &instance )
+int CInferno::DrawModel( int flags, const RenderableInstance_t &instance )
 {
-	CVProfScope _( "C_Inferno::DrawModel", 0, "DeadRun", false, BUDGETFLAG_OTHER );
+	CVProfScope _( "CInferno::DrawModel", 0, "DeadRun", false, BUDGETFLAG_OTHER );
 
 	IMaterial		*material;
 	CEngineSprite	*sprite;
@@ -502,12 +506,11 @@ int C_Inferno::DrawModel( int flags, const RenderableInstance_t &instance )
 	return 0;
 }
 
-
 //-----------------------------------------------------------------------------------------------
 /**
  * Render an individual fire sprite
  */
-void C_Inferno::DrawFire( C_Inferno::Drawable *fire, IMesh *mesh )
+void CInferno::DrawFire( CInferno::Drawable *fire, IMesh *mesh )
 {
 	const float halfWidth = fire->m_size/3.0f;
 	//unsigned char color[4] = { 255,255,255,255 };
@@ -607,10 +610,9 @@ void C_Inferno::DrawFire( C_Inferno::Drawable *fire, IMesh *mesh )
 		el->color.r = 254;
 		el->color.g = 100;
 		el->color.b = 10;
-		el->radius = random->RandomFloat(50, 131) * scale;
+		el->radius = random_valve->RandomFloat(50, 131) * scale;
 		el->die = gpGlobals->curtime + 0.1f;
 		el->color.exponent = 5;
-
 
 		/*
 		dlight_t *dl = effects->CL_AllocDlight ( fire->m_dlightIndex );
@@ -625,5 +627,4 @@ void C_Inferno::DrawFire( C_Inferno::Drawable *fire, IMesh *mesh )
 	}
 }
 
-
-IMPLEMENT_REFLECT_CLIENTCLASS( C_FireCrackerBlast, DT_FireCrackerBlast, CFireCrackerBlast )
+IMPLEMENT_REFLECT_CLIENTCLASS( CFireCrackerBlast, DT_FireCrackerBlast, CFireCrackerBlast )

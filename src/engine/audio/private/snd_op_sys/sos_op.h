@@ -6,6 +6,10 @@ import std;
 #include "sos_system.h"
 #include "snd_channels.h"
 #include "sos_op_list.h"
+import ks.core.logging;
+import ks.core.wchartypes;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
 
 // Externs the logging channel
 extern LoggingChannelID_t LOG_SND_OPERATORS;;

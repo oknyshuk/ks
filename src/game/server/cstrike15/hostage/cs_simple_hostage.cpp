@@ -1,60 +1,102 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
+module;
+#include "eiface.h"
+#include "gametypes.h"
+#include "igameevents.h"
+#include "networkvar.h"
+#include "reflect.h"
+#include "responserules/response_types.h"
+#include "server_class.h"
+#include "studio.h"
+#include "tier2/resourceprecacher.h"
+#include "vphysics_interface.h"
+#include "vscript/ivscript.h"
+#include "../../ai_criteria.h"
+#include "../../baseentity.h"
+#include "../../entity_dispatch.h"
+#include "../../entity_dispatch_list.h"
+#include "../../entity_kinds_dump.h"
+#include "../../reflect_datamap.h"
+#include "../../reflect_sendtable.h"
+#include "shareddefs.h"
+#include "../../util.h"
+#include "../../vscript_game.h"
+#include "../../vscript_shared.h"
+module ks.server;
+
+import std;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.random;
+import ks.core.types;
+import ks.game.cstrike15.cs_achievement_constants;
+import ks.game.cstrike15.cs_achievementdefs;
+import ks.game.in_buttons;
+import ks.game.iplayeranimstate;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.exprevaluator;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
+import :fish;
+import :vscript;
+import ks.game.ai_activity;
+import :player;
+import :sharedvar;
+import :baseentity;
+import :cstrike15.Effects.chicken;
+import :cstrike15.bot.bot;
+import :cstrike15.cs_player;
+import :cstrike15.cs_player_2;
+import :cstrike15.cs_playeranimstate;
+import :cstrike15.hostage.cs_simple_hostage;
+import :nav_4;
+import :entity_dispatch;
+import :entity_kind;
+import :entity_2;
+import ks.game.shareddefs;
+import :cstrike15.bot.cs_bot;
+import :econ.econ_item_schema_minimal;
+import :entityutil;
+import ks.game.gamemovement;
+import ks.game.mapentities_shared;
+
+class CAI_Expresser;
+class CBaseEntity;
+class CCSPlayer;
+class CConfigurationForHighPriorityUseEntity_t;
+class CEffectData;
+class CHostage;
+class CImprovLocomotor;
+class CNavArea;
+class CNavLadder;
+class CTakeDamageInfo;
+class CUserCmd;
+class CWeaponCSBase;
+class HostagePathCost;
+struct inputdata_t;
+
+using namespace ::ks::reflect;
+
 // cs_simple_hostage.cpp
 // Simple CS1.6 level hostage
 // Author: Michael S. Booth and Matt Boone, July 2004
 // Bugs Fixed by: Everyone else
 
-#include "vphysics_interface.h"
-#include "const.h"
-#include "edict.h"
-#include "eiface.h"
-#include "dt_send.h"
-#include "shareddefs.h"
-#include "ehandle.h"
-#include "datamap.h"
-#include "util.h"
-#include "predictable_entity.h"
-#include "variant_t.h"
-#include "takedamageinfo.h"
-#include "touchlink.h"
-#include "groundlink.h"
-#include "networkvar.h"
-#include "baseentity_shared.h"
-#include "basetoggle.h"
-#include "igameevents.h"
-#include "precache_register.h"
-#include "baseanimating.h"
-#include "basecombatweapon.h"
-#include "basecombatcharacter.h"
-#include "basetempentity.h"
-#include "player.h"
-#include "te.h"
-#include "ndebugoverlay.h"
-#include "reflect_predmap.h"
-#include "reflect_datamap.h"
-#include "reflect_sendtable.h"
-#include "reflect_annotations.h"
-#include "cs_simple_hostage.h"
-#include "cs_player.h"
-#include "cs_gamerules.h"
-#include "bot.h"
-#include "obstacle_pushaway.h"
-#include "props_shared.h"
-#include "te_effect_dispatch.h"
-
-#include "cs_gamestats.h"
-#include "cs_gamerules.h"
-#include "cs_achievement_constants.h"
-#include "gametypes.h"
-#include "cvisibilitymonitor.h"
-#include "cs_entity_spotting.h"
-#include "cs_shareddefs.h"
-#include "../Effects/chicken.h"
-
-constexpr auto HOSTAGE_THINK_INTERVAL = (1.0f/60.0f); //We increased this from 0.1 in CS:GO so that the hostages don't stutter as much.
-constexpr auto HOSTAGE_THINK_CARRIED_INTERVAL = (1.0f/45.0f);
+static constexpr auto HOSTAGE_THINK_INTERVAL = (1.0f/60.0f); //We increased this from 0.1 in CS:GO so that the hostages don't stutter as much.
+static constexpr auto HOSTAGE_THINK_CARRIED_INTERVAL = (1.0f/45.0f);
 
 #define DrawLine( from, to, duration, red, green, blue )		NDebugOverlay::Line( from, to, red, green, blue, true, 0.1f )
 inline constexpr const char *HOSTAGE_PUSHAWAY_THINK_CONTEXT = "HostagePushawayThink";
@@ -68,13 +110,12 @@ inline constexpr const char *HOSTAGE_CARRY_PROP_MODEL = "models/hostage/hostage_
 inline constexpr const char *HOSTAGE_CARRY_VIEW_MODEL = "models/hostage/v_hostage_arm.mdl";
 
 // amount of time a player is forced to continue defusing after not USEing. this effects other player's ability to interrupt
-const float GRAB_HOSTAGE_LOCKIN_PERIOD = 0.05f;
+static const float GRAB_HOSTAGE_LOCKIN_PERIOD = 0.05f;
 
-ConVar mp_hostagepenalty( "mp_hostagepenalty", "10", FCVAR_NOTIFY, "Terrorist are kicked for killing too much hostages" );
-ConVar hostage_debug( "hostage_debug", "0", FCVAR_CHEAT, "Show hostage AI debug information" );
-ConVar hostage_drop_time( "hostage_drop_time", "1", FCVAR_DEVELOPMENTONLY, "Time for the hostage before it fully drops to ground" );
-ConVar hostage_is_silent( "hostage_is_silent", "0", FCVAR_CHEAT, "When set, the hostage won't play any code driven response rules lines" );
-
+ConVar mp_hostagepenalty( side_registry(), "mp_hostagepenalty", "10", FCVAR_NOTIFY, "Terrorist are kicked for killing too much hostages" );
+ConVar hostage_debug( side_registry(), "hostage_debug", "0", FCVAR_CHEAT, "Show hostage AI debug information" );
+ConVar hostage_drop_time( side_registry(), "hostage_drop_time", "1", FCVAR_DEVELOPMENTONLY, "Time for the hostage before it fully drops to ground" );
+ConVar hostage_is_silent( side_registry(), "hostage_is_silent", "0", FCVAR_CHEAT, "When set, the hostage won't play any code driven response rules lines" );
 
 extern ConVar sv_pushaway_force;
 extern ConVar sv_pushaway_min_player_speed;
@@ -83,27 +124,21 @@ extern ConVar mp_hostages_takedamage;
 extern ConVar mp_hostages_rescuetowin;
 
 // We need hostage-specific pushaway cvars because the hostage doesn't have the same friction etc as players
-ConVar sv_pushaway_hostage_force( "sv_pushaway_hostage_force", "20000", FCVAR_REPLICATED | FCVAR_CHEAT, "How hard the hostage is pushed away from physics objects (falls off with inverse square of distance)." );
-ConVar sv_pushaway_max_hostage_force( "sv_pushaway_max_hostage_force", "1000", FCVAR_REPLICATED | FCVAR_CHEAT, "Maximum of how hard the hostage is pushed away from physics objects." );
+ConVar sv_pushaway_hostage_force( side_registry(), "sv_pushaway_hostage_force", "20000", FCVAR_REPLICATED | FCVAR_CHEAT, "How hard the hostage is pushed away from physics objects (falls off with inverse square of distance)." );
+ConVar sv_pushaway_max_hostage_force( side_registry(), "sv_pushaway_max_hostage_force", "1000", FCVAR_REPLICATED | FCVAR_CHEAT, "Maximum of how hard the hostage is pushed away from physics objects." );
 
-ConVar mp_hostages_max( "mp_hostages_max", "2", FCVAR_REPLICATED | FCVAR_RELEASE, "Maximum number of hostages to spawn." );
-ConVar mp_hostages_spawn_farthest( "mp_hostages_spawn_farthest", "0", FCVAR_REPLICATED | FCVAR_RELEASE, "When enabled will consistently force the farthest hostages to spawn." );
-ConVar mp_hostages_spawn_same_every_round( "mp_hostages_spawn_same_every_round", "1", FCVAR_REPLICATED | FCVAR_RELEASE, "0 = spawn hostages randomly every round, 1 = same spawns for entire match." );
-ConVar mp_hostages_spawn_force_positions( "mp_hostages_spawn_force_positions", "", FCVAR_REPLICATED | FCVAR_RELEASE, "Comma separated list of zero based indices to force spawn positions, e.g. '0,2' or '1,6'" );
-ConVar mp_hostages_run_speed_modifier( "mp_hostages_run_speed_modifier", "1.0", FCVAR_REPLICATED | FCVAR_RELEASE, "Default is 1.0, slow down hostages by setting this to < 1.0.", true, 0.1, true, 1.5 );
-
+ConVar mp_hostages_max( side_registry(), "mp_hostages_max", "2", FCVAR_REPLICATED | FCVAR_RELEASE, "Maximum number of hostages to spawn." );
+ConVar mp_hostages_spawn_farthest( side_registry(), "mp_hostages_spawn_farthest", "0", FCVAR_REPLICATED | FCVAR_RELEASE, "When enabled will consistently force the farthest hostages to spawn." );
+ConVar mp_hostages_spawn_same_every_round( side_registry(), "mp_hostages_spawn_same_every_round", "1", FCVAR_REPLICATED | FCVAR_RELEASE, "0 = spawn hostages randomly every round, 1 = same spawns for entire match." );
+ConVar mp_hostages_spawn_force_positions( side_registry(), "mp_hostages_spawn_force_positions", "", FCVAR_REPLICATED | FCVAR_RELEASE, "Comma separated list of zero based indices to force spawn positions, e.g. '0,2' or '1,6'" );
+ConVar mp_hostages_run_speed_modifier( side_registry(), "mp_hostages_run_speed_modifier", "1.0", FCVAR_REPLICATED | FCVAR_RELEASE, "Default is 1.0, slow down hostages by setting this to < 1.0.", true, 0.1, true, 1.5 );
 
 LINK_ENTITY_TO_CLASS( hostage_carriable_prop, CHostageCarriableProp );
 PRECACHE_REGISTER( hostage_carriable_prop );
 
-
 IMPLEMENT_REFLECT_SERVERCLASS( CHostageCarriableProp, DT_HostageCarriableProp )
 
-#ifdef CLIENT_DLL
-IMPLEMENT_REFLECT_PREDMAP( CHostageCarriableProp );
-#endif
-
-const int DEFAULT_NUM_HOSTAGE_MODELS = 4;
+static const int DEFAULT_NUM_HOSTAGE_MODELS = 4;
 static const char *HostageModel[DEFAULT_NUM_HOSTAGE_MODELS] =
 {
 	"models/hostage/hostage.mdl",
@@ -127,10 +162,8 @@ LINK_ENTITY_TO_CLASS_ALIAS( hostage_entity, CHostage );
 //-----------------------------------------------------------------------------------------------------
 IMPLEMENT_REFLECT_DATAMAP( CHostage )
 
-
 //-----------------------------------------------------------------------------------------------------
 IMPLEMENT_REFLECT_SERVERCLASS( CHostage, DT_CHostage )
-
 
 //-----------------------------------------------------------------------------------------------------
 std::vector< CHostage * > g_Hostages;
@@ -270,7 +303,6 @@ void CHostage::Spawn_Impl( void )
 	++hostageModelIndex;
 
 	RemoveEffects( EF_NODRAW );
-	SetHullType( HULL_HUMAN );
 
 	SetSolid( SOLID_BBOX );
 	AddSolidFlags( FSOLID_NOT_STANDABLE );
@@ -289,7 +321,6 @@ void CHostage::Spawn_Impl( void )
 
 	// we must set this, because its zero by default thus putting their eyes in their feet
 	SetViewOffset( Vector( 0, 0, 35 ) );
-
 
 	// set up think callback
 	SetNextThink( gpGlobals->curtime + HOSTAGE_THINK_INTERVAL );
@@ -542,7 +573,6 @@ void CHostage::CheckForHostageAbuse( CCSPlayer *player )
 	}
 }
 
-
 //-----------------------------------------------------------------------------------------------------
 /**
  * Hostage was killed
@@ -555,7 +585,6 @@ void CHostage::Event_Killed_Impl( const CTakeDamageInfo &info )
 	{
 		player->DecrementNumFollowers();
 	}
-
 
 	// tell the game logic that we've died
 	CSGameRules()->CheckWinConditions();
@@ -600,7 +629,6 @@ void CHostage::Event_Killed_Impl( const CTakeDamageInfo &info )
 
 	m_nHostageState = k_EHostageStates_Dead;
 }
-
 
 //-----------------------------------------------------------------------------------------------------
 /**
@@ -781,7 +809,6 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 				}
 			}
 
-
 		}
 
 		if ( !roundWasAlreadyOver )
@@ -803,7 +830,6 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 		}
 	}
 }
-
 
 //-----------------------------------------------------------------------------------------------------
 /**
@@ -840,7 +866,6 @@ void CHostage::Touch_Impl( CBaseEntity *other )
 		other->OnTakeDamage( damageInfo );
 	}
 }
-
 
 //-----------------------------------------------------------------------------------------------------
 /**
@@ -884,7 +909,6 @@ void CHostage::Wiggle( void )
 		Jump();
 	}
 }
-
 
 //-----------------------------------------------------------------------------------------------------
 /**
@@ -958,7 +982,6 @@ void CHostage::UpdateFollowing( float deltaT )
 			m_pathFollower.Reset();
 		}
 
-
 		// if our rescuer is too far away, give up
 		const float giveUpRange = 2000.0f;
 		const float maxPathLength = 4000.0f;
@@ -971,7 +994,6 @@ void CHostage::UpdateFollowing( float deltaT )
 			}
 			return;
 		}
-
 
 		// don't crowd the leader
 		if (m_isWaitingForLeader)
@@ -1021,8 +1043,6 @@ void CHostage::UpdateFollowing( float deltaT )
 		}
 	}
 }
-
-
 
 //-----------------------------------------------------------------------------------------------------
 void CHostage::AvoidPhysicsProps( void )
@@ -1089,7 +1109,6 @@ void CHostage::AvoidPhysicsProps( void )
 		}
 	}
 }
-
 
 //-----------------------------------------------------------------------------------------------------
 /**
@@ -1427,7 +1446,6 @@ void CHostage::Follow( CCSPlayer *leader )
 	}
 }
 
-
 //-----------------------------------------------------------------------------------------------------
 /**
  * Return our leader, or NULL
@@ -1436,7 +1454,6 @@ CCSPlayer *CHostage::GetLeader( void ) const
 {
 	return ToCSPlayer( m_leader.m_Value );
 }
-
 
 //-----------------------------------------------------------------------------------------------------
 /**
@@ -1695,7 +1712,6 @@ void CHostage::DropHostage( Vector vecPosition, bool bIsRescued )
 		m_nHostageState = k_EHostageStates_GettingDropped;
 		m_flDropStartTime = gpGlobals->curtime;
 
-
 	}
 
 	//Vector soundPosition = GetAbsOrigin() + Vector( 0, 0, 5 );
@@ -1852,7 +1868,6 @@ void CHostage::Jump( void )
 	}
 }
 
-
 //-----------------------------------------------------------------------------------------------------
 bool CHostage::IsJumping( void ) const
 {
@@ -1868,7 +1883,6 @@ void CHostage::Run( void )
 	m_isRunning = true;
 }
 
-
 //-----------------------------------------------------------------------------------------------------
 /**
  * Set movement speed to walking
@@ -1877,7 +1891,6 @@ void CHostage::Walk( void )
 {
 	m_isRunning = false;
 }
-
 
 //-----------------------------------------------------------------------------------------------------
 bool CHostage::IsRunning( void ) const
@@ -1956,12 +1969,10 @@ void CHostage::OnMoveToFailure( const Vector &goal, MoveToFailureType reason )
 {
 }
 
-
 unsigned int CHostage::PhysicsSolidMaskForEntity_Impl() const
 {
 	return MASK_PLAYERSOLID;
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 // CImprovLocomotor methods: forward to the concrete class (CHostage or CChicken) according to the Kind
@@ -2168,4 +2179,3 @@ void CImprovLocomotor::OnMoveToFailure( const Vector &goal, MoveToFailureType re
 	case Kind::Chicken:	static_cast< CChicken * >( this )->OnMoveToFailure( goal, reason );	break;
 	}
 }
-

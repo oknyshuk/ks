@@ -4,7 +4,9 @@
 // Purpose: A set of utilities to render standard shapes
 
 import std;
-import ks.core;
+import ks.math.polyhedron;
+import ks.platform;
+import ks.simd;
 #include "tier2/meshutils.h"
 
 

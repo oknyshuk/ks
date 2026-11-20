@@ -8,7 +8,10 @@
 #include <materialsystem/IShader.h>
 #include <materialsystem/ishadersystem_declarations.h>
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 #include "shaderlib/shadercombosemantics.h"
 
 //-----------------------------------------------------------------------------

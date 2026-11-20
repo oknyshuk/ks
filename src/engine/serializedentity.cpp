@@ -2,7 +2,16 @@
 // Copyright (c) Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.types;
+import ks.math.mathlib;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.convar;
+import ks.tier1.fixed_pool;
 #include "serializedentity.h"
 
 //-----------------------------------------------------------------------------

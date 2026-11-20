@@ -9,7 +9,12 @@ void Shader_Disconnect();
 void Shader_SwapBuffers();
 
 import std;
-import ks.tier1;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
 
 extern	Vector		modelorg;
 extern VMatrix g_BrushToWorldMatrix;

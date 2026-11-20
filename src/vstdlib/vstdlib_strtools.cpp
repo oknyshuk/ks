@@ -5,7 +5,11 @@
 // Allows centralization of CRT and CRT-like code and consistent behavior across platforms.
 
 import std;
-import ks.tier1;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
 
 // Prints out a memory dump where stuff that's ascii is human readable, etc.
 void V_LogMultiline(bool input, char const *label, const char *data, std::size_t len, std::string &output);

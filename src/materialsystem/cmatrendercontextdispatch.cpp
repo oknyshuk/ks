@@ -9,6 +9,8 @@
 
 #include "facade/imatrendercontext.inl"
 #include "facade/imatrendercontextinternal.inl"
+import ks.tier1.exprevaluator;
+import ks.tier1.refcount;
 
 int CMatRenderContextBase::Release()
 {

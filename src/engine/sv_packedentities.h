@@ -5,6 +5,8 @@
 #include "server.h"
 #include "framesnapshot.h"
 #include "server_class.h"
+import ks.tier1.bitbuf;
+import ks.tier1.checksum_crc;
 
 void SV_ComputeClientPacks( 
 	int clientCount, 

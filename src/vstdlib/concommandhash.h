@@ -5,7 +5,13 @@
 // Purpose: Special case hash table for console commands
 
 import std;
-import ks.tier1;
+import ks.core.tslist;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.cvar;
+import ks.tier1.generichash;
 
 
 // This is a hash table class very similar to the CUtlHashFast, but

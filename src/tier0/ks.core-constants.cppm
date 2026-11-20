@@ -4,9 +4,9 @@
 
 // Purpose: declares a variety of constants
 
-export module ks.core:constants;
+export module ks.core.constants;
 
-import :platform;
+import ks.core.platform;
 
 export extern "C++" {
 

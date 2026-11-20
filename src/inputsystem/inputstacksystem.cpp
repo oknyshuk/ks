@@ -284,3 +284,6 @@ void CInputStackSystem::UpdateCursorState()
 // The IInputStackSystem members forward to CInputStackSystem
 //-----------------------------------------------------------------------------
 #include "facade/iinputstacksystem.inl"
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;

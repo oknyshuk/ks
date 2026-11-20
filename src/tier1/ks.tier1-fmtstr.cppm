@@ -2,11 +2,16 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:fmtstr;
+export module ks.tier1.fmtstr;
 
 import std;
-import ks.math;
-export import :strtools;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.strtools;
 
 export extern "C++" {
 

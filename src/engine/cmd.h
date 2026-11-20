@@ -10,7 +10,10 @@
 // The game starts with a Cbuf_AddText ("exec quake.rc\n"); Cbuf_Execute ();
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
 
 // REI 7/18/2016:
 //

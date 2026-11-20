@@ -1,7 +1,14 @@
 #pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2008 Valve Corporation
-import ks.math;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
 
 #include "shaderapi/shareddefs.h"
 #include "materialsystem/imaterial.h"

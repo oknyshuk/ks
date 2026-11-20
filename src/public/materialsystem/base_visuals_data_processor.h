@@ -4,7 +4,8 @@
 
 // Purpose: Provide custom texture generation (compositing)
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 #include "ivisualsdataprocessor.h"
 
 import std;

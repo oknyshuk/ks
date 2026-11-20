@@ -34,7 +34,10 @@
 #include <Jolt/Physics/Constraints/SliderConstraint.h>
 #include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
 import std;
-import ks.core;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "vphysics_interface.h"
 #include "vphysics/friction.h"
 

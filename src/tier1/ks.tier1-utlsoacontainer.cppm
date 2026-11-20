@@ -2,10 +2,18 @@
 // Copyright (c) 1996-2007 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:utlsoacontainer;
+export module ks.tier1.utlsoacontainer;
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 export extern "C++" {
 

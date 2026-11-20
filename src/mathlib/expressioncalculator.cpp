@@ -2,7 +2,17 @@
 // Copyright (c) 1996-2008 Valve Corporation
 
 
-import ks.math;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.math.compressed_vector;
+import ks.math.noise;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
 
 #include "mathlib/expressioncalculator.h"
 

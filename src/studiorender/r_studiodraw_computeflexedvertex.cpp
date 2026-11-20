@@ -6,6 +6,7 @@
 #include "optimize.h"
 #include "studiorendercontext.h"
 import std;
+import ks.tier1.convar;
 
 ConVar g_cv_morph_path("morph_path", "7");
 ConVar g_cv_morph_debug("morph_debug", "0");

@@ -2,10 +2,14 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.vstdlib:ikeyvaluessystem;
+export module ks.vstdlib.ikeyvaluessystem;
 
 import std;
-import ks.tier1;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.fixed_pool;
+import ks.tier1.memstack;
 
 export extern "C++" {
 

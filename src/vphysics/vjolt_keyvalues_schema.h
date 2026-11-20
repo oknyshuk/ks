@@ -6,7 +6,10 @@
 
 // This function fixes up the base object
 // after loading a single KV value.
-import ks.tier1;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.keyvalues;
 import std;
 #include "vcollide_parse.h"
 

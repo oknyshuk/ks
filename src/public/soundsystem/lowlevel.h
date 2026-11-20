@@ -7,7 +7,12 @@
 //			and Null implementations.
 
 import std;
-import ks.tier1;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 
 inline constexpr auto SOUND_DEVICE_MAX_CHANNELS = 8; // we support 2, 4, 6, & 8 channels currently.
 											// Long term we may build 4 & 8 as matrix mix-downs of 6 channels

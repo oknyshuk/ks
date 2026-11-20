@@ -12,6 +12,9 @@
 // per mesh to transfer each mesh individually.
 
 #include "datamap.h"
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.wchartypes;
 
 // valve hardware vertexes
 inline constexpr auto VHV_VERSION = 2;

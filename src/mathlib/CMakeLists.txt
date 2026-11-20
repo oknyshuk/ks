@@ -59,7 +59,7 @@ endforeach()
 add_library(ks_math STATIC)
 target_sources(ks_math PUBLIC
     FILE_SET CXX_MODULES
-    FILES ks.math.cppm
+    FILES
           ks.math-pfns.cppm
           ks.math-vector2d.cppm
           ks.math-vector.cppm

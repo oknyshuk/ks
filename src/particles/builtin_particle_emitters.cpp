@@ -3,7 +3,17 @@
 
 // Purpose: particle system code
 
-import ks.core;
+import ks.core.basetypes;
+import ks.core.numeric;
+import ks.core.platform;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "particles/particles.h"
 
 extern int g_nParticle_Multiplier;

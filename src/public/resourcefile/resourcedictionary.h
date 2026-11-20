@@ -8,6 +8,7 @@
 // is stored in a second, parallel file.
 
 #include "resourcefile/schema.h"
+import ks.core.types;
 
 //-----------------------------------------------------------------------------
 // Forward declarations

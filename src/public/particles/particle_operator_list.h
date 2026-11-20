@@ -1,4 +1,7 @@
 #pragma once
+import ks.core.types;
+import ks.math.ssemath;
+import ks.math.vector4d;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 

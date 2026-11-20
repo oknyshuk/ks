@@ -2,6 +2,12 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "meshbase.h"
+import ks.core.dbg;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.tier1.strtools;
 
 //-----------------------------------------------------------------------------
 // Helpers with VertexDesc_t...

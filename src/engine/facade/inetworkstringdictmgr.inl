@@ -1,3 +1,4 @@
+import ks.tier1.checksum_crc;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 //

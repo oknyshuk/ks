@@ -3,6 +3,9 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
+import ks.core.wchartypes;
+import ks.tier1.convar;
+import ks.tier1.createinterface;
 
 // Purpose: Utilities for setting vproject settings
 

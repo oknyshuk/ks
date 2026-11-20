@@ -4,7 +4,9 @@
 
 #pragma once
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 #include "compat/better_winlite.h"
 import std;
 

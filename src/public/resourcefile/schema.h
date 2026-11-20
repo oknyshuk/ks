@@ -1,7 +1,10 @@
 #pragma once
 
 import std;
-import ks.core;
+import ks.core.dbg;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
 
 #include "resourcefile/resourcestream.h"
 #include "resourcefile/resourcefile.h"

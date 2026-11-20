@@ -5,7 +5,14 @@
 // Purpose: The CResponseSystem class. Don't include this header; include the response_types
 // into which it is transcluded.
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.filename_table;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
+import ks.tier1.strtools;
 #include "responserules/response_types_internal.h"
 
 import std;

@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.fmtstr;
+import ks.tier1.heapsort;
+import ks.tier1.strtools;
 #include "mathlib/femodeldesc.h"
 #include "mathlib/femodel.h"
 import std;

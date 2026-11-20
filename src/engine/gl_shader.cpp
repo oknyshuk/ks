@@ -3,7 +3,10 @@
 
 // main precompiled header for client rendering code
 
-import ks.tier1;
+import ks.core.cmdline;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 
 import std;

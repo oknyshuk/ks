@@ -1,4 +1,9 @@
-import ks.core;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 import std;
 #include "soundsystem/lowlevel.h"
 

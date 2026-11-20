@@ -1,3 +1,16 @@
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.math.vplane;
+import ks.tier1.bitbuf;
+import ks.tier1.cvar;
+import ks.tier1.icvar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.playerid;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 //

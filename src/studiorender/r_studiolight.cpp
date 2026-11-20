@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.lightdesc;
+import ks.math.mathlib;
+import ks.math.pfns;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
 #include "r_studiolight.h"
 #include "studiorender.h"
 #include "studiorendercontext.h"

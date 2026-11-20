@@ -31,6 +31,9 @@ statically linked.
 #include "VBRHeader.h"
 #include "MPAHeader.h"
 #include "filesystem.h"
+import ks.core.basetypes;
+import ks.core.types;
+import ks.tier1.keyvalues;
 
 // exception class
 class CMPAException

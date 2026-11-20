@@ -4,7 +4,12 @@
 
 // Purpose: Stateless light computation routines
 
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.lightdesc;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
 
 
 

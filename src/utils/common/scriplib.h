@@ -3,6 +3,10 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
+
 enum ScriptPathMode_t
 {
 	SCRIPT_USE_ABSOLUTE_PATH,
@@ -45,7 +49,6 @@ typedef void ( * SCRIPT_LOADED_CALLBACK )( char const *pFilenameLoaded, char con
 //	Returns the previous callback function.
 SCRIPT_LOADED_CALLBACK SetScriptLoadedCallback( SCRIPT_LOADED_CALLBACK pfnNewScriptLoadedCallback );
 
-import ks.tier1;
 import std;
 
 enum DiskWriteMode_t

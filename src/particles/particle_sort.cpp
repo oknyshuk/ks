@@ -4,7 +4,17 @@
 // Purpose: particle system code
 
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.exprevaluator;
 #include "particles/particles.h"
 #include "particles_internal.h"
 #include "bitmap/psheet.h"

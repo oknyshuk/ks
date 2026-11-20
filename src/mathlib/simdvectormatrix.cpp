@@ -5,7 +5,14 @@
 // for high speed processing in tools.
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.utlsoacontainer;
 #include "mathlib/simdvectormatrix.h"
 
 void CSIMDVectorMatrix::CreateFromCSOAAttributes( CSOAContainer const *pSrc,

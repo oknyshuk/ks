@@ -1,10 +1,18 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-#include "rope_helpers.h"
-#include "rope_shared.h"
-#include "rope_physics.h"
+module;
 #include "networkvar.h"
+#include "rope_physics.h"
+#include "rope_shared.h"
+module ks.game.rope_helpers;
+
+import std;
+import ks.core.tslist;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 class CHangRope : public CRopePhysics<512>
 {
@@ -18,17 +26,14 @@ public:
 		pAccel->Init( ROPE_GRAVITY );
 	}
 
-	
 	virtual void ApplyConstraints( CSimplePhysics::CNode *pNodes, int nNodes )
 	{
 		// Apply spring forces.
 		BaseClass::ApplyConstraints( pNodes, nNodes );
 
-
 		// Lock the endpoints.
 		pNodes[0].m_vPos = m_vEndPoints[0];
 		pNodes[nNodes-1].m_vPos = m_vEndPoints[1];
-
 
 		// Calculate how far it is hanging down and adjust if necessary.
 		float flCurHangDist = 0;
@@ -48,7 +53,6 @@ public:
 		ApplyNewSpringLength();
 	}
 
-
 // Helpers.
 public:
 	
@@ -56,7 +60,6 @@ public:
 	{
 		ResetSpringLength( (m_flRopeLength + m_flCurSlack + ROPESLACK_FUDGEFACTOR) / (NumNodes() - 1) );
 	}
-
 
 // Variables used to adjust the rope slack.
 public:
@@ -71,8 +74,6 @@ public:
 	float	m_flStartZ;
 
 };
-
-
 
 void CalcRopeStartingConditions( 
 	const Vector &vStartPos,

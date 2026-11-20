@@ -5,6 +5,7 @@
 #include "togl/rendermechanism.h"
 #include "locald3dtypes.h"
 #include "shaderapi/ishadershadow.h"
+import ks.core.types;
 
 class IShaderAPIDX8;
 

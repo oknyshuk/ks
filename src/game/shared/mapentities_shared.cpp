@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-// Purpose: Controls the loading, parsing and creation of the entities from the BSP.
+module ks.game.mapentities_shared;
 
-#if defined(CLIENT_DLL)
-#include "cdll_util.h"
-#elif defined(GAME_DLL)
-#include "shareddefs.h"
-#include "util.h"
-#endif
-#include "mapentities_shared.h"
+import std;
+import ks.core.dbg;
+import ks.platform;
+import ks.simd;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.game.shareddefs;
+
+
+// Purpose: Controls the loading, parsing and creation of the entities from the BSP.
 
 static const char *s_BraceChars = "{}()\'";
 static bool s_BraceCharacters[256];
@@ -60,7 +63,6 @@ int MapEntity_GetNumKeysInEntity( const char *pEntData )
 	return iNumKeys;
 }
 
-
 // skips to the beginning of the next entity in the data block
 // returns NULL if no more entities
 const char *MapEntity_SkipToNextEntity( const char *pMapData, char *pWorkBuffer )
@@ -74,11 +76,11 @@ const char *MapEntity_SkipToNextEntity( const char *pMapData, char *pWorkBuffer 
 	{
 		pMapData = MapEntity_ParseToken( pMapData, pWorkBuffer );
 
-		if ( FStrEq(pWorkBuffer, "{") )
+		if ( !V_stricmp( pWorkBuffer, "{" ) )
 		{
 			openBraceCount++;
 		}
-		else if ( FStrEq(pWorkBuffer, "}") )
+		else if ( !V_stricmp( pWorkBuffer, "}" ) )
 		{
 			if ( --openBraceCount == 0 )
 			{
@@ -91,7 +93,6 @@ const char *MapEntity_SkipToNextEntity( const char *pMapData, char *pWorkBuffer 
 	// eof hit
 	return nullptr;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: parses a token out of a char data block
@@ -144,7 +145,6 @@ skipwhite:
 		goto skipwhite;
 	}
 	
-
 // handle quoted strings specially
 	if (c == '\"')
 	{
@@ -198,7 +198,6 @@ skipwhite:
 	newToken[len] = 0;
 	return data;
 }
-
 
 /* ================= CEntityMapData definition ================ */
 

@@ -4,7 +4,10 @@
 // Purpose: random stream class
 
 import std;
-import ks.vstdlib;
+import ks.core.random;
+import ks.platform;
+import ks.simd;
+import ks.tier1.createinterface;
 #include "cdll_int.h"
 
 //-----------------------------------------------------------------------------

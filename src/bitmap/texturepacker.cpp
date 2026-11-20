@@ -2,6 +2,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "bitmap/texturepacker.h"
+import ks.core.basetypes;
 
 //-----------------------------------------------------------------------------
 // Purpose: Constructor

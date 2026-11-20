@@ -8,23 +8,25 @@
 #endif
 #if defined(CLIENT_DLL)
 import std;
-import ks.core;
-import ks.tier1;
-import ks.vstdlib;
 #include "const.h"
 #include "string_t.h"
-#include "predictableid.h"
-#include "predictable_entity.h"
-#include "cdll_util.h"
-#include "util_shared.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
 #endif
 #undef PROTECT_FILEIO_FUNCTIONS
 
 import ks.platform;
 #include "filesystem_init.h"
 #include "appframework/IAppSystemGroup.h"
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.platform;
+import ks.simd;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 
 
 #define GAMEINFO_FILENAME			"gameinfo.txt"

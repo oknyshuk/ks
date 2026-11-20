@@ -1,3 +1,4 @@
+import ks.tier1.netadr;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 //

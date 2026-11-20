@@ -6,6 +6,9 @@
 
 #include "shadowmodel_ps20.inc"
 #include "shadowmodel_vs20.inc"
+import ks.math.compressed_vector;
+import ks.math.vector2d;
+import ks.math.vector4d;
 
 DEFINE_FALLBACK_SHADER( ShadowModel, ShadowModel_DX9 )
 

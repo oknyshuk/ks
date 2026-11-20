@@ -5,7 +5,16 @@
 // The meshes and index buffer a queued render context hands out.  The shader API libraries dispatch
 // to them as they do to their own meshes (see MeshKind in materialsystem/imesh.h).
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.functors;
 import std;
 #include "materialsystem/imesh.h"
 #include "imatrendercontextinternal.h"

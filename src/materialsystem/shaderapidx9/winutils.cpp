@@ -3,6 +3,9 @@
 
 import ks.desktop;
 #include "winutils.h"
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.threadtools;
 
 
 void GlobalMemoryStatus( MEMORYSTATUS *pOut )

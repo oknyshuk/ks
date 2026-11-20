@@ -8,6 +8,9 @@
 #include "eiface.h"
 #include "cdll_engine_int.h"
 #include "dt_localtransfer.h"
+import ks.core.dbg;
+import ks.tier1.bit_ops;
+import ks.tier1.interfaces;
 
 CLocalNetworkBackdoor *g_pLocalNetworkBackdoor = nullptr;
 

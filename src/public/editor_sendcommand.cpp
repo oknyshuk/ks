@@ -6,7 +6,10 @@
 //			creation and deletion of entities, AI nodes, and AI node connections.
 
 import std;
-import ks.tier1;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 #include "editor_sendcommand.h"
 
 const int MAX_COMMAND_BUFFER = 2048;

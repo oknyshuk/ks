@@ -2,6 +2,15 @@
 // Copyright (c) Valve Corporation
 
 #include "capsule.h"
+import ks.core.basetypes;
+import ks.core.numeric;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector2d;
 //#include "body.h"
 //#include "mass.h"
 

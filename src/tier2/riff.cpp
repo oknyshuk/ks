@@ -3,7 +3,9 @@
 
 // Avoid these warnings:
 
-import ks.core;
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
 #include "riff.h"
 import std;
 

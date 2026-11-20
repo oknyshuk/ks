@@ -3,6 +3,15 @@
 
 #include "basefilesystem.h"
 import std;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.tier1.checksum_crc;
+import ks.tier1.checksum_md5;
+import ks.tier1.keyvalues;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
 
 //-----------------------------------------------------------------------------
 // CFileTracker.

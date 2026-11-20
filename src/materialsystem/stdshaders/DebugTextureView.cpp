@@ -7,6 +7,7 @@
 #include "debugtextureview_vs20.inc"
 #include "debugtextureview_ps20.inc"
 #include "debugtextureview_ps20b.inc"
+import ks.core.platform;
 
 DEFINE_FALLBACK_SHADER( DebugTextureView, DebugTextureView_dx9 )
 BEGIN_VS_SHADER( DebugTextureView_dx9, "Help for DebugTextureView" )

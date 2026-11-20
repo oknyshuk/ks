@@ -4,7 +4,19 @@
 // Purpose: Support for mapping from a quad mesh to Bicubic Patches, as a means
 //         of rendering approximate Catmull-Clark subdivision surfaces
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 #include "studio.h"
 #include "studiorendercontext.h"
 #include "materialsystem/imaterialsystem.h"

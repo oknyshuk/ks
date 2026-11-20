@@ -4,7 +4,12 @@
 
 // Purpose: Provide custom texture generation (compositing) for use on weapons and clothing
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.keyvalues;
+import ks.tier1.refcount;
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/icustommaterial.h"
 #include "materialsystem/icustommaterialmanager.h"

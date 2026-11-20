@@ -5,6 +5,8 @@
 // Purpose: This is where all common code for vertex shaders go.
 
 #include "common_fxc.h"
+import ks.core.basetypes;
+import ks.math.mathlib;
 
 // Put global skip commands here. . make sure and check that the appropriate vars are defined
 // so these aren't used on the wrong shaders!

@@ -1,4 +1,5 @@
 #pragma once
+import ks.core.threadtools;
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 2005 Valve Corporation
 

@@ -5,7 +5,10 @@
 // NOTE!  These are in random order unlike anorms.h
 // Generated with genrandomnormals 162
 import std;
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 inline constexpr auto NUMRANDOMNORMALS = 162;
 

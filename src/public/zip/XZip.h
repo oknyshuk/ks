@@ -99,6 +99,7 @@ typedef unsigned int DWORD;
 typedef char TCHAR;
 
 #include "zip/xzip_common.h"
+import ks.core.platform;
 
 typedef DWORD ZRESULT;		// result codes from any of the zip functions. Listed later.
 

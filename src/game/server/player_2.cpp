@@ -1,0 +1,1675 @@
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+// Copyright (c) Valve Corporation
+
+module;
+#include <math.h>
+#include <string.h>
+#include "edict.h"
+#include "networkvar.h"
+#include "shareddefs.h"
+#include "collisionutils.h"
+#include "eiface.h"
+#include "inetchannelinfo.h"
+#include "studio.h"
+#include "responserules/response_types.h"
+#include "server_class.h"
+#include "vphysics_interface.h"
+#include "baseentity.h"
+#include "entity_dispatch.h"
+#include "entity_dispatch_list.h"
+#include "entity_kinds_dump.h"
+#include "reflect_sendtable.h"
+#include "util.h"
+#include "vscript/ivscript.h"
+#include "vscript_game.h"
+module ks.server;
+
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.transform;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import :vscript;
+import :fish;
+import :sharedvar;
+import :baseentity;
+import :player;
+import :entity_kind;
+import :nav_4;
+import ks.game.shareddefs;
+import :cstrike15.bot.bot;
+import :entityutil;
+import ks.game.gamemovement;
+import ks.game.mapentities_shared;
+import :entity_2;
+import std;
+import ks.math.ssemath;
+import ks.tier1.envelope;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import :entity_dispatch;
+
+class CBaseCombatWeapon;
+class CBaseEntity;
+class CBasePlayer;
+class CPlayerMove;
+class CUserCmd;
+
+using namespace ::ks::reflect;
+
+extern IGameMovement *g_pGameMovement;
+extern CMoveData *g_pMoveData;	// This is a global because it is subclassed by each game.
+extern ConVar sv_noclipduringpause;
+
+ConVar sv_maxusrcmdprocessticks_warning( side_registry(), "sv_maxusrcmdprocessticks_warning", "-1", FCVAR_RELEASE, "Print a warning when user commands get dropped due to insufficient usrcmd ticks allocated, number of seconds to throttle, negative disabled" );
+static ConVar sv_maxusrcmdprocessticks_holdaim( side_registry(), "sv_maxusrcmdprocessticks_holdaim", "1", FCVAR_RELEASE, "Hold client aim for multiple server sim ticks when client-issued usrcmd contains multiple actions (0: off; 1: hold this server tick; 2+: hold multiple ticks)" );
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+CPlayerMove::CPlayerMove( void )
+{
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: We're about to run this usercmd for the specified player.  We can set up groupinfo and masking here, etc.
+//  This is the time to examine the usercmd for anything extra.  This call happens even if think does not.
+// Input  : *player - 
+//			*cmd - 
+//-----------------------------------------------------------------------------
+void CPlayerMove::StartCommand( CBasePlayer *player, CUserCmd *cmd )
+{
+	CVProfScope _( "CPlayerMove::StartCommand", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+
+	player->m_pCurrentCommand = cmd;
+	CBaseEntity::SetPredictionRandomSeed( cmd );
+	CBaseEntity::SetPredictionPlayer( player );
+	
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: We've finished running a user's command
+// Input  : *player - 
+//-----------------------------------------------------------------------------
+void CPlayerMove::FinishCommand( CBasePlayer *player )
+{
+	CVProfScope _( "CPlayerMove::FinishCommand", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+
+	player->m_pCurrentCommand = nullptr;
+	CBaseEntity::SetPredictionRandomSeed( nullptr );
+	CBaseEntity::SetPredictionPlayer( nullptr );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Checks if the player is standing on a moving entity and adjusts velocity and 
+//  basevelocity appropriately
+// Input  : *player - 
+//			frametime - 
+//-----------------------------------------------------------------------------
+void CPlayerMove::CheckMovingGround( CBasePlayer *player, double frametime )
+{
+	CVProfScope _( "CPlayerMove::CheckMovingGround()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+
+	CBaseEntity	    *groundentity;
+
+	if ( player->GetFlags() & FL_ONGROUND )
+	{
+		groundentity = player->GetGroundEntity();
+		if ( groundentity && ( groundentity->GetFlags() & FL_CONVEYOR) )
+		{
+			Vector vecNewVelocity;
+			groundentity->GetGroundVelocityToApply( vecNewVelocity );
+			if ( player->GetFlags() & FL_BASEVELOCITY )
+			{
+				vecNewVelocity += player->GetBaseVelocity();
+			}
+			player->SetBaseVelocity( vecNewVelocity );
+			player->AddFlag( FL_BASEVELOCITY );
+		}
+	}
+
+	if ( !( player->GetFlags() & FL_BASEVELOCITY ) )
+	{
+		// Apply momentum (add in half of the previous frame of velocity first)
+		player->ApplyAbsVelocityImpulse( (1.0 + ( frametime * 0.5 )) * player->GetBaseVelocity() );
+		player->SetBaseVelocity( vec3_origin );
+	}
+
+	player->RemoveFlag( FL_BASEVELOCITY );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Prepares for running movement
+// Input  : *player - 
+//			*ucmd - 
+//			*pHelper - 
+//			*move - 
+//			time - 
+//-----------------------------------------------------------------------------
+void CPlayerMove::SetupMove( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper *pHelper, CMoveData *move )
+{
+	CVProfScope _( "CPlayerMove::SetupMove", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+
+	// Allow sound, etc. to be created by movement code
+	move->m_bFirstRunOfFunctions = true;
+	move->m_bGameCodeMovedPlayer = false;
+	if ( player->GetPreviouslyPredictedOrigin() != player->GetAbsOrigin() )
+	{
+		move->m_bGameCodeMovedPlayer = true;
+	}
+
+	// Prepare the usercmd fields
+	move->m_nImpulseCommand		= ucmd->impulse;	
+	move->m_vecViewAngles		= ucmd->viewangles;
+
+	CBaseEntity *pMoveParent = player->GetMoveParent();
+	if (!pMoveParent)
+	{
+		move->m_vecAbsViewAngles = move->m_vecViewAngles;
+	}
+	else
+	{
+		matrix3x4_t viewToParent, viewToWorld;
+		AngleMatrix( move->m_vecViewAngles, viewToParent );
+		ConcatTransforms( pMoveParent->EntityToWorldTransform(), viewToParent, viewToWorld );
+		MatrixAngles( viewToWorld, move->m_vecAbsViewAngles );
+	}
+
+	move->m_nButtons			= ucmd->buttons;
+
+	// Ingore buttons for movement if at controls
+	if ( player->GetFlags() & FL_ATCONTROLS )
+	{
+		move->m_flForwardMove		= 0;
+		move->m_flSideMove			= 0;
+		move->m_flUpMove				= 0;
+	}
+	else
+	{
+		move->m_flForwardMove		= ucmd->forwardmove;
+		move->m_flSideMove			= ucmd->sidemove;
+		move->m_flUpMove				= ucmd->upmove;
+	}
+
+	// Prepare remaining fields
+	move->m_flClientMaxSpeed		= player->m_flMaxspeed;
+	move->m_nOldButtons			= player->m_Local.m_nOldButtons;
+	move->m_vecAngles			= player->pl.v_angle;
+
+	move->m_vecVelocity			= player->GetAbsVelocity();
+
+	move->m_nPlayerHandle		= player;
+
+	move->SetAbsOrigin( player->GetAbsOrigin() );
+
+	// Copy constraint information
+	if ( player->m_hConstraintEntity.Get() )
+		move->m_vecConstraintCenter = player->m_hConstraintEntity.Get()->GetAbsOrigin();
+	else
+		move->m_vecConstraintCenter = player->m_vecConstraintCenter;
+	move->m_flConstraintRadius = player->m_flConstraintRadius;
+	move->m_flConstraintWidth = player->m_flConstraintWidth;
+	move->m_flConstraintSpeedFactor = player->m_flConstraintSpeedFactor;
+	move->m_bConstraintPastRadius = player->m_bConstraintPastRadius;
+	// setup trace optimization
+	g_pGameMovement->SetupMovementBounds( move );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Finishes running movement
+// Input  : *player - 
+//			*move - 
+//			*ucmd - 
+//			time - 
+//-----------------------------------------------------------------------------
+void CPlayerMove::FinishMove( CBasePlayer *player, CUserCmd *ucmd, CMoveData *move )
+{
+	CVProfScope _( "CPlayerMove::FinishMove", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+
+	player->m_flMaxspeed			= move->m_flClientMaxSpeed;
+	player->SetAbsOrigin( move->GetAbsOrigin() );
+	player->SetAbsVelocity( move->m_vecVelocity );
+	player->SetPreviouslyPredictedOrigin( move->GetAbsOrigin() );
+
+	player->m_Local.m_nOldButtons			= move->m_nButtons;
+
+	// Convert final pitch to body pitch
+	float pitch = move->m_vecAngles[ PITCH ];
+	if ( pitch > 180.0f )
+	{
+		pitch -= 360.0f;
+	}
+	pitch = clamp( pitch, -90, 90 );
+
+	move->m_vecAngles[ PITCH ] = pitch;
+
+	player->SetBodyPitch( pitch );
+
+	// player->SetLocalAngles( move->m_vecAngles );
+
+	// The class had better not have changed during the move!!
+	if ( player->m_hConstraintEntity )
+		contract_assert( move->m_vecConstraintCenter == player->m_hConstraintEntity.Get()->GetAbsOrigin() );
+	else
+		contract_assert( move->m_vecConstraintCenter == player->m_vecConstraintCenter );
+	contract_assert( move->m_flConstraintRadius == player->m_flConstraintRadius );
+	contract_assert( move->m_flConstraintWidth == player->m_flConstraintWidth );
+	contract_assert( move->m_flConstraintSpeedFactor == player->m_flConstraintSpeedFactor );
+	contract_assert( move->m_bConstraintPastRadius == player->m_bConstraintPastRadius );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Called before player thinks
+// Input  : *player - 
+//			thinktime - 
+//-----------------------------------------------------------------------------
+void CPlayerMove::RunPreThink( CBasePlayer *player )
+{
+	CVProfScope _( "CPlayerMove::RunPreThink", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+
+	// Run think functions on the player
+	{ CVProfScope _( "player->PhysicsRunThink()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+	if ( !player->PhysicsRunThink() )
+		return;
+	};
+
+	{ CVProfScope _( "g_pGameRules->PlayerThink( player )", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+	// Called every frame to let game rules do any specific think logic for the player
+	g_pGameRules->PlayerThink( player );
+	};
+
+	{ CVProfScope _( "player->PreThink()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+	player->PreThink();
+	};
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Runs the PLAYER's thinking code if time.  There is some play in the exact time the think
+//  function will be called, because it is called before any movement is done
+//  in a frame.  Not used for pushmove objects, because they must be exact.
+//  Returns false if the entity removed itself.
+// Input  : *ent - 
+//			frametime - 
+//			clienttimebase - 
+// Output : void CPlayerMove::RunThink
+//-----------------------------------------------------------------------------
+void CPlayerMove::RunThink (CBasePlayer *player, double frametime )
+{
+	CVProfScope _( "CPlayerMove::RunThink", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+	int thinktick = player->GetNextThinkTick();
+
+	if ( thinktick <= 0 || thinktick > player->m_nTickBase )
+		return;
+		
+	//gpGlobals->curtime = thinktime;
+	player->SetNextThink( TICK_NEVER_THINK );
+
+	// Think
+	player->Think();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Called after player movement
+// Input  : *player - 
+//			thinktime - 
+//			frametime - 
+//-----------------------------------------------------------------------------
+void CPlayerMove::RunPostThink( CBasePlayer *player )
+{
+	CVProfScope _( "CPlayerMove::RunPostThink", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+
+	// Run post-think
+	player->PostThink();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Runs movement commands for the player
+// Input  : *player - 
+//			*ucmd - 
+//			*moveHelper - 
+// Output : void CPlayerMove::RunCommand
+//-----------------------------------------------------------------------------
+void CPlayerMove::RunCommand ( CBasePlayer *player, CUserCmd *ucmd, IMoveHelper *moveHelper )
+{
+	const float playerCurTime = player->m_nTickBase * TICK_INTERVAL; 
+	const float playerFrameTime = player->m_bGamePaused ? 0 : TICK_INTERVAL;
+	const float flTimeAllowedForProcessing = player->ConsumeMovementTimeForUserCmdProcessing( playerFrameTime );
+	if ( !player->IsBot() && !player->IsHLTV() && ( flTimeAllowedForProcessing < playerFrameTime ) )
+	{
+		// Make sure that the activity in command is erased because player cheated or dropped too many packets
+		double dblWarningFrequencyThrottle = sv_maxusrcmdprocessticks_warning.GetFloat();
+		if ( dblWarningFrequencyThrottle >= 0 )
+		{
+			static double s_dblLastWarningTime = 0;
+			double dblTimeNow = Plat_FloatTime();
+			if ( !s_dblLastWarningTime || ( dblTimeNow - s_dblLastWarningTime >= dblWarningFrequencyThrottle ) )
+			{
+				s_dblLastWarningTime = dblTimeNow;
+				Warning( "sv_maxusrcmdprocessticks_warning at server tick %u: Ignored client %s usrcmd (%.6f < %.6f)!\n", gpGlobals->tickcount, player->GetPlayerName(), flTimeAllowedForProcessing, playerFrameTime );
+			}
+		}
+		return; // Don't process this command
+	}
+
+	StartCommand( player, ucmd );
+
+	// Set globals appropriately
+	const float serverCurTime = gpGlobals->curtime;
+	const float serverFrameTime = gpGlobals->frametime;
+	gpGlobals->curtime		=  playerCurTime;
+	gpGlobals->frametime	=  playerFrameTime;
+
+	// Add and subtract buttons we're forcing on the player
+	ucmd->buttons |= player->m_afButtonForced;
+	ucmd->buttons &= ~player->m_afButtonDisabled;
+
+	if ( player->m_bGamePaused )
+	{
+		// If no clipping and cheats enabled and noclipduring game enabled, then leave
+		//  forwardmove and angles stuff in usercmd
+		if ( player->GetMoveType() == MOVETYPE_NOCLIP &&
+			 sv_cheats->GetBool() && 
+			 sv_noclipduringpause.GetBool() )
+		{
+			gpGlobals->frametime = TICK_INTERVAL;
+		}
+	}
+
+	/*
+	// TODO:  We can check whether the player is sending more commands than elapsed real time
+	cmdtimeremaining -= ucmd->msec;
+	if ( cmdtimeremaining < 0 )
+	{
+	//	return;
+	}
+	*/
+
+	g_pGameMovement->StartTrackPredictionErrors( player );
+
+	// Do weapon selection
+	if ( ucmd->weaponselect != 0 )
+	{
+		CBaseCombatWeapon *weapon = entity_cast<CBaseCombatWeapon>( CBaseEntity::Instance( ucmd->weaponselect ) );
+		if ( weapon )
+		{
+			CVProfScope _( "player->SelectItem()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+			player->SelectItem( weapon->GetName(), ucmd->weaponsubtype );
+		}
+	}
+
+
+	// Latch in impulse.
+	if ( ucmd->impulse )
+	{
+		// Discard impulse commands unless the vehicle allows them.
+		// FIXME: UsingStandardWeapons seems like a bad filter for this. The flashlight is an impulse command, for example.
+		{
+			player->m_nImpulse = ucmd->impulse;
+		}
+	}
+
+	// Update player input button states
+	{ CVProfScope _( "player->UpdateButtonState", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+	player->UpdateButtonState( ucmd->buttons );
+	};
+
+	CheckMovingGround( player, TICK_INTERVAL );
+
+	g_pMoveData->m_vecOldAngles = player->pl.v_angle;
+
+	// Copy from command to player unless game .dll has set angle using fixangle
+	if ( player->pl.fixangle == FIXANGLE_NONE )
+	{
+		player->pl.v_angle = ucmd->viewangles;
+	}
+	else if( player->pl.fixangle == FIXANGLE_RELATIVE )
+	{
+		player->pl.v_angle = ucmd->viewangles + player->pl.anglechange;
+	}
+
+	// TrackIR
+	player->SetEyeAngleOffset(ucmd->headangles);
+	player->SetEyeOffset(ucmd->headoffset);
+	// TrackIR
+
+	player->SetAimDirection(ucmd->aimdirection);
+
+	// Call standard client pre-think
+	RunPreThink( player );
+
+	// Call Think if one is set
+	RunThink( player, TICK_INTERVAL );
+
+	// Setup input.
+	SetupMove( player, ucmd, moveHelper, g_pMoveData );
+
+	// Let the game do the movement.
+	{
+		CVProfScope _( "g_pGameMovement->ProcessMovement()", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+		contract_assert( g_pGameMovement );
+		g_pGameMovement->ProcessMovement( player, g_pMoveData );
+	}
+			
+	// Copy output
+	FinishMove( player, ucmd, g_pMoveData );
+
+	// If we have to restore the view angle then do so right now
+	if ( !player->IsBot() &&
+		( gpGlobals->tickcount - player->GetLockViewanglesTickNumber() < sv_maxusrcmdprocessticks_holdaim.GetInt() ) )
+	{
+		player->pl.v_angle = player->GetLockViewanglesData();
+	}
+
+	// Restore server time temporarily before processing impacts,
+	// so timestamps are all in the same time space
+	gpGlobals->curtime = serverCurTime;
+	gpGlobals->frametime = serverFrameTime;
+	// Let server invoke any needed impact functions
+	{ CVProfScope _( "moveHelper->ProcessImpacts", 1, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
+	moveHelper->ProcessImpacts();
+	};
+	gpGlobals->curtime = playerCurTime;
+	gpGlobals->frametime = playerFrameTime;
+
+	RunPostThink( player );
+
+	g_pGameMovement->FinishTrackPredictionErrors( player );
+	g_pGameMovement->Reset();
+
+	FinishCommand( player );
+
+	// Let time pass
+	if ( gpGlobals->frametime > 0 )
+	{
+		player->m_nTickBase++;
+	}
+}
+
+class CAnimationLayer;
+class CBaseAnimating;
+class CBaseAnimatingOverlay;
+class CBaseEntity;
+class CBasePlayer;
+class CUserCmd;
+
+using namespace ::ks::reflect;
+
+static constexpr auto LC_NONE = 0;
+static constexpr auto LC_ALIVE = (1<<0);
+
+static constexpr auto LC_ORIGIN_CHANGED = (1<<8);
+static constexpr auto LC_ANGLES_CHANGED = (1<<9);
+static constexpr auto LC_SIZE_CHANGED = (1<<10);
+static constexpr auto LC_ANIMATION_CHANGED = (1<<11);
+
+static constexpr auto LAG_COMPENSATION_TELEPORTED_DISTANCE_SQR = ( 64.0f * 64.0f );
+static constexpr auto LAG_COMPENSATION_EPS_SQR = ( 0.1f * 0.1f );
+// Allow 4 units of error ( about 1 / 8 bbox width )
+static constexpr auto LAG_COMPENSATION_ERROR_EPS_SQR = ( 4.0f * 4.0f );
+
+ConVar sv_unlag( side_registry(), "sv_unlag", "1", FCVAR_DEVELOPMENTONLY, "Enables player lag compensation" );
+ConVar sv_maxunlag( side_registry(), "sv_maxunlag", "1.0", FCVAR_DEVELOPMENTONLY, "Maximum lag compensation in seconds", true, 0.0f, true, 1.0f );
+ConVar sv_lagflushbonecache( side_registry(), "sv_lagflushbonecache", "1", FCVAR_DEVELOPMENTONLY, "Flushes entity bone cache on lag compensation" );
+ConVar sv_showlagcompensation( side_registry(), "sv_showlagcompensation", "0", FCVAR_CHEAT, "Show lag compensated hitboxes whenever a player is lag compensated." );
+ConVar sv_showlagcompensation_duration( side_registry(), "sv_showlagcompensation_duration", "4.0", FCVAR_CHEAT, "Duration to show lag-compensated hitboxes", true, 0.0f, true, 10.0f );
+ConVar sv_lagcompensationforcerestore( side_registry(), "sv_lagcompensationforcerestore", "1", FCVAR_CHEAT, "Don't test validity of a lag comp restore, just do it.");
+
+ConVar sv_unlag_fixstuck( side_registry(), "sv_unlag_fixstuck", "0", FCVAR_DEVELOPMENTONLY, "Disallow backtracking a player for lag compensation if it will cause them to become stuck" );
+
+ConVar sv_lagpushticks( side_registry(), "sv_lagpushticks", "0", FCVAR_DEVELOPMENTONLY, "Push computed lag compensation amount by this many ticks." );
+
+ConVar sv_lagcompensateself( side_registry(), "sv_lagcompensateself", "0", FCVAR_CHEAT, "Player can lag compensate themselves." );
+
+static constexpr auto COSINE_20F = 0.93969f;
+static constexpr auto SINE_20F = 0.34202f;
+
+static CLagCompensationManager g_LagCompensationManager( "CLagCompensationManager" );
+ILagCompensationManager *lagcompensation = &g_LagCompensationManager;
+
+//
+// Try to take the player from his current origin to vWantedPos.
+// If it can't get there, leave the player where he is.
+// 
+
+ConVar sv_unlag_debug( side_registry(), "sv_unlag_debug", "0", FCVAR_GAMEDLL | FCVAR_DEVELOPMENTONLY );
+
+float g_flFractionScale = 0.95;
+
+static void LC_SetAbsOrigin( CBaseEntity *entity, const Vector &vecAbsOrigin, bool bFireTriggers )
+{
+	entity->SetAbsOrigin( vecAbsOrigin );
+	if ( bFireTriggers )
+	{
+		entity->PhysicsTouchTriggers();
+	}
+}
+
+static void RestoreEntityTo( CBaseEntity *pEntity, const Vector &vWantedPos )
+{
+	// Try to move to the wanted position from our current position.
+	trace_t tr;
+	CVProfScope _( "RestoreEntityTo", 0, "CLagCompensationManager", false, BUDGETFLAG_OTHER );
+	if( sv_lagcompensationforcerestore.GetBool() )
+	{
+		// We don't have to test for validity.  Just put them back where you found them.
+		LC_SetAbsOrigin( pEntity, vWantedPos, true );
+	}
+
+	unsigned int mask = MASK_PLAYERSOLID; 
+	UTIL_TraceEntity( pEntity, vWantedPos, vWantedPos, mask, pEntity, COLLISION_GROUP_PLAYER_MOVEMENT, &tr );
+	if ( tr.startsolid || tr.allsolid )
+	{
+		if ( sv_unlag_debug.GetBool() )
+		{
+			DevMsg( "RestoreEntityTo could not restore player position for client \"%d\" ( %.1f %.1f %.1f )\n",
+					pEntity->entindex(), vWantedPos.x, vWantedPos.y, vWantedPos.z );
+		}
+
+		UTIL_TraceEntity( pEntity, pEntity->GetAbsOrigin(), vWantedPos, mask, pEntity, COLLISION_GROUP_PLAYER_MOVEMENT, &tr );
+		if ( tr.startsolid || tr.allsolid )
+		{
+			// In this case, the guy got stuck back wherever we lag compensated him to. Nasty.
+
+			if ( sv_unlag_debug.GetBool() )
+				DevMsg( " restore failed entirely\n" );
+		}
+		else
+		{
+			// We can get to a valid place, but not all the way back to where we were.
+			Vector vPos;
+			VectorLerp( pEntity->GetAbsOrigin(), vWantedPos, tr.fraction * g_flFractionScale, vPos );
+			LC_SetAbsOrigin( pEntity, vPos, true );
+
+			if ( sv_unlag_debug.GetBool() )
+				DevMsg( " restore got most of the way\n" );
+		}
+	}
+	else
+	{
+		// Cool, the player can go back to whence he came.
+		LC_SetAbsOrigin( pEntity, tr.endpos, true );
+	}
+}
+
+// Mappers can flag certain additional entities to lag compensate, this handles them
+void CLagCompensationManager::AddAdditionalEntity( CBaseEntity *pEntity )
+{
+	EHANDLE eh;
+	eh = pEntity;
+	m_AdditionalEntities.insert( eh );
+}
+
+void CLagCompensationManager::RemoveAdditionalEntity( CBaseEntity *pEntity )
+{
+	EHANDLE eh;
+	eh = pEntity;
+	m_AdditionalEntities.erase( eh );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Called once per frame after all entities have had a chance to think
+//-----------------------------------------------------------------------------
+void CLagCompensationManager::FrameUpdatePostEntityThink()
+{
+	if ( (gpGlobals->maxClients <= 1) || !sv_unlag.GetBool() )
+	{
+		ClearHistory();
+		return;
+	}
+	
+	CVProfScope _( "FrameUpdatePostEntityThink", 0, "CLagCompensationManager", false, BUDGETFLAG_OTHER );
+
+	std::set< CBaseEntity * > rbEntityList;
+
+	// Add active players
+	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	{
+		CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
+		if ( !pPlayer )
+		{
+			continue;
+		}
+
+		rbEntityList.insert( pPlayer );
+	}
+
+	// Add any additional entities
+	for ( const EHANDLE &hAdd : m_AdditionalEntities )
+	{
+		CBaseEntity *pAddEntity = hAdd.Get();
+		if ( !pAddEntity )
+			continue;
+
+		rbEntityList.insert( pAddEntity );
+	}
+
+	// Now record the actual history information
+	for ( CBaseEntity *pEntity : rbEntityList )
+	{
+
+		EHANDLE eh;
+		eh = pEntity;
+
+		std::unique_ptr< EntityLagData > &entry = m_CompensatedEntities[ eh ];
+		if ( !entry )
+			entry = std::make_unique< EntityLagData >();
+
+		EntityLagData *ld = entry.get();
+
+		RecordDataIntoTrack( pEntity, &ld->m_LagRecords, true );
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Called during gamemovment weapon firing to set up/restore after lag compensation around the bullet traces
+//-----------------------------------------------------------------------------
+void CLagCompensationManager::StartLagCompensation( CBasePlayer *player, LagCompensationType lagCompensationType, const Vector& weaponPos, const QAngle &weaponAngles, float weaponRange )
+{
+	contract_assert( !m_isCurrentlyDoingCompensation );
+
+	// Assume no entities need to be restored
+	for ( auto it = m_CompensatedEntities.begin(); it != m_CompensatedEntities.end(); )
+	{
+		// Wipe any deleted entities from the list
+		if ( !it->first.Get() )
+		{
+			it = m_CompensatedEntities.erase( it );
+			continue;
+		}
+
+		// Clear state
+		EntityLagData *ld = it->second.get();
+		ld->m_bRestoreEntity = false;
+		ld->m_RestoreData = {};
+		ld->m_ChangeData = {};
+		++it;
+	}
+
+	m_bNeedToRestore = false;
+
+	m_pCurrentPlayer = player;
+	
+	if ( !player->m_bLagCompensation		// Player not wanting lag compensation
+		 || (gpGlobals->maxClients <= 1)	// no lag compensation in single player
+		 || !sv_unlag.GetBool()				// disabled by server admin
+		 || player->IsBot() 				// not for bots
+		 || player->IsObserver()			// not for spectators
+		)
+		return;
+
+	const CUserCmd *cmd = player->GetCurrentUserCommand(); 
+	if ( !cmd )
+	{
+		// This can hit if m_hActiveWeapon incorrectly gets set to a weapon not actually owned by the local player 
+		// (since lag comp asks for the GetPlayerOwner() which will have m_pCurrentCommand == NULL, 
+		//  not the player currently executing a CUserCmd).
+		Error( "CLagCompensationManager::StartLagCompensation with NULL CUserCmd!!!\n" );
+	}
+
+	// NOTE: Put this here so that it won't show up in single player mode.
+	CVProfScope _( "StartLagCompensation", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_OTHER );
+
+	m_isCurrentlyDoingCompensation = true;
+
+	// correct is the amount of time we have to correct game time
+	float correct = 0.0f;
+
+	// Get true latency
+	INetChannelInfo *nci = engine->GetPlayerNetInfo( player->entindex() ); 
+	if ( nci )
+	{
+		// add network latency
+		correct+= nci->GetLatency( FLOW_OUTGOING );
+	}
+
+	// NOTE:  do these computations in float time, not ticks, to avoid big roundoff error accumulations in the math
+	// add view interpolation latency see C_BaseEntity::GetInterpolationAmount()
+	correct += player->m_fLerpTime;
+	
+	// check bounds [0,sv_maxunlag]
+	correct = clamp( correct, 0.0f, sv_maxunlag.GetFloat() );
+
+	// correct tick send by player 
+	float flTargetTime = TICKS_TO_TIME( cmd->tick_count ) - player->m_fLerpTime;
+
+	// calculate difference between tick sent by player and our latency based tick
+	float deltaTime =  correct - ( gpGlobals->curtime - flTargetTime );
+
+	if ( fabs( deltaTime ) > 0.2f )
+	{
+		// difference between cmd time and latency is too big > 200ms, use time correction based on latency
+		// DevMsg("StartLagCompensation: delta too big (%.3f)\n", deltaTime );
+		flTargetTime = gpGlobals->curtime - correct;
+	}
+
+	flTargetTime += TICKS_TO_TIME( sv_lagpushticks.GetInt() );
+
+	m_lagCompensationType = lagCompensationType;
+	m_weaponPos = weaponPos;
+	m_weaponAngles = weaponAngles;
+	m_weaponRange = weaponRange;
+
+	// populate position, angles and range if the provided values are zeroed
+	if ( m_weaponPos == vec3_origin )
+	{
+		m_weaponPos = m_pCurrentPlayer->EyePosition();
+	}
+
+	if ( m_weaponAngles == vec3_angle )
+	{
+		m_weaponAngles = m_pCurrentPlayer->EyeAngles();
+	}
+
+	if ( m_weaponRange <= 0 )
+	{
+		m_weaponRange = std::numeric_limits<float>::max();
+	}
+
+	// Iterate all lag compensatable entities
+	const std::bitset<MAX_EDICTS> *pEntityTransmitBits = engine->GetEntityTransmitBitsForClient( player->entindex() - 1 );
+
+	for ( auto &[key, entry] : m_CompensatedEntities )
+	{
+		EntityLagData *ld = entry.get();
+		CBaseEntity *pEntity = key.Get();
+		if ( !pEntity )
+		{
+			// Stale entity in list, fixed up on next time through loop
+			continue;
+		}
+
+		// Don't lag compensate self, unless we've set a convar explicitly allowing it
+		if ( player == pEntity && !sv_lagcompensateself.GetBool() )
+		{
+			continue;
+		}
+
+		// Custom checks for if things should lag compensate (based on things like what team the entity is associated with).
+		if ( !player->WantsLagCompensationOnEntity( pEntity, cmd, pEntityTransmitBits ) )
+			continue;
+
+		// Move entity back in time and remember that fact
+		ld->m_bRestoreEntity = BacktrackEntity( pEntity, flTargetTime, &ld->m_LagRecords, &ld->m_RestoreData, &ld->m_ChangeData, true );
+	}
+}
+
+bool CLagCompensationManager::BacktrackEntity( CBaseEntity *entity, float flTargetTime, LagRecordList *track, LagRecord *restore, LagRecord *change, bool wantsAnims )
+{
+	Vector org, mins, maxs;
+	QAngle ang;
+
+	CVProfScope _( "BacktrackEntity", 0, "CLagCompensationManager", false, BUDGETFLAG_OTHER );
+
+	// check if we have at least one entry
+	if ( track->empty() )
+		return false;
+
+	LagRecord *prevRecord = nullptr;
+	LagRecord *record = nullptr;
+
+	Vector prevOrg = entity->GetAbsOrigin();
+	
+	// Walk context looking for any invalidating event
+	for ( LagRecord &curr : *track )
+	{
+		// remember last record
+		prevRecord = record;
+
+		// get next record
+		record = &curr;
+
+		if ( !(record->m_fFlags & LC_ALIVE) )
+		{
+			// entity must be alive, lost track
+			return false;
+		}
+
+		Vector delta = record->m_vecOrigin - prevOrg;
+		if ( delta.LengthSqr() > LAG_COMPENSATION_TELEPORTED_DISTANCE_SQR )
+		{
+			// lost track, too much difference
+			return false;
+		}
+
+		// did we find a context smaller than target time ?
+		if ( record->m_flSimulationTime <= flTargetTime )
+			break; // hurra, stop
+
+		prevOrg = record->m_vecOrigin;
+	}
+
+	contract_assert( record );
+
+	if ( !record )
+	{
+		if ( sv_unlag_debug.GetBool() )
+		{
+			DevMsg( "No valid positions in history for BacktrackPlayer client ( %d )\n", entity->entindex() );
+		}
+		return false;
+	}
+
+	float frac = 0.0f;
+	if ( prevRecord && 
+		 (record->m_flSimulationTime < flTargetTime) &&
+		 (record->m_flSimulationTime < prevRecord->m_flSimulationTime) )
+	{
+		// we didn't find the exact time but have a valid previous record
+		// so interpolate between these two records;
+
+		contract_assert( prevRecord->m_flSimulationTime > record->m_flSimulationTime );
+		contract_assert( flTargetTime < prevRecord->m_flSimulationTime );
+
+		// calc fraction between both records
+		frac = ( flTargetTime - record->m_flSimulationTime ) / 
+			( prevRecord->m_flSimulationTime - record->m_flSimulationTime );
+
+		contract_assert( frac > 0 && frac < 1 ); // should never extrapolate
+
+		ang  = Lerp( frac, record->m_vecAngles, prevRecord->m_vecAngles );
+		org  = Lerp( frac, record->m_vecOrigin, prevRecord->m_vecOrigin  );
+		mins = Lerp( frac, record->m_vecMins, prevRecord->m_vecMins  );
+		maxs = Lerp( frac, record->m_vecMaxs, prevRecord->m_vecMaxs );
+	}
+	else
+	{
+		// we found the exact record or no other record to interpolate with
+		// just copy these values since they are the best we have
+		ang  = record->m_vecAngles;
+		org  = record->m_vecOrigin;
+		mins = record->m_vecMins;
+		maxs = record->m_vecMaxs;
+	}
+
+	// See if this is still a valid position for us to teleport to
+	if ( sv_unlag_fixstuck.GetBool() )
+	{
+		// Try to move to the wanted position from our current position.
+		trace_t tr;
+		UTIL_TraceEntity( entity, org, org, MASK_PLAYERSOLID, &tr );
+		if ( tr.startsolid || tr.allsolid )
+		{
+			if ( sv_unlag_debug.GetBool() )
+				DevMsg( "WARNING: BackupPlayer trying to back player into a bad position - client %d\n", entity->entindex() );
+
+			CBaseEntity *pHitEntity = tr.Ent<CBaseEntity>();
+			// don't lag compensate the current player
+			if ( pHitEntity && ( pHitEntity != m_pCurrentPlayer ) )	
+			{
+				// Find it
+				EHANDLE eh;
+				eh = pHitEntity;
+
+				auto it = m_CompensatedEntities.find( eh );
+				if ( it != m_CompensatedEntities.end() )
+				{
+					EntityLagData *ld = it->second.get();
+
+					// If we haven't backtracked this player, do it now
+					// this deliberately ignores WantsLagCompensationOnEntity.
+					if ( !ld->m_bRestoreEntity )
+					{
+						// Temp turn this flag on
+						ld->m_bRestoreEntity = true;
+
+						BacktrackEntity( pHitEntity, flTargetTime, &ld->m_LagRecords, &ld->m_RestoreData, &ld->m_ChangeData, true );
+
+						// Remove the temp flag
+						ld->m_bRestoreEntity = false;
+					}	
+				}
+			}
+
+			// now trace us back as far as we can go
+			unsigned int mask = MASK_PLAYERSOLID;
+			UTIL_TraceEntity( entity, entity->GetAbsOrigin(), org, mask, &tr );
+
+			if ( tr.startsolid || tr.allsolid )
+			{
+				// Our starting position is bogus
+
+				if ( sv_unlag_debug.GetBool() )
+					DevMsg( "Backtrack failed completely, bad starting position\n" );
+			}
+			else
+			{
+				// We can get to a valid place, but not all the way to the target
+				Vector vPos;
+				VectorLerp( entity->GetAbsOrigin(), org, tr.fraction * g_flFractionScale, vPos );
+				
+				// This is as close as we're going to get
+				org = vPos;
+
+				if ( sv_unlag_debug.GetBool() )
+					DevMsg( "Backtrack got most of the way\n" );
+			}
+		}
+	}
+	
+	// See if this represents a change for the entity
+	int flags = 0;
+
+	QAngle angdiff = entity->GetAbsAngles() - ang;
+	Vector orgdiff = entity->GetAbsOrigin() - org;
+
+	// Always remember the pristine simulation time in case we need to restore it.
+	restore->m_flSimulationTime = entity->GetSimulationTime();
+
+	if ( angdiff.LengthSqr() > LAG_COMPENSATION_EPS_SQR )
+	{
+		flags |= LC_ANGLES_CHANGED;
+		restore->m_vecAngles = entity->GetAbsAngles();
+		entity->SetAbsAngles( ang );
+		change->m_vecAngles = ang;
+	}
+
+	// Use absolute equality here
+	if ( ( mins != entity->WorldAlignMins() ) ||
+		 ( maxs != entity->WorldAlignMaxs() ) )
+	{
+		flags |= LC_SIZE_CHANGED;
+		restore->m_vecMins = entity->WorldAlignMins() ;
+		restore->m_vecMaxs = entity->WorldAlignMaxs();
+		entity->SetSize( mins, maxs );
+		change->m_vecMins = mins;
+		change->m_vecMaxs = maxs;
+	}
+
+	// Note, do origin at end since it causes a relink into the k/d tree
+	if ( orgdiff.LengthSqr() > LAG_COMPENSATION_EPS_SQR )
+	{
+		flags |= LC_ORIGIN_CHANGED;
+		restore->m_vecOrigin = entity->GetAbsOrigin();
+		entity->SetAbsOrigin( org );
+		change->m_vecOrigin = org;
+	}
+
+	bool skipAnims = false;
+	switch (m_lagCompensationType)
+	{
+	case LAG_COMPENSATE_BOUNDS:
+		skipAnims = true;
+		break;
+	case LAG_COMPENSATE_HITBOXES:
+		skipAnims = false;
+		break;
+	case LAG_COMPENSATE_HITBOXES_ALONG_RAY:
+		skipAnims = false;
+		{
+			// don't bother to set up lag-compensated animation layers on entities that fall outside a 20-degree cone from the weapon firing point
+			Vector vecWeaponForward;
+			AngleVectors( m_weaponAngles, &vecWeaponForward );
+			if ( !IsSphereIntersectingCone( entity->WorldSpaceCenter(), entity->BoundingRadius() + 10.0f, m_weaponPos, vecWeaponForward, SINE_20F, COSINE_20F ) )
+			{
+				skipAnims = true;
+
+				//indicate ignored entities with a red box
+				if( sv_showlagcompensation.GetInt() == 1 && entity->GetBaseAnimating() )
+					debugoverlay->AddBoxOverlay( entity->WorldSpaceCenter(), Vector(-3,-3,-3), Vector(3,3,3), QAngle(0,0,0), 255,0,0,255, sv_showlagcompensation_duration.GetFloat() * 0.125f );
+			}
+		}
+		break;
+	}
+
+	if( !skipAnims && wantsAnims && entity->GetBaseAnimating() )
+	{
+		CBaseAnimating *pAnimating = entity->GetBaseAnimating();
+
+		// Sorry for the loss of the optimization for the case of people
+		// standing still, but you breathe even on the server.
+		// This is quicker than actually comparing all bazillion floats.
+		flags |= LC_ANIMATION_CHANGED;
+		restore->m_masterSequence = pAnimating->GetSequence();
+		restore->m_masterCycle = pAnimating->GetCycle();
+
+		pAnimating->SetSequence(record->m_masterSequence);
+		pAnimating->SetCycle(record->m_masterCycle);
+
+		// populate restore record's pose parameters
+		CStudioHdr *pHdr = pAnimating->GetModelPtr();
+		if ( pHdr )
+		{
+			for( int i=0; i<pHdr->GetNumPoseParameters(); i++ )
+			{
+				restore->m_flPoseParameters[i] = pAnimating->GetPoseParameter( i );
+
+				// apply the record's pose parameter
+				pAnimating->SetPoseParameter( i, record->m_flPoseParameters[i] );
+			}
+		}
+
+		////////////////////////
+		// Now do all the layers
+		//
+		CBaseAnimatingOverlay *pAnimatingOverlay = entity->GetBaseAnimatingOverlay();
+		if ( pAnimatingOverlay )
+		{
+			int layerCount = pAnimatingOverlay->GetNumAnimOverlays();
+			for( int layerIndex = 0; layerIndex < layerCount; ++layerIndex )
+			{
+				CAnimationLayer *currentLayer = pAnimatingOverlay->GetAnimOverlay(layerIndex);
+				if( currentLayer )
+				{
+					restore->m_layerRecords[layerIndex].m_cycle = currentLayer->m_flCycle;
+					restore->m_layerRecords[layerIndex].m_order = currentLayer->m_nOrder;
+					restore->m_layerRecords[layerIndex].m_sequence = currentLayer->m_nSequence;
+					restore->m_layerRecords[layerIndex].m_weight = currentLayer->m_flWeight;
+
+					currentLayer->m_flCycle = record->m_layerRecords[layerIndex].m_cycle;
+					currentLayer->m_nOrder = record->m_layerRecords[layerIndex].m_order;
+					currentLayer->m_nSequence = record->m_layerRecords[layerIndex].m_sequence;
+					currentLayer->m_flWeight = record->m_layerRecords[layerIndex].m_weight;
+					
+				}
+			}
+		}
+
+		//indicate lag-compensated entities with a green box
+		if( sv_showlagcompensation.GetInt() == 1 && entity->GetBaseAnimating() )
+			debugoverlay->AddBoxOverlay( entity->WorldSpaceCenter(), Vector(-3,-3,-3), Vector(3,3,3), QAngle(0,0,0), 0,255,0,255, sv_showlagcompensation_duration.GetFloat() * 0.125f );
+
+	}
+	
+	if ( !flags )
+		return false; // we didn't change anything
+
+	if ( sv_lagflushbonecache.GetBool() && (flags & LC_ANIMATION_CHANGED) && entity->GetBaseAnimating() )
+		entity->GetBaseAnimating()->InvalidateBoneCache();
+
+	/*
+	char text[256]; V_snprintf( text, sizeof(text), "time %.2f", flTargetTime );
+	pPlayer->DrawServerHitboxes( 10 );
+	NDebugOverlay::Text( org, text, false, 10 );
+	if ( skipAnims )
+	{
+		NDebugOverlay::EntityBounds( pPlayer, 0, 255, 0, 32, 10 );
+	}
+	else
+	{
+		NDebugOverlay::EntityBounds( pPlayer, 255, 0, 0, 32, 10 );
+	}
+	*/
+
+	m_bNeedToRestore = true;  // we changed at least one entity
+	restore->m_fFlags = flags; // we need to restore these flags
+	change->m_fFlags = flags; // we have changed these flags
+
+	if( sv_showlagcompensation.GetInt() == 1 && entity->GetBaseAnimating() )
+	{
+		entity->GetBaseAnimating()->DrawServerHitboxes(sv_showlagcompensation_duration.GetFloat(), true);
+	}
+
+	return true;// Yes, this guy has been backtracked
+}
+
+void CLagCompensationManager::FinishLagCompensation( CBasePlayer *player )
+{
+	CVProfScope _( "FinishLagCompensation", 0, VPROF_BUDGETGROUP_OTHER_NETWORKING, false, BUDGETFLAG_CLIENT|BUDGETFLAG_SERVER );
+
+	m_isCurrentlyDoingCompensation = false;
+
+	if ( !m_bNeedToRestore )
+		return; // no entity was changed at all
+
+	// Iterate all active entities
+	for ( auto &[key, entry] : m_CompensatedEntities )
+	{
+		EntityLagData *ld = entry.get();
+		// entity wasn't changed by lag compensation
+		if ( !ld->m_bRestoreEntity )
+			continue;
+
+		CBaseEntity *pEntity = key.Get();
+		if ( !pEntity )
+			continue;
+
+		LagRecord *restore = &ld->m_RestoreData;
+		LagRecord *change  = &ld->m_ChangeData;
+
+		RestoreEntityFromRecords( pEntity, restore, change, true );
+	}
+}
+
+void CLagCompensationManager::RecordDataIntoTrack( CBaseEntity *entity, LagRecordList *track, bool wantsAnims )
+{
+	contract_assert( track->size() < 1000 ); // insanity check
+
+	// remove all records before that time:
+	int flDeadtime = gpGlobals->curtime - sv_maxunlag.GetFloat();
+
+	// remove tail records that are too old
+	while ( !track->empty() )
+	{
+		// if tail is within limits, stop
+		if ( track->back().m_flSimulationTime >= flDeadtime )
+			break;
+
+		// remove tail, get new tail
+		track->pop_back();
+	}
+
+	// check if head has same simulation time
+	if ( !track->empty() )
+	{
+		LagRecord &head = track->front();
+
+		// check if player changed simulation time since last time updated
+		if ( head.m_flSimulationTime >= entity->GetSimulationTime() )
+			return; // don't add new entry for same or older time
+	}
+
+	// add new record to entity track
+	LagRecord &record = track->emplace_front();
+
+	record.m_fFlags = 0;
+	if ( entity->IsAlive() )
+	{
+		record.m_fFlags |= LC_ALIVE;
+	}
+
+	record.m_flSimulationTime	= entity->GetSimulationTime();
+	record.m_vecAngles			= entity->GetAbsAngles();
+	record.m_vecOrigin			= entity->GetAbsOrigin();
+	record.m_vecMaxs			= entity->WorldAlignMaxs();
+	record.m_vecMins			= entity->WorldAlignMins();
+
+	CBaseAnimating *pAnimating = entity->GetBaseAnimating();
+
+	if( wantsAnims && pAnimating )
+	{
+		CBaseAnimatingOverlay *pAnimatingOverlay = entity->GetBaseAnimatingOverlay();
+
+		if ( pAnimatingOverlay )
+		{
+			int layerCount = pAnimatingOverlay->GetNumAnimOverlays();
+			for( int layerIndex = 0; layerIndex < layerCount; ++layerIndex )
+			{
+				CAnimationLayer *currentLayer = pAnimatingOverlay->GetAnimOverlay(layerIndex);
+				if( currentLayer )
+				{
+					record.m_layerRecords[layerIndex].m_cycle = currentLayer->m_flCycle;
+					record.m_layerRecords[layerIndex].m_order = currentLayer->m_nOrder;
+					record.m_layerRecords[layerIndex].m_sequence = currentLayer->m_nSequence;
+					record.m_layerRecords[layerIndex].m_weight = currentLayer->m_flWeight;
+				}
+			}
+		}
+		record.m_masterSequence = pAnimating->GetSequence();
+		record.m_masterCycle = pAnimating->GetCycle();
+
+		CStudioHdr *pHdr = pAnimating->GetModelPtr();
+		if ( pHdr )
+		{
+			for( int i=0; i<pHdr->GetNumPoseParameters(); i++ )
+			{
+				record.m_flPoseParameters[i] = pAnimating->GetPoseParameter(i);
+			}
+		}
+	}
+}
+void CLagCompensationManager::RestoreEntityFromRecords( CBaseEntity *entity, LagRecord *restore, LagRecord *change, bool wantsAnims )
+{
+	bool restoreSimulationTime = false;
+
+	if ( restore->m_fFlags & LC_SIZE_CHANGED )
+	{
+		restoreSimulationTime = true;
+
+		// see if simulation made any changes, if no, then do the restore, otherwise,
+		//  leave new values in
+		if ( entity->WorldAlignMins() == change->m_vecMins &&
+			entity->WorldAlignMaxs() == change->m_vecMaxs )
+		{
+			// Restore it
+			entity->SetSize( restore->m_vecMins, restore->m_vecMaxs );
+		}
+	}
+
+	if ( restore->m_fFlags & LC_ANGLES_CHANGED )
+	{		   
+		restoreSimulationTime = true;
+
+		if ( entity->GetAbsAngles() == change->m_vecAngles )
+		{
+			entity->SetAbsAngles( restore->m_vecAngles );
+		}
+	}
+
+	if ( restore->m_fFlags & LC_ORIGIN_CHANGED )
+	{
+		restoreSimulationTime = true;
+
+		// Okay, let's see if we can do something reasonable with the change
+		Vector delta = entity->GetAbsOrigin() - change->m_vecOrigin;
+
+		// If it moved really far, just leave the entity in the new spot!!!
+		if ( delta.LengthSqr() < LAG_COMPENSATION_TELEPORTED_DISTANCE_SQR )
+		{
+			RestoreEntityTo( entity, restore->m_vecOrigin + delta );
+		}
+	}
+			
+	CBaseAnimating *pAnimating = entity->GetBaseAnimating();
+
+	if( wantsAnims && pAnimating )
+	{
+		if( restore->m_fFlags & LC_ANIMATION_CHANGED )
+		{
+			restoreSimulationTime = true;
+
+			pAnimating->SetSequence(restore->m_masterSequence);
+			pAnimating->SetCycle(restore->m_masterCycle);
+
+			CBaseAnimatingOverlay *pAnimatingOverlay = entity->GetBaseAnimatingOverlay();
+			if ( pAnimatingOverlay )
+			{
+				int layerCount = pAnimatingOverlay->GetNumAnimOverlays();
+				for( int layerIndex = 0; layerIndex < layerCount; ++layerIndex )
+				{
+					CAnimationLayer *currentLayer = pAnimatingOverlay->GetAnimOverlay(layerIndex);
+					if( currentLayer )
+					{
+						currentLayer->m_flCycle = restore->m_layerRecords[layerIndex].m_cycle;
+						currentLayer->m_nOrder = restore->m_layerRecords[layerIndex].m_order;
+						currentLayer->m_nSequence = restore->m_layerRecords[layerIndex].m_sequence;
+						currentLayer->m_flWeight = restore->m_layerRecords[layerIndex].m_weight;
+					}
+				}
+			}
+
+			CStudioHdr *pHdr = pAnimating->GetModelPtr();
+			if ( pHdr )
+			{
+				for( int i=0; i<pHdr->GetNumPoseParameters(); i++ )
+				{
+					pAnimating->SetPoseParameter( i, restore->m_flPoseParameters[i] );
+				}
+			}
+		}
+	}
+
+	if ( restoreSimulationTime )
+	{
+		entity->SetSimulationTime( restore->m_flSimulationTime );
+	}
+}
+
+LayerRecord::LayerRecord( const LayerRecord& src)
+{
+	m_sequence = src.m_sequence;
+	m_cycle = src.m_cycle;
+	m_weight = src.m_weight;
+	m_order = src.m_order;
+}
+
+LagRecord::LagRecord( const LagRecord& src)
+{
+	m_fFlags = src.m_fFlags;
+	m_vecOrigin = src.m_vecOrigin;
+	m_vecAngles = src.m_vecAngles;
+	m_vecMins = src.m_vecMins;
+	m_vecMaxs = src.m_vecMaxs;
+	m_flSimulationTime = src.m_flSimulationTime;
+	for( int layerIndex = 0; layerIndex < MAX_LAYER_RECORDS; ++layerIndex )
+	{
+		m_layerRecords[layerIndex] = src.m_layerRecords[layerIndex];
+	}
+	m_masterSequence = src.m_masterSequence;
+	m_masterCycle = src.m_masterCycle;
+
+	for( int i=0; i<MAXSTUDIOPOSEPARAM; i++ )
+	{
+		m_flPoseParameters[i] = src.m_flPoseParameters[i];
+	}
+}
+
+CLagCompensationManager::CLagCompensationManager( char const *name) : 
+		CAutoGameSystemPerFrame( name )
+{
+	m_bNeedToRestore = false;
+	m_weaponRange = 0.0f;
+	m_isCurrentlyDoingCompensation = false;
+}
+
+class CBasePlayer;
+
+using namespace ::ks::reflect;
+
+// Purpose: Entity that propagates general data needed by clients for every player.
+
+// Datatable
+IMPLEMENT_REFLECT_SERVERCLASS( CPlayerResource, DT_PlayerResource )
+
+LINK_ENTITY_TO_CLASS( player_manager, CPlayerResource );
+
+CPlayerResource *g_pPlayerResource;
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CPlayerResource::Spawn_Impl( void )
+{
+	for ( int i=0; i < MAX_PLAYERS+1; i++ )
+	{
+		m_iPing.Set( i, 0 );
+		m_iKills.Set( i, 0 );
+		m_iAssists.Set( i, 0 );
+		m_iDeaths.Set( i, 0 );
+		m_bConnected.Set( i, 0 );
+		m_iTeam.Set( i, 0 );
+		m_iPendingTeam.Set( i, 0 );
+		m_bAlive.Set( i, 0 );
+		m_iCoachingTeam.Set( i, 0 );
+	}
+
+	SetThink( &CPlayerResource::ResourceThink );
+	SetNextThink( gpGlobals->curtime );
+	m_nUpdateCounter = 0;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: The Player resource is always transmitted to clients
+//-----------------------------------------------------------------------------
+int CPlayerResource::UpdateTransmitState_Impl()
+{
+	// ALWAYS transmit to all clients.
+	return SetTransmitState( FL_EDICT_ALWAYS );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Wrapper for the virtual GrabPlayerData Think function
+//-----------------------------------------------------------------------------
+void CPlayerResource::ResourceThink( void )
+{
+	m_nUpdateCounter++;
+
+	UpdatePlayerData();
+
+	SetNextThink( gpGlobals->curtime + 0.1f );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CPlayerResource::UpdatePlayerData( void )
+{
+	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	{
+		CBasePlayer *pPlayer = (CBasePlayer*)UTIL_PlayerByIndex( i );
+		
+		if ( pPlayer && pPlayer->IsConnected() )
+		{
+			m_iKills.Set( i, pPlayer->FragCount() );
+			m_iAssists.Set(i, pPlayer->AssistsCount() ); 
+			m_iDeaths.Set( i, pPlayer->DeathCount() );
+			m_bConnected.Set( i, 1 );
+			m_iTeam.Set( i, pPlayer->GetTeamNumber() );
+			m_iPendingTeam.Set( i, pPlayer->GetPendingTeamNumber() );
+			m_bAlive.Set( i, pPlayer->IsAlive()?1:0 );
+			m_iHealth.Set(i, std::max( 0, pPlayer->GetHealth() ) );
+			m_iCoachingTeam.Set( i, pPlayer->GetCoachingTeam() );
+
+			// Don't update ping / packetloss everytime
+
+			if ( !(m_nUpdateCounter%20) )
+			{
+				// update ping all 20 think ticks = (20*0.1=2seconds)
+				int ping, packetloss;
+				UTIL_GetPlayerConnectionInfo( i, ping, packetloss );
+				
+				// calc avg for scoreboard so it's not so jittery
+				ping = 0.8f * m_iPing.Get(i) + 0.2f * ping;
+
+				m_iPing.Set( i, ping );
+				// m_iPacketloss.Set( i, packetloss );
+			}
+		}
+		else
+		{
+			m_bConnected.Set( i, 0 );
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Exposes smooth player ping that this PR accumulates over time
+//-----------------------------------------------------------------------------
+int CPlayerResource::GetPlayerSmoothPing( int iClientIndex )
+{
+	if ( ( iClientIndex > 0 ) && ( iClientIndex <= gpGlobals->maxClients ) )
+		return m_iPing.Get( iClientIndex );
+	else
+		return 0;
+}
+
+class CBasePlayer;
+
+using namespace ::ks::reflect;
+
+// Purpose: Maintain data about voice communications from various players
+//			so that the server can react to it.
+
+ConVar voice_player_speaking_delay_threshold( side_registry(), "voice_player_speaking_delay_threshold", "0.5f", FCVAR_CHEAT );
+
+BEGIN_SCRIPTDESC_ROOT_NAMED( CPlayerVoiceListener, "CPlayerVoiceListener", SCRIPT_SINGLETON "Player voice listeners" )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptIsPlayerSpeaking, "IsPlayerSpeaking", "Returns whether the player specified is speaking." )
+	DEFINE_SCRIPTFUNC_NAMED( ScriptGetPlayerSpeechDuration, "GetPlayerSpeechDuration", "Returns the number of seconds the player has been continuously speaking." )
+END_SCRIPTDESC()
+
+inline bool IsPlayerIndexValid( int nPlayerIndex )
+{
+	if ( nPlayerIndex < 1 || nPlayerIndex > MAX_PLAYERS )
+		return false;
+
+	return true;
+}
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+CPlayerVoiceListener::CPlayerVoiceListener( void )
+{
+	InitData();
+}
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+bool CPlayerVoiceListener::IsPlayerSpeaking( int nPlayerIndex )
+{
+	// Validate the player index
+	if ( IsPlayerIndexValid( nPlayerIndex ) == false )
+		return false;
+
+	// See if they last spoke within our time threshold
+	if ( ( m_flLastPlayerSpeechTime[nPlayerIndex] + voice_player_speaking_delay_threshold.GetFloat() ) >= gpGlobals->curtime )
+		return true;
+
+	// Silent too long
+	return false;
+}
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+bool CPlayerVoiceListener::IsPlayerSpeaking( CBasePlayer *pPlayer )
+{
+	// Validate the player
+	contract_assert( pPlayer );
+	if ( pPlayer == nullptr )
+		return false;
+
+	return IsPlayerSpeaking( pPlayer->entindex() );
+}
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+bool CPlayerVoiceListener::ScriptIsPlayerSpeaking( int nPlayerIndex )
+{
+	return IsPlayerSpeaking( nPlayerIndex );
+}
+
+static constexpr auto SPEECH_DURATION_HACK = 1.0f; // This is a total hack to guess a duration of a voice packet, this has no real value
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+void CPlayerVoiceListener::AddPlayerSpeakTime( int nPlayerIndex )
+{
+	// Validate the player index
+	if ( IsPlayerIndexValid( nPlayerIndex ) == false )
+		return;
+
+	// Maintain our current speech time
+	if ( IsPlayerSpeaking( nPlayerIndex ) )
+	{
+		// We're continuing the speech
+		m_flPlayerSpeechDuration[nPlayerIndex] += ( gpGlobals->curtime - m_flLastPlayerSpeechTime[nPlayerIndex] );
+	}
+	else
+	{
+		// We've just begun to speak
+		m_flPlayerSpeechDuration[nPlayerIndex] = 0.0f;
+	}
+
+	// Take the time update
+	m_flLastPlayerSpeechTime[nPlayerIndex] = gpGlobals->curtime;
+
+	// Msg("Player %d last spoke at %0.2f for %0.2f seconds\n", nPlayerIndex, gpGlobals->curtime, m_flPlayerSpeechDuration[nPlayerIndex] );
+}
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+void CPlayerVoiceListener::AddPlayerSpeakTime( CBasePlayer *pPlayer )
+{
+	// Validate the player
+	contract_assert( pPlayer );
+	if ( pPlayer == nullptr )
+		return;
+
+	return AddPlayerSpeakTime( pPlayer->entindex() );
+}
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+float CPlayerVoiceListener::GetPlayerLastSpeechTime( int nPlayerIndex )
+{
+	if ( IsPlayerIndexValid( nPlayerIndex ) == false )
+		return -1.0f;
+
+	return m_flLastPlayerSpeechTime[ nPlayerIndex ];
+}
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+float CPlayerVoiceListener::GetPlayerLastSpeechTime( CBasePlayer *pPlayer )
+{
+	// Validate the player
+	contract_assert( pPlayer );
+	if ( pPlayer == nullptr )
+		return -1.0f;
+
+	return GetPlayerLastSpeechTime( pPlayer->entindex() );
+}
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+float CPlayerVoiceListener::GetPlayerSilenceDuration( int nPlayerIndex )
+{
+	if ( IsPlayerIndexValid( nPlayerIndex ) == false )
+		return -1.0f;
+
+	return gpGlobals->curtime - m_flLastPlayerSpeechTime[ nPlayerIndex ];
+}
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+float CPlayerVoiceListener::GetPlayerSilenceDuration( CBasePlayer *pPlayer )
+{
+	// Validate the player
+	contract_assert( pPlayer );
+	if ( pPlayer == nullptr )
+		return -1.0f;
+
+	return GetPlayerSilenceDuration( pPlayer->entindex() );
+}
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+float CPlayerVoiceListener::GetPlayerSpeechDuration( int nPlayerIndex )
+{
+	if ( IsPlayerIndexValid( nPlayerIndex ) == false )
+		return -1.0f;
+
+	return m_flPlayerSpeechDuration[nPlayerIndex];
+}
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+float CPlayerVoiceListener::GetPlayerSpeechDuration( CBasePlayer *pPlayer )
+{
+	// Validate the player
+	contract_assert( pPlayer );
+	if ( pPlayer == nullptr )
+		return -1.0f;
+
+	return GetPlayerSpeechDuration( pPlayer->entindex() );
+}
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+float CPlayerVoiceListener::ScriptGetPlayerSpeechDuration( int nPlayerIndex )
+{
+	return GetPlayerSpeechDuration( nPlayerIndex );
+}
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+void CPlayerVoiceListener::InitData( void )
+{
+	// Clear our tracking data
+	std::memset( m_flLastPlayerSpeechTime, 0.0f, std::size( m_flLastPlayerSpeechTime ) );
+	memset( m_flPlayerSpeechDuration, 0.0f, std::size( m_flPlayerSpeechDuration ) );
+}
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+void CPlayerVoiceListener::LevelInitPreEntity( void )
+{
+	InitData();
+}
+
+//---------------------------------------------------------------------------
+// Purpose:
+//---------------------------------------------------------------------------
+void CPlayerVoiceListener::LevelShutdownPreEntity( void )
+{
+	InitData();
+}
+
+// Singleton
+CPlayerVoiceListener g_PlayerVoiceListener;
+CPlayerVoiceListener &PlayerVoiceListener( void ) { return g_PlayerVoiceListener; }

@@ -1,0 +1,361 @@
+// SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
+// Copyright (c) 1996-2005 Valve Corporation
+
+module;
+#include "eiface.h"
+#include "networkvar.h"
+#include "reflect_annotations.h"
+#include "responserules/response_types.h"
+#include "server_class.h"
+#include "vscript/ivscript.h"
+#include "../../ai_criteria.h"
+#include "cs_simple_hostage.h"
+#include "../../predictable_entity.h"
+#include "../../vscript_game.h"
+#include "../../vscript_shared.h"
+module ks.server:cstrike15.hostage.cs_simple_hostage;
+
+import std;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.game.iplayeranimstate;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.reflect_wirevar;
+import :player;
+import :vscript;
+import :fish;
+import :cstrike15.bot.bot;
+import :cstrike15.cs_player;
+import :cstrike15.cs_playeranimstate;
+import :baseentity;
+import :nav_4;
+import ks.game.shareddefs;
+
+class CAI_Expresser;
+class CBaseAnimating;
+class CBaseCombatCharacter;
+class CBaseEntity;
+class CCSPlayer;
+class CImprovLocomotor;
+class CNavArea;
+class CNavLadder;
+class CTakeDamageInfo;
+class CWeaponCSBase;
+struct inputdata_t;
+
+using namespace ::ks::reflect;
+
+
+// cs_simple_hostage.h
+// Simple CS1.6 level hostage
+// Author: Michael S. Booth, July 2004
+
+// The send table quantises m_vel against this, and the annotation lives in this header.
+
+void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const void *pStruct,
+    const void *pData, DVariant *pOut, int iElement, int objectID );
+
+
+class CHostageExpresserShim : public CBaseCombatCharacter
+{
+public:
+	inline CAI_Expresser *GetExpresser( void ) { return m_pExpresser; }
+	inline const CAI_Expresser *GetMultiplayerExpresser( void ) const { return m_pExpresser; }
+
+protected:
+	CAI_Expresser *m_pExpresser;
+};
+
+class CHostageCarriableProp : public CBaseAnimating
+{
+	[[= ks::reflect::NetTable{ .name = "DT_HostageCarriableProp" } ]]
+	static constexpr bool ks_class = true;
+
+public:
+	DECLARE_CLASS( CHostageCarriableProp, CBaseAnimating );
+	DECLARE_SERVERCLASS();
+	DECLARE_PREDICTABLE();
+};
+
+//----------------------------------------------------------------------------------------------------------------
+/**
+ * A Counter-Strike Hostage
+ */
+class CHostage : public CAI_ExpresserHost< CHostageExpresserShim >, public CImprovLocomotor, public ICSPlayerAnimStateHelpers
+{
+	[[= ks::reflect::NetTable{ .name = "DT_CHostage" } ]]
+	[[= ks::reflect::From<"m_iHealth", ks::reflect::Net{ .bits = 10 }>{} ]]
+	[[= ks::reflect::From<"m_iMaxHealth", ks::reflect::Net{ .bits = 10 }>{} ]]
+	[[= ks::reflect::From<"m_lifeState", ks::reflect::Net{ .bits = 3, .flags = SPROP_UNSIGNED }>{} ]]
+	[[= ks::reflect::From<"m_fFlags", ks::reflect::Net{ .bits = PLAYER_FLAG_BITS, .flags = SPROP_UNSIGNED }, SendProxy_CropFlagsToPlayerFlagBitsLength>{} ]]
+	[[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_flPoseParameter" } ]]
+	[[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_flPlaybackRate" } ]]
+	[[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_nSequence" } ]]
+	[[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_nNewSequenceParity" } ]]
+	[[= ks::reflect::Exclude{ .table = "DT_BaseAnimating", .prop = "m_nResetEventsParity" } ]]
+	[[= ks::reflect::Exclude{ .table = "DT_BaseAnimatingOverlay", .prop = "overlay_vars" } ]]
+	[[= ks::reflect::Exclude{ .table = "DT_ServerAnimationData", .prop = "m_flCycle" } ]]
+	[[= ks::reflect::Exclude{ .table = "DT_AnimTimeMustBeFirst", .prop = "m_flAnimTime" } ]]
+	static constexpr bool ks_class = true;
+
+public:
+	DECLARE_CLASS( CHostage, CHostageExpresserShim );
+	DECLARE_ENT_SCRIPTDESC();
+	DECLARE_SERVERCLASS();
+	DECLARE_DATADESC();
+
+	CHostage( void );
+	virtual ~CHostage();
+
+public:
+	void Spawn_Impl( void );
+	void Precache_Impl();
+	int ObjectCaps_Impl( void ) { return (BaseClass::ObjectCaps_Impl() | FCAP_IMPULSE_USE); }	// make hostage "useable"
+	using BaseClass::KeyValue_Impl;
+	bool KeyValue_Impl( const char *szKeyName, const char *szValue );
+
+	void PhysicsSimulate_Impl( void );
+
+	virtual int OnTakeDamage_Alive( const CTakeDamageInfo &info );
+	void TraceAttack_Impl( const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr );
+
+	void Event_Killed_Impl( const CTakeDamageInfo &info );
+	void Touch_Impl( CBaseEntity *other );				// in contact with "other"
+	
+	[[= ks::reflect::Input{ .name = "OnRescueZoneTouch", .type = FIELD_VOID } ]] void HostageRescueZoneTouch( inputdata_t &inputdata );	// invoked when hostage touches a rescue zone
+
+	void HostageThink( void );								// periodic update to initiate behaviors
+
+	void GiveCTUseBonus( CCSPlayer *rescuer );				// give bonus to CT's for talking to a hostage
+	void CheckForHostageAbuse( CCSPlayer *player );			// check for hostage-killer abuse
+
+	// queries
+	bool IsBeingCarried( void );
+	bool IsFollowingSomeone( void );
+	bool IsFollowing( const CBaseEntity *entity );
+	bool IsValid( void ) const;
+	bool IsRescuable( void ) const;
+	bool IsRescued( void ) const;
+	bool IsOnGround( void ) const;
+
+	bool IsVisible( const Vector &pos, bool testFOV = false ) const;	// return true if hostage can see position
+
+	// hostage states
+	void Idle( void );										// stand idle
+	void Follow( CCSPlayer *leader );						// begin following "leader"
+	CCSPlayer *GetLeader( void ) const;						// return our leader, or NULL
+
+	void DropHostage( Vector vecPosition, bool bIsRescued = false );
+
+	void FaceTowards( const Vector &target, float deltaT );	// rotate body to face towards "target"
+	void ApplyForce( const Vector &force )		{ m_accel += force; }	// apply a force to the hostage
+
+	unsigned int PhysicsSolidMaskForEntity_Impl() const;
+	Class_T Classify_Impl ( void ) { return CLASS_PLAYER_ALLY; }
+
+public:
+	// begin CImprovLocomotor -----------------------------------------------------------------------------------------------------------------
+	const Vector &GetCentroid( void ) const;
+	const Vector &GetFeet( void ) const;			// return position of "feet" - point below centroid of improv at feet level
+	const Vector &GetEyes( void ) const;
+	float GetMoveAngle( void ) const;				// return direction of movement
+
+	CNavArea *GetLastKnownArea( void ) const;
+	bool GetSimpleGroundHeightWithFloor( const Vector &pos, float *height, Vector *normal = nullptr );	// find "simple" ground height, treating current nav area as part of the floor
+
+	void Crouch( void );
+	void StandUp( void );							// "un-crouch"
+	bool IsCrouching( void ) const;
+
+	void Jump( void );								// initiate a jump
+	bool IsJumping( void ) const;
+
+	void Run( void );								// set movement speed to running
+	void Walk( void );								// set movement speed to walking
+	bool IsRunning( void ) const;
+
+	void StartLadder( const CNavLadder *ladder, NavTraverseType how, const Vector &approachPos, const Vector &departPos );	// invoked when a ladder is encountered while following a path
+	bool TraverseLadder( const CNavLadder *ladder, NavTraverseType how, const Vector &approachPos, const Vector &departPos, float deltaT );	// traverse given ladder
+	bool IsUsingLadder( void ) const;
+
+	void TrackPath( const Vector &pathGoal, float deltaT );		// move along path by following "pathGoal"
+	void OnMoveToSuccess( const Vector &goal );					// invoked when an improv reaches its MoveTo goal
+	void OnMoveToFailure( const Vector &goal, MoveToFailureType reason );	// invoked when an improv fails to reach a MoveTo goal
+	// end CImprovLocomotor -------------------------------------------------------------------------------------------------------------------
+
+public:
+	virtual CWeaponCSBase* CSAnim_GetActiveWeapon();
+	virtual bool CSAnim_CanMove();
+
+	void ModifyOrAppendCriteria_Impl( AI_CriteriaSet& set );
+
+	int GetHostageState( void ) { return m_nHostageState; }
+
+	uint32 GetHostageSpawnExclusionGroup() const { return m_uiHostageSpawnExclusionGroupMask; }
+	uint32 GetHostageSpawnRandomFactor() const { return m_nHostageSpawnRandomFactor; }
+
+	[[= ks::reflect::Key{ .name = "OnHostageBeginGrab" } ]] COutputEvent m_OnHostageBeginGrab;
+	[[= ks::reflect::Key{ .name = "OnFirstPickedUp" } ]] COutputEvent m_OnFirstPickedUp; 
+	[[= ks::reflect::Key{ .name = "OnDroppedNotRescued" } ]] COutputEvent m_OnDroppedNotRescued; 
+	[[= ks::reflect::Key{ .name = "OnRescued" } ]] COutputEvent m_OnRescued; 
+
+protected:
+	virtual CAI_Expresser *CreateExpresser( void );
+	void HostageUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void SetHostageStartFollowingPlayer( CCSPlayer *pPlayer );
+	void SmoothlyDropHostageToGround( Vector vecPosition );
+
+private:
+	uint32 m_uiHostageSpawnExclusionGroupMask;	// Mask of hostage spawn exclusion groups
+	uint32 m_nHostageSpawnRandomFactor; // Additional weight when building random spawn locations
+	bool m_bRemove; // We've exceeded MAX_HOSTAGES; delete excess entities upon spawn.
+
+	float GetModifiedDamage( float flDamage, int nHitGroup );
+
+	IPlayerAnimState *m_PlayerAnimState;
+
+	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_iMaxHealth );
+	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_iHealth );
+	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_lifeState );
+	IMPLEMENT_NETWORK_VAR_FOR_DERIVED( m_fFlags );
+	
+	CNetworkVar( Vector, m_vel, [[= ks::reflect::Net{ .bits = 12, .low = -MAX_HOSTAGE_MOVE_FORCE, .high = MAX_HOSTAGE_MOVE_FORCE, .flags = 0x0, .enc = ks::reflect::WireEnc::Vector } ]] );
+
+	CNetworkVar( bool, m_isRescued, [[= ks::reflect::Net{} ]] );						// true if the hostage has been rescued
+	CNetworkVar( bool, m_jumpedThisFrame, [[= ks::reflect::Net{} ]] );
+
+	CNetworkVar( int, m_nHostageState, [[= ks::reflect::Net{ .bits = -1 } ]] );
+
+	CNetworkVar( EHANDLE, m_leader, [[= ks::reflect::Net{} ]] );						// the player we are following
+	void UpdateFollowing( float deltaT );					// do following behavior
+
+	int m_lastLeaderID;
+
+	CountdownTimer m_reuseTimer;							// to throttle how often hostage can be used
+	bool m_hasBeenUsed;										// flag to give first rescuer bonus money
+
+	Vector m_accel;
+
+	bool m_isRunning;										// true if hostage move speed is to run (walk if false)
+	bool m_isCrouching;										// true if hostage is crouching
+	CountdownTimer m_jumpTimer;								// if zero, we can jump
+
+	bool m_isWaitingForLeader;								// true if we are waiting for our rescuer to move
+
+	CCSNavPath m_path;										// current path to follow
+	CountdownTimer m_repathTimer;							// throttle pathfinder
+
+	CountdownTimer m_inhibitDoorTimer;
+
+	CNavPathFollower m_pathFollower;						// path tracking mechanism
+	CountdownTimer m_inhibitObstacleAvoidanceTimer;			// when active, turn off path following feelers
+
+	CNavArea *m_lastKnownArea;								// last area we were in
+
+	void Wiggle( void );									// attempt to wiggle-out of begin stuck
+	CountdownTimer m_wiggleTimer;							// for wiggling
+	NavRelativeDirType m_wiggleDirection;
+
+	bool m_isAdjusted;										// hack for adjusting bounding box
+
+	// Info for defusing.
+	bool			m_bHandsHaveBeenCut;
+	//bool			m_bBeingGrabbed;
+	CHandle<CCSPlayer> m_pHostageGrabber;
+	float			m_fLastGrabTime;
+	float			m_flGrabbingLength;		//How long does the defuse take? Depends on if a defuser was used
+	Vector			m_vecPositionWhenStartedDroppingToGround; // Where was the hostage when he started dropping to ground
+	
+	Vector			m_vecGrabbedPos;
+	CNetworkVar( float, m_flRescueStartTime, [[= ks::reflect::Net{ .bits = 32 } ]] );
+	CNetworkVar( float, m_flGrabSuccessTime, [[= ks::reflect::Net{ .bits = 32 } ]] );		//What time did the grabbing succeed?
+	CNetworkVar( float, m_flDropStartTime, [[= ks::reflect::Net{ .bits = 32 } ]] );		//What time did the grabbing succeed?
+
+	void PushawayThink( void );								// pushes physics objects away from the hostage
+	void AvoidPhysicsProps( void );							// guides the hostage away from physics props
+};
+
+//--------------------------------------------------------------------------------------------------------------
+/**
+ * Functor used with NavAreaBuildPath() for building Hostage paths.
+ * Once we hook up crouching and ladders, this can be removed and ShortestPathCost() can be used instead.
+ */
+class HostagePathCost
+{
+public:
+	float operator() ( CNavArea *area, CNavArea *fromArea, const CNavLadder *ladder, const CFuncElevator *elevator, float length )
+	{
+		if (fromArea == nullptr)
+		{
+			// first area in path, no cost
+			return 0.0f;
+		}
+		else
+		{
+			// if this area isn't available to hostages, skip it
+			if ( area->GetAttributes() & NAV_MESH_NO_HOSTAGES )
+			{
+				return -1.0f;
+			}
+
+			// compute distance travelled along path so far
+			float dist;
+
+			if (ladder)
+			{
+				// can't traverse ladders
+				return -1.0f;
+			}
+			else
+			{
+				dist = (area->GetCenter() - fromArea->GetCenter()).Length();
+			}
+
+			float cost = dist + fromArea->GetCostSoFar();
+
+			if (area->GetAttributes() & NAV_MESH_CROUCH) //  && !(area->GetAttributes() & NAV_MESH_JUMP))
+			{
+				// can't traverse areas that require crouching
+				return -1.0f;
+			}
+
+			// if this is a "jump" area, add penalty
+			if (area->GetAttributes() & NAV_MESH_JUMP)
+			{
+				const float jumpPenalty = 5.0f;
+				cost += jumpPenalty * dist;
+			}
+
+			return cost;
+		}
+	}
+};
+
+//--------------------------------------------------------------------------------------------------------------
+// All the hostage entities.
+extern std::vector< CHostage * > g_Hostages;
+
+//--------------------------------------------------------------------------------------------------------------
+/**
+ * Iterate over all active hostages in the game, invoking functor on each.
+ * If functor returns false, stop iteration and return false.
+ */
+template < typename Functor >
+bool ForEachHostage( Functor &func )
+{
+	for( int i=0; i<std::ssize( g_Hostages ); ++i )
+	{
+		CHostage *hostage = g_Hostages[i];
+
+		if ( hostage == nullptr || !hostage->IsValid() )
+			continue;
+
+		if ( func( hostage ) == false )
+			return false;
+	}
+
+	return true;
+}

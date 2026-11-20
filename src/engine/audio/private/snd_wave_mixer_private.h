@@ -6,6 +6,8 @@
 #include "snd_wave_mixer.h"
 #include "sound_private.h"
 #include "snd_wave_source.h"
+import ks.core.basetypes;
+import ks.core.types;
 
 class IWaveData;
 

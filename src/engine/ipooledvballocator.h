@@ -9,6 +9,7 @@
 // Pooled VB allocator abstract base class
 //-----------------------------------------------------------------------------
 #include "materialsystem/imesh.h"
+import ks.math.polyhedron;
 
 class IPooledVBAllocator
 {

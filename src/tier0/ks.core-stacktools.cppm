@@ -4,9 +4,9 @@
 
 // Purpose: Tools for grabbing/dumping the stack at runtime
 
-export module ks.core:stacktools;
+export module ks.core.stacktools;
 
-import :platform;
+import ks.core.platform;
 
 export extern "C++" {
 

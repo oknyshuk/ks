@@ -4,7 +4,12 @@
 
 // Purpose: A higher level link library for general use in the game and tools.
 
-import ks.core;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
 #include "tier2/tier2.h"
 
 #include "filesystem.h"

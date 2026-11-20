@@ -4,7 +4,10 @@
 
 #pragma once
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
 #include "isaverestore.h"
 
 import std;

@@ -5,7 +5,9 @@
 //
 // Describes possible states of an async operation
 //
-import ks.core;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 enum AsyncOperationState_t
 {
 	AOS_RUNNING,

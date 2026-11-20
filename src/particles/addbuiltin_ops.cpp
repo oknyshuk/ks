@@ -3,7 +3,8 @@
 
 // Purpose: particle system code
 
-import ks.core;
+import ks.platform;
+import ks.simd;
 #include "particles/particles.h"
 
 

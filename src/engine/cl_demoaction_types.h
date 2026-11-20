@@ -8,6 +8,11 @@
 #include "cl_demoaction.h"
 #include "shake.h"
 #include "client_textmessage.h"
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.tier1.text_writer;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 
 class CDemoActionSkipAhead : public CBaseDemoAction
 {

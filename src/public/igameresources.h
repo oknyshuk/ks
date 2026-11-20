@@ -6,6 +6,10 @@
 
 
 
+import ks.core.color;
+import ks.platform;
+import ks.simd;
+
 class IGameResources
 {
 public:
@@ -32,4 +36,4 @@ public:
 	virtual int		GetHealth( int index ) = 0;
 };
 
-extern IGameResources *GameResources( void ); // singelton accessor
+// GameResources() is the client's (c_playerresource.h).

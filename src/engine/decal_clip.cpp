@@ -2,6 +2,14 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "decal_clip.h"
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.polyhedron;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.tier1.exprevaluator;
 
 // --------------------------------------------------------------------------- //
 // Template classes for the clipper.

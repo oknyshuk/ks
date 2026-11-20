@@ -2,7 +2,15 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.math;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
 
 const fltx4 Four_PointFives={0.5,0.5,0.5,0.5};
 const fltx4 Four_Zeros={0.0,0.0,0.0,0.0};

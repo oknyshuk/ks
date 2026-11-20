@@ -3,7 +3,13 @@
 // Copyright (c) 1996-2009 Valve Corporation
 
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.appinstance;
 
 typedef int32 LRESULT;
 typedef void* HWND;

@@ -5,7 +5,17 @@
 // Purpose: sheet definitions for particles and other sprite functions
 
 import std;
-import ks.tier1;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.timeutils;
+import ks.tier1.tracked_ref;
+import ks.tier1.uniqueid;
 #include "materialsystem/MaterialSystemUtil.h"
 
 namespace ks { class byte_reader; }

@@ -8,7 +8,15 @@
 #include <globalvars_base.h>
 #include <soundflags.h>
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.wchartypes;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.checksum_crc;
+import ks.tier1.keyvalues;
+import ks.tier1.ns_address;
 #include "host.h"
 #include "event_system.h"
 #include "precache.h"

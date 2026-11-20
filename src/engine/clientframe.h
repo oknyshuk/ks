@@ -4,7 +4,10 @@
 
 #include <const.h>
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.fixed_pool;
+import ks.tier1.createinterface;
 
 class CFrameSnapshot;
 

@@ -18,7 +18,10 @@
 #include <Jolt/Physics/Constraints/HingeConstraint.h>
 #include <Jolt/Physics/Constraints/DistanceConstraint.h>
 import std;
-import ks.core;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "cmodel.h"
 #include "vphysics_interface.h"
 #include "vjolt_util.h"

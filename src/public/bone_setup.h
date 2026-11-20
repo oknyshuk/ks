@@ -5,6 +5,11 @@
 #include "studio.h"
 #include "cmodel.h"
 import std;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.tier1.datamanager;
 
 class CBoneToWorld;
 class CIKContext;

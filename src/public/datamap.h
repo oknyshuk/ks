@@ -4,7 +4,10 @@
 
 import std;
 
-import ks.tier1;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
 
 inline constexpr auto INVALID_TIME = (std::numeric_limits<float>::max() * -1.0); // Special value not rebased on save/load
 

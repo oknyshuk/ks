@@ -2,6 +2,8 @@
 // Copyright (c) 2005 Valve Corporation
 
 import std;
-import ks.vstdlib;
+import ks.platform;
+import ks.simd;
+import ks.vstdlib.vcover;
 
 CVCoverage g_VCoverage;

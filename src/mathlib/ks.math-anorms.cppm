@@ -2,12 +2,12 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:anorms;
+export module ks.math.anorms;
 
 import std;
-import ks.core;
+import ks.platform;
 import ks.simd;
-export import :vector;
+export import ks.math.vector;
 
 export extern "C++" {
 

@@ -3,6 +3,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "tier3/tier3.h"
+import ks.tier1.datamanager;
 
 //-----------------------------------------------------------------------------
 // Forward declarations

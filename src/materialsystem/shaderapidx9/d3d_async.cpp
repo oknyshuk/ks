@@ -3,7 +3,12 @@
 
 // Purpose: methods for muti-core dx9 threading
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
 #include "togl/rendermechanism.h"
 #include "locald3dtypes.h"
 #include "shaderapidx8_global.h"

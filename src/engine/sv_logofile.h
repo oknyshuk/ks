@@ -3,7 +3,8 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 
 class CGameClient;
 class CPerClientLogoInfo;	// (private to this module)

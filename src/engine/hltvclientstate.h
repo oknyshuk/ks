@@ -3,6 +3,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "baseclientstate.h"
+import ks.tier1.convar;
 
 class CClientFrame;
 class CHLTVServer;

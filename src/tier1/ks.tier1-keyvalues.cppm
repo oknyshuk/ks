@@ -2,12 +2,17 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:keyvalues;
+export module ks.tier1.keyvalues;
 
 import std;
-import ks.math;
-export import :utlvector;
-export import :exprevaluator;
+import ks.core.basetypes;
+import ks.core.color;
+import ks.core.dbg;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.utlvector;
+export import ks.tier1.exprevaluator;
 
 export extern "C++" {
 

@@ -88,7 +88,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-import ks.core;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
 import std;
 
 typedef unsigned int DWORD;

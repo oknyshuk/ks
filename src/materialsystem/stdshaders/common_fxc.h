@@ -6,6 +6,9 @@
 
 #include "common_pragmas.h"
 #include "common_hlsl_cpp_consts.h"
+import ks.math.bumpvects;
+import ks.math.mathlib;
+import ks.math.ssemath;
 
 #if defined( NV3X ) || defined( _PS3 )
 #	define HALF half

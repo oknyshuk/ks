@@ -4,7 +4,11 @@
 
 // Purpose: Expose functions from sys_dll.cpp.
 
-import ks.tier1;
+import ks.core.logging;
+import ks.platform;
+import ks.simd;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 import std;
 
 //-----------------------------------------------------------------------------

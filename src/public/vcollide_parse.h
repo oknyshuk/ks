@@ -3,6 +3,9 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "vphysics_interface.h"
+import ks.core.basetypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
 
 struct solid_t
 {

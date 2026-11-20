@@ -5,7 +5,17 @@
 // Purpose: Core types for the response rules -- criteria, responses, rules, and matchers.
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.tslist;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.intern_pool;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
 #include "tier2/interval.h"
 #include "datamap.h"
 #include "soundflags.h"
@@ -397,6 +407,9 @@ extern ConVar rr_debugresponses;
 extern ConVar rr_debugrule;
 extern ConVar rr_dumpresponses;
 extern ConVar rr_debugresponseconcept;
+
+// Splits one key:value[:duration] entry off a context string (criteriaset.cpp).
+extern const char *SplitContext( const char *raw, char *key, int keylen, char *value, int valuelen, float *duration, const char *entireContext );
 
 #include "rr_speechconcept.h"
 #include "response_host_interface.h"

@@ -12,7 +12,26 @@ typedef int SOCKET;
 constexpr auto SD_SEND = 0x01;
 #define INVALID_SOCKET (~0)
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.convar;
+import ks.tier1.diff;
+import ks.tier1.iconvar;
+import ks.tier1.interfaces;
+import ks.tier1.intern_pool;
+import ks.tier1.keyvalues;
+import ks.tier1.lzmadecoder;
+import ks.tier1.map_ops;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
 #include "togl/rendermechanism.h"
 #include "vertexshaderdx8.h"
 import std;

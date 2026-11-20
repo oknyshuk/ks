@@ -3,6 +3,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "materialsystem/imaterialsystem.h"
+import ks.core.platform;
 
 inline constexpr const char *MATERIALSYSTEM_CONFIG_VERSION = "VMaterialSystemConfig004";
 

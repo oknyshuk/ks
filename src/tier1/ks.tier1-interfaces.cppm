@@ -2,10 +2,11 @@
 // Copyright (c) 2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:interfaces;
+export module ks.tier1.interfaces;
 
 import std;
-import ks.math;
+import ks.platform;
+import ks.simd;
 
 export extern "C++" {
 

@@ -3,12 +3,12 @@
 // light structure definitions.
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:lightdesc;
+export module ks.math.lightdesc;
 
 import std;
-import ks.core;
+import ks.platform;
 import ks.simd;
-export import :ssemath;
+export import ks.math.ssemath;
 
 export extern "C++" {
 

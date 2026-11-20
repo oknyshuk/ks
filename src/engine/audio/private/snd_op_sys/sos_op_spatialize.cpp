@@ -5,7 +5,15 @@ import std;
 
 
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.color;
+import ks.core.logging;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.keyvalues;
 #include "sound.h"
 #include "soundservice.h"
 #include "filesystem.h"

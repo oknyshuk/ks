@@ -3,7 +3,11 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.keyvalues;
 
 inline constexpr const char *SCRIPT_DIR = "scripts/";
 

@@ -119,3 +119,5 @@ void CMatchExtensions::OnExtensionInterfaceUpdated( char const *szInterfaceStrin
 
 //-----------------------------------------------------------------------------
 #include "facade/imatchextensions.inl"
+import ks.tier1.interfaces;
+import ks.tier1.strtools;

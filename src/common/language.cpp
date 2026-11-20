@@ -8,7 +8,10 @@
 import std;
 #if defined(CLIENT_DLL)
 #endif
-import ks.tier1;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 #include "language.h"
 
 struct Language_t

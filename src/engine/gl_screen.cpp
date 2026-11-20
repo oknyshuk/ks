@@ -5,7 +5,14 @@
 
 // main precompiled header for client rendering code
 
-import ks.vstdlib;
+import ks.core.cmdline;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.vstdlib.jobthread;
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"

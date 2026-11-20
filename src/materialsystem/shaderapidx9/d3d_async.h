@@ -3,7 +3,15 @@
 // Copyright (c) 1996-2008 Valve Corporation
 
 // Set this to 1 to allow d3d calls to be buffered and played back on another thread
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.appinstance;
+import ks.tier1.strtools;
 #include "togl/rendermechanism.h"
 #include "locald3dtypes.h"
 #include "shaderapidx8_global.h"

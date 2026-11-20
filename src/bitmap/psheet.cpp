@@ -3,7 +3,20 @@
 
 // Purpose: sheet code for particles and other sprite functions
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.convar;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 #include "bitmap/psheet.h"
 import std;
 

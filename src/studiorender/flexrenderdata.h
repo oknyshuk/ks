@@ -3,7 +3,11 @@
 // Copyright (c) 1996-2008 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.vprof;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
 #include "studio.h"
 
 //-----------------------------------------------------------------------------

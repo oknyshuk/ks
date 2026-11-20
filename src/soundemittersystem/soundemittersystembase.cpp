@@ -2,7 +2,28 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.logging;
+import ks.core.platform;
+import ks.core.random;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.checksum_crc;
+import ks.tier1.filename_table;
+import ks.tier1.fixed_pool;
+import ks.tier1.generichash;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.intern_pool;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.tier1.text_writer;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.tier1.vector_ops;
 #include "filesystem.h"
 #include "tier2/interval.h"
 #include "engine/IEngineSound.h"

@@ -6,6 +6,7 @@
 #include "debugluxel_ps20b.inc"
 #include "debugluxel_ps20.inc"
 #include "debugluxel_vs20.inc"
+import ks.math.vector4d;
 
 BEGIN_SHADER_FLAGS( DebugLuxels, "Help for DebugLuxels", SHADER_NOT_EDITABLE )
 			  

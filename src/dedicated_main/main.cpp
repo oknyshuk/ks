@@ -10,15 +10,20 @@
 
 import std;
 
-import ks.core;
-import ks.tier1;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 #include "game_entry.h"
+import ks.server;
 
 extern "C" int DedicatedMain( int argc, char *argv[] );
 
 
 // The game server is linked into this executable, there is no game client.
-static void *ServerFactory( const char *pName, int *pReturnCode ) { return ks::server_registry().create_interface( pName, pReturnCode ); }
+static void *ServerFactory( const char *pName, int *pReturnCode ) { return ks::server::create_interface( pName, pReturnCode ); }
 CreateInterfaceFn ServerGameFactory() { return &ServerFactory; }
 CreateInterfaceFn ClientGameFactory() { return nullptr; }
 

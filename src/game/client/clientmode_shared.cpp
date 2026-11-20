@@ -1,61 +1,88 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
+module;
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+#include <wchar.h>
+#include "edict.h"
+#include "engine/IEngineSound.h"
+#include "igameevents.h"
+#include "inputsystem/ButtonCode.h"
+#include "localize/ilocalize.h"
+#include "usermessages_schema.h"
+#include "view_shared.h"
+#include "cdll_client_int.h"
+#include "hud_element_helper.h"
+#include "hud_macros.h"
+module ks.client;
+
+import std;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
+import :particlemgr;
+import :iinput;
+import :props;
+import :baseanimatedtextureproxy;
+import :baseentity;
+import :sharedvar;
+import :util;
+import :cstrike15.cs_player;
+import :cstrike15.cs_shareddefs;
+import :cstrike15.gameui.bonusmapsdatabase;
+import :game_controls.baseviewport;
+import :precache;
+import ks.game.shareddefs;
+import :achievements_and_stats_interface;
+import :econ.econ_item_schema_minimal;
+import ks.game.gamemovement;
+import ks.game.mapentities_shared;
+import :noopanimcontroller;
+
+class CBaseHudChat;
+class CBaseHudWeaponSelection;
+class CHudWeaponSelection;
+class CIronSightController;
+class CUserCmd;
+class CBaseCombatWeapon;
+class CBaseEntity;
+class CBasePlayer;
+class CTeam;
+class CWeaponCSBase;
+
+using namespace ::ks::reflect;
+
 // Purpose: Normal HUD mode
 
-#include "rocketui/rmlui.h"
-#include "predictable_entity.h"
-#include "cdll_util.h"
-#include "util_shared.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
-#include "precache_register.h"
-#include "c_basecombatweapon.h"
-#include "c_basecombatcharacter.h"
-#include "gamerules.h"
-#include "c_baseplayer.h"
-#include "c_recipientfilter.h"
-#include "cdll_client_int.h"
-#include "clientmode_shared.h"
-#include "iinput.h"
-#include "view_shared.h"
-#include "iviewrender.h"
-#include "hud_basechat.h"
-#include "weapon_selection.h"
-#include "localize/ilocalize.h"
-#include "engine/IEngineSound.h"
-#include "clientui.h"
-#include "hud_macros.h"
-#include "hltvcamera.h"
-#include "hud.h"
-#include "hud_element_helper.h"
-#include "netmessages.h"
-#include "particlemgr.h"
-#include "c_team.h"
-#include "c_rumble.h"
-#include "c_playerresource.h"
-#include <localize/ilocalize.h>
-#include "gameui_interface.h"
-#include "menu.h" // CHudMenu
-#include "clientmode_csnormal.h"
 
-#include "c_cs_playerresource.h"
-
-class CHudWeaponSelection;
-class CHudChat;
-
-ConVar cl_drawhud( "cl_drawhud", "1", FCVAR_CHEAT, "Enable the rendering of the hud" );
-ConVar hud_takesshots( "hud_takesshots", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Auto-save a scoreboard screenshot at the end of a map." );
-ConVar spec_usenumberkeys_nobinds( "spec_usenumberkeys_nobinds", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If set to 1, map voting and spectator view use the raw number keys instead of the weapon binds (slot1, slot2, etc)." );
-ConVar spec_cameraman_ui( "spec_cameraman_ui", "0", FCVAR_CLIENTDLL | FCVAR_CLIENTCMD_CAN_EXECUTE, "If a cameraman is active then use their UI commands (scoreboard, overview, etc.)" );
-ConVar spec_cameraman_xray( "spec_cameraman_xray", "0", FCVAR_CLIENTDLL | FCVAR_CLIENTCMD_CAN_EXECUTE, "If a cameraman is active then use their Xray state." );
-ConVar spec_cameraman_disable_with_user_control( "spec_cameraman_disable_with_user_control", "0", FCVAR_CLIENTDLL | FCVAR_CLIENTCMD_CAN_EXECUTE, "Disable cameraman UI control when user controls camera." );
-
+ConVar cl_drawhud( side_registry(), "cl_drawhud", "1", FCVAR_CHEAT, "Enable the rendering of the hud" );
+ConVar hud_takesshots( side_registry(), "hud_takesshots", "0", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "Auto-save a scoreboard screenshot at the end of a map." );
+ConVar spec_usenumberkeys_nobinds( side_registry(), "spec_usenumberkeys_nobinds", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE, "If set to 1, map voting and spectator view use the raw number keys instead of the weapon binds (slot1, slot2, etc)." );
+ConVar spec_cameraman_ui( side_registry(), "spec_cameraman_ui", "0", FCVAR_CLIENTDLL | FCVAR_CLIENTCMD_CAN_EXECUTE, "If a cameraman is active then use their UI commands (scoreboard, overview, etc.)" );
+ConVar spec_cameraman_xray( side_registry(), "spec_cameraman_xray", "0", FCVAR_CLIENTDLL | FCVAR_CLIENTCMD_CAN_EXECUTE, "If a cameraman is active then use their Xray state." );
+ConVar spec_cameraman_disable_with_user_control( side_registry(), "spec_cameraman_disable_with_user_control", "0", FCVAR_CLIENTDLL | FCVAR_CLIENTCMD_CAN_EXECUTE, "Disable cameraman UI control when user controls camera." );
 
 extern ConVar v_viewmodel_fov;
 extern ConVar spec_show_xray;
 extern ConVar spec_hide_players;
-
 
 static bool __MsgFunc_Rumble( const ks::net::CCSUsrMsg_Rumble &msg )
 {
@@ -152,14 +179,8 @@ void ClientModeShared::Init()
 	ListenForGameEvent( "player_changename" );
 	ListenForGameEvent( "teamplay_broadcast_audio" );
 
-#if defined( TF_CLIENT_DLL ) || defined( CSTRIKE_CLIENT_DLL )
 	ListenForGameEvent( "item_found" );
 	ListenForGameEvent( "items_gifted" );
-#endif
-
-
-
-
 
 	HLTVCamera()->Init();
 
@@ -183,13 +204,11 @@ void ClientModeShared::InitViewport()
 {
 }
 
-
 void ClientModeShared::UI_Shutdown()
 {
 	delete m_pViewport;
 	m_pViewport = nullptr;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -206,7 +225,7 @@ void ClientModeShared::Shutdown()
 bool ClientModeShared::CreateMove( float flInputSampleTime, CUserCmd *cmd )
 {
 	// Let the player override the view.
-	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	CBasePlayer *pPlayer = CBasePlayer::GetLocalPlayer();
 	if(!pPlayer)
 		return true;
 
@@ -223,7 +242,7 @@ void ClientModeShared::OverrideView( CViewSetup *pSetup )
 	QAngle camAngles;
 
 	// Let the player override the view.
-	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	CBasePlayer *pPlayer = CBasePlayer::GetLocalPlayer();
 	if(!pPlayer)
 		return;
 
@@ -288,7 +307,7 @@ void ClientModeShared::OverrideView( CViewSetup *pSetup )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool ClientModeShared::ShouldDrawEntity(C_BaseEntity *pEnt)
+bool ClientModeShared::ShouldDrawEntity(CBaseEntity *pEnt)
 {
 	return true;
 }
@@ -303,8 +322,8 @@ bool ClientModeShared::ShouldDrawParticles( )
 //-----------------------------------------------------------------------------
 void ClientModeShared::OverrideMouseInput( float *x, float *y )
 {
-	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
-	C_BaseCombatWeapon *pWeapon = pPlayer ? pPlayer->GetActiveWeapon() : nullptr;;
+	CBasePlayer *pPlayer = CBasePlayer::GetLocalPlayer();
+	CBaseCombatWeapon *pWeapon = pPlayer ? pPlayer->GetActiveWeapon() : nullptr;;
 	if ( pWeapon )
 	{
 		pWeapon->OverrideMouseInput( x, y );
@@ -336,14 +355,13 @@ bool ClientModeShared::ShouldDrawCrosshair( void )
 //-----------------------------------------------------------------------------
 // Purpose: Don't draw the current view entity if we are not in 3rd person
 //-----------------------------------------------------------------------------
-bool ClientModeShared::ShouldDrawLocalPlayer( C_BasePlayer *pPlayer )
+bool ClientModeShared::ShouldDrawLocalPlayer( CBasePlayer *pPlayer )
 {
 	if ( pPlayer->IsViewEntity() && !pPlayer->ShouldDrawLocalPlayer() )
 		return false;
 
 	return true;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: The mode can choose to not draw fog
@@ -427,7 +445,7 @@ int	ClientModeShared::KeyInput( int down, ButtonCode_t keynum, const char *pszCu
 		return 0;
 	}
 
-	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	CBasePlayer *pPlayer = CBasePlayer::GetLocalPlayer();
 
 	if ( IsJoystickCode( keynum ) )
 	{
@@ -457,7 +475,7 @@ int	ClientModeShared::KeyInput( int down, ButtonCode_t keynum, const char *pszCu
 		return 0;
 	}
 
-	C_BaseCombatWeapon *pWeapon = pPlayer ? pPlayer->GetActiveWeapon() : nullptr;
+	CBaseCombatWeapon *pWeapon = pPlayer ? pPlayer->GetActiveWeapon() : nullptr;
 	if ( pWeapon )
 	{
 		return pWeapon->KeyInput( down, keynum, pszCurrentBinding );
@@ -515,7 +533,7 @@ void ClientModeShared::UpdateCameraManUIState( int iType, int nOptionalParam, ui
 void SendCameraManUIStateChange( HltvUiType_t eventType, int nOptionalParam )
 {
 	// this sends a client command to the server which will then change the server side states and propagate that out to everyone
-	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	CBasePlayer *pPlayer = CBasePlayer::GetLocalPlayer();
 	if ( pPlayer && pPlayer->IsActiveCameraMan() )
 	{
 		char szTemp[ 256 ];
@@ -677,29 +695,24 @@ void ClientModeShared::Enable()
 	Layout();
 }
 
-
 void ClientModeShared::Disable()
 {
 }
-
 
 void ClientModeShared::Layout( bool bForce /*= false*/)
 {
 }
 
-#ifdef IRONSIGHT
 #ifdef DEBUG
-	ConVar ironsight_scoped_viewmodel_fov( "ironsight_scoped_viewmodel_fov", "54", FCVAR_CHEAT, "The fov of the viewmodel when ironsighted" );
+	ConVar ironsight_scoped_viewmodel_fov( side_registry(), "ironsight_scoped_viewmodel_fov", "54", FCVAR_CHEAT, "The fov of the viewmodel when ironsighted" );
 #else
-	#define IRONSIGHT_SCOPED_FOV 54.0f
-#endif
+	constexpr auto IRONSIGHT_SCOPED_FOV = 54.0f;
 #endif
 
 float ClientModeShared::GetViewModelFOV( void )
 {
 
-#ifdef IRONSIGHT
-	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	CBasePlayer *pPlayer = CBasePlayer::GetLocalPlayer();
 	if ( pPlayer )
 	{
 		CWeaponCSBase *pIronSightWeapon = (CWeaponCSBase*)pPlayer->GetActiveWeapon();
@@ -718,12 +731,10 @@ float ClientModeShared::GetViewModelFOV( void )
 			}
 		}
 	}
-#endif
 
 	return v_viewmodel_fov.GetFloat();
 }
 
-class CHudChat;
 
 bool PlayerNameNotSetYet( const char *pszName )
 {
@@ -772,7 +783,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 	else if ( V_strcmp( "player_connect_full", eventname ) == 0 )
 	{
 		CLocalPlayerFilter filter;
-		C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Music.StopMenuMusic" );
+		CBaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Music.StopMenuMusic" );
 		GameUI().SetBackgroundMusicDesired( false );
 	}
 	else if ( V_strcmp( "player_disconnect", eventname ) == 0 )
@@ -781,7 +792,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		if ( this == GetFullscreenClientMode() )
 			return;
 		int userID = event->GetInt("userid");
-		C_BasePlayer *pPlayer = USERID2PLAYER( userID );
+		CBasePlayer *pPlayer = USERID2PLAYER( userID );
 
 		// don't show disconnects for bots in coop
 		if ( CSGameRules() && CSGameRules()->IsPlayingCooperativeGametype() && (pPlayer && pPlayer->IsBot()) )
@@ -795,7 +806,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		{
 
 			wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
-			C_CS_PlayerResource *pCSPR = ( C_CS_PlayerResource* )GameResources();
+			CCS_PlayerResource *pCSPR = ( CCS_PlayerResource* )GameResources();
 			pCSPR->GetDecoratedPlayerName( pPlayer->entindex(), wszPlayerName, sizeof( wszPlayerName ), ( EDecoratedPlayerNameFlag_t) ( k_EDecoratedPlayerNameFlag_DontUseNameOfControllingPlayer | k_EDecoratedPlayerNameFlag_DontUseAssassinationTargetName ) );
 
 			wchar_t wszReasonBuf[64];
@@ -839,7 +850,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		if ( this == GetFullscreenClientMode() )
 			return;
 
-		C_BasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
+		CBasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
 		if ( !hudChat )
 			return;
 		if ( !pPlayer )
@@ -864,7 +875,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			g_pLocalize->ConvertANSIToUnicode( pszName, wszPlayerName, sizeof(wszPlayerName) );
 
 			wchar_t wszTeam[64];
-			C_Team *pTeam = GetGlobalTeam( team );
+			CTeam *pTeam = GetGlobalTeam( team );
 			if ( pTeam )
 			{
 				g_pLocalize->ConvertANSIToUnicode( pTeam->Get_Name(), wszTeam, sizeof(wszTeam) );
@@ -892,7 +903,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			}
 		}
 
-		if ( C_BasePlayer::IsLocalPlayer( pPlayer ) )
+		if ( CBasePlayer::IsLocalPlayer( pPlayer ) )
 		{
 			ACTIVE_SPLITSCREEN_PLAYER_GUARD_ENT( pPlayer );
 
@@ -970,7 +981,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		{
 			CLocalPlayerFilter filter;
 			const char *pszSoundName = event->GetString("sound");
-			C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, pszSoundName );
+			CBaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, pszSoundName );
 		}
 	}
 	else if ( V_strcmp( "teamplay_broadcast_audio", eventname ) == 0 )
@@ -983,7 +994,7 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 		{
 			CLocalPlayerFilter filter;
 			const char *pszSoundName = event->GetString("sound");
-			C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, pszSoundName );
+			CBaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, pszSoundName );
 		}
 	}
 	else if ( V_strcmp( "server_cvar", eventname ) == 0 )
@@ -1025,14 +1036,13 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			hudChat->Printf( CHAT_FILTER_SERVERMSG, "%s", szLocalized );
 		}
 	}
-#if defined( TF_CLIENT_DLL ) || defined( CSTRIKE_CLIENT_DLL )
 	else if ( V_strcmp( "item_found", eventname ) == 0 )
 	{
 		int iPlayerIndex = event->GetInt( "player" );
 		//entityquality_t iItemQuality = event->GetInt( "quality" );
 		int iMethod = event->GetInt( "method" );
 		int iItemDef = event->GetInt( "itemdef" );
-		C_BasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
+		CBasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
 		const GameItemDefinition_t *pItemDefinition = dynamic_cast<const GameItemDefinition_t *>( GetItemSchema()->GetItemDefinition( iItemDef ) );
 
 		if ( !pPlayer || !pItemDefinition )
@@ -1078,16 +1088,11 @@ void ClientModeShared::FireGameEvent( IGameEvent *event )
 			}
 		}		
 	}
-#endif
 	else
 	{
 		DevMsg( 2, "Unhandled GameEvent in ClientModeShared::FireGameEvent - %s\n", event->GetName()  );
 	}
 }
-
-
-
-
 
 int ClientModeShared::GetSplitScreenPlayerSlot() const
 {

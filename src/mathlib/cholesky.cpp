@@ -4,7 +4,16 @@
 // Purpose: Cholesky and LDL' decomposition-related code
 
 import std;
-import ks.math;
+import ks.core.types;
+import ks.math.cholesky;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssecholesky;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 inline float ClampNeg( float a )
 {

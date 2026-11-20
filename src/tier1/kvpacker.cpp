@@ -3,7 +3,19 @@
 
 // Purpose: Contains a branch-neutral binary packer for KeyValues trees.
 
-import ks.tier1;
+import ks.core.color;
+import ks.core.memalloc;
+import ks.core.tslist;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.byte_writer;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.strtools;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 
 
 import std;

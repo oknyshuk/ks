@@ -6,7 +6,13 @@
 // for high speed processing in tools.
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.math.compressed_vector;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.utlsoacontainer;
 
 class CSIMDVectorMatrix
 {

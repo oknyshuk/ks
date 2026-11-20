@@ -3,6 +3,9 @@
 // Copyright (c) Valve Corporation
 
 import std;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.core.wchartypes;
 
 #ifdef _DEBUG
 #define RUBIKON_DEBUG_NAMES 1

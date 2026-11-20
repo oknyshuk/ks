@@ -7,7 +7,8 @@
 //////////////////////////////////////////////////////////////////////
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 
 class CHLTVServer;
 

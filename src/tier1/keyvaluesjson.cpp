@@ -4,7 +4,13 @@
 // Purpose: Read JSON-formatted data into KeyValues
 
 import std;
-import ks.tier1;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.keyvalues;
+import ks.tier1.keyvaluesjson;
+import ks.tier1.strtools;
 
 KeyValuesJSONParser::KeyValuesJSONParser( std::string_view text )
 {

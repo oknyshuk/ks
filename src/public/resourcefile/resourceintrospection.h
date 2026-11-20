@@ -6,7 +6,11 @@
 // data for a resource file. Specifies which fields are what types, and
 // also specifies which fields refer to other types (by ptr or array).
 
-import ks.math;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
 #include "resourcefile/schema.h"
 
 import std;

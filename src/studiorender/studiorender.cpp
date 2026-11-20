@@ -3,7 +3,24 @@
 
 import std;
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.mathlib;
+import ks.math.vector4d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.exprevaluator;
+import ks.tier1.iappsystem;
+import ks.tier1.iconvar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 #include "studiorender.h"
 #include "studiorendercontext.h"
 #include "materialsystem/imaterialsystem.h"

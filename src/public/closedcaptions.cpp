@@ -6,20 +6,15 @@
 #elif defined(GAME_DLL)
 #endif
 import std;
-import ks.core;
+import ks.core.dbg;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
 #if defined(CLIENT_DLL)
-import ks.tier1;
-import ks.vstdlib;
 #include "const.h"
 #include "string_t.h"
-#include "predictableid.h"
-#include "predictable_entity.h"
-#include "cdll_util.h"
-#include "util_shared.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
 #elif defined(GAME_DLL)
-import ks.math;
 #include "string_t.h"
 #include "vphysics_interface.h"
 #include "const.h"
@@ -27,8 +22,6 @@ import ks.math;
 #include "eiface.h"
 #include "iserverentity.h"
 #include "dt_send.h"
-#include "shareddefs.h"
-#include "ehandle.h"
 #include "datamap.h"
 #endif
 #include "closedcaptions.h"

@@ -2,6 +2,11 @@
 // Copyright (c) Valve Corporation
 
 #include "sphere.h"
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
 //#include "body.h"
 //#include "gjk.h"
 //#include "toi.h"

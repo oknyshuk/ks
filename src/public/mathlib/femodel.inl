@@ -1,4 +1,12 @@
 #pragma once
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vector4d;
+import ks.tier1.exprevaluator;
 //----------------------------------------------------------------------------------------------------------
 #define LOAD_NODES_POS( POS, V, IDX ) {																  \
 	fltx4 _pos0 = POS[ IDX[ 0 ] ], _pos1 = POS[ IDX[ 1 ] ], _pos2 = POS[ IDX[ 2 ] ], _pos3 = POS[ IDX[ 3 ] ]; \

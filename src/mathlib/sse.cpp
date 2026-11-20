@@ -4,7 +4,12 @@
 // Purpose: SSE Math primitives.
 
 import std;
-import ks.math;
+import ks.core.types;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "sse.h"
 
 static const uint32 _sincos_masks[]	  = { (uint32)0x0,  (uint32)~0x0 };

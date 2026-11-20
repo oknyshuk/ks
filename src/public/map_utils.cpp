@@ -5,10 +5,13 @@
 #endif
 #if defined(GAME_DLL)
 import std;
-import ks.core;
 #endif
-import ks.math;
 #include "bspfile.h"
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 void SetupLightNormalFromProps( const QAngle &angles, float angle, float pitch, Vector &output )
 {

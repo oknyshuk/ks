@@ -6,7 +6,14 @@
 import std;
 #if defined(CLIENT_DLL)
 #endif
-import ks.math;
+import ks.core.basetypes;
+import ks.core.numeric;
+import ks.core.platform;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "dt_recv.h"
 #include "dt_utlvector_common.h"
 

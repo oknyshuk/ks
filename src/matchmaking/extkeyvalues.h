@@ -5,6 +5,9 @@
 #include "mm_framework.h"
 
 #include "matchmaking/mm_helpers.h"
+import ks.core.vprof;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 
 #define KeyValuesAddDefaultValue( kv, szKeyName, defValue, fnSet ) \
 	( (kv)->FindKey( szKeyName ) ? (1) : ( (kv)->fnSet( szKeyName, defValue ), 1 ) )

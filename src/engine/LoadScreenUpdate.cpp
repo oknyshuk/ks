@@ -4,7 +4,8 @@
 // Purpose: Loading-screen update entry points. They do nothing: the loading screen is not
 // refreshed while loading.
 
-import ks.core;
+import ks.platform;
+import ks.simd;
 #include "LoadScreenUpdate.h"
 import std;
 #include "tier2/tier2.h"

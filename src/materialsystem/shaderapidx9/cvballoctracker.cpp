@@ -4,7 +4,17 @@
 // Purpose: tracks VB allocations (and compressed/uncompressed vertex memory usage)
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.generichash;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.strtools;
 #include "materialsystem/imaterial.h"
 #include "imeshdx8.h"
 

@@ -3,7 +3,13 @@
 // Copyright (c) 2026 oknyshuk
 
 import std;
-import ks.tier1;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.stacktools;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
+import ks.tier1.strtools;
 #include "isys.h"
 #include "dedicated.h"
 #include "engine_hlds_api.h"

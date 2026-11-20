@@ -11,7 +11,13 @@
 #include "baseserver.h"
 #include <ihltvdirector.h>
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.convar;
+import ks.tier1.netadr;
 
 class CGameTrace;
 class ITraceFilter;

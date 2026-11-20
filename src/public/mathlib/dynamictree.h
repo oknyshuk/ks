@@ -4,7 +4,13 @@
 
 import std;
 
-import ks.tier1;
+import ks.core.types;
+import ks.math.aabb;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.small_vector;
 
 // This class implements a dynamic AABB tree and allows node insertion, removal and updates.
 // The user needs to provide an AABB on construction and will receive a unique identifier

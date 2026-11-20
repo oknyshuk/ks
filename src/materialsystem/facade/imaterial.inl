@@ -1,3 +1,10 @@
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.tier1.convar;
+import ks.tier1.keyvalues;
+import ks.vstdlib.callqueue;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 //

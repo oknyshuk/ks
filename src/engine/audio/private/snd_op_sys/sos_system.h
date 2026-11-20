@@ -2,7 +2,19 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.logging;
+import ks.core.platform;
+import ks.core.random;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
+import ks.tier1.strtools;
 #include "snd_dma.h"
 #include "snd_channels.h"
 #include "sos_entry_match_system.h"

@@ -3,7 +3,10 @@
 // Copyright (c) 2026 oknyshuk
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.iappsystem;
+import ks.tier1.interfaces;
 #include "shaderapi/IShaderDevice.h"
 #include "inputsystem/InputEnums.h"
 

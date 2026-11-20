@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:byte_writer;
+export module ks.tier1.byte_writer;
 
 import std;
-import ks.math;
-export import :byte_reader;
+import ks.core.basetypes;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.byte_reader;
 
 export extern "C++" {
 

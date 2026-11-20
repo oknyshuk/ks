@@ -1,7 +1,23 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.logging;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
+import ks.tier1.strtools;
+import ks.tier1.tier1_logging;
 #include "shadersystem.h"
 import std;
 #include "materialsystem_global.h"

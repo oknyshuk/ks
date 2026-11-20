@@ -3,7 +3,17 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vmatrix;
+import ks.math.volumeculler;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
 #include "bsptreedata.h"
 #include "materialsystem/imesh.h"
 #include "surfacehandle.h"

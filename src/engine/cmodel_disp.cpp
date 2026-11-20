@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.core;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.tslist;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "cmodel_engine.h"
 #include "dispcoll_common.h"
 #include "cmodel_private.h"

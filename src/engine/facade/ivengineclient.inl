@@ -1,3 +1,15 @@
+import ks.core.basetypes;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vmatrix;
+import ks.tier1.icvar;
+import ks.tier1.keyvalues;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 //

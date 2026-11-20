@@ -4,7 +4,11 @@
 
 // Purpose: The BSP tree leaf data system
 
-import ks.math;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 
 //-----------------------------------------------------------------------------

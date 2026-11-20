@@ -14,12 +14,12 @@
 // HaltonSequenceGenerator_t's, with different (primes) bases.
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:halton;
+export module ks.math.halton;
 
 import std;
-import ks.core;
+import ks.platform;
 import ks.simd;
-export import :vector;
+export import ks.math.vector;
 
 export extern "C++" {
 

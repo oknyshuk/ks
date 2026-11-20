@@ -3,7 +3,21 @@
 
 // Purpose: threaded UDP socket receive pump
 
-import ks.core;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.threadtools;
+import ks.core.tslist;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.netadr;
+import ks.tier1.ns_address;
+import ks.tier1.strtools;
 #include "net_ws_headers.h"
 #include "sv_ipratelimit.h"
 

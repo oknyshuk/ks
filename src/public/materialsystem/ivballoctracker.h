@@ -5,6 +5,7 @@
 // Purpose: tracks VB allocations (and compressed/uncompressed vertex memory usage)
 
 #include "materialsystem/imaterialsystem.h"
+import ks.tier1.interfaces;
 
 // By default, only enable this alloc tracking for a debug shaderapidx*.dll
 // (it uses about 0.25MB to track ~7000 allocations)

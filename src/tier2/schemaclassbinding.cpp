@@ -3,6 +3,7 @@
 
 #include "resourcefile/schema.h"
 #include "resourcesystem/iresourcesystem.h"
+import ks.tier1.interfaces;
 
 CSchemaClassBindingBase *CSchemaClassBindingBase::sm_pClassBindingList;
 

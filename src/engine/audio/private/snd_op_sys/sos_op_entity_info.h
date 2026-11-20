@@ -3,6 +3,8 @@
 // Copyright (c) Valve Corporation
 
 #include "sos_op.h"
+import ks.math.compressed_vector;
+import ks.math.vector;
 
 //-----------------------------------------------------------------------------
 // simple operator for setting a single position

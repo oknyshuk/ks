@@ -3,7 +3,9 @@
 
 
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
 #include "vphysics/object_hash.h"
 
 #include "vjolt_objectpairhash.h"

@@ -11,7 +11,30 @@ import std;
 
 //#define _VPROF_MATHLIB
 
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.numeric;
+import ks.core.platform;
+import ks.core.random;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.aabb;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.pfns;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.transform;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vmatrix;
+import ks.math.vplane;
+import ks.platform;
+import ks.simd;
+import ks.tier1.exprevaluator;
+import ks.tier1.interfaces;
 
 
 

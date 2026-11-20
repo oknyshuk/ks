@@ -5,7 +5,13 @@
 // Purpose: Network data for screen shake and screen fade.
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 //
 // Commands for the screen shake effect.

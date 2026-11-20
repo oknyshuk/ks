@@ -4,7 +4,9 @@
 
 #include <const.h>
 import std;
-import ks.tier1;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 
 #include "common.h"
 #include "ents_shared.h"

@@ -2,12 +2,12 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:polyhedron;
+export module ks.math.polyhedron;
 
 import std;
-import ks.core;
+import ks.platform;
 import ks.simd;
-export import :mathlib;
+export import ks.math.mathlib;
 
 export extern "C++" {
 

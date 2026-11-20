@@ -4,7 +4,28 @@
 
 
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.appinstance;
+import ks.tier1.checksum_crc;
+import ks.tier1.checksum_md5;
+import ks.tier1.convar;
+import ks.tier1.filename_table;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.intern_pool;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
+import ks.tier1.slot_pool;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
+import ks.vstdlib.jobthread;
 	#include "platform/linux/linux_support.h"
 	#define INVALID_HANDLE_VALUE (void *)-1
 

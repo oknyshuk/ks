@@ -5,6 +5,7 @@
 
 #include "writez_vs20.inc"
 #include "white_ps20.inc"
+import ks.core.basetypes;
 
 DEFINE_FALLBACK_SHADER( WriteZ, WriteZ_DX9 )
 

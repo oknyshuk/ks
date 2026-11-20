@@ -1,68 +1,71 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-#include "vphysics_interface.h"
+module;
+#include "bone_setup.h"
+#include "datacache/imdlcache.h"
 #include "edict.h"
-#include "eiface.h"
-#include "iserverentity.h"
-#include "dt_send.h"
-#include "shareddefs.h"
-#include "ehandle.h"
-#include "datamap.h"
-#include "util.h"
-#include "predictable_entity.h"
-#include "variant_t.h"
-#include "takedamageinfo.h"
-#include "touchlink.h"
-#include "groundlink.h"
 #include "networkvar.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
-#include "basetoggle.h"
-#include "precache_register.h"
-#include "baseanimating.h"
-#include "basecombatweapon.h"
-#include "basecombatcharacter.h"
-#include "entitylist.h"
-#include "basetempentity.h"
-#include "physics.h"
-#include "ndebugoverlay.h"
-#include "recipientfilter.h"
+#include "reflect.h"
+#include "server_class.h"
+#include "BaseAnimatingOverlay.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
-#include "animation.h"
-#include "studio.h"
-#include "bone_setup.h"
-#include "ai_basenpc.h"
-#include "npcevent.h"
+#include "predictable_entity.h"
+#include "entity_dispatch.h"
+module ks.server;
 
-#include "dt_utlvector_send.h"
+import :entity_dispatch;
+import std;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.wchartypes;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.createinterface;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import :fish;
+import ks.game.ai_activity;
+import :vscript;
+import :sharedvar;
+import :baseentity;
+import :player;
+import :cstrike15.cs_player;
+import :nav_4;
+import :entity_2;
+import ks.game.shareddefs;
+import :cstrike15.bot.cs_bot;
+import :cstrike15.cs_player_2;
+import ks.game.mapentities_shared;
+import ks.core.vprof;
 
-#include "datacache/imdlcache.h"
+class CAnimationLayer;
+class CBaseAnimating;
+class CBaseAnimatingOverlay;
+class CBaseCombatWeapon;
+class CBaseEntity;
+class CBoneMergeCache;
+class CCSPlayer;
+struct animevent_t;
 
-
-#include "cs_player.h"
+using namespace ::ks::reflect;
 
 extern ConVar ai_sequence_debug;
 
-
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAnimationLayer )
-
 
 IMPLEMENT_REFLECT_DATAMAP( CBaseAnimatingOverlay )
 
-
 IMPLEMENT_REFLECT_TABLE( CAnimationLayer, DT_Animationlayer );
-
 
 IMPLEMENT_REFLECT_TABLE_IN( CBaseAnimatingOverlay, DT_OverlayVars );
 
-
 IMPLEMENT_REFLECT_SERVERCLASS( CBaseAnimatingOverlay, DT_BaseAnimatingOverlay )
-
-
-
 
 CAnimationLayer::CAnimationLayer( )
 {
@@ -105,7 +108,6 @@ void CAnimationLayer::Init( CBaseAnimatingOverlay *pOverlay )
 	m_nDispatchedDst = ACT_INVALID;
 
 }
-
 
 //------------------------------------------------------------------------------
 // Purpose :
@@ -189,7 +191,7 @@ void CAnimationLayer::MarkActive( void )
 }
 
 //------------------------------------------------------------------------------
-ConVar debug_dispatch_server_dump( "debug_dispatch_server_dump", "0" );
+ConVar debug_dispatch_server_dump( side_registry(), "debug_dispatch_server_dump", "0" );
 void CBaseAnimatingOverlay::AccumulateDispatchedLayers( CBaseAnimatingOverlay *pWeapon, CStudioHdr *pWeaponStudioHdr, IBoneSetup &boneSetup, BoneVector pos[], BoneQuaternion q[], float currentTime )
 {
 	if ( !pWeapon->m_pBoneMergeCache )
@@ -287,56 +289,7 @@ void CBaseAnimatingOverlay::RegenerateDispatchedLayers( IBoneSetup &boneSetup, B
 
 void CBaseAnimatingOverlay::VerifyOrder( void )
 {
-#ifdef _DEBUG
-	int i, j;
-	// test sorting of the layers
-	int layer[MAX_OVERLAYS] = {};
-	int maxOrder = -1;
-	for (i = 0; i < MAX_OVERLAYS; i++)
-	{
-		layer[i] = MAX_OVERLAYS;
-	}
-	for (i = 0; i < std::ssize( m_AnimOverlay ); i++)
-	{
-		if (m_AnimOverlay[ i ].m_nOrder < MAX_OVERLAYS)
-		{
-			j = m_AnimOverlay[ i ].m_nOrder;
-			contract_assert( layer[j] == MAX_OVERLAYS );
-			layer[j] = i;
-			if (j > maxOrder)
-				maxOrder = j;
-		}
-	}
-
-	// make sure they're sequential
-	// Aim layers are allowed to have gaps, and we are moving aim blending to server
-//	for ( i = 0; i <= maxOrder; i++ )
-//	{
-//		Assert( layer[i] != MAX_OVERLAYS);
-//	}
-
-	/*
-	for ( i = 0; i < MAX_OVERLAYS; i++ )
-	{
-		int j = layer[i];
-		if (j != MAX_OVERLAYS)
-		{
-			char tempstr[512];
-			V_snprintf( tempstr, sizeof( tempstr ),"%d : %d :%.2f :%d:%d:%.1f", 
-				j, 
-				m_AnimOverlay[ j ].m_nSequence, 
-				m_AnimOverlay[ j ].m_flWeight,
-				m_AnimOverlay[ j ].IsActive(),
-				m_AnimOverlay[ j ].IsKillMe(),
-				m_AnimOverlay[ j ].m_flKillDelay
-				);
-			EntityText( i, tempstr, 0.1 );
-		}
-	}
-	*/
-#endif
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Sets the entity's model, clearing animation data
@@ -351,7 +304,6 @@ void CBaseAnimatingOverlay::SetModel_Impl( const char *szModelName )
 
 	BaseClass::SetModel_Impl( szModelName );
 }
-
 
 //------------------------------------------------------------------------------
 // Purpose : advance the animation frame up to the current time
@@ -441,8 +393,6 @@ void CBaseAnimatingOverlay::StudioFrameAdvance ()
 
 	VerifyOrder();
 }
-
-
 
 //=========================================================
 // DispatchAnimEvents
@@ -535,8 +485,6 @@ void CAnimationLayer::DispatchAnimEvents( CBaseAnimating *eventHandler, CBaseAni
 		eventHandler->HandleAnimEvent( &event );
 	}
 }
-
-
 
 void CBaseAnimatingOverlay::GetSkeleton( CStudioHdr *pStudioHdr, BoneVector pos[], BoneQuaternionAligned q[], int boneMask )
 {
@@ -688,8 +636,6 @@ void CBaseAnimatingOverlay::GetSkeleton( CStudioHdr *pStudioHdr, BoneVector pos[
 	//RegenerateDispatchedLayers( boneSetup, pos, q, gpGlobals->curtime );
 }
 
-
-
 //-----------------------------------------------------------------------------
 // Purpose: zero's out all non-restore safe fields
 // Output :
@@ -722,7 +668,6 @@ void CBaseAnimatingOverlay::OnRestore_Impl( )
 
 	BaseClass::OnRestore_Impl();
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -772,7 +717,7 @@ int CBaseAnimatingOverlay::AddGesture( Activity activity, bool autokill /*= true
 	int seq = SelectWeightedSequence( activity );
 	if ( seq <= 0 )
 	{
-		const char *actname = CAI_BaseNPC::GetActivityName( activity );
+		const char *actname = ActivityList_NameForIndex( activity );
 		DevMsg( "CBaseAnimatingOverlay::AddGesture:  model %s missing activity %s\n", STRING(GetModelName()), actname );
 		return -1;
 	}
@@ -787,7 +732,6 @@ int CBaseAnimatingOverlay::AddGesture( Activity activity, bool autokill /*= true
 	return i;
 }
 
-
 int CBaseAnimatingOverlay::AddGesture( Activity activity, float flDuration, bool autokill /*= true*/ )
 {
 	int iLayer = AddGesture( activity, autokill );
@@ -795,7 +739,6 @@ int CBaseAnimatingOverlay::AddGesture( Activity activity, float flDuration, bool
 
 	return iLayer;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -809,8 +752,6 @@ void CBaseAnimatingOverlay::SetLayerDuration( int iLayer, float flDuration )
 		m_AnimOverlay[iLayer].m_flPlaybackRate = SequenceDuration( m_AnimOverlay[iLayer].m_nSequence ) / flDuration;
 	}
 }
-
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -829,7 +770,6 @@ float CBaseAnimatingOverlay::GetLayerDuration( int iLayer )
 	}
 	return 0.0;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -861,7 +801,6 @@ int	CBaseAnimatingOverlay::AddLayeredSequence( int sequence, int iPriority )
 	return i;
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Output : int
@@ -870,7 +809,6 @@ bool CBaseAnimatingOverlay::IsValidLayer( int iLayer )
 {
 	return (iLayer >= 0 && iLayer < std::ssize( m_AnimOverlay ) && m_AnimOverlay[iLayer].IsActive());
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -951,8 +889,6 @@ int CBaseAnimatingOverlay::AllocateLayer( int iPriority )
 
 	return iOpenLayer;
 }
-
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1110,7 +1046,6 @@ void CBaseAnimatingOverlay::SetLayerCycle( int iLayer, float flCycle )
 	m_AnimOverlay[iLayer].MarkActive( );
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -1167,7 +1102,6 @@ void CBaseAnimatingOverlay::SetLayerWeight( int iLayer, float flWeight )
 	m_AnimOverlay[iLayer].MarkActive( );
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -1178,7 +1112,6 @@ float CBaseAnimatingOverlay::GetLayerWeight( int iLayer )
 
 	return m_AnimOverlay[iLayer].m_flWeight;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1220,7 +1153,6 @@ void CBaseAnimatingOverlay::SetLayerAutokill( int iLayer, bool bAutokill )
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -1231,7 +1163,6 @@ void CBaseAnimatingOverlay::SetLayerLooping( int iLayer, bool bLooping )
 
 	m_AnimOverlay[iLayer].m_bLooping = bLooping;
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1354,7 +1285,6 @@ CAnimationLayer *CBaseAnimatingOverlay::GetAnimOverlay( int iIndex, bool bUseOrd
 	return &m_AnimOverlay[iIndex];
 }
 
-
 void CBaseAnimatingOverlay::SetNumAnimOverlays( int num )
 {
 	if ( GetNumAnimOverlays() != num )
@@ -1401,3 +1331,53 @@ bool CBaseAnimatingOverlay::UpdateDispatchLayer( CAnimationLayer *pLayer, CStudi
 	}
 	return (pLayer->m_nDispatchedDst != ACT_INVALID );
 }
+
+float CAnimationLayer::GetFadeout( float flCurTime )
+{
+	float s;
+
+	if (m_flLayerFadeOuttime <= 0.0f)
+	{
+		s = 0;
+	}
+	else
+	{
+		// blend in over 0.2 seconds
+		s = 1.0 - (flCurTime - m_flLayerAnimtime) / m_flLayerFadeOuttime;
+		if (s > 0 && s <= 1.0)
+		{
+			// do a nice spline curve
+			s = 3 * s * s - 2 * s * s * s;
+		}
+		else if ( s > 1.0f )
+		{
+			// Shouldn't happen, but maybe curtime is behind animtime?
+			s = 1.0f;
+		}
+	}
+	return s;
+}
+
+int CBaseAnimatingOverlay::GetNumAnimOverlays() const
+{
+	return std::ssize( m_AnimOverlay );
+}
+
+void CAnimationLayer::SetOrder( int nOrder )
+{
+	m_nOrder = nOrder;
+}
+
+void CAnimationLayer::NetworkStateChanged()
+{
+	if ( m_pOwnerEntity )
+		m_pOwnerEntity->NetworkStateChanged();
+}
+
+void CAnimationLayer::NetworkStateChanged( void *pVar )
+{
+	if ( m_pOwnerEntity )
+		m_pOwnerEntity->NetworkStateChanged();
+}
+
+KS_ENTITY_ABSTRACT_KIND( CBaseAnimatingOverlay )

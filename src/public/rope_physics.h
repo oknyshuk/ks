@@ -4,6 +4,8 @@
 
 #include "simple_physics.h"
 #include "declare_class.h"
+import ks.math.compressed_vector;
+import ks.math.vector;
 
 class CRopeSpring
 {

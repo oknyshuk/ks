@@ -2,11 +2,14 @@
 // Copyright (c) Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:tier1_logging;
+export module ks.tier1.tier1_logging;
 
 import std;
-import ks.math;
-export import :byte_writer;
+import ks.core.logging;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.byte_writer;
 
 export extern "C++" {
 

@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2011 Valve Corporation
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.keyvalues;
 import std;
 #include "datacache/imdlcache.h"
 

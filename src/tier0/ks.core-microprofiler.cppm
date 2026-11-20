@@ -2,20 +2,21 @@
 // Copyright (c) Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.core:microprofiler;
+export module ks.core.microprofiler;
 
 import std;
 import ks.platform;
-import :prelude;
-import :color;
-import :logging;
-import :dbg;
-import :memalloc;
-import :threadtools;
-import :tslist;
-import :cache_hints;
-import :scratcharena;
-import :perfstats;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.color;
+import ks.core.logging;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.threadtools;
+import ks.core.tslist;
+import ks.core.cache_hints;
+import ks.core.scratcharena;
+import ks.core.perfstats;
 
 export extern "C++" {
 

@@ -8,7 +8,11 @@
 //=====================================================================================//
 
 import std;
-import ks.tier1;
+import ks.core.memalloc;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.lzmadecoder;
 
 #ifndef _7ZIP_BYTE_DEFINED
 #define _7ZIP_BYTE_DEFINED

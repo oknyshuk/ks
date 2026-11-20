@@ -15,7 +15,7 @@
 //   mess up the function signature, you'll get a valid pointer and a crash
 //   if you call it as a function.
 
-export module ks.core:dynfunction;
+export module ks.core.dynfunction;
 
 export extern "C++" {
 

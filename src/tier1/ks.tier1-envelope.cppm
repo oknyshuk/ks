@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:envelope;
+export module ks.tier1.envelope;
 
 import std;
-import ks.math;
-export import :small_vector;
-export import :string_ops;
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.small_vector;
+export import ks.tier1.string_ops;
 
 export extern "C++" {
 

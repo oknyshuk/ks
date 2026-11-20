@@ -2,7 +2,14 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import ks.core;
+import ks.core.basetypes;
+import ks.core.numeric;
+import ks.core.types;
+import ks.math.aabb;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 // Purpose: Dynamic tree
 
 [[gnu::always_inline]] inline void* CDynamicTree::GetUserData( int32 nProxyId ) const

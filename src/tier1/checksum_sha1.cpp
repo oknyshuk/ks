@@ -22,7 +22,11 @@
 
 
 import std;
-import ks.tier1;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.checksum_sha1;
 
 constexpr auto MAX_FILE_READ_BUFFER = 8000;
 

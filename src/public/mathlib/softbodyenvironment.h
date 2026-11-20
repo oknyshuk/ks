@@ -5,7 +5,16 @@
 // Purpose: A small subset of CRnWorld
 // Note: mathlib is tentative place for this code. We will probably move it to a separate lib or dll or vphysics.dll
 
-import ks.math;
+import ks.core.platform;
+import ks.core.types;
+import ks.math.aabb;
+import ks.math.compressed_vector;
+import ks.math.ssequaternion;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.exprevaluator;
 #include "rubikon/param_types.h"
 import std;
 #include "mathlib/softbody.h"

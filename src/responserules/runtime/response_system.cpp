@@ -3,7 +3,22 @@
 
 // Purpose: Core types for the response rules -- criteria, responses, rules, and matchers.
 
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.random;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.convar;
+import ks.tier1.fmtstr;
+import ks.tier1.generichash;
+import ks.tier1.iconvar;
+import ks.tier1.map_ops;
+import ks.tier1.strtools;
 #include "rrbase.h"
 import std;
 #include "tier2/interval.h"

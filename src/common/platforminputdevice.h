@@ -3,7 +3,8 @@
 // Copyright (c) 1996-2012 Valve Corporation
 
 import std;
-import ks.core;
+import ks.platform;
+import ks.simd;
 #include "input_device.h"
 
 class PlatformInputDevice

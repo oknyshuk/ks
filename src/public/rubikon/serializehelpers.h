@@ -27,5 +27,10 @@ class CRnSerializer;
 
 
 import std;
-import ks.tier1;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.serialization;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 #include "serializehelpers.inl"

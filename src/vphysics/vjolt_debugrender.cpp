@@ -36,7 +36,12 @@
 #include <Jolt/Physics/Constraints/FixedConstraint.h>
 #include <Jolt/Physics/Constraints/SixDOFConstraint.h>
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.strtools;
 #include "cmodel.h"
 #include "vphysics_interface.h"
 #include "vphysics/collision_set.h"

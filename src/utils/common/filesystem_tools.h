@@ -4,6 +4,9 @@
 
 #include "filesystem.h"
 #include "filesystem_init.h"
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
 
 // This is the the path of the initial source file
 extern char		qdir[1024];

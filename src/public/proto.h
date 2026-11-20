@@ -16,6 +16,9 @@ import std;
 
 
 #include "proto_types.h"
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.vprof;
 
 namespace ks::proto
 {

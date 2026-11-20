@@ -1,13 +1,25 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
+module;
+#include "cmodel.h"
+#include "collisionutils.h"
+#include "engine/ICollideable.h"
+module ks.game.sheetsimulator;
+
+import std;
+import ks.core.numeric;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+
 // Purpose: The Escort's Shield weapon effect
 
-#include "sheetsimulator.h"
-#include "edict.h"
-#include "collisionutils.h"
-
-constexpr auto COLLISION_PLANE_OFFSET = 6.0f;
+static constexpr auto COLLISION_PLANE_OFFSET = 6.0f;
 		  
 //-----------------------------------------------------------------------------
 // constructor, destructor
@@ -121,7 +133,6 @@ void CSheetSimulator::SetSpringDampConstant( float damp )
 	m_DampConstant = damp;
 }
 
-
 //-----------------------------------------------------------------------------
 // Sets the collision group
 //-----------------------------------------------------------------------------
@@ -130,7 +141,6 @@ void CSheetSimulator::SetCollisionGroup( int group )
 {
 	m_CollisionGroup = group;
 }
-
 
 //-----------------------------------------------------------------------------
 // bounding box for collision
@@ -338,7 +348,6 @@ void CSheetSimulator::ComputeForces()
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Used for testing neighbors against a particular plane
 //-----------------------------------------------------------------------------
@@ -363,8 +372,6 @@ void CSheetSimulator::TestVertAgainstPlane( int vert, int plane, bool bFarTest )
 		}
 	}
 }
-
-
 
 //-----------------------------------------------------------------------------
 // Collision detect
@@ -445,7 +452,6 @@ void CSheetSimulator::DetectCollision( int i, float flPlaneOffset )
 		m_pValidCollisionPlane[i] = false;
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Collision plane fixup
@@ -546,7 +552,6 @@ void CSheetSimulator::Simulate( float dt )
 	EulerStep(dt);
 }
 
-
 void CSheetSimulator::Simulate( float dt, int steps )
 {
 	ComputeControlPoints();
@@ -563,8 +568,7 @@ void CSheetSimulator::Simulate( float dt, int steps )
 	}
 }
 
-
-constexpr auto CLAMP_DIST = 6.0;
+static constexpr auto CLAMP_DIST = 6.0;
 
 void CSheetSimulator::ClampPointsToCollisionPlanes()
 {
@@ -589,7 +593,6 @@ void CSheetSimulator::ClampPointsToCollisionPlanes()
 		}
 	}
 }
-
 
 //-----------------------------------------------------------------------------
 // Class to help dealing with the iterative computation

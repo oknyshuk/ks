@@ -4,7 +4,38 @@
 // Purpose: model loading and caching
 
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.tslist;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.polyhedron;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.convar;
+import ks.tier1.exprevaluator;
+import ks.tier1.fixed_pool;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.lzmadecoder;
+import ks.tier1.map_ops;
+import ks.tier1.refcount;
+import ks.tier1.slot_pool;
+import ks.tier1.strtools;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.tier1.vector_ops;
 import std;
 #include "datacache/imdlcache.h"
 #include "appframework/apptiers.h"

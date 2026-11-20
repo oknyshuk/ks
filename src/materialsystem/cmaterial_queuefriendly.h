@@ -3,6 +3,14 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "imaterialinternal.h"
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.tier1.convar;
+import ks.tier1.filename_table;
+import ks.tier1.keyvalues;
+import ks.vstdlib.callqueue;
 
 class CMaterial_QueueFriendly : public IMaterialInternal //wraps a CMaterial with queue friendly functions for game/engine code. materialsystem/shaderapi code should use CMaterial directly.
 {

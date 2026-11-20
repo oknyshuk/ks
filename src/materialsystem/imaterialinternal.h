@@ -1,7 +1,12 @@
 #pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
-import ks.tier1;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.exprevaluator;
+import ks.tier1.filename_table;
+import ks.tier1.keyvalues;
 
 // identifier was truncated to '255' characters in the debug information
 

@@ -2,7 +2,13 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.cvar;
+import ks.tier1.icvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 
 void InitShaderLibCVars( CreateInterfaceFn cvarFactory )
 {

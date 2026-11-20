@@ -4,7 +4,8 @@
 // main precompiled header for client files
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 
 #include "iprediction.h"
 

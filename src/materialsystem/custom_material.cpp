@@ -2,7 +2,13 @@
 // Copyright (c) 1996-2013 Valve Corporation
 
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 #include "materialsystem/imaterial.h"
 #include "custom_material.h"
 #include "composite_texture.h"

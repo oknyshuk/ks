@@ -7,6 +7,8 @@
 #include "demo.h"
 #include "demofile.h"
 #include "netmessages_signon.h"
+import ks.core.basetypes;
+import ks.tier1.bitbuf;
 
 class CHLTVFrame;
 class CGameInfo;

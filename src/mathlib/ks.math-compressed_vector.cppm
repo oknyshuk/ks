@@ -2,12 +2,15 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:compressed_vector;
+export module ks.math.compressed_vector;
 
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.numeric;
+import ks.core.types;
+import ks.platform;
 import ks.simd;
-export import :ssemath;
+export import ks.math.ssemath;
 
 export extern "C++" {
 

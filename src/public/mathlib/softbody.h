@@ -5,7 +5,24 @@
 // Purpose: A port of CRnSoftbody
 // Note: mathlib is tentative place for this code. We will probably move it to a separate lib or dll or vphysics.dll
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.math.aabb;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.transform;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.commandbuffer;
+import ks.tier1.hierarchicalbitvec;
+import ks.tier1.keyvalues;
+import ks.tier1.small_vector;
+import ks.tier1.text_reader;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.vstdlib.jobthread;
 #include "rubikon/param_types.h"
 #include "rubikon/debugname.h"
 #include "rubikon/intersection.h"

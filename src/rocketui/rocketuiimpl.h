@@ -14,6 +14,10 @@ import std;
 #include "tier3/tier3.h"
 
 #include "rocketrender.h"
+import ks.core.platform;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 
 class DeviceCallbacks;
 

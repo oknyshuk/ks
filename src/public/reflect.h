@@ -24,6 +24,12 @@
 #include "string_t.h"
 
 import std;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.tier1.reflect_wirevar;
 
 // Forward declarations only: comparing reflections does not need a complete type. Must be at
 // global scope -- declared inside ks::reflect they would name different types, and the tag
@@ -37,10 +43,27 @@ namespace ks::reflect
 {
 
 // ---- annotation lookup -------------------------------------------------------
+// The annotations of an entity. A class's are those on the class itself and those on its member
+// ks_class: the classes of a game module carry theirs there, because GCC does not merge a pointer
+// to an annotated class with the same pointer type formed where the class is forward-declared
+// (in another partition). The WireVar class templates carry theirs there too: GCC 16, loading
+// imports eagerly, rejects a member of a specialization of an annotated class template reached
+// through two BMIs of one module ("conflicting argument types for imported declaration").
+consteval std::vector<std::meta::info> annotations_on( std::meta::info e )
+{
+	std::vector<std::meta::info> out;
+	for ( auto a : std::meta::annotations_of( e ) ) out.push_back( a );
+	if ( std::meta::is_type( e ) && std::meta::is_class_type( e ) && std::meta::is_complete_type( e ) )
+		for ( auto m : std::meta::members_of( e, std::meta::access_context::unchecked() ) )
+			if ( std::meta::is_variable( m ) && std::meta::has_identifier( m )
+			     && std::meta::identifier_of( m ) == "ks_class" )
+				for ( auto a : std::meta::annotations_of( m ) ) out.push_back( a );
+	return out;
+}
 template <class A>
 consteval bool has( std::meta::info m )
 {
-	for ( auto a : std::meta::annotations_of( m ) )
+	for ( auto a : annotations_on( m ) )
 		if ( std::meta::type_of( a ) == ^^const A ) return true;
 	return false;
 }
@@ -48,7 +71,7 @@ consteval bool has( std::meta::info m )
 template <class A>
 consteval A get( std::meta::info m )
 {
-	for ( auto a : std::meta::annotations_of( m ) )
+	for ( auto a : annotations_on( m ) )
 		if ( std::meta::type_of( a ) == ^^const A ) return std::meta::extract<A>( a );
 	return A{};
 }
@@ -58,7 +81,7 @@ template <class A>
 consteval std::vector<A> all( std::meta::info m )
 {
 	std::vector<A> out;
-	for ( auto a : std::meta::annotations_of( m ) )
+	for ( auto a : annotations_on( m ) )
 		if ( std::meta::type_of( a ) == ^^const A ) out.push_back( std::meta::extract<A>( a ) );
 	return out;
 }
@@ -69,7 +92,7 @@ consteval std::vector<A> all( std::meta::info m )
 // The proxy for one side: a Proxy<F> with no side serves both, and a member may carry one for each.
 consteval std::meta::info proxy_arg_of( std::meta::info m, WireSide want )
 {
-	for ( auto a : std::meta::annotations_of( m ) )
+	for ( auto a : annotations_on( m ) )
 	{
 		const std::meta::info t = std::meta::remove_cv( std::meta::type_of( a ) );
 		if ( !std::meta::has_template_arguments( t ) || std::meta::template_of( t ) != ^^Proxy )
@@ -177,7 +200,7 @@ consteval fieldtype_t tag_of_type( std::meta::info t )
 	// CNetworkString and CNetworkArray hold an array in m_Value; the tag is the element's.
 	if ( std::meta::is_array_type( t ) ) t = std::meta::remove_extent( t );
 	if ( std::meta::is_class_type( t ) )
-		for ( auto a : std::meta::annotations_of( t ) )
+		for ( auto a : annotations_on( t ) )
 			if ( std::meta::type_of( a ) == ^^const As ) return std::meta::extract<As>( a ).type;
 
 	if ( t == ^^float )    return FIELD_FLOAT;
@@ -431,7 +454,7 @@ consteval bool base_owner_matches()
 consteval std::vector<std::meta::info> from_annotations( std::meta::info cls )
 {
 	std::vector<std::meta::info> out;
-	for ( auto a : std::meta::annotations_of( cls ) )
+	for ( auto a : annotations_on( cls ) )
 	{
 		const std::meta::info t = std::meta::remove_cv( std::meta::type_of( a ) );
 		if ( !std::meta::has_template_arguments( t ) ) continue;
@@ -463,7 +486,7 @@ consteval FromEntry from_entry( std::meta::info t )
 consteval std::vector<std::meta::info> pred_from_annotations( std::meta::info cls )
 {
 	std::vector<std::meta::info> out;
-	for ( auto a : std::meta::annotations_of( cls ) )
+	for ( auto a : annotations_on( cls ) )
 	{
 		const std::meta::info t = std::meta::remove_cv( std::meta::type_of( a ) );
 		if ( std::meta::has_template_arguments( t ) && std::meta::template_of( t ) == ^^PredFrom )
@@ -476,7 +499,7 @@ consteval std::vector<std::meta::info> pred_from_annotations( std::meta::info cl
 consteval std::vector<std::meta::info> key_from_annotations( std::meta::info cls )
 {
 	std::vector<std::meta::info> out;
-	for ( auto a : std::meta::annotations_of( cls ) )
+	for ( auto a : annotations_on( cls ) )
 	{
 		const std::meta::info t = std::meta::remove_cv( std::meta::type_of( a ) );
 		if ( std::meta::has_template_arguments( t ) && std::meta::template_of( t ) == ^^KeyFrom )
@@ -489,7 +512,7 @@ consteval std::vector<std::meta::info> key_from_annotations( std::meta::info cls
 consteval std::vector<std::meta::info> utl_vecs( std::meta::info cls, const name_t &table )
 {
 	std::vector<std::meta::info> out;
-	for ( auto a : std::meta::annotations_of( cls ) )
+	for ( auto a : annotations_on( cls ) )
 	{
 		const std::meta::info t = std::meta::remove_cv( std::meta::type_of( a ) );
 		if ( !std::meta::has_template_arguments( t ) || std::meta::template_of( t ) != ^^UtlVec )
@@ -504,7 +527,7 @@ consteval std::vector<std::meta::info> utl_vecs( std::meta::info cls, const name
 consteval std::vector<std::meta::info> bare_arrays( std::meta::info cls )
 {
 	std::vector<std::meta::info> out;
-	for ( auto a : std::meta::annotations_of( cls ) )
+	for ( auto a : annotations_on( cls ) )
 	{
 		const std::meta::info t = std::meta::remove_cv( std::meta::type_of( a ) );
 		if ( std::meta::has_template_arguments( t ) && std::meta::template_of( t ) == ^^BareArray )
@@ -516,7 +539,7 @@ consteval std::vector<std::meta::info> bare_arrays( std::meta::info cls )
 consteval std::vector<std::meta::info> bare_props( std::meta::info cls )
 {
 	std::vector<std::meta::info> out;
-	for ( auto a : std::meta::annotations_of( cls ) )
+	for ( auto a : annotations_on( cls ) )
 	{
 		const std::meta::info t = std::meta::remove_cv( std::meta::type_of( a ) );
 		if ( std::meta::has_template_arguments( t ) && std::meta::template_of( t ) == ^^Bare )
@@ -528,7 +551,7 @@ consteval std::vector<std::meta::info> bare_props( std::meta::info cls )
 consteval std::vector<std::meta::info> sub_tables( std::meta::info cls, bool at_head )
 {
 	std::vector<std::meta::info> out;
-	for ( auto a : std::meta::annotations_of( cls ) )
+	for ( auto a : annotations_on( cls ) )
 	{
 		const std::meta::info t = std::meta::remove_cv( std::meta::type_of( a ) );
 		if ( !std::meta::has_template_arguments( t ) || std::meta::template_of( t ) != ^^SubTable )
@@ -566,15 +589,49 @@ consteval const char *external_name( std::meta::info m )
 	return intern( std::meta::identifier_of( m ) );
 }
 
-// Members carrying annotation A, in declaration order. Table order is wire-visible, so
-// this must stay stable.
+consteval bool is_flatten_base( std::meta::info b )
+{
+	return has<Flatten>( std::meta::remove_cv( std::meta::type_of( b ) ) );
+}
+
+template <class A>
+consteval void collect_tagged( std::meta::info cls, std::vector<std::meta::info> &out )
+{
+	for ( auto b : std::meta::bases_of( cls, std::meta::access_context::unchecked() ) )
+		if ( is_flatten_base( b ) )
+			collect_tagged<A>( std::meta::remove_cv( std::meta::type_of( b ) ), out );
+	for ( auto m : std::meta::nonstatic_data_members_of( cls, std::meta::access_context::unchecked() ) )
+		if ( has<A>( m ) ) out.push_back( m );
+}
+
+// Members carrying annotation A: those of Flatten bases first, then the class's own, each in
+// declaration order -- which is layout order. Table order is wire-visible, so this must stay
+// stable. A name reached twice would shadow a core field on the wire, so it is rejected.
 template <class A>
 consteval std::vector<std::meta::info> tagged_members( std::meta::info cls )
 {
 	std::vector<std::meta::info> out;
-	for ( auto m : std::meta::nonstatic_data_members_of( cls, std::meta::access_context::unchecked() ) )
-		if ( has<A>( m ) ) out.push_back( m );
+	collect_tagged<A>( cls, out );
+	for ( std::size_t i = 0; i < out.size(); ++i )
+		for ( std::size_t j = i + 1; j < out.size(); ++j )
+			if ( std::meta::identifier_of( out[i] ) == std::meta::identifier_of( out[j] ) )
+				throw std::meta::exception( "a member shadows one of a Flatten base", out[j] );
 	return out;
+}
+
+// Where m's declaring class sits inside cls, for m from tagged_members( cls ). byte_offset_of is
+// relative to the declaring class, so a flattened member needs its base's offset added.
+consteval std::size_t flattened_offset( std::meta::info cls, std::meta::info m )
+{
+	if ( std::meta::parent_of( m ) == cls ) return 0;
+	for ( auto b : std::meta::bases_of( cls, std::meta::access_context::unchecked() ) )
+	{
+		if ( !is_flatten_base( b ) ) continue;
+		const std::meta::info t = std::meta::remove_cv( std::meta::type_of( b ) );
+		if ( std::meta::parent_of( m ) == t || derives_from( t, std::meta::parent_of( m ) ) )
+			return static_cast<std::size_t>( std::meta::offset_of( b ).bytes ) + flattened_offset( t, m );
+	}
+	throw std::meta::exception( "member is not reached through a Flatten base", m );
 }
 
 template <class A, class T>

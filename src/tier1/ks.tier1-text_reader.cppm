@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:text_reader;
+export module ks.tier1.text_reader;
 
 import std;
-import ks.math;
-export import :string_escapes;
+import ks.core.basetypes;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.string_escapes;
 
 export extern "C++" {
 

@@ -9,6 +9,9 @@
 #include "vjolt_object.h" // IJoltObjectListener
 #include "vjolt_environment.h" // IJoltPhysicsController
 #include "vphysics/vehicles.h"
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
 
 struct JoltPhysicsWheel
 {

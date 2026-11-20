@@ -2,7 +2,26 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #define DISABLE_PROTECTED_THINGS
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.math.mathlib;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.cvar;
+import ks.tier1.icvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.tier1.text_writer;
+import ks.tier1.tier1;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.tier1.vector_ops;
 #include "togl/rendermechanism.h"
 #include "shaderdevicebase.h"
 import std;

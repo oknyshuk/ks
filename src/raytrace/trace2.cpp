@@ -1,6 +1,17 @@
 // $Id$
 
-import ks.math;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.halton;
+import ks.math.lightdesc;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
 #include "raytrace.h"
 import std;
 

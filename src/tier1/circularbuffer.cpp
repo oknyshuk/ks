@@ -3,7 +3,12 @@
 
 // Purpose: Circular Buffer
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.memalloc;
+import ks.platform;
+import ks.simd;
+import ks.tier1.circularbuffer;
+import ks.tier1.fixed_pool;
 
 import std;
 CCircularBuffer::CCircularBuffer()

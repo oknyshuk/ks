@@ -3,7 +3,11 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.core;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.appinstance;
+import ks.tier1.keyvalues;
 
 inline constexpr int FILE_ATTRIBUTE_DIRECTORY = 0x4000;
 

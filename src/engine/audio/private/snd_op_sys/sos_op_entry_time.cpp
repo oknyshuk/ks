@@ -4,7 +4,14 @@
 import std;
 
 
-import ks.tier1;
+import ks.core.color;
+import ks.core.dbg;
+import ks.core.logging;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 
 #include "sound.h"
 #include "soundservice.h"

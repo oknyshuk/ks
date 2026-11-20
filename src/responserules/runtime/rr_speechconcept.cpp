@@ -2,6 +2,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "rrbase.h"
+import ks.tier1.string_ops;
 
 #if RR_CONCEPTS_ARE_STRINGS
 #pragma error("RR_CONCEPTS_ARE_STRINGS no longer supported")

@@ -2,9 +2,9 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.core:l2cache;
+export module ks.core.l2cache;
 
-import :platform;
+import ks.core.platform;
 
 export extern "C++" {
 

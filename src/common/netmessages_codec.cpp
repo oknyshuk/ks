@@ -10,14 +10,14 @@
 #endif
 #if defined(CLIENT_DLL)
 import std;
-import ks.core;
 #elif defined(GAME_DLL)
 import std;
-import ks.core;
 #endif
 #include "netmessages_schema.h"
 #include "usermessages_schema.h"
 #include "proto.h"
+import ks.platform;
+import ks.simd;
 
 #define X( name ) KS_PROTO_INSTANTIATE( ks::net::name )
 KS_NET_MESSAGES( X )

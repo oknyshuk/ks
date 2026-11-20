@@ -3,7 +3,16 @@
 
 // Purpose: Lightmapped paint shader
 
-import ks.tier1;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
 #include "lightmappedpaint_dx9_helper.h"
 #include "BaseVSShader.h"
 #include "shaderlib/commandbuilder.h"

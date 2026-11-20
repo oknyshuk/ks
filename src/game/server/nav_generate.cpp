@@ -1,49 +1,66 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
+module;
+#include <math.h>
+#include <stdlib.h>
+#include "eiface.h"
+#include "game/client/viewport_panel_names.h"
+#include "igameevents.h"
+#include "networkvar.h"
+#include "usermessages_schema.h"
+#include "shareddefs.h"
+module ks.server;
+
+import std;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import ks.tier1.vector_ops;
+import :vscript;
+import :fish;
+import :sharedvar;
+import :baseentity;
+import :player;
+import :nav_4;
+import ks.game.shareddefs;
+import :cstrike15.bot.bot;
+import :entityutil;
+import ks.game.gamemovement;
+import ks.game.mapentities_shared;
+import :entity_2;
+
+class CBaseEntity;
+class CBasePlayer;
+class CNavArea;
+class CNavLadder;
+class CNavMesh;
+class CNavNode;
+class CRecipientFilter;
+struct Extent;
+
+using namespace ::ks::reflect;
+
 // nav_generate.cpp
 // Auto-generate a Navigation Mesh by sampling the current map
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#include "string_t.h"
-#include "vphysics_interface.h"
-#include "const.h"
-#include "edict.h"
-#include "eiface.h"
-#include "iserverentity.h"
-#include "dt_send.h"
-#include "shareddefs.h"
-#include "ehandle.h"
-#include "datamap.h"
-#include "util.h"
-#include "predictable_entity.h"
-#include "predictableid.h"
-#include "variant_t.h"
-#include "takedamageinfo.h"
-#include "touchlink.h"
-#include "groundlink.h"
-#include "soundflags.h"
-#include "networkvar.h"
-#include "sharedvar.h"
-#include "baseentity_shared.h"
-#include "basetoggle.h"
-#include "igameevents.h"
-#include "precache_register.h"
-#include "baseanimating.h"
-#include "basecombatweapon.h"
-#include "basecombatcharacter.h"
-#include "gamerules.h"
-#include "entitylist.h"
-#include "basetempentity.h"
-#include "ndebugoverlay.h"
-#include "recipientfilter.h"
-#include "util_shared.h"
-#include "nav_mesh.h"
-#include "nav_node.h"
-#include "nav_pathfind.h"
-#include "viewport_panel_names.h"
 //#include "terror/TerrorShared.h"
-#include "usermessages.h"
 
 enum { MAX_BLOCKED_AREAS = 256 };
 static unsigned int blockedID[ MAX_BLOCKED_AREAS ];
@@ -53,22 +70,22 @@ static float lastMsgTime = 0.0f;
 bool TraceAdjacentNode( int depth, const Vector& start, const Vector& end, trace_t *trace, float zLimit = DeathDrop );
 bool StayOnFloor( trace_t *trace, float zLimit = DeathDrop );
 
-ConVar nav_slope_limit( "nav_slope_limit", "0.7", FCVAR_CHEAT, "The ground unit normal's Z component must be greater than this for nav areas to be generated." );
-ConVar nav_slope_tolerance( "nav_slope_tolerance", "0.1", FCVAR_CHEAT, "The ground unit normal's Z component must be this close to the nav area's Z component to be generated." );
-ConVar nav_displacement_test( "nav_displacement_test", "10000", FCVAR_CHEAT, "Checks for nodes embedded in displacements (useful for in-development maps)" );
-ConVar nav_generate_fencetops( "nav_generate_fencetops", "1", FCVAR_CHEAT, "Autogenerate nav areas on fence and obstacle tops" );
-ConVar nav_generate_fixup_jump_areas( "nav_generate_fixup_jump_areas", "1", FCVAR_CHEAT, "Convert obsolete jump areas into 2-way connections" );
-ConVar nav_generate_incremental_range( "nav_generate_incremental_range", "2000", FCVAR_CHEAT );
-ConVar nav_generate_incremental_tolerance( "nav_generate_incremental_tolerance", "0", FCVAR_CHEAT, "Z tolerance for adding new nav areas." );
-ConVar nav_area_max_size( "nav_area_max_size", "50", FCVAR_CHEAT, "Max area size created in nav generation" );
+ConVar nav_slope_limit( side_registry(), "nav_slope_limit", "0.7", FCVAR_CHEAT, "The ground unit normal's Z component must be greater than this for nav areas to be generated." );
+ConVar nav_slope_tolerance( side_registry(), "nav_slope_tolerance", "0.1", FCVAR_CHEAT, "The ground unit normal's Z component must be this close to the nav area's Z component to be generated." );
+ConVar nav_displacement_test( side_registry(), "nav_displacement_test", "10000", FCVAR_CHEAT, "Checks for nodes embedded in displacements (useful for in-development maps)" );
+ConVar nav_generate_fencetops( side_registry(), "nav_generate_fencetops", "1", FCVAR_CHEAT, "Autogenerate nav areas on fence and obstacle tops" );
+ConVar nav_generate_fixup_jump_areas( side_registry(), "nav_generate_fixup_jump_areas", "1", FCVAR_CHEAT, "Convert obsolete jump areas into 2-way connections" );
+ConVar nav_generate_incremental_range( side_registry(), "nav_generate_incremental_range", "2000", FCVAR_CHEAT );
+ConVar nav_generate_incremental_tolerance( side_registry(), "nav_generate_incremental_tolerance", "0", FCVAR_CHEAT, "Z tolerance for adding new nav areas." );
+ConVar nav_area_max_size( side_registry(), "nav_area_max_size", "50", FCVAR_CHEAT, "Max area size created in nav generation" );
 
 // Common bounding box for traces
 Vector NavTraceMins( -0.45, -0.45, 0 );
 Vector NavTraceMaxs( 0.45, 0.45, HumanCrouchHeight );
 bool FindGroundForNode( Vector *pos, Vector *normal );	// find a ground Z for pos that is clear for NavTraceMins -> NavTraceMaxs
 
-const float MaxTraversableHeight = StepHeight;		// max internal obstacle height that can occur between nav nodes and safely disregarded
-const float MinObstacleAreaWidth = 10.0f;			// min width of a nav area we will generate on top of an obstacle
+static const float MaxTraversableHeight = StepHeight;		// max internal obstacle height that can occur between nav nodes and safely disregarded
+static const float MinObstacleAreaWidth = 10.0f;			// min width of a nav area we will generate on top of an obstacle
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -114,7 +131,6 @@ public:
 	}
 };
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Start at given position and find first area in given direction
@@ -156,7 +172,6 @@ inline CNavArea *findFirstAreaInDirection( const Vector *start, NavDirType dir, 
 	return area;
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * For each ladder in the map, create a navigation representation of it.
@@ -167,7 +182,6 @@ void CNavMesh::BuildLadders( void )
 	DestroyLadders();
 
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -280,7 +294,6 @@ void CNavMesh::CreateLadder( const Vector& absMin, const Vector& absMax, float m
 	m_ladders.push_back( ladder );		
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Create a navigation representation of a ladder.
@@ -373,7 +386,6 @@ void CNavMesh::CreateLadder( const Vector &top, const Vector &bottom, float widt
 	// add ladder to global list
 	m_ladders.push_back( ladder );
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 void CNavLadder::ConnectGeneratedLadder( float maxHeightAboveTopArea )
@@ -499,7 +511,6 @@ void CNavLadder::ConnectGeneratedLadder( float maxHeightAboveTopArea )
 		}
 	}
 }
-
 
 //--------------------------------------------------------------------------------------------------------
 class JumpConnector
@@ -670,7 +681,6 @@ void CNavMesh::StichAndRemoveJumpAreas( void )
 	ForAllAreas( connector );
 	RemoveJumpAreas();
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -936,7 +946,6 @@ void CNavMesh::CreateObstacleTopAreas()
 	}
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
 * Creates a new nav area if an obstacle exists between the two nav areas.  If bMultiNode is false, this checks
@@ -1053,9 +1062,6 @@ bool CNavMesh::CreateObstacleTopAreaIfNecessary( CNavArea *area, CNavArea *areaO
 
 			node = node->GetConnectedNode( dirEdge );
 		}
-
-
-
 
 		// if we had some obstacle height from EVERY node along the portal, then getting from this area to the other requires scaling an obstacle,
 		// need to generate a nav area on top of it
@@ -1218,7 +1224,7 @@ static void CommandNavCheckStairs( void )
 {
 	TheNavMesh->MarkStairAreas();
 }
-static ConCommand nav_check_stairs( "nav_check_stairs", CommandNavCheckStairs, "Update the nav mesh STAIRS attribute", FCVAR_CHEAT );
+static ConCommand nav_check_stairs( side_registry(), "nav_check_stairs", CommandNavCheckStairs, "Update the nav mesh STAIRS attribute", FCVAR_CHEAT );
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -1232,7 +1238,6 @@ void CNavMesh::MarkStairAreas( void )
 	}
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 enum StairTestType
 {
@@ -1240,7 +1245,6 @@ enum StairTestType
 	STAIRS_YES,
 	STAIRS_MAYBE,
 };
-
 
 //--------------------------------------------------------------------------------------------------------
 // Test if a line across a nav area could be part of a stairway
@@ -1333,7 +1337,6 @@ StairTestType IsStairs( const Vector &start, const Vector &end, StairTestType re
 				return STAIRS_NO;
 			}
 
-
 			float deltaZ = abs( height - priorHeight );
 
 			if ( deltaZ >= minStepZ && deltaZ <= StepHeight )
@@ -1359,7 +1362,6 @@ StairTestType IsStairs( const Vector &start, const Vector &end, StairTestType re
 
 	return ret;
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -1427,10 +1429,9 @@ bool CNavArea::TestStairs( void )
 	return false;
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 static void nav_test_stairs( const CCommand &args );
-static ConCommand nav_test_stairs_command( "nav_test_stairs", nav_test_stairs, "Test the selected set for being on stairs", FCVAR_CHEAT );
+static ConCommand nav_test_stairs_command( side_registry(), "nav_test_stairs", nav_test_stairs, "Test the selected set for being on stairs", FCVAR_CHEAT );
 static void nav_test_stairs( const CCommand &args )
 {
 	int count = 0;
@@ -1447,7 +1448,6 @@ static void nav_test_stairs( const CCommand &args )
 
 	Msg( "Marked %d areas as stairs\n", count );
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -1488,7 +1488,6 @@ void CNavMesh::RemoveJumpAreas( void )
 	m_markedCorner = NUM_CORNERS;	// clear the corner selection
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 void CNavMesh::CommandNavRemoveJumpAreas( void )
 {
@@ -1501,7 +1500,6 @@ void CNavMesh::CommandNavRemoveJumpAreas( void )
 
 	Msg( "Removed %d jump areas\n", before - after );
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -1593,7 +1591,6 @@ void CNavMesh::SquareUpAreas( void )
 	}
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 static bool testStitchConnection( CNavArea *source, CNavArea *target, const Vector &sourcePos, const Vector &targetPos )
 {
@@ -1648,9 +1645,6 @@ static bool testStitchConnection( CNavArea *source, CNavArea *target, const Vect
 	return success;
 }
 
-
-
-
 //--------------------------------------------------------------------------------------------------------
 class IncrementallyGeneratedAreas
 {
@@ -1660,7 +1654,6 @@ public:
 		return area->HasNodes();
 	}
 };
-
 
 //--------------------------------------------------------------------------------------------------------
 /**
@@ -1677,7 +1670,6 @@ void CNavMesh::StitchGeneratedAreas( void )
 		StitchMesh( incrementalAreas );
 	}
 }
-
 
 //--------------------------------------------------------------------------------------------------------
 class AreaSet
@@ -1697,7 +1689,6 @@ private:
 	std::vector< CNavArea * > *m_areas;
 };
 
-
 //--------------------------------------------------------------------------------------------------------
 /**
  * Stitches an arbitrary set of areas (newly-merged, for example) into the existing mesh
@@ -1707,7 +1698,6 @@ void CNavMesh::StitchAreaSet( std::vector< CNavArea * > *areas )
 	AreaSet areaSet( areas );
 	StitchMesh( areaSet );
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -1773,7 +1763,6 @@ inline bool testJumpDown( const Vector *fromPos, const Vector *toPos )
 	return true;
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 inline CNavArea *findJumpDownArea( const Vector *fromPos, NavDirType dir )
 {
@@ -1788,7 +1777,6 @@ inline CNavArea *findJumpDownArea( const Vector *fromPos, NavDirType dir )
 
 	return nullptr;
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 template < typename Functor >
@@ -1864,7 +1852,6 @@ void CNavMesh::StitchAreaIntoMesh( CNavArea *area, NavDirType dir, Functor &func
 	}
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
 * Checks to see if there is a cliff - a drop of at least CliffHeight - in specified direction.
@@ -1874,7 +1861,6 @@ inline bool CheckCliff( const Vector *fromPos, NavDirType dir, bool bExhaustive 
 	// cliffs are half-baked, not used by any existing AI, and create poorly behaved nav areas (ie: long, thin, strips) (MSB 8/7/09)
 	return false;
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -2124,7 +2110,6 @@ void CNavMesh::MergeGeneratedAreas( void )
 			if (merged)
 				break;
 
-
 			// west edge
 			for ( const NavConnect &connect : area->m_connect[ WEST ] )
 			{
@@ -2225,7 +2210,6 @@ void ClassifyCorners( Vector vec[4], Vector &vecNW, Vector &vecNE, Vector &vecSE
 	}
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
 * Perform miscellaneous fixups to generated mesh
@@ -2235,7 +2219,6 @@ void CNavMesh::FixUpGeneratedAreas( void )
 	FixCornerOnCornerAreas();
 	FixConnections();
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 void CNavMesh::FixConnections( void )
@@ -2341,7 +2324,6 @@ void CNavMesh::FixConnections( void )
 		}
 	}
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -2639,7 +2621,6 @@ void CNavMesh::SplitAreasUnderOverhangs( void )
 	while ( bRestartProcessing );
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 bool TestForValidCrouchArea( CNavNode *node )
 {
@@ -2666,7 +2647,6 @@ bool TestForValidCrouchArea( CNavNode *node )
 
 	return ( !tr.allsolid );
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -2700,7 +2680,6 @@ bool IsHeightDifferenceValid( float test, float other1, float other2, float othe
 	return true;
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Check that a 1x1 area with 'node' at the northwest corner has a valid shape - if 3 corners
@@ -2711,7 +2690,6 @@ bool TestForValidJumpArea( CNavNode *node )
 {
 	return true;
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 class TestOverlapping
@@ -2792,7 +2770,6 @@ public:
 		return false;
 	}
 };
-
 
 //--------------------------------------------------------------------------------------------------------------
 /** 
@@ -3179,7 +3156,6 @@ int CNavMesh::BuildArea( CNavNode *node, int width, int height )
 	return coveredNodes;
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * This function uses the CNavNodes that have been sampled from the map to
@@ -3263,7 +3239,6 @@ void CNavMesh::CreateNavAreasFromNodes( void )
 		AddNavArea( area );
 	}
 
-	
 	ConnectGeneratedAreas();
 	MarkPlayerClipAreas();
 	MarkJumpAreas();	// mark jump areas before we merge generated areas, so we don't merge jump and non-jump areas
@@ -3271,10 +3246,6 @@ void CNavMesh::CreateNavAreasFromNodes( void )
 	SplitAreasUnderOverhangs();
 	SquareUpAreas();
 	MarkStairAreas();
-
-#ifndef CSTRIKE_DLL	// CSBots use jump areas
-	StichAndRemoveJumpAreas();
-#endif
 
 	HandleObstacleTopAreas();
 	FixUpGeneratedAreas();
@@ -3289,7 +3260,6 @@ void CNavMesh::CreateNavAreasFromNodes( void )
 		}
 	}
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 // adds walkable positions for any/all positions a mod specifies
@@ -3311,7 +3281,6 @@ void CNavMesh::AddWalkableSeeds( void )
 		}
 	}
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -3374,7 +3343,6 @@ void CNavMesh::BeginGeneration( bool incremental )
 	m_generationStartTime = Plat_FloatTime();
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Re-analyze an existing Mesh.  Determine Hiding Spots, Encounter Spots, etc.
@@ -3412,7 +3380,6 @@ void CNavMesh::BeginAnalysis( bool quitWhenFinished )
 	lastMsgTime = 0.0f;
 	m_generationStartTime = Plat_FloatTime();
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 void ShowViewPortPanelToAll( const char * name, bool bShow, KeyValues *data )
@@ -3454,7 +3421,6 @@ void ShowViewPortPanelToAll( const char * name, bool bShow, KeyValues *data )
 	SendUserMessage( filter, ks::net::CS_UM_VGUIMenu, msg );
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 static void AnalysisProgress( const char *msg, int ticks, int current, bool showPercent = true )
 {
@@ -3484,7 +3450,6 @@ static void AnalysisProgress( const char *msg, int ticks, int current, bool show
 	data->deleteThis();
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 static void HideAnalysisProgress( void )
 {
@@ -3492,7 +3457,6 @@ static void HideAnalysisProgress( void )
 	ShowViewPortPanelToAll( PANEL_NAV_PROGRESS, false, data );
 	data->deleteThis();
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -3646,7 +3610,6 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 			}
 
 			Msg( "Finding sniper spots...DONE\n" );
-
 
 			if ( IsMeshVisibilityGenerated() )
 			{
@@ -3947,7 +3910,6 @@ void CNavMesh::SetPlayerSpawnName( const char *name )
 	std::strcpy( m_spawnName, name );
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Return name of player spawn entity
@@ -4066,7 +4028,6 @@ inline CNavNode *LadderEndSearch( const Vector *pos, NavDirType mountDir )
 	return nullptr;
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 bool CNavMesh::FindGroundForNode( Vector *pos, Vector *normal )
 {
@@ -4091,7 +4052,6 @@ bool CNavMesh::FindGroundForNode( Vector *pos, Vector *normal )
 	return ( !tr.allsolid );
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 void DrawTrace( const trace_t *trace )
 {
@@ -4106,7 +4066,6 @@ void DrawTrace( const trace_t *trace )
 	}
 	*/
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 bool StayOnFloor( trace_t *trace, float zLimit /* = DeathDrop */ )
@@ -4131,7 +4090,6 @@ bool StayOnFloor( trace_t *trace, float zLimit /* = DeathDrop */ )
 
 	return true;
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 bool TraceAdjacentNode( int depth, const Vector& start, const Vector& end, trace_t *trace, float zLimit /* = DeathDrop */ )
@@ -4176,7 +4134,6 @@ bool TraceAdjacentNode( int depth, const Vector& start, const Vector& end, trace
 	forwardTestEnd.z = forwardTestStart.z;
 	return TraceAdjacentNode( depth+1, forwardTestStart, forwardTestEnd, trace );
 }
-
 
 //--------------------------------------------------------------------------------------------------------
 static bool IsNodeOverlapped( const Vector& pos, const Vector& offset )
@@ -4225,7 +4182,6 @@ static bool IsNodeOverlapped( const Vector& pos, const Vector& offset )
 	}
 	return overlap;
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -4461,7 +4417,6 @@ bool CNavMesh::SampleStep( void )
 						return true;
 				}
 
-
 				bool isOnDisplacement = result.IsDispSurface();
 
 				if ( nav_displacement_test.GetInt() > 0 )
@@ -4513,7 +4468,6 @@ bool CNavMesh::SampleStep( void )
 	}
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Add given walkable position to list of seed positions for map sampling
@@ -4549,7 +4503,6 @@ CNavNode *CNavMesh::GetNextWalkableSeedNode( void )
 
 	return new CNavNode( spot.pos, spot.normal, nullptr, false );
 }
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -4592,7 +4545,6 @@ bool IsWalkableTraceLineClear( const Vector &from, const Vector &to, unsigned in
 	return false;
 }
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Trace a hull, ignoring any entities that we can walk through
@@ -4611,9 +4563,6 @@ bool IsWalkableTraceHullClear( const Vector &from, const Vector &to, const Vecto
 
 	return !result.DidHit();
 }
-
-
-
 
 //--------------------------------------------------------------------------------------------------------------
 class Subdivider
@@ -4659,7 +4608,6 @@ public:
 		}
 	}
 
-
 	void SubdivideY( CNavArea *area, bool canDivideX, bool canDivideY, int depth )
 	{
 		if (!canDivideY)
@@ -4691,7 +4639,6 @@ public:
 	int m_depth;
 };
 
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Subdivide each nav area in X and Y to create 4 new areas
@@ -4710,7 +4657,7 @@ void CNavMesh::CommandNavSubdivide( const CCommand &args )
 }
 
 static void nav_subdivide( const CCommand &args );
-static ConCommand nav_subdivide_command( "nav_subdivide", nav_subdivide, "Subdivides all selected areas.", FCVAR_GAMEDLL | FCVAR_CHEAT );
+static ConCommand nav_subdivide_command( side_registry(), "nav_subdivide", nav_subdivide, "Subdivides all selected areas.", FCVAR_GAMEDLL | FCVAR_CHEAT );
 static void nav_subdivide( const CCommand &args )
 {
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
@@ -4849,7 +4796,7 @@ void CNavMesh::PostProcessCliffAreas()
 }
 
 static void nav_gen_cliffs_approx( const CCommand &args );
-static ConCommand nav_gen_cliffs_approx_command( "nav_gen_cliffs_approx", nav_gen_cliffs_approx, "Mark cliff areas, post-processing approximation", FCVAR_CHEAT );
+static ConCommand nav_gen_cliffs_approx_command( side_registry(), "nav_gen_cliffs_approx", nav_gen_cliffs_approx, "Mark cliff areas, post-processing approximation", FCVAR_CHEAT );
 static void nav_gen_cliffs_approx( const CCommand &args )
 {
 	TheNavMesh->PostProcessCliffAreas();

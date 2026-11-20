@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.tier1;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.math.vmatrix;
+import ks.math.volumeculler;
+import ks.platform;
+import ks.simd;
 import std;
 #include "mathlib/camera.h"
 #include "materialsystem/MaterialSystemUtil.h"

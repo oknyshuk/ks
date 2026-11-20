@@ -2,7 +2,18 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.vstdlib;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.fixed_pool;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
+import ks.tier1.strtools;
+import ks.vstdlib.ikeyvaluessystem;
 
 
 //

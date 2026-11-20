@@ -2,7 +2,13 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 
-import ks.core;
+import ks.core.cmdline;
+import ks.core.platform;
+import ks.platform;
+import ks.simd;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.strtools;
 #include "eiface.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "sv_uploadgamestats.h"

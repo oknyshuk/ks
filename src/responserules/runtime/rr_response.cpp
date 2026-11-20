@@ -4,7 +4,13 @@
 #include "rrbase.h"
 
 #include <tier2/interval.h>
-import ks.core;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 
 /*
 #include "AI_Criteria.h"

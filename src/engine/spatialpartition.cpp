@@ -5,7 +5,27 @@
 //		  broad mutexing. Needs to be addressed. (toml 3-20-06)
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.color;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.tslist;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.generichash;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.map_ops;
 #include "chain_pool.h"
 #include "ispatialpartitioninternal.h"
 #include "bsptreedata.h"

@@ -4,7 +4,12 @@
 
 // NOTE: These are fixed length to make it easy to fill these out without memory allocation or storage
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 const int MAX_VIRTUAL_TRIANGLES = 1024;
 struct virtualmeshlist_t

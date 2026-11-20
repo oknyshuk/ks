@@ -1,4 +1,6 @@
 #pragma once
+import ks.core.platform;
+import ks.tier1.appinstance;
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 

@@ -1,7 +1,10 @@
 #pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2006 Valve Corporation
-import ks.math;
+import ks.core.vprof;
+import ks.math.mathlib;
+import ks.platform;
+import ks.simd;
 
 
 float _SSE_Sqrt(float x);

@@ -2,7 +2,11 @@
 // Copyright (c) Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 
 //-----------------------------------------------------------------------------
 // Purpose: determine if a uchar32 represents a valid Unicode code point

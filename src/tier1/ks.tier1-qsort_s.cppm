@@ -1,10 +1,11 @@
 
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:qsort_s;
+export module ks.tier1.qsort_s;
 
 import std;
-import ks.math;
+import ks.platform;
+import ks.simd;
 
 export extern "C++" {
 

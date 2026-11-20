@@ -3,7 +3,17 @@
 // Copyright (c) 1996-2009 Valve Corporation
 
 
-import ks.tier1;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.netadr;
+import ks.tier1.ns_address;
 
 import std;
 

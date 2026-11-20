@@ -2,10 +2,18 @@
 // Copyright (c) 2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.vstdlib:jobthread;
+export module ks.vstdlib.jobthread;
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.scratcharena;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.functors;
+import ks.tier1.small_vector;
 
 export extern "C++" {
 

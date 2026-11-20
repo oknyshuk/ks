@@ -3,7 +3,15 @@
 
 // main precompiled header for client files
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.tier1.text_writer;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.tier1.vector_ops;
 import std;
 
 #include "common.h"

@@ -12,6 +12,7 @@
 import std;
 
 #include "proto_types.h"
+import ks.core.types;
 
 namespace ks::net
 {

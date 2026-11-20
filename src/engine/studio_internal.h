@@ -3,4 +3,5 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.math;
+import ks.platform;
+import ks.simd;

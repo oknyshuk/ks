@@ -4,7 +4,13 @@
 // Purpose: A higher level link library for general use in the game and tools.
 
 import std;
-import ks.tier1;
+import ks.core.dbg;
+import ks.platform;
+import ks.simd;
+import ks.tier1.cvar;
+import ks.tier1.icvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 #include "materialsystem/ivballoctracker.h"
 
 #include "rocketui/rocketui.h"

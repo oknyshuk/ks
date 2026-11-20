@@ -5,6 +5,7 @@
 class CConnectionlessLanMgr;
 
 #include "mm_framework.h"
+import ks.tier1.keyvalues;
 
 class CConnectionlessLanMgr
 {

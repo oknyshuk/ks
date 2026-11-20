@@ -9,7 +9,10 @@
 // Author: Matthew D. Campbell (matt@turtlerockstudios.com), 2004
 //--------------------------------------------------------------------------------------------------------------
 
-import ks.core;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 
 //--------------------------------------------------------------------------------------------------------------
 /**

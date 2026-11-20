@@ -2,13 +2,13 @@
 // Copyright (c) Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:aabb;
+export module ks.math.aabb;
 
 import std;
-import ks.core;
+import ks.platform;
 import ks.simd;
-export import :vector4d;
-export import :mathlib;
+export import ks.math.vector4d;
+export import ks.math.mathlib;
 
 export extern "C++" {
 

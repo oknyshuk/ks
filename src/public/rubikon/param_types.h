@@ -3,7 +3,20 @@
 // Copyright (c) Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.eigen;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.transform;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.small_vector;
+import ks.tier1.strtools;
 #include "rubikon/serializehelpers.h"
 #include "rubikon/constants.h"
 

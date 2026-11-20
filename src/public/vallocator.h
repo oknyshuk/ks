@@ -3,6 +3,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
+import ks.core.basetypes;
 
 // These classes let you write your own allocators to be used with new and delete.
 // If you have an allocator: VAllocator *pAlloc, you can call new and delete like this:

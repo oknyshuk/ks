@@ -5,7 +5,18 @@
 
 // main precompiled header for client files
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.color;
+import ks.core.dbg;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.interfaces;
+import ks.tier1.strtools;
 
 #include "common.h"
 #include "iprediction.h"

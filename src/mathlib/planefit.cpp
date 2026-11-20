@@ -3,7 +3,12 @@
 
 // Purpose: Code to compute the equation of a plane with a least-squares residual fit.
 
-import ks.math;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.math.vplane;
+import ks.platform;
+import ks.simd;
 import std;
 using namespace std;
 

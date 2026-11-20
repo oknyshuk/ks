@@ -1,36 +1,79 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 2008 Valve Corporation
 
-#include "rocketui/rmlui.h"
-#include "predictable_entity.h"
-#include "cdll_util.h"
-#include "util_shared.h"
-#include "baseentity_shared.h"
-#include "c_basecombatweapon.h"
-#include "c_basecombatcharacter.h"
-#include "gamerules.h"
-#include "c_baseplayer.h"
-#include "cdll_client_int.h"
-
-#include "materialsystem/imaterialsystem.h"
-#include "materialsystem/itexture.h"
+module;
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+#include "bitmap/tgawriter.h"
+#include "edict.h"
+#include "engine/ivmodelinfo.h"
+#include "iclientrenderable.h"
+#include "materialsystem/imaterialproxy.h"
 #include "materialsystem/imaterialvar.h"
-#include "materialsystem/imaterialsystemhardwareconfig.h"
-#include "materialsystem/materialsystem_config.h"
-#include "colorcorrectionmgr.h"
-#include "view_scene.h"
-#include "c_world.h"
+#include "materialsystem/imesh.h"
+#include "model_types.h"
 #include "renderparm.h"
 #include "shaderapi/ishaderapi.h"
-#include "proxyentity.h"
+#include "view_shared.h"
+#include "cdll_client_int.h"
 #include "imaterialproxydict.h"
-#include "model_types.h"
-#include "bitmap/tgawriter.h"
-#include "filesystem.h"
+module ks.client;
 
-#include "weapon_csbase.h"
-#include "c_cs_player.h"
+import std;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.numeric;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.game.postprocess_shared;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vector4d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_writer;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import ks.tier1.strtools;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
+import ks.vstdlib.callqueue;
+import ks.vstdlib.jobthread;
+import :props;
+import :baseanimatedtextureproxy;
+import :iinput;
+import :baseentity;
+import :sharedvar;
+import :util;
+import :particlemgr;
+import :cstrike15.cs_player;
+import :precache;
+import ks.game.shareddefs;
+import :achievements_and_stats_interface;
+import :cstrike15.cs_player_shared;
+import ks.game.gamemovement;
+import ks.game.mapentities_shared;
+import :noopanimcontroller;
 
+class CBaseEntity;
+class CBasePlayer;
+class CCSPlayer;
+class CWeaponCSBase;
+
+using namespace ::ks::reflect;
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -67,58 +110,55 @@ float g_flDOFFarBlurRadius = 5.0f;
 bool g_bFlashlightIsOn = false;
 
 // hdr parameters
-ConVar mat_bloomscale( "mat_bloomscale", "1", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
+ConVar mat_bloomscale( side_registry(), "mat_bloomscale", "1", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
 
-ConVar mat_hdr_level( "mat_hdr_level", "2", FCVAR_DEVELOPMENTONLY );
-ConVar mat_bloomamount_rate( "mat_bloomamount_rate", "0.05f", FCVAR_CHEAT );
-static ConVar debug_postproc( "mat_debug_postprocessing_effects", "0", FCVAR_CHEAT, "0 = off, 1 = show post-processing passes in quadrants of the screen, 2 = only apply post-processing to the centre of the screen" );
-static ConVar mat_dynamic_tonemapping( "mat_dynamic_tonemapping", "1", FCVAR_CHEAT );
-static ConVar mat_tonemapping_occlusion_use_stencil( "mat_tonemapping_occlusion_use_stencil", "0", FCVAR_DEVELOPMENTONLY  );
+ConVar mat_hdr_level( side_registry(), "mat_hdr_level", "2", FCVAR_DEVELOPMENTONLY );
+ConVar mat_bloomamount_rate( side_registry(), "mat_bloomamount_rate", "0.05f", FCVAR_CHEAT );
+static ConVar debug_postproc( side_registry(), "mat_debug_postprocessing_effects", "0", FCVAR_CHEAT, "0 = off, 1 = show post-processing passes in quadrants of the screen, 2 = only apply post-processing to the centre of the screen" );
+static ConVar mat_dynamic_tonemapping( side_registry(), "mat_dynamic_tonemapping", "1", FCVAR_CHEAT );
+static ConVar mat_tonemapping_occlusion_use_stencil( side_registry(), "mat_tonemapping_occlusion_use_stencil", "0", FCVAR_DEVELOPMENTONLY  );
 
-static ConVar mat_autoexposure_max( "mat_autoexposure_max", "2", FCVAR_CHEAT );
-static ConVar mat_autoexposure_max_multiplier("mat_autoexposure_max_multiplier","1.0", FCVAR_CHEAT );
-static ConVar mat_autoexposure_min( "mat_autoexposure_min", "0.5", FCVAR_CHEAT );
-static ConVar mat_show_histogram( "mat_show_histogram", "0", FCVAR_CHEAT );
-ConVar mat_hdr_uncapexposure( "mat_hdr_uncapexposure", "0", FCVAR_CHEAT );
-ConVar mat_force_bloom("mat_force_bloom","0", FCVAR_CHEAT );
+static ConVar mat_autoexposure_max( side_registry(), "mat_autoexposure_max", "2", FCVAR_CHEAT );
+static ConVar mat_autoexposure_max_multiplier(side_registry(), "mat_autoexposure_max_multiplier","1.0", FCVAR_CHEAT );
+static ConVar mat_autoexposure_min( side_registry(), "mat_autoexposure_min", "0.5", FCVAR_CHEAT );
+static ConVar mat_show_histogram( side_registry(), "mat_show_histogram", "0", FCVAR_CHEAT );
+ConVar mat_hdr_uncapexposure( side_registry(), "mat_hdr_uncapexposure", "0", FCVAR_CHEAT );
+ConVar mat_force_bloom(side_registry(), "mat_force_bloom","0", FCVAR_CHEAT );
 
-ConVar mat_disable_bloom("mat_disable_bloom","0", FCVAR_CHEAT );
-ConVar mat_debug_bloom("mat_debug_bloom","0", FCVAR_CHEAT);
-ConVar mat_colorcorrection( "mat_colorcorrection", "1", FCVAR_CHEAT );
+ConVar mat_disable_bloom(side_registry(), "mat_disable_bloom","0", FCVAR_CHEAT );
+ConVar mat_debug_bloom(side_registry(), "mat_debug_bloom","0", FCVAR_CHEAT);
+ConVar mat_colorcorrection( side_registry(), "mat_colorcorrection", "1", FCVAR_CHEAT );
 
-ConVar mat_accelerate_adjust_exposure_down( "mat_accelerate_adjust_exposure_down", "40.0", FCVAR_CHEAT );
+ConVar mat_accelerate_adjust_exposure_down( side_registry(), "mat_accelerate_adjust_exposure_down", "40.0", FCVAR_CHEAT );
 
 // fudge factor to make non-hdr bloom more closely match hdr bloom. Because of auto-exposure, high
 // bloomscales don't blow out as much in hdr. this factor was derived by comparing images in a
 // reference scene.
-ConVar mat_non_hdr_bloom_scalefactor("mat_non_hdr_bloom_scalefactor",".3", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
+ConVar mat_non_hdr_bloom_scalefactor(side_registry(), "mat_non_hdr_bloom_scalefactor",".3", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
 
 // Apply addition scale to the final bloom scale
-static ConVar mat_bloom_scalefactor_scalar( "mat_bloom_scalefactor_scalar", "1.0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
+static ConVar mat_bloom_scalefactor_scalar( side_registry(), "mat_bloom_scalefactor_scalar", "1.0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
 
 //ConVar mat_exposure_center_region_x( "mat_exposure_center_region_x","0.75", FCVAR_CHEAT );
 //ConVar mat_exposure_center_region_y( "mat_exposure_center_region_y","0.80", FCVAR_CHEAT );
 
-ConVar mat_exposure_center_region_x( "mat_exposure_center_region_x","0.9", FCVAR_CHEAT );
-ConVar mat_exposure_center_region_y( "mat_exposure_center_region_y","0.85", FCVAR_CHEAT );
+ConVar mat_exposure_center_region_x( side_registry(), "mat_exposure_center_region_x","0.9", FCVAR_CHEAT );
+ConVar mat_exposure_center_region_y( side_registry(), "mat_exposure_center_region_y","0.85", FCVAR_CHEAT );
 
-ConVar mat_tonemap_algorithm( "mat_tonemap_algorithm", "1", FCVAR_CHEAT, "0 = Original Algorithm 1 = New Algorithm" );
-ConVar mat_force_tonemap_percent_target( "mat_force_tonemap_percent_target", "-1", FCVAR_CHEAT, "Override. Old default was 60." );
-ConVar mat_force_tonemap_percent_bright_pixels( "mat_force_tonemap_percent_bright_pixels", "-1", FCVAR_CHEAT, "Override. Old value was 2.0" );
-ConVar mat_force_tonemap_min_avglum( "mat_force_tonemap_min_avglum", "-1", FCVAR_CHEAT, "Override. Old default was 3.0" );
-ConVar mat_force_tonemap_scale( "mat_force_tonemap_scale", "0.0", FCVAR_CHEAT );
-ConVar mat_fullbright( "mat_fullbright", "0", FCVAR_CHEAT );
+ConVar mat_tonemap_algorithm( side_registry(), "mat_tonemap_algorithm", "1", FCVAR_CHEAT, "0 = Original Algorithm 1 = New Algorithm" );
+ConVar mat_force_tonemap_percent_target( side_registry(), "mat_force_tonemap_percent_target", "-1", FCVAR_CHEAT, "Override. Old default was 60." );
+ConVar mat_force_tonemap_percent_bright_pixels( side_registry(), "mat_force_tonemap_percent_bright_pixels", "-1", FCVAR_CHEAT, "Override. Old value was 2.0" );
+ConVar mat_force_tonemap_min_avglum( side_registry(), "mat_force_tonemap_min_avglum", "-1", FCVAR_CHEAT, "Override. Old default was 3.0" );
+ConVar mat_force_tonemap_scale( side_registry(), "mat_force_tonemap_scale", "0.0", FCVAR_CHEAT );
+ConVar mat_fullbright( side_registry(), "mat_fullbright", "0", FCVAR_CHEAT );
 
-ConVar mat_grain_enable( "mat_grain_enable", "1" );
+ConVar mat_grain_enable( side_registry(), "mat_grain_enable", "1" );
 //ConVar mat_vignette_enable( "mat_vignette_enable", "1", FCVAR_RELEASE | FCVAR_REPLICATED );
-ConVar mat_local_contrast_enable( "mat_local_contrast_enable", "1", FCVAR_DEVELOPMENTONLY );
+ConVar mat_local_contrast_enable( side_registry(), "mat_local_contrast_enable", "1", FCVAR_DEVELOPMENTONLY );
 
-ConVar mat_blur_r( "mat_blur_r", "0.7" );
-ConVar mat_blur_g( "mat_blur_g", "0.7" );
-ConVar mat_blur_b( "mat_blur_b", "0.7" );
-
-
-
+ConVar mat_blur_r( side_registry(), "mat_blur_r", "0.7" );
+ConVar mat_blur_g( side_registry(), "mat_blur_g", "0.7" );
+ConVar mat_blur_b( side_registry(), "mat_blur_b", "0.7" );
 
 // These material proxies + the GetXXXMaterial calls within have been added for PS3 for perf reasons (to avoid the expensive PS3 mutexes on Find_Var, Find_Material) 
 // gives us almost 0.5ms saving from main thread, could be added to other platforms - need to test
@@ -134,7 +174,7 @@ public:
 	CLumCompareMaterialProxy();
 	virtual ~CLumCompareMaterialProxy() {};
 	virtual bool Init( IMaterial *pMaterial, KeyValues *pKeyValues );
-	virtual void OnBind( C_BaseEntity *pEntity );
+	virtual void OnBind( CBaseEntity *pEntity );
 	virtual IMaterial *GetMaterial();
 
 	static IMaterial *GetLumCompareMaterial( IMaterialSystem * materials );
@@ -149,7 +189,6 @@ private:
 
 	static IMaterial	*s_pLumCompareMaterial;
 };
-
 
 IMaterialVar *CLumCompareMaterialProxy::s_pMaterialParam_C0_X = nullptr;
 IMaterialVar *CLumCompareMaterialProxy::s_pMaterialParam_C0_Y = nullptr;
@@ -179,7 +218,7 @@ bool CLumCompareMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues
 	return true;
 }
 
-void CLumCompareMaterialProxy::OnBind( C_BaseEntity *pEnt )
+void CLumCompareMaterialProxy::OnBind( CBaseEntity *pEnt )
 {
 }
 
@@ -210,7 +249,6 @@ void CLumCompareMaterialProxy::SetupLumCompareMaterial( float flTestRangeMin, fl
 	s_pMaterialParam_C0_Y->SetFloatValue( s_C0_Y );
 }
 
-
 EXPOSE_MATERIAL_PROXY( CLumCompareMaterialProxy, LumCompare );
 
 //=====================================================================================================================
@@ -223,7 +261,7 @@ public:
 	CLumCompareStencilMaterialProxy();
 	virtual ~CLumCompareStencilMaterialProxy() {};
 	virtual bool Init( IMaterial *pMaterial, KeyValues *pKeyValues );
-	virtual void OnBind( C_BaseEntity *pEntity );
+	virtual void OnBind( CBaseEntity *pEntity );
 	virtual IMaterial *GetMaterial();
 
 private:
@@ -235,7 +273,6 @@ private:
 
 	static IMaterial *s_pLumCompareStencilMaterial;
 };
-
 
 IMaterial	*CLumCompareStencilMaterialProxy::s_pLumCompareStencilMaterial = nullptr;
 
@@ -249,7 +286,7 @@ bool CLumCompareStencilMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKe
 	return true;
 }
 
-void CLumCompareStencilMaterialProxy::OnBind( C_BaseEntity *pEnt )
+void CLumCompareStencilMaterialProxy::OnBind( CBaseEntity *pEnt )
 {
 }
 
@@ -273,7 +310,6 @@ IMaterial *CLumCompareStencilMaterialProxy::GetLumCompareStencilMaterial( IMater
 	return s_pLumCompareStencilMaterial;
 }
 
-
 EXPOSE_MATERIAL_PROXY( CLumCompareStencilMaterialProxy, no_pixel_write );
 
 //=====================================================================================================================
@@ -286,7 +322,7 @@ public:
 	CDownsampleMaterialProxy();
 	virtual ~CDownsampleMaterialProxy() {};
 	virtual bool Init( IMaterial *pMaterial, KeyValues *pKeyValues );
-	virtual void OnBind( C_BaseEntity *pEntity );
+	virtual void OnBind( CBaseEntity *pEntity );
 	virtual IMaterial *GetMaterial();
 
 public:
@@ -311,7 +347,6 @@ float CDownsampleMaterialProxy::s_bloomsaturation	= 1.0f;
  
 IMaterial	*CDownsampleMaterialProxy::s_pDownsampleMaterial = nullptr;
 
-
 CDownsampleMaterialProxy::CDownsampleMaterialProxy()
 {
 	s_pMaterialParam_bloomexp		 = nullptr;
@@ -333,7 +368,7 @@ bool CDownsampleMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues
 	return true;
 }
 
-void CDownsampleMaterialProxy::OnBind( C_BaseEntity *pEnt )
+void CDownsampleMaterialProxy::OnBind( CBaseEntity *pEnt )
 {
 }
 
@@ -365,9 +400,7 @@ void CDownsampleMaterialProxy::SetupDownsampleMaterial( float flBloomExponent, f
 	s_pMaterialParam_bloomsaturation->SetFloatValue( s_bloomsaturation );
 }
 
-
 EXPOSE_MATERIAL_PROXY( CDownsampleMaterialProxy, downsample_non_hdr );
-
 
 //=====================================================================================================================
 // XBlur material proxy ============================================================================================
@@ -379,7 +412,7 @@ public:
 	CXBlurMaterialProxy();
 	virtual ~CXBlurMaterialProxy() {};
 	virtual bool Init( IMaterial *pMaterial, KeyValues *pKeyValues );
-	virtual void OnBind( C_BaseEntity *pEntity );
+	virtual void OnBind( CBaseEntity *pEntity );
 	virtual IMaterial *GetMaterial();
 
 private:
@@ -391,7 +424,6 @@ private:
 
 	static IMaterial	*s_pXBlurMaterial;
 };
-
 
 IMaterial	*CXBlurMaterialProxy::s_pXBlurMaterial = nullptr;
 
@@ -405,7 +437,7 @@ bool CXBlurMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 	return true;
 }
 
-void CXBlurMaterialProxy::OnBind( C_BaseEntity *pEnt )
+void CXBlurMaterialProxy::OnBind( CBaseEntity *pEnt )
 {
 }
 
@@ -429,7 +461,6 @@ IMaterial *CXBlurMaterialProxy::GetXBlurMaterial( IMaterialSystem * materials )
 	return s_pXBlurMaterial;
 }
 
-
 EXPOSE_MATERIAL_PROXY( CXBlurMaterialProxy, blurfilterx );
 
 //=====================================================================================================================
@@ -442,7 +473,7 @@ public:
 	CYBlurMaterialProxy();
 	virtual ~CYBlurMaterialProxy() {};
 	virtual bool Init( IMaterial *pMaterial, KeyValues *pKeyValues );
-	virtual void OnBind( C_BaseEntity *pEntity );
+	virtual void OnBind( CBaseEntity *pEntity );
 	virtual IMaterial *GetMaterial();
 
 private:
@@ -454,7 +485,6 @@ private:
 
 	static IMaterial	*s_pYBlurMaterial;
 };
-
 
 IMaterial	*CYBlurMaterialProxy::s_pYBlurMaterial = nullptr;
 
@@ -468,7 +498,7 @@ bool CYBlurMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 	return true;
 }
 
-void CYBlurMaterialProxy::OnBind( C_BaseEntity *pEnt )
+void CYBlurMaterialProxy::OnBind( CBaseEntity *pEnt )
 {
 }
 
@@ -492,10 +522,7 @@ IMaterial *CYBlurMaterialProxy::GetYBlurMaterial( IMaterialSystem * materials )
 	return s_pYBlurMaterial;
 }
 
-
 EXPOSE_MATERIAL_PROXY( CYBlurMaterialProxy, blurfiltery );
-
-
 
 static void SetRenderTargetAndViewPort(ITexture *rt)
 {
@@ -515,9 +542,9 @@ enum HistogramEntryState_t
 	HESTATE_QUERY_DONE,
 };
 
-constexpr auto NUM_HISTOGRAM_BUCKETS = 31;
-constexpr auto NUM_HISTOGRAM_BUCKETS_NEW = 17;
-constexpr auto MAX_QUERIES_PER_FRAME = 1;
+static constexpr auto NUM_HISTOGRAM_BUCKETS = 31;
+static constexpr auto NUM_HISTOGRAM_BUCKETS_NEW = 17;
+static constexpr auto MAX_QUERIES_PER_FRAME = 1;
 
 class CHistogramBucket
 {
@@ -565,7 +592,6 @@ void CHistogramBucket::IssueQuery( int nFrameNum )
 		IMaterialVar *pMaxVar = pLumCompareMaterial->FindVar( "$C0_Y", nullptr );
 		pMaxVar->SetFloatValue( flTestRangeMax );
 	}
-
 
 	int nScreenMinX = FLerp( nViewportX, ( nViewportX + nViewportWidth - 1 ), 0, 1, m_flScreenMinX );
 	int nScreenMaxX = FLerp( nViewportX, ( nViewportX + nViewportWidth - 1 ), 0, 1, m_flScreenMaxX );
@@ -657,7 +683,7 @@ void CHistogramBucket::IssueQuery( int nFrameNum )
 	m_nFrameQueued = nFrameNum;
 }
 
-constexpr auto HISTOGRAM_BAR_SIZE = 200;
+static constexpr auto HISTOGRAM_BAR_SIZE = 200;
 
 class CTonemapSystem
 {
@@ -1064,7 +1090,6 @@ void CTonemapSystem::UpdateBucketRanges()
 		//Warning( "Bucket %d: min/max %f / %f ", nBucket, pBucket->m_flMinLuminance, pBucket->m_flMaxLuminance );
 	}
 }
-
 
 void CTonemapSystem::SetOverrideTonemapScale( bool bEnableOverride, float flTonemapScale )
 {
@@ -1524,7 +1549,7 @@ public:
 	CBloomAddMaterialProxy();
 	virtual ~CBloomAddMaterialProxy() {}
 	virtual bool Init( IMaterial *pMaterial, KeyValues *pKeyValues );
-	virtual void OnBind( C_BaseEntity *pEntity );
+	virtual void OnBind( CBaseEntity *pEntity );
 	virtual IMaterial *GetMaterial();
 
 private:
@@ -1553,7 +1578,7 @@ bool CBloomAddMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues )
 	return true;
 }
 
-void CBloomAddMaterialProxy::OnBind( C_BaseEntity *pEnt )
+void CBloomAddMaterialProxy::OnBind( CBaseEntity *pEnt )
 {
 	if ( m_pMaterialParam_BloomAmount )
 		m_pMaterialParam_BloomAmount->SetFloatValue( s_flBloomAmount );
@@ -1573,22 +1598,21 @@ EXPOSE_MATERIAL_PROXY( CBloomAddMaterialProxy, BloomAdd );
 // Engine_Post material proxy ============================================================================================
 //=====================================================================================================================
 
-static ConVar mat_software_aa_quality( "mat_software_aa_quality", "0", 0, "Software AA quality mode: (0 - 5-tap filter), (1 - 9-tap filter)" );
-static ConVar mat_software_aa_edge_threshold( "mat_software_aa_edge_threshold", "1.0", 0, "Software AA - adjusts the sensitivity of the software AA shader's edge detection (default 1.0 - a lower value will soften more edges, a higher value will soften fewer)" );
-static ConVar mat_software_aa_blur_one_pixel_lines( "mat_software_aa_blur_one_pixel_lines", "0.5", 0, "How much software AA should blur one-pixel thick lines: (0.0 - none), (1.0 - lots)" );
-static ConVar mat_software_aa_tap_offset( "mat_software_aa_tap_offset", "1.0", 0, "Software AA - adjusts the displacement of the taps used by the software AA shader (default 1.0 - a lower value will make the image sharper, higher will make it blurrier)" );
-static ConVar mat_software_aa_debug( "mat_software_aa_debug", "0", 0, "Software AA debug mode: (0 - off), (1 - show number of 'unlike' samples: 0->black, 1->red, 2->green, 3->blue), (2 - show anti-alias blend strength), (3 - show averaged 'unlike' colour)" );
-static ConVar mat_software_aa_strength_ui( "mat_software_aa_strength_ui", "-1.0", 0, "Same as mat_software_aa_strength, but forced to this value when called by the post vgui AA pass." );
+static ConVar mat_software_aa_quality( side_registry(), "mat_software_aa_quality", "0", 0, "Software AA quality mode: (0 - 5-tap filter), (1 - 9-tap filter)" );
+static ConVar mat_software_aa_edge_threshold( side_registry(), "mat_software_aa_edge_threshold", "1.0", 0, "Software AA - adjusts the sensitivity of the software AA shader's edge detection (default 1.0 - a lower value will soften more edges, a higher value will soften fewer)" );
+static ConVar mat_software_aa_blur_one_pixel_lines( side_registry(), "mat_software_aa_blur_one_pixel_lines", "0.5", 0, "How much software AA should blur one-pixel thick lines: (0.0 - none), (1.0 - lots)" );
+static ConVar mat_software_aa_tap_offset( side_registry(), "mat_software_aa_tap_offset", "1.0", 0, "Software AA - adjusts the displacement of the taps used by the software AA shader (default 1.0 - a lower value will make the image sharper, higher will make it blurrier)" );
+static ConVar mat_software_aa_debug( side_registry(), "mat_software_aa_debug", "0", 0, "Software AA debug mode: (0 - off), (1 - show number of 'unlike' samples: 0->black, 1->red, 2->green, 3->blue), (2 - show anti-alias blend strength), (3 - show averaged 'unlike' colour)" );
+static ConVar mat_software_aa_strength_ui( side_registry(), "mat_software_aa_strength_ui", "-1.0", 0, "Same as mat_software_aa_strength, but forced to this value when called by the post vgui AA pass." );
 
 // FXAA convars - defaults taken from 3.11 implementation
-static ConVar mat_fxaa_subpixel_C( "mat_fxaa_subpixel_C", "0.5", 0, "Effects sub-pixel AA quality and inversely sharpness (only used on FXAA Console): (0.33 - sharper), (0.5 - default)" );
-static ConVar mat_fxaa_edge_sharpness_C( "mat_fxaa_edge_sharpness_C", "8.0", 0, "Does not affect PS3 which uses FXAA_CONSOLE_PS3_EDGE_SHARPNESS define due to being ALU bound (and only safe values are 2, 4, 8). On X360, (2.0 - really soft, good for vector graphics inputs), (4.0 - is softer), (8.0 - is sharper, default)" );
-static ConVar mat_fxaa_edge_threshold_C( "mat_fxaa_edge_threshold_C", "0.125", 0, "Does not affect PS3 which uses FXAA_CONSOLE_PS3_EDGE_THRESHOLD define due to being ALU bound (and only safe values are 1/4, 1/8). On X360, (0.125 - default, leaves less aliasing, but is softer, 0.25 - leaves more aliasing and is sharper)" );
-static ConVar mat_fxaa_edge_threshold_min_C( "mat_fxaa_edge_threshold_min_C", "0.0", 0, "Trims the algorithm from processing darks. Does not affect PS3 due to being ALU bound. (0.04 - slower and less aliasing in darks, 0.05 - default, 0.06 - faster but more aliasing in darks). Special note: when using FXAA_GREEN_AS_LUMA likely want to set this to zero" );
-static ConVar mat_fxaa_subpixel_Q( "mat_fxaa_subpixel_Q", "0.75", 0, "Effects sub-pixel AA quality and inversely sharpness (only used on FXAA Quality): (0.0 - off), (1.0 - upper limit, softer), default = 0.75" );
-static ConVar mat_fxaa_edge_threshold_Q( "mat_fxaa_edge_threshold_Q", ".35", 0, "The minimum amount of local contrast required to apply algorithm: (0.063 - overkill, slower), (0.125 - high quality), (0.166 - default), (0.250 - low quality), (0.333 - too little, faster)" );
-static ConVar mat_fxaa_edge_threshold_min_Q( "mat_fxaa_edge_threshold_min_Q", "0.0", 0, "Trims the algorithm from processing darks: (0.0312 - visible limit, slower), (0.0625 - high quality, faster), (0.0833 - upper limit, the start of fisible unfiltered edges). Special note: when using FXAA_GREEN_AS_LUMA, likely want to set this to zero" );
-
+static ConVar mat_fxaa_subpixel_C( side_registry(), "mat_fxaa_subpixel_C", "0.5", 0, "Effects sub-pixel AA quality and inversely sharpness (only used on FXAA Console): (0.33 - sharper), (0.5 - default)" );
+static ConVar mat_fxaa_edge_sharpness_C( side_registry(), "mat_fxaa_edge_sharpness_C", "8.0", 0, "Does not affect PS3 which uses FXAA_CONSOLE_PS3_EDGE_SHARPNESS define due to being ALU bound (and only safe values are 2, 4, 8). On X360, (2.0 - really soft, good for vector graphics inputs), (4.0 - is softer), (8.0 - is sharper, default)" );
+static ConVar mat_fxaa_edge_threshold_C( side_registry(), "mat_fxaa_edge_threshold_C", "0.125", 0, "Does not affect PS3 which uses FXAA_CONSOLE_PS3_EDGE_THRESHOLD define due to being ALU bound (and only safe values are 1/4, 1/8). On X360, (0.125 - default, leaves less aliasing, but is softer, 0.25 - leaves more aliasing and is sharper)" );
+static ConVar mat_fxaa_edge_threshold_min_C( side_registry(), "mat_fxaa_edge_threshold_min_C", "0.0", 0, "Trims the algorithm from processing darks. Does not affect PS3 due to being ALU bound. (0.04 - slower and less aliasing in darks, 0.05 - default, 0.06 - faster but more aliasing in darks). Special note: when using FXAA_GREEN_AS_LUMA likely want to set this to zero" );
+static ConVar mat_fxaa_subpixel_Q( side_registry(), "mat_fxaa_subpixel_Q", "0.75", 0, "Effects sub-pixel AA quality and inversely sharpness (only used on FXAA Quality): (0.0 - off), (1.0 - upper limit, softer), default = 0.75" );
+static ConVar mat_fxaa_edge_threshold_Q( side_registry(), "mat_fxaa_edge_threshold_Q", ".35", 0, "The minimum amount of local contrast required to apply algorithm: (0.063 - overkill, slower), (0.125 - high quality), (0.166 - default), (0.250 - low quality), (0.333 - too little, faster)" );
+static ConVar mat_fxaa_edge_threshold_min_Q( side_registry(), "mat_fxaa_edge_threshold_min_Q", "0.0", 0, "Trims the algorithm from processing darks: (0.0312 - visible limit, slower), (0.0625 - high quality, faster), (0.0833 - upper limit, the start of fisible unfiltered edges). Special note: when using FXAA_GREEN_AS_LUMA, likely want to set this to zero" );
 
 class CEnginePostMaterialProxy : public CEntityMaterialProxy
 {
@@ -1596,7 +1620,7 @@ public:
 	CEnginePostMaterialProxy();
 	virtual ~CEnginePostMaterialProxy();
 	virtual bool Init( IMaterial *pMaterial, KeyValues *pKeyValues );
-	virtual void OnBind( C_BaseEntity *pEntity );
+	virtual void OnBind( CBaseEntity *pEntity );
 	virtual IMaterial *GetMaterial();
 
 private:
@@ -1633,7 +1657,6 @@ public:
 										 bool bPerformSoftwareAA, bool bPerformBloom, bool bPerformColCorrect, float flAAStrength, float flBloomAmount );
 	static void SetupEnginePostMaterialAA( bool bPerformSoftwareAA, float flAAStrength );
 	static void SetupEnginePostMaterialTextureTransform( const Vector4D & fullViewportBloomUVs, const Vector4D & fullViewportFBUVs, Vector2D destTexSize );
-
 
 private:
 	static float s_vBloomAAValues[4];
@@ -1718,11 +1741,10 @@ bool CEnginePostMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues
 	m_pMaterialParam_FadeColor = pMaterial->FindVar( "$fadeColor", &bFoundVar, false );
 	m_pMaterialParam_FadeType = pMaterial->FindVar( "$fade", &bFoundVar, false );
 
-
 	return true;
 }
 
-void CEnginePostMaterialProxy::OnBind( C_BaseEntity *pEnt )
+void CEnginePostMaterialProxy::OnBind( CBaseEntity *pEnt )
 {
 	int nSplitScreenSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
 
@@ -1780,7 +1802,6 @@ void CEnginePostMaterialProxy::OnBind( C_BaseEntity *pEnt )
 	if ( m_pMaterialParam_FilmGrainStrength )
 		m_pMaterialParam_FilmGrainStrength->SetFloatValue( s_LocalPostProcessParameters[ nSplitScreenSlot ].m_flParameters[ PPPN_FILM_GRAIN_STRENGTH ] );
 
-
 	if ( m_pMaterialParam_FadeType )
 	{
 		int nFadeType = ( s_bViewFadeModulate[nSplitScreenSlot] ) ? 2 : 1;
@@ -1801,9 +1822,6 @@ IMaterial *CEnginePostMaterialProxy::GetMaterial()
 
 	return m_pMaterialParam_AAValues->GetOwningMaterial();
 }
-
-
-
 
 void CEnginePostMaterialProxy::SetupEnginePostMaterialAA( bool bPerformSoftwareAA, float flAAStrength )
 {
@@ -1897,7 +1915,6 @@ void CEnginePostMaterialProxy::SetupEnginePostMaterial(	const Vector4D & fullVie
 
 EXPOSE_MATERIAL_PROXY( CEnginePostMaterialProxy, engine_post );
 
-
 static void DrawBloomDebugBoxes( IMatRenderContext *pRenderContext, int nX, int nY, int nWidth, int nHeight )
 {
 	// draw inset rects which should have a centered bloom 
@@ -1984,7 +2001,7 @@ static float GetBloomAmount( void )
 }
 
 // Control for dumping render targets to files for debugging
-static ConVar mat_dump_rts( "mat_dump_rts", "0", FCVAR_DEVELOPMENTONLY );
+static ConVar mat_dump_rts( side_registry(), "mat_dump_rts", "0", FCVAR_DEVELOPMENTONLY );
 static bool s_bDumpRenderTargets = false;
 static int s_nRTIndex = 0;
 
@@ -2062,7 +2079,6 @@ static void DownsampleFBQuarterSize( IMatRenderContext *pRenderContext, int nSrc
 		}
 	}
 
-
 	// downsample fb to rt0
 	SetRenderTargetAndViewPort( pDest );
 	// note the -2's below. Thats because we are downsampling on each axis and the shader
@@ -2081,8 +2097,6 @@ static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext,
 										int x, int y, int w, int h, bool bExtractBloomRange, bool bClearRGB = true )
 {
 	pRenderContext->PushRenderTargetAndViewport();
-
-
 
 	ITexture *pSrc;
 	IMaterial *xblur_mat;
@@ -2108,10 +2122,8 @@ static void Generate8BitBloomTexture( IMatRenderContext *pRenderContext,
 		dest_rt1 = materials->FindTexture( "_rt_SmallFB1", TEXTURE_GROUP_RENDER_TARGET );
 	}
 
-
 	int nSrcWidth = pSrc->GetActualWidth();
 	int nSrcHeight = pSrc->GetActualHeight(); //,nViewportHeight;
-
 
 	// *Everything* in here relies on the small RTs being exactly 1/4 the full FB res
 	contract_assert( dest_rt0->GetActualWidth()  == pSrc->GetActualWidth()  / 4 );
@@ -2216,14 +2228,13 @@ static void CenterScaleQuadUVs( Vector4D & quadUVs, const Vector2D & uvScale )
 	quadUVs.w		= uvMid.y + uvScale.y*uvRange.y;
 }
 
-#ifdef IRONSIGHT
 bool ApplyIronSightScopeEffect( int x, int y, int w, int h, CViewSetup *pViewSetup, bool bPreparationStage )
 {
 	//the preparation stage returns true if following steps like rendering the scope stencil shape are necessary.
-	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	CBasePlayer *pPlayer = CBasePlayer::GetLocalPlayer();
 	if (pPlayer)
 	{
-		C_WeaponCSBase *pWeapon = (C_WeaponCSBase *)pPlayer->GetActiveWeapon();
+		CWeaponCSBase *pWeapon = (CWeaponCSBase *)pPlayer->GetActiveWeapon();
 		if (pWeapon)
 		{
 			if ( pWeapon->GetIronSightController() )
@@ -2241,15 +2252,14 @@ bool ApplyIronSightScopeEffect( int x, int y, int w, int h, CViewSetup *pViewSet
 	}
 	return false;
 }
-#endif
 
-static ConVar r_queued_post_processing( "r_queued_post_processing", "0" );
+static ConVar r_queued_post_processing( side_registry(), "r_queued_post_processing", "0" );
 
 // How much to dice up the screen during post-processing on 360
 // This has really marginal effects, but 4x1 does seem vaguely better for post-processing
-static ConVar mat_postprocess_x( "mat_postprocess_x", "4" );
-static ConVar mat_postprocess_y( "mat_postprocess_y", "1" );
-static ConVar mat_postprocess_enable( "mat_postprocess_enable", "0" );
+static ConVar mat_postprocess_x( side_registry(), "mat_postprocess_x", "4" );
+static ConVar mat_postprocess_y( side_registry(), "mat_postprocess_y", "1" );
+static ConVar mat_postprocess_enable( side_registry(), "mat_postprocess_enable", "0" );
 
 bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, bool bPostUI )
 {
@@ -2284,7 +2294,6 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 		}
 	}
 
-
 	GetTonemapSettingsFromEnvTonemapController();
 
 	g_bFlashlightIsOn = bFlashlightIsOn;
@@ -2306,7 +2315,6 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 	if ( mat_postprocess_enable.GetInt() == 0 )
 	{
 		GetCurrentTonemappingSystem()->DisplayHistogram();
-
 
 		return false;
 	}
@@ -2390,8 +2398,7 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 			Generate8BitBloomTexture( pRenderContext, x, y, w, h, true, false );
 		}
 
-		C_CSPlayer::RenderLocalScreenSpaceEffect( AR_LEADER_SCREEN_SPACE_EFFECT, pRenderContext, x, y, w, h );
-
+		CCSPlayer::RenderLocalScreenSpaceEffect( AR_LEADER_SCREEN_SPACE_EFFECT, pRenderContext, x, y, w, h );
 
 		// Now add bloom (dest_rt0) to the framebuffer and perform software anti-aliasing and
 		// colour correction, all in one pass (improves performance, reduces quantization errors)
@@ -2475,7 +2482,6 @@ bool DoEnginePostProcessing( int x, int y, int w, int h, bool bFlashlightIsOn, b
 
 	GetCurrentTonemappingSystem()->DisplayHistogram();
 
-
 	return bPerformedPostProcessPass;
 }
 
@@ -2551,17 +2557,14 @@ public:
 	CMotionBlurMaterialProxy();
 	virtual ~CMotionBlurMaterialProxy();
 	virtual bool Init( IMaterial *pMaterial, KeyValues *pKeyValues );
-	virtual void OnBind( C_BaseEntity *pEntity );
+	virtual void OnBind( CBaseEntity *pEntity );
 	virtual IMaterial *GetMaterial();
-
 
 private:
 	IMaterialVar *m_pMaterialParam;
 	IMaterialVar *m_pMaterialParamViewport;
 
 };
-
-
 
 CMotionBlurMaterialProxy::CMotionBlurMaterialProxy()
 {
@@ -2589,7 +2592,7 @@ bool CMotionBlurMaterialProxy::Init( IMaterial *pMaterial, KeyValues *pKeyValues
 	return true;
 }
 
-void CMotionBlurMaterialProxy::OnBind( C_BaseEntity *pEnt )
+void CMotionBlurMaterialProxy::OnBind( CBaseEntity *pEnt )
 {
 	if ( m_pMaterialParam != nullptr )
 	{
@@ -2610,19 +2613,18 @@ IMaterial *CMotionBlurMaterialProxy::GetMaterial()
 	return m_pMaterialParam->GetOwningMaterial();
 }
 
-
 EXPOSE_MATERIAL_PROXY( CMotionBlurMaterialProxy, MotionBlur );
 
 //=====================================================================================================================
 // Image-space Motion Blur ============================================================================================
 //=====================================================================================================================
-ConVar mat_motion_blur_forward_enabled( "mat_motion_blur_forward_enabled", "0" );
-ConVar mat_motion_blur_falling_min( "mat_motion_blur_falling_min", "10.0" );
-ConVar mat_motion_blur_falling_max( "mat_motion_blur_falling_max", "20.0" );
-ConVar mat_motion_blur_falling_intensity( "mat_motion_blur_falling_intensity", "1.0" );
+ConVar mat_motion_blur_forward_enabled( side_registry(), "mat_motion_blur_forward_enabled", "0" );
+ConVar mat_motion_blur_falling_min( side_registry(), "mat_motion_blur_falling_min", "10.0" );
+ConVar mat_motion_blur_falling_max( side_registry(), "mat_motion_blur_falling_max", "20.0" );
+ConVar mat_motion_blur_falling_intensity( side_registry(), "mat_motion_blur_falling_intensity", "1.0" );
 //ConVar mat_motion_blur_roll_intensity( "mat_motion_blur_roll_intensity", "1.0" );
-ConVar mat_motion_blur_rotation_intensity( "mat_motion_blur_rotation_intensity", "1.0" );
-ConVar mat_motion_blur_strength( "mat_motion_blur_strength", "1.0" );
+ConVar mat_motion_blur_rotation_intensity( side_registry(), "mat_motion_blur_rotation_intensity", "1.0" );
+ConVar mat_motion_blur_strength( side_registry(), "mat_motion_blur_strength", "1.0" );
 
 struct MotionBlurHistory_t
 {
@@ -2741,7 +2743,6 @@ bool DoImageSpaceMotionBlur( const CViewSetup &view )
 		while ( flCurrentYaw < -180.0f )
 			flCurrentYaw += 360.0f;
 
-
 		/*engine->Con_NPrintf( 0, "Blur Pitch: %6.2f   Yaw: %6.2f", flCurrentPitch, flCurrentYaw );
 		engine->Con_NPrintf( 1, "Blur FOV: %6.2f   Aspect: %6.2f   Ortho: %s", view.fov, view.m_flAspectRatio, view.m_bOrtho ? "Yes" : "No" );
 		engine->Con_NPrintf( 2, "View Angles: %6.2f %6.2f %6.2f", XYZ(view.angles) );*/
@@ -2759,7 +2760,6 @@ bool DoImageSpaceMotionBlur( const CViewSetup &view )
 		{
 			AngleMatrix( view.angles, mCurrentBasisVectors );
 		}
-
 
 		Vector vCurrentSideVec(  mCurrentBasisVectors[0][1], mCurrentBasisVectors[1][1], mCurrentBasisVectors[2][1] );
 		Vector vCurrentForwardVec( mCurrentBasisVectors[0][0], mCurrentBasisVectors[1][0], mCurrentBasisVectors[2][0] );
@@ -2973,7 +2973,6 @@ bool DoImageSpaceMotionBlur( const CViewSetup &view )
 
 	//engine->Con_NPrintf( 6, "Final values: { %6.2f%%, %6.2f%%, %6.2f%%, %6.2f%% }", g_vMotionBlurValues[0]*100.0f, g_vMotionBlurValues[1]*100.0f, g_vMotionBlurValues[2]*100.0f, g_vMotionBlurValues[3]*100.0f );
 
-
 	//==========================================//
 	// Set global g_vMotionBlurViewportValues[] //
 	//==========================================//
@@ -3063,15 +3062,15 @@ bool DoImageSpaceMotionBlur( const CViewSetup &view )
 //=====================================================================================================================
 // Depth of field =====================================================================================================
 //=====================================================================================================================
-ConVar mat_dof_enabled( "mat_dof_enabled", "1" );
-ConVar mat_dof_override( "mat_dof_override", "0" );
-ConVar mat_dof_near_blur_depth( "mat_dof_near_blur_depth", "20.0" );
-ConVar mat_dof_near_focus_depth( "mat_dof_near_focus_depth", "100.0" );
-ConVar mat_dof_far_focus_depth( "mat_dof_far_focus_depth", "250.0" );
-ConVar mat_dof_far_blur_depth( "mat_dof_far_blur_depth", "1000.0" );
-ConVar mat_dof_near_blur_radius( "mat_dof_near_blur_radius", "10.0" );
-ConVar mat_dof_far_blur_radius( "mat_dof_far_blur_radius", "5.0" );
-ConVar mat_dof_quality( "mat_dof_quality", "0" );
+ConVar mat_dof_enabled( side_registry(), "mat_dof_enabled", "1" );
+ConVar mat_dof_override( side_registry(), "mat_dof_override", "0" );
+ConVar mat_dof_near_blur_depth( side_registry(), "mat_dof_near_blur_depth", "20.0" );
+ConVar mat_dof_near_focus_depth( side_registry(), "mat_dof_near_focus_depth", "100.0" );
+ConVar mat_dof_far_focus_depth( side_registry(), "mat_dof_far_focus_depth", "250.0" );
+ConVar mat_dof_far_blur_depth( side_registry(), "mat_dof_far_blur_depth", "1000.0" );
+ConVar mat_dof_near_blur_radius( side_registry(), "mat_dof_near_blur_radius", "10.0" );
+ConVar mat_dof_far_blur_radius( side_registry(), "mat_dof_far_blur_radius", "5.0" );
+ConVar mat_dof_quality( side_registry(), "mat_dof_quality", "0" );
 
 static float GetNearBlurDepth()
 {
@@ -3226,7 +3225,6 @@ void DoDepthOfField( const CViewSetup &view )
 			0, 0, dest_rt0->GetActualWidth()-1, dest_rt0->GetActualHeight()-1,
 			dest_rt0->GetActualWidth(), dest_rt0->GetActualHeight() );
 
-
 		pRenderContext->PopRenderTargetAndViewport();
 	}
 
@@ -3273,9 +3271,6 @@ void DoDepthOfField( const CViewSetup &view )
 		0, 0, nSrcWidth-1, nSrcHeight-1,
 		nSrcWidth, nSrcHeight, GetClientWorldEntity()->GetClientRenderable() );
 }
-
-
-
 
 void DrawModulationQuad( IMaterial *pMaterial, IMatRenderContext *pRenderContext, uint8 r, uint8 g, uint8 b, uint8 a, float fDepth )
 {
@@ -3365,10 +3360,10 @@ void DrawModulationQuad( IMaterial *pMaterial, IMatRenderContext *pRenderContext
 	pRenderContext->EnableClipping( true );
 }
 
-ConVar cl_blurClearAlpha( "cl_blurClearAlpha", "0", 0, "0-255, but 0 has errors at the moment" );
-ConVar cl_blurDebug( "cl_blurDebug", "0" );
-ConVar cl_blurTapSize( "cl_blurTapSize", "0.5" );
-ConVar cl_blurPasses( "cl_blurPasses", "1" );
+ConVar cl_blurClearAlpha( side_registry(), "cl_blurClearAlpha", "0", 0, "0-255, but 0 has errors at the moment" );
+ConVar cl_blurDebug( side_registry(), "cl_blurDebug", "0" );
+ConVar cl_blurTapSize( side_registry(), "cl_blurTapSize", "0.5" );
+ConVar cl_blurPasses( side_registry(), "cl_blurPasses", "1" );
 
 void BlurEntity( IClientRenderable *pRenderable, bool bPreDraw, int drawFlags, const RenderableInstance_t &instance, const CViewSetup &view, int x, int y, int w, int h )
 {
@@ -3401,7 +3396,6 @@ void BlurEntity( IClientRenderable *pRenderable, bool bPreDraw, int drawFlags, c
 
 	pRenderContext->PushRenderTargetAndViewport();
 
-	
 	int nSrcWidth = pFullFrameFB->GetActualWidth();
 	int nSrcHeight = pFullFrameFB->GetActualHeight();
 
@@ -3515,8 +3509,7 @@ void BlurEntity( IClientRenderable *pRenderable, bool bPreDraw, int drawFlags, c
 	}
 }
 
-
-ConVar cl_teamid( "cl_teamid", "0" );
+ConVar cl_teamid( side_registry(), "cl_teamid", "0" );
 
 class CTeamIdMaterialProxy : public CEntityMaterialProxy
 {
@@ -3544,7 +3537,7 @@ public:
 		return true;
 	}
 
-	virtual void OnBind( C_BaseEntity *pC_BaseEntity )
+	virtual void OnBind( CBaseEntity *pC_BaseEntity )
 	{
 		if ( cl_teamid.GetInt() == 0 )
 		{

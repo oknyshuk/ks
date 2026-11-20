@@ -3,7 +3,7 @@
 
 module;
 
-module ks.core;
+module ks.core.progress;
 
 static ProgressReportHandler_t pReportHandlerFN;
 

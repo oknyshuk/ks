@@ -2,9 +2,9 @@
 // Copyright (c) Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.core:minidump;
+export module ks.core.minidump;
 
-import :platform;
+import ks.core.platform;
 
 export extern "C++" {
 

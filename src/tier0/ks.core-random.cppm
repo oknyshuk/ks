@@ -2,7 +2,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.core:random;
+export module ks.core.random;
 
 import std;
 

@@ -6,7 +6,25 @@
 
 import std;
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.core.logging;
+import ks.core.memalloc;
+import ks.core.platwindow;
+import ks.core.scratcharena;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.polyhedron;
+import ks.platform;
+import ks.simd;
+import ks.tier1.cvar;
+import ks.tier1.exprevaluator;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.map_ops;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
 #include "appframework/ilaunchermgr.h"
 
 #include "appframework/IAppSystemGroup.h"

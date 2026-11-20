@@ -10,7 +10,9 @@ struct SpatializationInfo_t;
 typedef void *FileNameHandle_t;
 struct StartSoundParams_t;
 
-import ks.math;
+import ks.platform;
+import ks.simd;
+import ks.tier1.filename_table;
 #include "cdll_int.h"
 import std;
 

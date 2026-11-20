@@ -1,7 +1,8 @@
 #pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
-import ks.math;
+import ks.platform;
+import ks.simd;
 
 #include "iserverunknown.h"
 #include "string_t.h"

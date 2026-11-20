@@ -2,9 +2,9 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.core:cmdline;
+export module ks.core.cmdline;
 
-import :platform;
+import ks.core.platform;
 
 export extern "C++" {
 

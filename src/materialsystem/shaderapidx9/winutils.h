@@ -3,6 +3,7 @@
 // Copyright (c) 1996-2009 Valve Corporation
 
 #include "togl/rendermechanism.h"
+import ks.core.basetypes;
 
 #ifndef ZeroMemory
 #define ZeroMemory( ptr, size ) memset( ptr, 0, size )

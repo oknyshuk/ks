@@ -1,7 +1,40 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.logging;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.aabb;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.pfns;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.transform;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vector4d;
+import ks.math.vertexcolor;
+import ks.platform;
+import ks.simd;
+import ks.tier1.buffer_strider;
+import ks.tier1.checksum_crc;
+import ks.tier1.commandbuffer;
+import ks.tier1.convar;
+import ks.tier1.fmtstr;
+import ks.tier1.iconvar;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
+import ks.tier1.text_reader;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 #include "softbody.h"
 #include "mathlib/femodel.h"
 #include "mathlib/femodel.inl"

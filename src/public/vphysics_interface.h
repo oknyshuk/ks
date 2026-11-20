@@ -4,7 +4,19 @@
 
 // Purpose: Public interfaces to vphysics DLL
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.polyhedron;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 import std;
 #include "vcollide.h"
 #include "tier3/tier3.h"

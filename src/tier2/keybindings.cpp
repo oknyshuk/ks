@@ -4,6 +4,13 @@
 #include "tier2/keybindings.h"
 #include "tier2/tier2.h"
 #include "inputsystem/iinputsystem.h"
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
+import ks.tier1.text_writer;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 
 //-----------------------------------------------------------------------------
 // Set a key binding

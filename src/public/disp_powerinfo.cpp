@@ -3,6 +3,8 @@
 
 #include "disp_powerinfo.h"
 #include "disp_common.h"
+import ks.core.tslist;
+import ks.math.mathlib;
 
 // ------------------------------------------------------------------------ //
 // Internal classes.

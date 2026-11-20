@@ -3,6 +3,8 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "snd_audio_source.h"
+import ks.core.basetypes;
+import ks.core.types;
 
 //-----------------------------------------------------------------------------
 // Purpose: Linear iterator over source data.

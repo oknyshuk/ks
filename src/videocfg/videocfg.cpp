@@ -3,7 +3,23 @@
 
 // Purpose: Video configuration management (split out from tier2)
 
-import ks.tier1;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.math.ssemath;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.cvar;
+import ks.tier1.iconvar;
+import ks.tier1.icvar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.tier1.text_writer;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 #include "tier2/fileutils.h"
 #include "tier2/tier2.h"
 #include "videocfg/videocfg.h"

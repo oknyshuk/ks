@@ -5,6 +5,8 @@
 #include "black_vs20.inc"
 #include "black_ps20.inc"
 #include "black_ps20b.inc"
+import ks.math.mathlib;
+import ks.math.vector4d;
 
 BEGIN_VS_SHADER( Black, "Help for Black" )
 	

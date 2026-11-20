@@ -10,6 +10,18 @@ import std;
 #include "filesystem_engine.h"
 
 #include "dispcoll_common.h"
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.tier1.interfaces;
+import ks.tier1.small_vector;
+import ks.tier1.strtools;
 
 class CDispCollTree;
 class CCollisionBSPData;

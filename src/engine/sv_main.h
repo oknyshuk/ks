@@ -4,7 +4,16 @@
 
 // Purpose: Expose functions from sv_main.cpp.
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.checksum_crc;
+import ks.tier1.convar;
+import ks.tier1.netadr;
 #include "edict.h"
 #include "packed_entity.h"
 import std;

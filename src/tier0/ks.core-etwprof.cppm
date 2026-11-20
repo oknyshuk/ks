@@ -16,9 +16,9 @@
 //   wevtutil um src\tier0\ValveETWProvider.man
 //   wevtutil im src\tier0\ValveETWProvider.man
 
-export module ks.core:etwprof;
+export module ks.core.etwprof;
 
-import :platform;
+import ks.core.platform;
 
 export extern "C++" {
 

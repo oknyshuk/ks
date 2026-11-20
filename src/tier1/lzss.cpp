@@ -5,7 +5,13 @@
 // are	not aggresive as other alogrithms, but gets 2:1 on most arbitrary uncompressed data.
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.memalloc;
+import ks.core.scratcharena;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.lzss;
 
 constexpr auto LZSS_LOOKSHIFT = 4;
 constexpr auto LZSS_LOOKAHEAD = ( 1 << LZSS_LOOKSHIFT );

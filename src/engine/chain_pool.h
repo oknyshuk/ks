@@ -6,7 +6,11 @@
 // their own chain. Handles stay valid until freed, freed slots are reused most-recent first, elements never move.
 
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.slot_pool;
+import ks.tier1.vector_ops;
 
 import std;
 

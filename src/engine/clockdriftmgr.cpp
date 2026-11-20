@@ -6,6 +6,12 @@
 #include "demo.h"
 #include "server.h"
 #include "enginethreads.h"
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 
 ConVar cl_clock_correction( "cl_clock_correction", "1", FCVAR_CHEAT, "Enable/disable clock correction on the client." );
 

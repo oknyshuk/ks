@@ -3,7 +3,9 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.core;
+import ks.platform;
+import ks.simd;
+import ks.tier1.interfaces;
 #include "shaderapi_global.h"
 #include "tier2/tier2.h"
 #include "shaderdevicedx8.h"

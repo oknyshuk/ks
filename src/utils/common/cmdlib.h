@@ -4,7 +4,17 @@
 
 // cmdlib.h																   
 
-import ks.core;
+import ks.core.basetypes;
+import ks.core.logging;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.icvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
 
 // This can go away when everything is in bin.
 

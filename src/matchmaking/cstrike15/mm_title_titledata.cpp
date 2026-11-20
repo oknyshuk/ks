@@ -2,6 +2,8 @@
 // Copyright (c) 1996-2009 Valve Corporation
 
 #include "mm_title.h"
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 
 static ConVar cl_titledataversionblock1( "cl_titledataversionblock1", "14", FCVAR_DEVELOPMENTONLY, "stats for console title data block1 i/o version." );
 static ConVar cl_titledataversionblock2( "cl_titledataversionblock2", "8", FCVAR_DEVELOPMENTONLY, "stats for console title data block2 i/o version." );

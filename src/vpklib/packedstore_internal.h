@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import ks.core;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 
 inline constexpr auto VPKFILENUMBER_EMBEDDED_IN_DIR_FILE = 0x7fff; // if a chunk refers to this file number, it is data embedded in the same file as the directory block.
 

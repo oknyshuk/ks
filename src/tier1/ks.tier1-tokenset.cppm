@@ -2,11 +2,13 @@
 // Copyright (c) 2008 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:tokenset;
+export module ks.tier1.tokenset;
 
 import std;
-import ks.math;
-export import :strtools_inlines;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.strtools_inlines;
 
 export extern "C++" {
 
@@ -120,5 +122,10 @@ inline const char *tokenset_t< _T >::GetNameByToken( _T token, char const *szMis
 
 	return szMismatchResult;
 }
+
+// The instantiations the game uses, made here once: GCC 16 fails to load them ("recursive lazy
+// load") when a side module's partitions each instantiate their own.
+template struct tokenset_t< int >;
+template struct tokenset_t< const char * >;
 
 }

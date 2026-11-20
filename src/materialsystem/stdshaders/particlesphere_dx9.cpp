@@ -9,6 +9,10 @@
 #include "particlesphere_ps20.inc"
 #include "particlesphere_ps20b.inc"
 #include "common_hlsl_cpp_consts.h"
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 
 
 static ConVar mat_depthfeather_enable( "mat_depthfeather_enable", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );

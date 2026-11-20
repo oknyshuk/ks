@@ -3,6 +3,8 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "disp_powerinfo.h"
+import ks.core.basetypes;
+import ks.core.types;
 
 inline int InternalVertIndex( const CPowerInfo *pInfo, const CVertIndex &vert )
 {

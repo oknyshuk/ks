@@ -5,7 +5,7 @@
 // The declarations are attached to the global module (extern "C++") so their symbols and forward
 // declarations elsewhere are unchanged.
 
-export module ks.math:pfns;
+export module ks.math.pfns;
 
 import std;
 import ks.simd;

@@ -45,7 +45,7 @@ target_compile_definitions(tier1 PRIVATE TIER1_STATIC_LIB=1)
 add_library(ks_tier1 STATIC)
 target_sources(ks_tier1 PUBLIC
     FILE_SET CXX_MODULES
-    FILES ks.tier1.cppm
+    FILES
           ks.tier1-interfaces.cppm
           ks.tier1-iappsystem.cppm
           ks.tier1-icvar.cppm

@@ -1,7 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2004 Valve Corporation
 
-import ks.math;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.platform;
+import ks.simd;
+import ks.tier1.intern_pool;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
+import ks.tier1.uniqueid;
 #include "dmxloader/dmxelement.h"
 #include "dmxloader/dmxattribute.h"
 import std;

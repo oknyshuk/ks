@@ -3,7 +3,9 @@
 // Copyright (c) 2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 #include "imagepacker.h"
 
 #include "pixelwriter.h"

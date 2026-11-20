@@ -4,6 +4,12 @@
 import std;
 
 #include "mm_framework.h"
+import ks.math.mathlib;
+import ks.tier1.convar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.strtools;
+import ks.tier1.tier1;
 
 // GCSDK uses the console log channel
 

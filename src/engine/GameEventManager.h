@@ -1,4 +1,6 @@
 #pragma once
+import ks.platform;
+import ks.simd;
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
@@ -10,7 +12,6 @@
 
 #include <igameevents.h>
 import std;
-import ks.tier1;
 #include <networkstringtabledefs.h>
 #include "netmessages.h"
 

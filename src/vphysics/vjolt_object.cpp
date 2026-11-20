@@ -36,7 +36,16 @@
 #include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
 #include <Jolt/Physics/Constraints/SliderConstraint.h>
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.transform;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.vector_ops;
 #include "cmodel.h"
 #include "vcollide_parse.h"
 #include "vphysics/collision_set.h"

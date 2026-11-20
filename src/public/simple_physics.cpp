@@ -2,7 +2,11 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.core;
+import ks.core.tslist;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "simple_physics.h"
 
 CSimplePhysics::CSimplePhysics()

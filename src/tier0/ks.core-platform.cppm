@@ -12,12 +12,12 @@ module;
 #include <unistd.h>
 #include <wchar.h>
 
-export module ks.core:platform;
+export module ks.core.platform;
 
 import std;
 
-export import :types;
-export import :wchartypes;
+export import ks.core.types;
+export import ks.core.wchartypes;
 
 export using ::stdin;
 export using ::stdout;

@@ -8,7 +8,13 @@
 #include "qlimits.h"
 #include <inetmessage.h>
 #include <filesystem.h>
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.keyvalues;
+import ks.tier1.ns_address;
 #include "const.h"
 #include "inetchannel.h"
 #include "netmessages.h"

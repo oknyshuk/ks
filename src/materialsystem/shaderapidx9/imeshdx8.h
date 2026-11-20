@@ -4,6 +4,7 @@
 
 #include "meshbase.h"
 #include "shaderapi/ishaderapi.h"
+import ks.core.types;
 
 class IMeshMgr
 {

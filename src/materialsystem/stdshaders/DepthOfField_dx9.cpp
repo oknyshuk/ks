@@ -3,7 +3,11 @@
 
 // Purpose: Depth of field material
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 #include "BaseVSShader.h"
 #include "depth_of_field_vs20.inc"
 #include "depth_of_field_ps20b.inc"

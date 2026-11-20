@@ -4,12 +4,17 @@
 // Purpose: Entry point of srceng. The engine, game server and game client are linked into
 // this executable, so there is nothing to locate or load: call straight into the launcher.
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
 #include "game_entry.h"
+import ks.server;
+import ks.client;
 
 // Both game sides are linked into this executable.
-static void *ServerFactory( const char *pName, int *pReturnCode ) { return ks::server_registry().create_interface( pName, pReturnCode ); }
-static void *ClientFactory( const char *pName, int *pReturnCode ) { return ks::client_registry().create_interface( pName, pReturnCode ); }
+static void *ServerFactory( const char *pName, int *pReturnCode ) { return ks::server::create_interface( pName, pReturnCode ); }
+static void *ClientFactory( const char *pName, int *pReturnCode ) { return ks::client::create_interface( pName, pReturnCode ); }
 CreateInterfaceFn ServerGameFactory() { return &ServerFactory; }
 CreateInterfaceFn ClientGameFactory() { return &ClientFactory; }
 

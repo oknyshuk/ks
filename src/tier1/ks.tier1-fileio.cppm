@@ -2,11 +2,14 @@
 // Copyright (c) 1996-2008 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:fileio;
+export module ks.tier1.fileio;
 
 import std;
-import ks.math;
-export import :utlstring;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.utlstring;
 
 export extern "C++" {
 

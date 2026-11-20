@@ -5,6 +5,9 @@
 #include "gl_model_private.h"
 
 #include "draw.h"
+import ks.core.basetypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
 
 void				Decal_Init( void );
 void				Decal_Shutdown( void );

@@ -11,6 +11,8 @@
 #include "customweapon_ps30.inc"
 
 #include "shaderlib/commandbuilder.h"
+import ks.math.mathlib;
+import ks.tier1.convar;
 
 void InitParamsCustomWeapon( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, CustomWeaponVars_t &info )
 {

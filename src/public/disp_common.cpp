@@ -4,6 +4,13 @@
 #include "disp_common.h"
 #include "disp_powerinfo.h"
 #include "builddisp.h"
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
 
 class CNodeVert
 {

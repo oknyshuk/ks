@@ -5,9 +5,10 @@
 #endif
 #if defined(CLIENT_DLL)
 import std;
-import ks.core;
 #endif
 #include "crtmemdebug.h"
+import ks.platform;
+import ks.simd;
 
 void CheckHeap( void )
 {

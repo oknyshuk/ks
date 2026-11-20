@@ -2,7 +2,17 @@
 // Copyright (c) 1996-2012 Valve Corporation
 
 import std;
-import ks.math;
+import ks.core.platform;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.math.volumeculler;
+import ks.math.vplane;
+import ks.platform;
+import ks.simd;
 
 // Returns true if the AABB is completely within the frustum.
 // Basic scalar approach derived from "Real Time Rendering" 2nd edition section 13.13.3.

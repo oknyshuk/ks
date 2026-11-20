@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.core;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
 #include "decal_private.h"
 #include "decal_clip.h"
 import std;

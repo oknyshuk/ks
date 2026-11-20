@@ -39,3 +39,4 @@ IMatchVoice * CMatchSystem::GetMatchVoice()
 
 //-----------------------------------------------------------------------------
 #include "facade/imatchsystem.inl"
+import ks.core.platform;

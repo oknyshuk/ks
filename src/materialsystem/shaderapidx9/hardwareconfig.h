@@ -6,6 +6,7 @@
 #include "IHardwareConfigInternal.h"
 #include "bitmap/imageformat.h"
 #include "materialsystem/imaterialsystem.h"
+import ks.core.types;
 
 //-----------------------------------------------------------------------------
 // Forward declarations

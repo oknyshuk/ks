@@ -8,7 +8,19 @@
 
 // Valve includes
 import std;
-import ks.tier1;
+import ks.core.numeric;
+import ks.core.scratcharena;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.ssequaternion;
+import ks.math.transform;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 #include "bone_setup.h"
 #include "bone_constraints.h"
 #include "bone_accessor.h"

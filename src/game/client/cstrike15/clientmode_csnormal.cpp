@@ -1,65 +1,105 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-#include "rocketui/rmlui.h"
-#include "const.h"
-#include "predictable_entity.h"
-#include "cdll_util.h"
-#include "util_shared.h"
-#include "baseentity_shared.h"
-#include "c_basecombatweapon.h"
-#include "c_basecombatcharacter.h"
-#include "gamerules.h"
-#include "c_baseplayer.h"
-#include "vphysics_interface.h"
-#include "c_recipientfilter.h"
-#include "cdll_client_int.h"
-#include "engine/ivmodelinfo.h"
-#include "debugoverlay_shared.h"
-#include "hud.h"
-#include "clientmode_csnormal.h"
-#include "cdll_client_int.h"
-#include "iinput.h"
-#include "ivmodemanager.h"
-#include "cliententitylist.h"
-#include "filesystem.h"
-#include "hud_basechat.h"
-#include "view_shared.h"
-#include "ivrenderview.h"
-#include "cs_gamerules.h"
-#include "gameui/gameui_interface.h"
-#include "c_cs_playerresource.h"
-#include "smokegrenade_projectile.h"
-#include "cs_item_inventory.h"
-#include "c_props.h"
-#include "c_baseplayer.h"
-#include "c_playerresource.h"
-#include "c_soundscape.h"
-#include "uicenterprint.h"
-#include "physpropclientside.h"
-#include "c_weapon__stubs.h"
+module;
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+#include <wchar.h>
 #include <engine/IEngineSound.h>
-#include "c_cs_hostage.h"
-#include "buy_presets/buy_presets.h"
-#include "usermessages.h"
-#include "prediction.h"
-#include "achievementmgr.h"
-#include "achievements_cs.h"
-#include "hud_macros.h"
-#include "c_plantedc4.h"
-#include "cs_client_gamestats.h"
-#include "viewpostprocess.h"
-#include "../../engine/keys.h"
-#include "RocketUI/rkmenu_main.h"
-#include "gameui/uigamedata.h"
-#include "GameStats.h"
-#include "glow_outline_effect.h"
-#include "hltvcamera.h"
-#include "basecsgrenade_projectile.h"
-#include "hud_chat.h"
+#include "GameUI/IGameUI.h"
+#include "IGameUIFuncs.h"
+#include "client_class.h"
+#include "declare_class.h"
+#include "engine/ivmodelinfo.h"
+#include "game/client/viewport_panel_names.h"
+#include "input_device.h"
 #include "localize/ilocalize.h"
-#include "hltvreplaysystem.h"
+#include "matchmaking/imatchframework.h"
 #include "netmessages.h"
+#include "reflect_annotations.h"
+#include "usermessages_schema.h"
+#include "utils/common/scriplib.h"
+#include "view_shared.h"
+#include "vphysics_interface.h"
+#include "../weapon__stubs.h"
+#include "../cdll_client_int.h"
+#include "../hud_element_helper.h"
+#include "../hud_macros.h"
+#include "../predictable_entity.h"
+#include "../reflect_predmap.h"
+#include "../reflect_recvtable.h"
+module ks.client;
+
+import std;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.random;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.game.cstrike15.cs_player_rank_shared;
+import ks.game.postprocess_shared;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.fmtstr;
+import ks.tier1.iconvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.playerid;
+import ks.tier1.reflect_wirevar;
+import ks.tier1.registry;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
+import :particlemgr;
+import :baseentity;
+import :iinput;
+import :props;
+import :baseanimatedtextureproxy;
+import :sharedvar;
+import :util;
+import :cstrike15.RocketUI.rkconsole;
+import :cstrike15.VGUI.counterstrikeviewport;
+import :cstrike15.cs_player;
+import :cstrike15.buy_presets.buy;
+import :cstrike15.cs_shareddefs;
+import :cstrike15.gameui.bonusmapsdatabase;
+import :game_controls.baseviewport;
+import :gamevars_shared;
+import :precache;
+import :noopanimcontroller;
+import ks.game.shareddefs;
+import :triggers;
+import :achievements_and_stats_interface;
+import :cstrike15.cs_player_shared;
+import :econ.econ_item_schema_minimal;
+import ks.game.gamemovement;
+import ks.game.mapentities_shared;
+
+class CAchievementMgr;
+class CBaseHudChat;
+class CEconQuestDefinition;
+class CHudChat;
+class CBaseAnimating;
+class CBaseAnimatingOverlay;
+class CBaseCombatWeapon;
+class CBaseEntity;
+class CBasePlayer;
+class CCSPlayer;
+class CColorCorrection;
+class CEconItemView;
+class CPostProcessController;
+class CWeaponCSBase;
+class IClientMode;
+
+using namespace ::ks::reflect;
 
 //
 // WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!!
@@ -86,20 +126,19 @@ bool __MsgFunc_PlayerDecalDigitalSignature( const ks::net::CCSUsrMsg_PlayerDecal
 // WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!!
 //
 
-class CHudChat;
 
 //-----------------------------------------------------------------------------
 ConVar cl_spec_mode(
-	"cl_spec_mode",
+	side_registry(), "cl_spec_mode",
 	"0",
 	FCVAR_USERINFO | FCVAR_CLIENTDLL | FCVAR_ARCHIVE | FCVAR_SS | FCVAR_SERVER_CAN_EXECUTE,
 	"Saves the last viewed spectator mode for use next time we start to spectate" );
 
-ConVar cl_draw_only_deathnotices( "cl_draw_only_deathnotices", "0", FCVAR_CHEAT, "For drawing only the crosshair and death notices (used for moviemaking)" );
-ConVar cl_radar_square_with_scoreboard( "cl_radar_square_with_scoreboard", "1", FCVAR_ARCHIVE | FCVAR_RELEASE, "If set, the radar will toggle to square when the scoreboard is visible." );
+ConVar cl_draw_only_deathnotices( side_registry(), "cl_draw_only_deathnotices", "0", FCVAR_CHEAT, "For drawing only the crosshair and death notices (used for moviemaking)" );
+ConVar cl_radar_square_with_scoreboard( side_registry(), "cl_radar_square_with_scoreboard", "1", FCVAR_ARCHIVE | FCVAR_RELEASE, "If set, the radar will toggle to square when the scoreboard is visible." );
 
-ConVar default_fov( "default_fov", "90", FCVAR_CHEAT );
-ConVar fov_desired( "fov_desired", "90", FCVAR_ARCHIVE | FCVAR_USERINFO, "Sets the base field-of-view.", true, MIN_FOV, true, MAX_FOV );
+ConVar default_fov( side_registry(), "default_fov", "90", FCVAR_CHEAT );
+ConVar fov_desired( side_registry(), "fov_desired", "90", FCVAR_ARCHIVE | FCVAR_USERINFO, "Sets the base field-of-view.", true, MIN_FOV, true, MAX_FOV );
 
 static IClientMode *g_pClientMode[ MAX_SPLITSCREEN_PLAYERS ];
 IClientMode *GetClientMode()
@@ -108,13 +147,12 @@ IClientMode *GetClientMode()
 	return g_pClientMode[ GET_ACTIVE_SPLITSCREEN_SLOT() ];
 }
 
-
 // This is a temporary entity used to render the player's model while drawing the class selection menu.
-CHandle<C_BaseAnimatingOverlay> g_ClassImagePlayer;	// player
-CHandle<C_BaseAnimating> g_ClassImageWeapon;	// weapon
+CHandle<CBaseAnimatingOverlay> g_ClassImagePlayer;	// player
+CHandle<CBaseAnimating> g_ClassImageWeapon;	// weapon
 
-STUB_WEAPON_CLASS( cycler_weapon,	WeaponCycler,	C_BaseCombatWeapon );
-STUB_WEAPON_CLASS( weapon_cubemap,	WeaponCubemap,	C_BaseCombatWeapon );
+STUB_WEAPON_CLASS( cycler_weapon,	WeaponCycler,	CBaseCombatWeapon );
+STUB_WEAPON_CLASS( weapon_cubemap,	WeaponCubemap,	CBaseCombatWeapon );
 
 //-----------------------------------------------------------------------------
 // HACK: the detail sway convars are archive, and default to 0.  Existing CS:S players thus have no detail
@@ -125,9 +163,7 @@ extern ConVar cl_detail_avoid_radius;
 extern ConVar cl_detail_avoid_force;
 extern ConVar cl_detail_avoid_recover_speed;
 
-
 extern CAchievementMgr g_AchievementMgrCS;
-
 
 // Player sprays data
 struct PlayerSprayClientRequestData_t
@@ -143,16 +179,15 @@ static std::map< int, PlayerSprayClientRequestData_t > s_mapClientDigitalSignatu
 static uint32 GetLocalAccountID()
 {
 	CPlayerId localId;
-	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+	CBasePlayer *pLocalPlayer = CBasePlayer::GetLocalPlayer();
 	if ( pLocalPlayer && pLocalPlayer->GetPlayerID( &localId ) )
 		return localId.GetAccountID();
 	return 0;
 }
 
-
 //--------------------------------------------------------------------------------------------------------
 static void cl_reloadpostprocessparams( const CCommand &args );
-static ConCommand cl_reloadpostprocessparams_command( "cl_reloadpostprocessparams", cl_reloadpostprocessparams, "", FCVAR_CHEAT );
+static ConCommand cl_reloadpostprocessparams_command( side_registry(), "cl_reloadpostprocessparams", cl_reloadpostprocessparams, "", FCVAR_CHEAT );
 static void cl_reloadpostprocessparams( const CCommand &args )
 {
 	// get optional filename
@@ -166,7 +201,7 @@ static void cl_reloadpostprocessparams( const CCommand &args )
 	}
 }
 static void cl_sos_test_set_opvar( const CCommand &args );
-static ConCommand cl_sos_test_set_opvar_command( "cl_sos_test_set_opvar", cl_sos_test_set_opvar, "", FCVAR_CHEAT );
+static ConCommand cl_sos_test_set_opvar_command( side_registry(), "cl_sos_test_set_opvar", cl_sos_test_set_opvar, "", FCVAR_CHEAT );
 static void cl_sos_test_set_opvar( const CCommand &args )
 {
 	// get optional filename
@@ -176,7 +211,7 @@ static void cl_sos_test_set_opvar( const CCommand &args )
 	}
 }
 static void cl_sos_test_get_opvar( const CCommand &args );
-static ConCommand cl_sos_test_get_opvar_command( "cl_sos_test_get_opvar", cl_sos_test_get_opvar, "", FCVAR_CHEAT );
+static ConCommand cl_sos_test_get_opvar_command( side_registry(), "cl_sos_test_get_opvar", cl_sos_test_get_opvar, "", FCVAR_CHEAT );
 static void cl_sos_test_get_opvar( const CCommand &args )
 {
 	// get optional filename
@@ -188,10 +223,8 @@ static void cl_sos_test_get_opvar( const CCommand &args )
 	}
 }
 
-
-
 static void toggleRdrOpt( const CCommand &args );
-static ConCommand toggleRdrOpt_command( "toggleRdrOpt", toggleRdrOpt, "", FCVAR_DEVELOPMENTONLY );
+static ConCommand toggleRdrOpt_command( side_registry(), "toggleRdrOpt", toggleRdrOpt, "", FCVAR_DEVELOPMENTONLY );
 static void toggleRdrOpt( const CCommand &args )
 {
 	static bool s_fastMode = false;
@@ -222,7 +255,6 @@ static void toggleRdrOpt( const CCommand &args )
 	}
 	Msg( "Rdr opt = %s\n", s_fastMode ? "TRUE":"FALSE" );
 }
-
 
 //--------------------------------------------------------------------------------------------------------
 const char* ClientModeCSNormal::ms_postProcessEffectNames[NUM_POST_EFFECTS] = 
@@ -258,14 +290,14 @@ PostProcessParameters_t ClientModeCSNormal::ms_postProcessParams[NUM_POST_EFFECT
 
 //-----------------------------------------------------------------------------
 ConVar cl_autobuy(
-	"cl_autobuy",
+	side_registry(), "cl_autobuy",
 	"",
 	FCVAR_RELEASE,
 	"The order in which autobuy will attempt to purchase items" );
 
 //-----------------------------------------------------------------------------
 ConVar cl_rebuy(
-	"cl_rebuy",
+	side_registry(), "cl_rebuy",
 	"",
 	FCVAR_RELEASE,
 	"The order in which rebuy will attempt to repurchase items" );
@@ -314,7 +346,7 @@ static void SetBuyData( ConVar &buyVar, const char *filename )
 
 bool MsgFunc_KillCam( const ks::net::CCSUsrMsg_KillCam &msg ) 
 {
-	C_CSPlayer *pPlayer = ToCSPlayer( C_BasePlayer::GetLocalPlayer() );
+	CCSPlayer *pPlayer = ToCSPlayer( CBasePlayer::GetLocalPlayer() );
 
 	if ( !pPlayer )
 		return true;
@@ -344,7 +376,7 @@ bool MsgFunc_KillCam( const ks::net::CCSUsrMsg_KillCam &msg )
 
 bool MsgFunc_DisplayInventory( const ks::net::CCSUsrMsg_DisplayInventory &msg )
 {
-	C_CSPlayer *pPlayer = ToCSPlayer( C_BasePlayer::GetLocalPlayer() );
+	CCSPlayer *pPlayer = ToCSPlayer( CBasePlayer::GetLocalPlayer() );
 	if ( !pPlayer )
 		return true;
 
@@ -437,7 +469,6 @@ void CCSModeManager::LevelShutdown( void )
 	}
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -472,7 +503,6 @@ ClientModeCSNormal::ClientModeCSNormal()
 ClientModeCSNormal::~ClientModeCSNormal()
 {
 }
-
 
 void ClientModeCSNormal::Init()
 {
@@ -596,8 +626,6 @@ void ClientModeCSNormal::Init()
 // 		}
 // 	}
 
-
-	
 	/*
 	int nTimer = static_cast<int>( ceil( pRules->GetRoundRemainingTime() ) );
 
@@ -612,7 +640,6 @@ void ClientModeCSNormal::Init()
 
 	m_hCurrentColorCorrection = nullptr;
 }
-
 
 void ClientModeCSNormal::InitViewport()
 {
@@ -695,7 +722,7 @@ bool ClientModeCSNormal::GetIdealCameraPosForPlayer( int playerindex )
 	if ( !pPlayer )
 		return false;
 
-	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+	CBasePlayer *pLocalPlayer = CBasePlayer::GetLocalPlayer();
 	if ( !pLocalPlayer )
 		return false;
 
@@ -763,9 +790,9 @@ bool ClientModeCSNormal::GetIdealCameraPosForPlayer( int playerindex )
 			for ( int j = 0; j < count; j++ )
 			{
 				CBaseEntity *pOther = pEntList[j];
-				if ( focusCount < nMaxFocusPoints && (dynamic_cast<C_CSPlayer*>(pOther) || 
-					(dynamic_cast<C_WeaponCSBase*>(pOther) && (dynamic_cast<C_WeaponCSBase*>(pOther)->GetWeaponType() == WEAPONTYPE_C4)  ) || 
-					dynamic_cast<C_PlantedC4*>(pOther) || 
+				if ( focusCount < nMaxFocusPoints && (dynamic_cast<CCSPlayer*>(pOther) || 
+					(dynamic_cast<CWeaponCSBase*>(pOther) && (dynamic_cast<CWeaponCSBase*>(pOther)->GetWeaponType() == WEAPONTYPE_C4)  ) || 
+					dynamic_cast<CPlantedC4*>(pOther) || 
 					dynamic_cast<CBaseCSGrenadeProjectile*>(pOther)) )
 				{
 					Vector vecOtherPos = pOther->IsPlayer() ? pOther->EyePosition() : pOther->GetAbsOrigin();
@@ -835,7 +862,6 @@ bool ClientModeCSNormal::GetIdealCameraPosForPlayer( int playerindex )
 	return false;
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -891,7 +917,7 @@ void ClientModeCSNormal::Update()
 	if ( ( m_fDelayedCTWinTime > 0.0f ) && ( gpGlobals->curtime >= m_fDelayedCTWinTime  ) )
 	{
 		CLocalPlayerFilter filter;
-		C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.CTWin");
+		CBaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.CTWin");
 
 		m_fDelayedCTWinTime = -1.0f;
 	}
@@ -904,7 +930,7 @@ void ClientModeCSNormal::Update()
 		if( !bStartedHalfTimeMusic && gpGlobals->curtime - flHalfTimeStart > 6.5 )
 		{
 			bStartedHalfTimeMusic = true;
-			CSingleUserRecipientFilter filter(C_BasePlayer::GetLocalPlayer());
+			CSingleUserRecipientFilter filter(CBasePlayer::GetLocalPlayer());
 			if( CSGameRules()->GetGamePhase() == GAMEPHASE_HALFTIME )
 			{
 				PlayMusicSelection(filter, CSMUSIC_HALFTIME);
@@ -1053,39 +1079,13 @@ void ClientModeCSNormal::Update()
 
 }
 
-#ifdef _DEBUG
-static void quest_ui_test( const CCommand &args );
-static ConCommand quest_ui_test_command( "quest_ui_test", quest_ui_test, "Test quest ui", FCVAR_CLIENTCMD_CAN_EXECUTE );
-static void quest_ui_test( const CCommand &args )
-{
-	int newPoints = 1;
-	int totalPoints = 10;
-	int maxPoints = 20;
-
-	if (args.ArgC() > 1)
-	{
-		newPoints = V_atoi(args.ArgV()[1]);
-	}
-
-	if (args.ArgC() > 2)
-	{
-		totalPoints = V_atoi(args.ArgV()[2]);
-	}
-
-	if (args.ArgC() > 3)
-	{
-		maxPoints = V_atoi(args.ArgV()[3]);
-	}
-}
-#endif
-
-ConVar spec_replay_colorcorrection( "spec_replay_colorcorrection", "0.5", FCVAR_CLIENTDLL, "Amount of color correction in deathcam replay" );
+ConVar spec_replay_colorcorrection( side_registry(), "spec_replay_colorcorrection", "0.5", FCVAR_CLIENTDLL, "Amount of color correction in deathcam replay" );
 
 //--------------------------------------------------------------------------------------------------------
 void ClientModeCSNormal::UpdateColorCorrectionWeights( void )
 {
-	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
-	C_CSPlayer* pPlayer = ToCSPlayer(pLocalPlayer);
+	CBasePlayer *pLocalPlayer = CBasePlayer::GetLocalPlayer();
+	CCSPlayer* pPlayer = ToCSPlayer(pLocalPlayer);
 
 	if ( !pPlayer )
 	{
@@ -1195,10 +1195,10 @@ void ClientModeCSNormal::OnColorCorrectionWeightsReset( void )
 	g_pColorCorrectionMgr->SetColorCorrectionWeight( m_CCFreezePeriodHandle_T, m_CCFreezePeriodPercent_T );
 	g_pColorCorrectionMgr->SetColorCorrectionWeight( m_CCPlayerFlashedHandle, m_CCPlayerFlashedPercent );
 
-	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	CBasePlayer *pPlayer = CBasePlayer::GetLocalPlayer();
 	if ( pPlayer )
 	{
-		C_ColorCorrection* pCC = pPlayer->GetActiveColorCorrection();
+		CColorCorrection* pCC = pPlayer->GetActiveColorCorrection();
 		if ( pCC != m_hCurrentColorCorrection )
 		{
 			if ( m_hCurrentColorCorrection )
@@ -1231,7 +1231,6 @@ PostProcessEffect_t ClientModeCSNormal::PostProcessEffectFromName( const char* p
 	}
 	return NUM_POST_EFFECTS;
 }
-
 
 //--------------------------------------------------------------------------------------------------------
 void ClientModeCSNormal::LoadPostProcessParamsFromFile( const char* pFileName )
@@ -1280,13 +1279,12 @@ void ClientModeCSNormal::LoadPostProcessParamsFromFile( const char* pFileName )
 	pPPKeys->deleteThis();
 }
 
-
 //--------------------------------------------------------------------------------------------------------
 extern ConVar	spec_freeze_time;
 void ClientModeCSNormal::UpdatePostProcessingEffects()
 {
-	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
-	C_CSPlayer* pPlayer = ToCSPlayer(pLocalPlayer);
+	CBasePlayer *pLocalPlayer = CBasePlayer::GetLocalPlayer();
+	CCSPlayer* pPlayer = ToCSPlayer(pLocalPlayer);
 
 	// If we set off the bomb, run the bomb round end post process effect.
 	if ( pPlayer && m_iRoundStatus == ROUND_ENDED_VIA_BOMBING && (pPlayer->GetObserverMode() == OBS_MODE_DEATHCAM || ( pPlayer->GetObserverTarget() && !pPlayer->GetObserverTarget()->IsPlayer() ) ) )
@@ -1302,7 +1300,7 @@ void ClientModeCSNormal::UpdatePostProcessingEffects()
 		// Our view is on a camera
 		PostProcessLerpTo( POST_EFFECT_DEFAULT );
 	}
-	else if ( pPlayer->GetObserverInterpState() == C_CSPlayer::OBSERVER_INTERP_TRAVELING )
+	else if ( pPlayer->GetObserverInterpState() == CCSPlayer::OBSERVER_INTERP_TRAVELING )
 	{		
 		PostProcessLerpTo( POST_EFFECT_SPEC_CAMERA_LERPING, 0.1f );
 	}
@@ -1345,7 +1343,6 @@ void ClientModeCSNormal::UpdatePostProcessingEffects()
 		PostProcessLerpTo( POST_EFFECT_DEATH_CAM );
 	}
 
-	
 	/*
 	else if ( pPlayer && pPlayer->GetHealth() <= pPlayer->GetMaxHealth()/3 )
 	{
@@ -1366,7 +1363,7 @@ void ClientModeCSNormal::UpdatePostProcessingEffects()
 	}*/
 	else
 	{
-		C_PostProcessController* pPPCtrl = pPlayer->GetActivePostProcessController();
+		CPostProcessController* pPPCtrl = pPlayer->GetActivePostProcessController();
 
 		float flFadeTime = 0.5f;
 		if ( m_activePostProcessEffect == POST_EFFECT_ZOOMED_SNIPER_MOVING || m_activePostProcessEffect == POST_EFFECT_ZOOMED_SNIPER ||
@@ -1382,7 +1379,7 @@ void ClientModeCSNormal::UpdatePostProcessingEffects()
 		{
 			// FIXME: In the main menu the server is unable to set up the postprocess controller for the player for some reason.
 			// Just use the master controller for now.
-			pPPCtrl = C_PostProcessController::GetMasterController();
+			pPPCtrl = CPostProcessController::GetMasterController();
 		}
 
 		if ( !pPPCtrl )
@@ -1431,9 +1428,8 @@ void ClientModeCSNormal::PostProcessLerpTo( PostProcessEffect_t effectID, float 
 	}
 }
 
-
 //--------------------------------------------------------------------------------------------------------
-void ClientModeCSNormal::PostProcessLerpTo( PostProcessEffect_t effectID, const C_PostProcessController* pPostProcessController )
+void ClientModeCSNormal::PostProcessLerpTo( PostProcessEffect_t effectID, const CPostProcessController* pPostProcessController )
 {
 	contract_assert( pPostProcessController );
 
@@ -1460,7 +1456,6 @@ void ClientModeCSNormal::PostProcessLerpTo( PostProcessEffect_t effectID, const 
 	m_postProcessLerpEndParams = pPostProcessController->m_PostProcessParameters;
 
 }
-
 
 //--------------------------------------------------------------------------------------------------------
 void ClientModeCSNormal::DoPostProcessParamLerp()
@@ -1505,13 +1500,12 @@ void ClientModeCSNormal::LerpPostProcessParam( float fAmount, PostProcessParamet
 #undef PP_LERP
 }
 
-
 //--------------------------------------------------------------------------------------------------------
-void ClientModeCSNormal::GetDefaultPostProcessingParams( C_CSPlayer* pPlayer, PostProcessEffectParams_t* pParams )
+void ClientModeCSNormal::GetDefaultPostProcessingParams( CCSPlayer* pPlayer, PostProcessEffectParams_t* pParams )
 {
 	contract_assert( pParams );
 
-	C_PostProcessController* pPPCtrl = nullptr;
+	CPostProcessController* pPPCtrl = nullptr;
 	if ( pPlayer )
 	{
 		pPPCtrl = pPlayer->GetActivePostProcessController();
@@ -1535,7 +1529,7 @@ void ClientModeCSNormal::GetDefaultPostProcessingParams( C_CSPlayer* pPlayer, Po
 /*
 void ClientModeCSNormal::UpdateSpectatorMode( void )
 {
-	C_BasePlayer *pPlayer = C_BasePlayer::GetLocalPlayer();
+	CBasePlayer *pPlayer = CBasePlayer::GetLocalPlayer();
 
 	if ( !pPlayer )
 		return;
@@ -1555,7 +1549,7 @@ void ClientModeCSNormal::UpdateSpectatorMode( void )
 	Vector worldpos = pPlayer->GetLocalOrigin();
 	QAngle angles; engine->GetViewAngles( angles );
 
-	C_BaseEntity *target = pPlayer->GetObserverTarget();
+	CBaseEntity *target = pPlayer->GetObserverTarget();
 
 	if ( target && (obs_mode == OBS_MODE_IN_EYE || obs_mode == OBS_MODE_CHASE) )
 	{
@@ -1574,12 +1568,12 @@ void ClientModeCSNormal::UpdateSpectatorMode( void )
 	
 	for ( int i = 1; i<= MAX_PLAYERS; i++)
 	{
-		C_BaseEntity *ent = ClientEntityList().GetEnt( i );
+		CBaseEntity *ent = ClientEntityList().GetEnt( i );
 
 		if ( !ent || !ent->IsPlayer() )
 			continue;
 
-		C_BasePlayer *p = ToBasePlayer( ent );
+		CBasePlayer *p = ToBasePlayer( ent );
 
 		// update position of active players in our PVS
 		Vector position = p->GetAbsOrigin();
@@ -1596,8 +1590,7 @@ void ClientModeCSNormal::UpdateSpectatorMode( void )
 	}
 } */
 
-
-ConVar cl_scoreboard_mouse_enable_binding( "cl_scoreboard_mouse_enable_binding", "+attack2", FCVAR_ARCHIVE, "Name of the binding to enable mouse selection in the scoreboard" );
+ConVar cl_scoreboard_mouse_enable_binding( side_registry(), "cl_scoreboard_mouse_enable_binding", "+attack2", FCVAR_ARCHIVE, "Name of the binding to enable mouse selection in the scoreboard" );
 //-----------------------------------------------------------------------------
 // Purpose: We've received a keypress from the engine. Return 1 if the engine is allowed to handle it.
 //-----------------------------------------------------------------------------
@@ -1609,7 +1602,6 @@ int	ClientModeCSNormal::KeyInput( int down, ButtonCode_t keynum, const char *psz
 
 	return BaseClass::KeyInput( down, keynum, pszCurrentBinding );
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: this is the viewport that contains all the hud elements
@@ -1623,7 +1615,6 @@ private:
 protected:
 	virtual void CreateDefaultPanels( void ) { /* don't create any panels yet*/ };
 };
-
 
 //--------------------------------------------------------------------------------------------------------
 class FullscreenCSViewport : public CHudViewport
@@ -1642,8 +1633,6 @@ private:
 	{
 	}
 };
-
-
 
 class ClientModeCSFullscreen : public ClientModeCSNormal
 {
@@ -1676,7 +1665,6 @@ public:
 	void FireGameEvent( IGameEvent *event );
 } g_ClientModeFullscreen;
 
-
 IClientMode *GetFullscreenClientMode()
 {
 	return &g_ClientModeFullscreen;
@@ -1689,7 +1677,6 @@ IClientMode *GetClientModeNormal()
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 	return &g_ClientModeNormal[ GET_ACTIVE_SPLITSCREEN_SLOT() ];
 }
-
 
 ClientModeCSNormal* GetClientModeCSNormal()
 {
@@ -1704,7 +1691,6 @@ int ClientModeCSNormal::GetDeathMessageStartHeight( void )
 void ClientModeCSNormal::SyncCurrentKeyBindingsToDeviceTitleData( int iController, int eDevice, const SyncKeyBindingValueDirection_t eOp )
 {
 
-
 }
 
 void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
@@ -1713,10 +1699,10 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		return;
 
 	CBaseHudChat *pHudChat = CBaseHudChat::GetHudChat();
-	C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
+	CBasePlayer *pLocalPlayer = CBasePlayer::GetLocalPlayer();
 	CLocalPlayerFilter filter;
 
-	// we want to i/o title profile data from menu screens (not just in game) so we bypass checking for C_BasePlayer since we know we have a matchmaking local player
+	// we want to i/o title profile data from menu screens (not just in game) so we bypass checking for CBasePlayer since we know we have a matchmaking local player
 	bool bIgnoreLocalPlayerCheck = false;
 	if ( V_strcmp( "read_game_titledata", event->GetName() ) ==0 || V_strcmp( "write_game_titledata", event->GetName() ) ==0  )
 		bIgnoreLocalPlayerCheck = true;
@@ -1745,7 +1731,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		m_iRoundStatus = ROUND_STARTED;
 		m_nRoundMVP = 0;
 		// recreate all client side physics props
-		C_PhysPropClientside::RecreateAll();
+		CPhysPropClientside::RecreateAll();
 
 		// remove hostage ragdolls
 		for ( int i=0; i<std::ssize( g_HostageRagdolls ); ++i )
@@ -1822,7 +1808,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		int nObsMode = pLocalPlayer->GetObserverMode();
 		if( nObsMode == OBS_MODE_FIXED || nObsMode == OBS_MODE_ROAMING )
 		{
-			C_CSPlayer *pCSLocalPlayer = ToCSPlayer(pLocalPlayer);
+			CCSPlayer *pCSLocalPlayer = ToCSPlayer(pLocalPlayer);
 			if(pCSLocalPlayer->GetCurrentMusic() == CSMUSIC_START )
 			{
 				CLocalPlayerFilter filter;
@@ -1836,12 +1822,12 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		if ( this == GetFullscreenClientMode() )
 			return;
 
-		C_BasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
+		CBasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
 		if ( pPlayer )
 		{
 			int nPlayerIndex = pPlayer->entindex();
 
-			if ( C_CS_PlayerResource *cs_PR = dynamic_cast< C_CS_PlayerResource * >( g_PR ) )
+			if ( CCS_PlayerResource *cs_PR = dynamic_cast< CCS_PlayerResource * >( g_PR ) )
 			{
 				int nMusicID = cs_PR->GetMusicID( nPlayerIndex );
 				if ( nMusicID > 1 )
@@ -1872,7 +1858,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		if ( reason != Game_Commencing )
 		{
 			// if spectating play music for team being spectated at that moment
-			C_BasePlayer *pTeamPlayer = pLocalPlayer;
+			CBasePlayer *pTeamPlayer = pLocalPlayer;
 			if( pLocalPlayer->GetTeamNumber() == TEAM_SPECTATOR || pLocalPlayer->IsHLTV() )
 			{
 					pTeamPlayer = GetHudPlayer();
@@ -1902,31 +1888,31 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 				}
 				
 				// Play "Bomb has been defused" announcement
-				C_BaseEntity::EmitSound(filter, SOUND_FROM_LOCAL_PLAYER, s_arrAnnouncementLines[nAnnouncementLine]);
+				CBaseEntity::EmitSound(filter, SOUND_FROM_LOCAL_PLAYER, s_arrAnnouncementLines[nAnnouncementLine]);
 				// Queue up the CT Win audio to play after the bomb defused audio completes
-				m_fDelayedCTWinTime = gpGlobals->curtime + C_BaseEntity::GetSoundDuration( s_arrAnnouncementLines[nAnnouncementLine], nullptr) + ( nAnnouncementLine ? 0.7 : 0.3 );
+				m_fDelayedCTWinTime = gpGlobals->curtime + CBaseEntity::GetSoundDuration( s_arrAnnouncementLines[nAnnouncementLine], nullptr) + ( nAnnouncementLine ? 0.7 : 0.3 );
 			}
 			else if ( reason == All_Hostages_Rescued )
 			{
 				// Queue up the CT Win audio to play after the hostage rescue audio completes
-				m_fDelayedCTWinTime = gpGlobals->curtime + C_BaseEntity::GetSoundDuration( "Event.HostageRescued", nullptr );
+				m_fDelayedCTWinTime = gpGlobals->curtime + CBaseEntity::GetSoundDuration( "Event.HostageRescued", nullptr );
 			}
 			else
 			{
-				C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.CTWin");
+				CBaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.CTWin");
 			}
 		}
 		else if ( winningTeam == TEAM_TERRORIST )
 		{
 			if ( reason != Terrorists_Planted )
-				C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.TERWin");
+				CBaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.TERWin");
 		}
 		else
 		{
 			if ( reason != Game_Commencing )
 			{
 				// Prevent the round draw sound event from playing when the player spawns into an empty game
-				C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.RoundDraw");
+				CBaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.RoundDraw");
 			}
 		}
 		
@@ -1959,7 +1945,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			return;
 
 		CBaseHudChat *pHudChat = CBaseHudChat::GetHudChat();
-		C_BasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
+		CBasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
 		
 		if ( !pHudChat )
 			return;
@@ -1974,7 +1960,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 
 		int iTeam = event->GetInt("team");
 
-		if ( C_BasePlayer::IsLocalPlayer( pPlayer ) )
+		if ( CBasePlayer::IsLocalPlayer( pPlayer ) )
 		{
 			ACTIVE_SPLITSCREEN_PLAYER_GUARD( pPlayer );
 			// that's me
@@ -2022,7 +2008,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 
 	else if ( V_strcmp( "bomb_planted", eventname ) == 0 )
 	{
-		// C_BasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
+		// CBasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
 		if ( this == GetFullscreenClientMode() )
 			return;
 
@@ -2042,18 +2028,18 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		}
 
 		// play sound
-		 C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.BombPlanted" );
+		 CBaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.BombPlanted" );
 		
 	}
 // 	else if ( V_strcmp( "bomb_defused", eventname ) == 0 )
 // 	{
 // 		if ( !CSGameRules()->IsPlayingTraining() )
 // 		{
-// 			C_CSPlayer *pHudPlayer = GetHudPlayer();
-// 			C_CSPlayer *pCSLocalPlayer = ToCSPlayer(pLocalPlayer);
+// 			CCSPlayer *pHudPlayer = GetHudPlayer();
+// 			CCSPlayer *pCSLocalPlayer = ToCSPlayer(pLocalPlayer);
 // 
 // 			// music logic says: if mvp has music pack, play that. else, if spectating play win/lose and pack of hudplayer.. else play local win/lose and pack.
-// 			C_CSPlayer *pMusicPlayer = pCSLocalPlayer ? pCSLocalPlayer : pHudPlayer;
+// 			CCSPlayer *pMusicPlayer = pCSLocalPlayer ? pCSLocalPlayer : pHudPlayer;
 // 			if( pCSLocalPlayer->GetTeamNumber() == TEAM_SPECTATOR || pCSLocalPlayer->IsHLTV() )
 // 			{
 // 				pMusicPlayer = pHudPlayer;
@@ -2079,7 +2065,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		if ( !g_PlantedC4s.empty() )
 		{
 			// bomb is planted
-			C_PlantedC4 *pC4 = g_PlantedC4s[0];
+			CPlantedC4 *pC4 = g_PlantedC4s[0];
 			pC4->Explode();
 		}
 
@@ -2113,7 +2099,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		// play sound for spectators and CTs
 		if ( pLocalPlayer->IsObserver() || (pLocalPlayer->GetTeamNumber() == TEAM_CT) )
 		{
-			C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.HostageKilled")  ;
+			CBaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "Event.HostageKilled")  ;
 		}
 
 		// Show warning to killer
@@ -2140,15 +2126,15 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		if ( this == GetFullscreenClientMode() )
 			return;
 
-		C_BasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
+		CBasePlayer *pPlayer = USERID2PLAYER( event->GetInt("userid") );
 
-		C_CSPlayer* csPlayer = ToCSPlayer(pPlayer);
+		CCSPlayer* csPlayer = ToCSPlayer(pPlayer);
 		if (csPlayer)
 		{
 			csPlayer->ClearSoundEvents();
 		}
 
-		if ( pPlayer == C_BasePlayer::GetLocalPlayer() )
+		if ( pPlayer == CBasePlayer::GetLocalPlayer() )
 		{
 			// we just died, hide any buy panels
 			CSGameRules()->CloseBuyMenu( pLocalPlayer->GetUserID() );
@@ -2166,14 +2152,14 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		{
 			CBaseHudChat *hudChat = (CBaseHudChat *)GET_HUDELEMENT( CHudChat );
 			int iPlayerIndex = event->GetInt( "player" );
-			C_BasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
+			CBasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
 			//int iCategory = event->GetInt( "category" );
 			int iRank = event->GetInt( "rank" );
 
 			if ( !hudChat || !pPlayer )
 				return;
 
-			if ( C_CS_PlayerResource *cs_PR = dynamic_cast<C_CS_PlayerResource *>( g_PR ) )
+			if ( CCS_PlayerResource *cs_PR = dynamic_cast<CCS_PlayerResource *>( g_PR ) )
 			{
 				wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
 				cs_PR->GetDecoratedPlayerName( iPlayerIndex, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_DontMakeStringSafe );
@@ -2205,7 +2191,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			int iMethod = event->GetInt( "method" );
 			int iItemDef = event->GetInt( "itemdef" );
 			uint64 itemID = event->GetInt( "itemid", -1 );
-			C_BasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
+			CBasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
 			const GameItemDefinition_t *pItemDefinition = dynamic_cast<const GameItemDefinition_t *>( GetItemSchema()->GetItemDefinition( iItemDef ) );
 
 			// White list of item acquisitions to print in chat.
@@ -2219,7 +2205,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			if ( !pPlayer || !pItemDefinition )
 				return;
 
-			if ( C_CS_PlayerResource *cs_PR = dynamic_cast<C_CS_PlayerResource *>( g_PR ) )
+			if ( CCS_PlayerResource *cs_PR = dynamic_cast<CCS_PlayerResource *>( g_PR ) )
 			{
 				wchar_t wszPlayerName[MAX_DECORATED_PLAYER_NAME_LENGTH];
 				cs_PR->GetDecoratedPlayerName( iPlayerIndex, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_DontMakeStringSafe );
@@ -2276,13 +2262,13 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			int iPlayerIndex = event->GetInt( "player" );
 			int iItemDef = event->GetInt( "itemdef" );
 			int numGifts = event->GetInt( "numgifts" );
-			C_BasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
+			CBasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
 			const GameItemDefinition_t *pItemDefinition = dynamic_cast< const GameItemDefinition_t* >( GetItemSchema()->GetItemDefinition( iItemDef ) );
 
 			if ( !pPlayer || !pItemDefinition )
 				return;
 
-			if ( C_CS_PlayerResource *cs_PR = dynamic_cast<C_CS_PlayerResource *>( g_PR ) )
+			if ( CCS_PlayerResource *cs_PR = dynamic_cast<CCS_PlayerResource *>( g_PR ) )
 			{	// [VITALIY] has given out a gift! ///OR/// [VITALIY] has given out 25 gifts!
 				char const *fmtMessageLoc = ( numGifts > 1 ) ? "#Item_GiftsSentMany" : "#Item_GiftsSent1Anon";
 				wchar_t wszArg2[MAX_DECORATED_PLAYER_NAME_LENGTH] = {};
@@ -2306,10 +2292,10 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 			int iPlayerIndex = event->GetInt( "player" );
 			int iItemDef = event->GetInt( "itemdef" );
 			uint32 unAccountID = event->GetInt( "accountid" );
-			C_BasePlayer *pLocalPlayer = C_BasePlayer::GetLocalPlayer();
-			C_BasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
+			CBasePlayer *pLocalPlayer = CBasePlayer::GetLocalPlayer();
+			CBasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
 			const GameItemDefinition_t *pItemDefinition = dynamic_cast< const GameItemDefinition_t* >( GetItemSchema()->GetItemDefinition( iItemDef ) );
-			C_CS_PlayerResource *cs_PR = dynamic_cast<C_CS_PlayerResource *>( g_PR );
+			CCS_PlayerResource *cs_PR = dynamic_cast<CCS_PlayerResource *>( g_PR );
 
 			if ( !pPlayer || !pItemDefinition || !pLocalPlayer || !cs_PR )
 				return;
@@ -2321,7 +2307,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 				CBasePlayer *pFoundRecipient = nullptr;
 				for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 				{
-					C_BasePlayer *pPlayer = ToBasePlayer( UTIL_PlayerByIndex( i ) );
+					CBasePlayer *pPlayer = ToBasePlayer( UTIL_PlayerByIndex( i ) );
 					if ( pPlayer == nullptr )
 						continue;
 
@@ -2367,7 +2353,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 
 					// Play a sound for the local player
 					// CLocalPlayerFilter filter;
-					// C_BaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "UI.ContractSeal" );
+					// CBaseEntity::EmitSound( filter, SOUND_FROM_LOCAL_PLAYER, "UI.ContractSeal" );
 				}
 			}
 		}
@@ -2420,7 +2406,7 @@ bool __MsgFunc_SendPlayerItemFound( const ks::net::CCSUsrMsg_SendPlayerItemFound
 	int iPlayerIndex = msg.entindex;
 
 	int iMethod = GetUnacknowledgedReason( msg.iteminfo->inventory ) - 1;
-	C_BasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
+	CBasePlayer *pPlayer = UTIL_PlayerByIndex( iPlayerIndex );
 
 	// White list of item acquisitions to print in chat.
 	if ( ( iMethod != ( UNACK_ITEM_FOUND_IN_CRATE - 1 ) ) &&
@@ -2433,7 +2419,7 @@ bool __MsgFunc_SendPlayerItemFound( const ks::net::CCSUsrMsg_SendPlayerItemFound
 	if ( !pPlayer )
 		return true;
 
-	if ( C_CS_PlayerResource *cs_PR = dynamic_cast< C_CS_PlayerResource * >( g_PR ) )
+	if ( CCS_PlayerResource *cs_PR = dynamic_cast< CCS_PlayerResource * >( g_PR ) )
 	{
 		wchar_t wszPlayerName[ MAX_DECORATED_PLAYER_NAME_LENGTH ];
 		cs_PR->GetDecoratedPlayerName( iPlayerIndex, wszPlayerName, sizeof( wszPlayerName ), k_EDecoratedPlayerNameFlag_DontMakeStringSafe );
@@ -2468,16 +2454,13 @@ void ClientModeCSNormal::OnEvent( KeyValues *pEvent )
 	}
 }
 
-
-
 void ClientModeCSNormal::CheckTitleDataStorageConnected( void )
 {
 }
 
-
 void RemoveClassImageEntity()
 {
-	C_BaseAnimating *pEnt = g_ClassImagePlayer.Get();
+	CBaseAnimating *pEnt = g_ClassImagePlayer.Get();
 	if ( pEnt )
 	{
 		pEnt->Remove();
@@ -2492,8 +2475,7 @@ void RemoveClassImageEntity()
 	}
 }
 
-
-bool ShouldRecreateClassImageEntity( C_BaseAnimating *pEnt, const char *pNewModelName )
+bool ShouldRecreateClassImageEntity( CBaseAnimating *pEnt, const char *pNewModelName )
 {
 	if ( !pNewModelName || !pNewModelName[0] )
 		return false;
@@ -2516,8 +2498,6 @@ bool ShouldRecreateClassImageEntity( C_BaseAnimating *pEnt, const char *pNewMode
 	return( V_stricmp( pNameNoPath, pNewModelNameNoPath ) != 0 );
 }
 
-
-
 extern void UpdatePreviewDecal();
 void ClientModeCSNormal::PreRender(CViewSetup *pSetup)
 {
@@ -2533,7 +2513,7 @@ void ClientModeCSNormal::PostRenderVGui()
 
 bool ClientModeCSNormal::ShouldDrawViewModel( void )
 {
-	C_CSPlayer *pPlayer = GetHudPlayer();
+	CCSPlayer *pPlayer = GetHudPlayer();
 	
 	if( pPlayer && pPlayer->GetFOV() != CSGameRules()->DefaultFOV() && pPlayer->m_bIsScoped )
 	{
@@ -2548,10 +2528,9 @@ bool ClientModeCSNormal::ShouldDrawViewModel( void )
 	return BaseClass::ShouldDrawViewModel();
 }
 
-
 bool ClientModeCSNormal::CanRecordDemo( char *errorMsg, int length ) const
 {
-	C_CSPlayer *player = C_CSPlayer::GetLocalCSPlayer();
+	CCSPlayer *player = CCSPlayer::GetLocalCSPlayer();
 	if ( !player )
 	{
 		return true;
@@ -2570,11 +2549,11 @@ bool ClientModeCSNormal::CanRecordDemo( char *errorMsg, int length ) const
 	}
 
 	// don't start recording while smoke grenades are spewing smoke, as the existing smoke would be destroyed
-	C_BaseEntityIterator it;
-	C_BaseEntity *ent;
+	CBaseEntityIterator it;
+	CBaseEntity *ent;
 	while ( (ent = it.Next()) != nullptr )
 	{
-		if ( V_strcmp( ent->GetClassname(), "class C_ParticleSmokeGrenade" ) == 0 )
+		if ( V_strcmp( ent->GetClassname(), "class CParticleSmokeGrenade" ) == 0 )
 		{
 			V_strncpy( errorMsg, "Cannot record demos while a smoke grenade is active.", length );
 			return false;
@@ -2737,7 +2716,7 @@ bool __MsgFunc_PlayerDecalDigitalSignature( const ks::net::CCSUsrMsg_PlayerDecal
 	if ( fabs( gpGlobals->curtime - msg.data->creationtime ) > 10 ) return true;
 
 	// Ensure that the decal to spray is around where our local player is? (grace margins due to networking delays)
-	C_CSPlayer *pLocalPlayer = C_CSPlayer::GetLocalCSPlayer();
+	CCSPlayer *pLocalPlayer = CCSPlayer::GetLocalCSPlayer();
 	Vector vecCheck;
 	if ( !pLocalPlayer ) return true;
 	if ( msg.data->startpos.size() != 3 ) return true;
@@ -2770,11 +2749,6 @@ bool __MsgFunc_PlayerDecalDigitalSignature( const ks::net::CCSUsrMsg_PlayerDecal
 		unTintID = 0;
 	if ( unTintID != data.m_unTintID )
 		return true;
-
-#ifdef _DEBUG
-	//DevMsg( "Client decal signature (%llu) @(%.2f,%.2f,%.2f) T%u requested\n", cl2gc.Body().itemid, msg.data->endpos[ 0 ], msg.data->endpos[ 1 ], msg.data->endpos[ 2 ], msg.data->rtime );
-	DevMsg( "Client decal signature @(%.2f,%.2f,%.2f) T%u requested\n", msg.data->endpos[ 0 ], msg.data->endpos[ 1 ], msg.data->endpos[ 2 ], msg.data->rtime );
-#endif
 
 	return true;
 }
@@ -2887,7 +2861,7 @@ void ClientModeCSFullscreen::OnEvent( KeyValues *pEvent )
 }
 
 static void error_message_explain_pure( const CCommand &args );
-static ConCommand error_message_explain_pure_command( "error_message_explain_pure", error_message_explain_pure, "Take user to support article", FCVAR_CLIENTCMD_CAN_EXECUTE | FCVAR_HIDDEN );
+static ConCommand error_message_explain_pure_command( side_registry(), "error_message_explain_pure", error_message_explain_pure, "Take user to support article", FCVAR_CLIENTCMD_CAN_EXECUTE | FCVAR_HIDDEN );
 static void error_message_explain_pure( const CCommand &args )
 {
 }
@@ -2934,7 +2908,7 @@ void ClientModeCSFullscreen::FireGameEvent( IGameEvent *event )
 		FirePerfStatsEvent( PERF_STATS_SMOKE );
 
 		int index = event->GetInt( "entityid" );
-		C_BaseEntity* pEnt = ClientEntityList().GetBaseEntity( index );
+		CBaseEntity* pEnt = ClientEntityList().GetBaseEntity( index );
 		if ( pEnt )
 			AddSmokeGrenadeHandle( pEnt );
 	}
@@ -2946,7 +2920,7 @@ void ClientModeCSFullscreen::FireGameEvent( IGameEvent *event )
 		v.z = event->GetFloat( "Z" );
 
 		int index = event->GetInt( "entityid" );
-		C_BaseEntity* pEnt = ClientEntityList().GetBaseEntity( index );
+		CBaseEntity* pEnt = ClientEntityList().GetBaseEntity( index );
 		if ( pEnt )
 			RemoveSmokeGrenadeHandle( pEnt );
 	}

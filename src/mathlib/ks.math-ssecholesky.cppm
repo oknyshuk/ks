@@ -2,12 +2,12 @@
 // Copyright (c) 1996-2009 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:ssecholesky;
+export module ks.math.ssecholesky;
 
 import std;
-import ks.core;
+import ks.platform;
 import ks.simd;
-export import :ssemath;
+export import ks.math.ssemath;
 
 export extern "C++" {
 

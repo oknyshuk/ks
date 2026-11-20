@@ -7,7 +7,15 @@
 import std;
 
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
 
 #include "tier2/riff.h"
 #include "sound.h"

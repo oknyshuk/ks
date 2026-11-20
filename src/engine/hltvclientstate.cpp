@@ -22,6 +22,14 @@
 #include "dt_recv_decoder.h"
 import std;
 #include "cl_demo.h"
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.tier1.bitbuf;
+import ks.tier1.checksum_crc;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.netadr;
+import ks.tier1.strtools;
 
 static void HLTV_Callback_InstanceBaseline( void *object, INetworkStringTable *stringTable, int stringNumber, char const *newString, void const *newData )
 {

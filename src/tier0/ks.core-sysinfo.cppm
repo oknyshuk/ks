@@ -2,9 +2,9 @@
 // Copyright (c) 1996-2007 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.core:sysinfo;
+export module ks.core.sysinfo;
 
-import :platform;
+import ks.core.platform;
 
 export extern "C++" {
 

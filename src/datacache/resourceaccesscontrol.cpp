@@ -2,7 +2,18 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.string_ops;
+import ks.tier1.strtools;
 #include "datacache/iresourceaccesscontrol.h"
 #include "tier2/tier2.h"
 #include "appframework/apptiers.h"

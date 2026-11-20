@@ -3,7 +3,11 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.math;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 // Note: These flags need to match the bspfile.h DISPTRI_TAG_* flags.
 inline constexpr auto DISPSURF_FLAG_SURFACE = (1<<0);

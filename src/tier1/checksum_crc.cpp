@@ -4,7 +4,11 @@
 // Purpose: Generic CRC functions
 
 import std;
-import ks.tier1;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
+import ks.simd;
+import ks.tier1.checksum_crc;
 
 
 

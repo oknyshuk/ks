@@ -7,7 +7,30 @@ inline constexpr auto OO_OVERBRIGHT = ( 1.0f / 2.0f );
 inline constexpr auto GAMMA = 2.2f;
 inline constexpr auto TEXGAMMA = 2.2f;
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.lightdesc;
+import ks.math.mathlib;
+import ks.math.polyhedron;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vector4d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.exprevaluator;
+import ks.tier1.iappsystem;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.intrusive_ptr;
+import ks.tier1.keyvalues;
+import ks.tier1.refcount;
+import ks.vstdlib.callqueue;
 import std;
 #include "bitmap/imageformat.h"
 #include "texture_group_names.h"

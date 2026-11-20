@@ -3,7 +3,10 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.fixed_pool;
 #include "dt_common.h"
 
 // This class holds the last tick (from host_tickcount) that each property in 

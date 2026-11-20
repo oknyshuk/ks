@@ -11,7 +11,35 @@
 #endif
 
 import std;
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.color;
+import ks.core.platform;
+import ks.core.random;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.fltx4;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.byte_writer;
+import ks.tier1.exprevaluator;
+import ks.tier1.createinterface;
+import ks.tier1.intrusive_list;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.map_ops;
+import ks.tier1.serialization;
+import ks.tier1.strtools;
+import ks.tier1.timeutils;
+import ks.tier1.tracked_ref;
+import ks.tier1.uniqueid;
+import ks.tier1.utlsoacontainer;
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/MaterialSystemUtil.h"
 

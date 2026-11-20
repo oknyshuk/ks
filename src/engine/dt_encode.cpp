@@ -4,6 +4,11 @@
 #include "dt.h"
 #include "dt_encode.h"
 #include "coordsize.h"
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.types;
+import ks.math.mathlib;
+import ks.tier1.bitbuf;
 
 extern void DataTable_Warning( const char *pInMessage, ... );
 extern bool ShouldWatchThisProp( const SendTable *pTable, int objectID, const char *pPropName );

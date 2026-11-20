@@ -3,7 +3,20 @@
 
 // Purpose: Provide custom texture generation (compositing)
 
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.cvar;
+import ks.tier1.icvar;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.tier1.vector_ops;
+import ks.vstdlib.jobthread;
 #include "composite_texture.h"
 #include "materialsystem/base_visuals_data_processor.h"
 #include "materialsystem_global.h"

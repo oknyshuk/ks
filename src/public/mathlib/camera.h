@@ -5,7 +5,18 @@
 import std;
 
 // For vec_t, put this somewhere else?
-import ks.math;
+import ks.math.aabb;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.pfns;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.math.vector4d;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.strtools;
 
 #include "datamap.h"
 

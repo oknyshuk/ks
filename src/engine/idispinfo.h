@@ -4,7 +4,12 @@
 
 //=============================================================================
 
-import ks.tier1;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
 #include "bspfile.h"
 import std;
 #include "dispnode.h"

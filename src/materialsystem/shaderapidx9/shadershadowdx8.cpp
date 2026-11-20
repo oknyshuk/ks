@@ -150,6 +150,8 @@ static IShaderShadowDX8 s_ShaderShadowFacade;
 IShaderShadowDX8 *g_pShaderShadowDx8 = &s_ShaderShadowFacade;
 static CShaderShadowDX8 &ShaderShadowImpl() { return g_ShaderShadow; }
 #include "../shaderapi_facade/ishadershadow.inl"
+import ks.core.dbg;
+import ks.tier1.createinterface;
 
 void IShaderShadowDX8::Init()
 {

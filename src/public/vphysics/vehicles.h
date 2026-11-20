@@ -3,6 +3,8 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "datamap.h"
+import ks.math.compressed_vector;
+import ks.math.vector;
 class IPhysicsObject;
 
 inline constexpr auto VEHICLE_TYPE_CAR_WHEELS = (1<<0);

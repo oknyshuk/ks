@@ -5,6 +5,8 @@
 
 #include "writez_vs20.inc"
 #include "black_ps20.inc"
+import ks.tier1.convar;
+import ks.tier1.iconvar;
 
 // Enables alpha blending workaround for an (apparently) weird color/alpha write disable bug on NVidia GL drivers.
 // For NVidia, the actual bug is in glBlitFramebuffer() (it doesn't ignore the currently set colormask), which we fix in glmgr.cpp Blit2(), so I'm disabling this more expensive workaround.

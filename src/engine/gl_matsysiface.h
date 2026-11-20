@@ -4,7 +4,16 @@
 
 // wrapper for the material system for the engine.
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.interfaces;
 #include "ivrenderview.h"
 #include "surfacehandle.h"
 import std;

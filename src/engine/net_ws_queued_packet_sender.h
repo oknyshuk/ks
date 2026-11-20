@@ -4,6 +4,10 @@
 
 // Used to match against certain debug values of cvars.
 #include "net_ws_headers.h"
+import ks.core.types;
+import ks.core.vprof;
+import ks.tier1.convar;
+import ks.tier1.ns_address;
 
 inline constexpr auto NET_QUEUED_PACKET_THREAD_DEBUG_VALUE = 581304;
 

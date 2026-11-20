@@ -8,7 +8,15 @@
 //				e.g: ( $1 || ( $FOO || $WHATEVER ) && !$BAR )
 
 import std;
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.tslist;
+import ks.platform;
+import ks.simd;
+import ks.tier1.exprevaluator;
+import ks.tier1.fmtstr;
+import ks.tier1.strtools;
+import ks.vstdlib.ikeyvaluessystem;
 
 //-----------------------------------------------------------------------------
 // Default conditional symbol handler callback. Symbols are the form $<name>.

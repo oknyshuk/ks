@@ -3,7 +3,9 @@
 // Copyright (c) 1996-2012 Valve Corporation
 
 import std;
-import ks.core;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 #include "resourcefile/resourcestream.h"
 
 //! Global tuning constants based on meter-kilogram-seconds (MKS) units. Here adjusted 

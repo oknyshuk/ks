@@ -6,6 +6,11 @@
 class IterateRIFF;
 #include "sentence.h"
 #include "snd_sfx.h"
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.tier1.keyvalues;
 
 //=============================================================================
 // Functions to create audio sources from wave files or from wave data.

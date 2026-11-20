@@ -5,12 +5,18 @@
 // The declarations are attached to the global module (extern "C++") so their symbols and forward
 // declarations elsewhere are unchanged.
 
-export module ks.math:vector;
+export module ks.math.vector;
 
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.dbg;
+import ks.core.mem;
+import ks.core.numeric;
+import ks.core.random;
+import ks.core.vprof;
+import ks.platform;
 import ks.simd;
-export import :vector2d;
+export import ks.math.vector2d;
 
 export extern "C++" {
 

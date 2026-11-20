@@ -2,16 +2,32 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.cmdline;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.vprof;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.registry;
+import ks.tier1.strtools;
 
 // ------------------------------------------------------------------------------------ //
 // InterfaceReg.
 // ------------------------------------------------------------------------------------ //
 
 InterfaceReg::InterfaceReg( InstantiateInterfaceFn fn, const char *pName ) :
+	InterfaceReg( ks::engine_registry(), fn, pName )
+{
+}
+
+InterfaceReg::InterfaceReg( ks::registry &registry, InstantiateInterfaceFn fn, const char *pName ) :
 	m_pName(pName)
 {
-	ks::registry &registry = ks::current_registry();
 	m_CreateFn = fn;
 	m_pNext = registry.interfaces;
 	registry.interfaces = this;
@@ -26,27 +42,9 @@ namespace ks
 	namespace
 	{
 		constinit registry s_EngineRegistry;
-		constinit registry s_ServerRegistry;
-		constinit registry s_ClientRegistry;
-		constinit registry *s_pCurrentRegistry = &s_EngineRegistry;
 	}
 
 	registry &engine_registry() { return s_EngineRegistry; }
-	registry &server_registry() { return s_ServerRegistry; }
-	registry &client_registry() { return s_ClientRegistry; }
-	registry &current_registry() { return *s_pCurrentRegistry; }
-
-	bool enter_registry( registry &r )
-	{
-		s_pCurrentRegistry = &r;
-		return true;
-	}
-
-	bool leave_registry()
-	{
-		s_pCurrentRegistry = &s_EngineRegistry;
-		return true;
-	}
 
 	void *registry::create_interface( const char *pName, int *pReturnCode ) const
 	{

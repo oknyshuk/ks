@@ -43,6 +43,7 @@
 #include "common_flashlight_fxc.h"
 #define PIXELSHADER
 #include "common_lightmappedgeneric_fxc.h"
+import ks.core.basetypes;
 
 #if SEAMLESS
 	#define USE_FAST_PATH 1

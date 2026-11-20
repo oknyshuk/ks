@@ -2,7 +2,11 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.math;
+import ks.math.anorms;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 
 Vector g_anorms[NUMVERTEXNORMALS] =
 {

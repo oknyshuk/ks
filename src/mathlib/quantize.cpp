@@ -4,7 +4,12 @@
 import std;
 
 
-import ks.math;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.quantize;
+import ks.platform;
+import ks.simd;
 
 
 

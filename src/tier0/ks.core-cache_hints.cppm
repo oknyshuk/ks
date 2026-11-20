@@ -2,17 +2,16 @@
 // Copyright (c) Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.core:cache_hints;
+export module ks.core.cache_hints;
 
 import std;
 import ks.platform;
-import :prelude;
-import :color;
-import :logging;
-import :dbg;
-import :memalloc;
-import :threadtools;
-import :tslist;
+import ks.core.color;
+import ks.core.logging;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.threadtools;
+import ks.core.tslist;
 
 export extern "C++" {
 

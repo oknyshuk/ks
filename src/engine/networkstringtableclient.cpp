@@ -3,6 +3,7 @@
 
 #include "networkstringtable.h"
 #include "client.h"
+import ks.tier1.createinterface;
 
  	static CNetworkStringTableContainer s_NetworkStringTableClient;
 	CNetworkStringTableContainer *networkStringTableContainerClient = &s_NetworkStringTableClient;

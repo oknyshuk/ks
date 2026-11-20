@@ -9,6 +9,11 @@
 // game/shared/reflect_sendtable.h.
 
 #include "reflect.h"
+import ks.core.basetypes;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.tier1.reflect_wirevar;
 
 namespace
 {
@@ -19,9 +24,9 @@ struct FireBurst { int count; float interval; };   // embedded, unannotated memb
 
 // Shaped like the CNetworkVar family: WireVar marks the wrapper and the payload is its single
 // data member. The member is named m_Value here only because the real ones are -- nothing in
-// reflect.h reads the name.
+// reflect.h reads the name. Like the real ones it carries WireVar on its member ks_class.
 template <class T>
-struct [[= WireVar{} ]] MockNetworkVar { T m_Value{}; };
+struct MockNetworkVar { [[= WireVar{} ]] static constexpr bool ks_class = true; T m_Value{}; };
 
 // A class template carrying its own tag -- the shape CHandle will take. Also checks that
 // an annotation on a primary template is visible from a specialization.

@@ -1,7 +1,16 @@
 #pragma once
 
 import std;
-import ks.core;
+import ks.core.basetypes;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.tslist;
+import ks.core.vprof;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
 #include "bone_setup.h"
 
 

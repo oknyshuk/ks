@@ -1,7 +1,24 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2004 Valve Corporation
 
-import ks.tier1;
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.scratcharena;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.byte_writer;
+import ks.tier1.commandbuffer;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.memstack;
+import ks.tier1.serialization;
+import ks.tier1.strtools;
+import ks.tier1.text_reader;
+import ks.tier1.text_writer;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 #include "dmxloader/dmxelement.h"
 #include "tier2/tier2.h"
 #include "filesystem.h"

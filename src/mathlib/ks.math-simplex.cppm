@@ -2,10 +2,11 @@
 // Copyright (c) 1996-2009 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:simplex;
+export module ks.math.simplex;
 
 import std;
-import ks.core;
+import ks.core.platform;
+import ks.platform;
 import ks.simd;
 
 export extern "C++" {

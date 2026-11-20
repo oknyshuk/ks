@@ -4,7 +4,7 @@
 
 // Purpose: Memory allocation!
 
-export module ks.core:mem;
+export module ks.core.mem;
 
 import std;
 

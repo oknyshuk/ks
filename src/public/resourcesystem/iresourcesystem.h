@@ -3,7 +3,13 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.math.polyhedron;
+import ks.platform;
+import ks.simd;
+import ks.tier1.iappsystem;
+import ks.tier1.interfaces;
 #include "resourcefile/resourceintrospection.h"
 #include "resourcefile/resourcedictionary.h"
 #include "resourcefile/resourcetype.h"

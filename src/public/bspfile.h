@@ -5,7 +5,16 @@
 // Purpose: Defines and structures for the BSP file format.
 
 import std;
-import ks.math;
+import ks.core.basetypes;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_light_cube;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
+import ks.math.vector4d;
+import ks.platform;
+import ks.simd;
 
 #include "datamap.h"
 #include "datalinker_interface.h"

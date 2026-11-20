@@ -3,7 +3,14 @@
 // Copyright (c) Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.tslist;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.fixed_pool;
+import ks.tier1.strtools;
 #include "dt.h"
 #include "iclientnetworkable.h"
 #include "ents_shared.h"

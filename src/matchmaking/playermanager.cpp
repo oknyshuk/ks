@@ -158,3 +158,10 @@ void PlayerManager::OnEvent( KeyValues *pEvent )
 
 //-----------------------------------------------------------------------------
 #include "facade/iplayermanager.inl"
+import ks.core.dbg;
+import ks.core.platform;
+import ks.core.threadtools;
+import ks.core.types;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;

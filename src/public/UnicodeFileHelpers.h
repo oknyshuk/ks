@@ -11,6 +11,14 @@ ucs2 *ReadUnicodeTokenNoSpecial(ucs2 *start, ucs2 *token, int tokenBufferSize, b
 ucs2 *ReadToEndOfLine(ucs2 *start);
 
 // writing UTF-16 code units to unicode files
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.wchartypes;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_writer;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 void WriteUnicodeString(ks::byte_writer &buffer, const wchar_t *string, bool addQuotes = false);
 void WriteAsciiStringAsUnicode(ks::byte_writer &buffer, const char *string, bool addQuotes = false);

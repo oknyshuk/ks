@@ -6,12 +6,14 @@
 //
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:svd;
+export module ks.math.svd;
 
 import std;
-import ks.core;
+import ks.core.types;
+import ks.core.vprof;
+import ks.platform;
 import ks.simd;
-export import :ssemath;
+export import ks.math.ssemath;
 
 export extern "C++" {
 

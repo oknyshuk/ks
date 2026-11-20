@@ -4,6 +4,17 @@
 #include "mm_netmgr.h"
 
 #include "protocol.h"
+import ks.tier1.bitbuf;
+import ks.tier1.byte_reader;
+import ks.tier1.byte_writer;
+import ks.tier1.convar;
+import ks.tier1.iconvar;
+import ks.tier1.keyvalues;
+import ks.tier1.kvpacker;
+import ks.tier1.netadr;
+import ks.tier1.ns_address;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 
 //
 // Convars

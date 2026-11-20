@@ -5,7 +5,10 @@
 // Purpose: Game types and modes
 
 import std;
-import ks.tier1;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.keyvalues;
 
 class IGameTypes
 {

@@ -6,7 +6,8 @@
 
 
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 #include "sound.h"
 import std;
 #include "soundservice.h"

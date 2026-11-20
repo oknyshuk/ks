@@ -3,7 +3,20 @@
 
 // main precompiled header for client rendering code
 
-import ks.tier1;
+import ks.core.color;
+import ks.core.dbg;
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.commandbuffer;
+import ks.tier1.keyvalues;
+import ks.tier1.strtools;
+import ks.tier1.text_reader;
+import ks.tier1.timeutils;
+import ks.tier1.uniqueid;
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"

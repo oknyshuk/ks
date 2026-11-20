@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import ks.core;
+import ks.core.minidump;
+import ks.platform;
+import ks.simd;
 
 // First include standard libraries
 import std;

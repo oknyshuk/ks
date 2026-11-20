@@ -3,12 +3,13 @@
 // Purpose: Quadric math functionality used for squared distance error metrics.
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:quadric;
+export module ks.math.quadric;
 
 import std;
-import ks.core;
+import ks.core.numeric;
+import ks.platform;
 import ks.simd;
-export import :cholesky;
+export import ks.math.cholesky;
 
 export extern "C++" {
 

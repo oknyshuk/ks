@@ -2,21 +2,25 @@
 // Copyright (c) 1996-2005 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.core:vprof;
+export module ks.core.vprof;
 
 import std;
 import ks.platform;
-import :prelude;
-import :color;
-import :logging;
-import :dbg;
-import :memalloc;
-import :threadtools;
-import :tslist;
-import :cache_hints;
-import :scratcharena;
-import :perfstats;
-import :microprofiler;
+import ks.core.basetypes;
+import ks.core.l2cache;
+import ks.core.platform;
+import ks.core.time;
+import ks.core.wchartypes;
+import ks.core.color;
+import ks.core.logging;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.threadtools;
+import ks.core.tslist;
+import ks.core.cache_hints;
+import ks.core.scratcharena;
+import ks.core.perfstats;
+import ks.core.microprofiler;
 
 export extern "C++" {
 

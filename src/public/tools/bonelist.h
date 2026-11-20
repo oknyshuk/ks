@@ -3,6 +3,10 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "studio.h"
+import ks.core.types;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.vector;
 
 class CBoneList
 {

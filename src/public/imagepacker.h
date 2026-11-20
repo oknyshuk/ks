@@ -3,7 +3,8 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.platform;
+import ks.simd;
 
 inline constexpr auto MAX_MAX_LIGHTMAP_WIDTH = 2048;
 

@@ -3,7 +3,9 @@
 
 // Purpose: Multiblend shader
 
-import ks.tier1;
+import ks.core.basetypes;
+import ks.platform;
+import ks.simd;
 #include "BaseVSShader.h"
 import std;
 #include "lightmapped_4wayblend_dx9_helper.h"

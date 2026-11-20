@@ -3,7 +3,11 @@
 // Copyright (c) 1996-2009 Valve Corporation
 
 import std;
-import ks.tier1;
+import ks.core.threadtools;
+import ks.platform;
+import ks.simd;
+import ks.tier1.iappsystem;
+import ks.tier1.keyvalues;
 #include "matchmaking/imatchtitle.h"
 
 extern InitReturnVal_t MM_Title_Init();

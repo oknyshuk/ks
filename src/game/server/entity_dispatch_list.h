@@ -1,12 +1,11 @@
-#pragma once
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 oknyshuk
 
-// The former virtual methods of CBaseEntity that are dispatched by kind (entity_dispatch.h).
-// E( return type, name, const or nothing, ( parameters ), ( argument names ), extra... )
-// Every method listed here is declared in CBaseEntity twice: `Name`, the dispatcher (not virtual), and
-// `Name_Impl`, CBaseEntity's own version, which classes override by defining a `Name_Impl` of the same
-// signature. A method that is still `virtual` in CBaseEntity is not in this list.
+#pragma once
+import ks.core.threadtools;
+import ks.math.compressed_vector;
+import ks.math.vector;
+import ks.tier1.exprevaluator;
 
 #define KS_ENTITY_METHODS( E, ... ) \
 	E( void, Spawn, , ( ), ( ) __VA_OPT__( , ) __VA_ARGS__ ) \
@@ -116,7 +115,6 @@
 	E( void, GetVectors, const, ( Vector* forward, Vector* right, Vector* up ), ( forward, right, up ) __VA_OPT__( , ) __VA_ARGS__ ) \
 	E( Vector, GetStepOrigin, const, (  ), (  ) __VA_OPT__( , ) __VA_ARGS__ ) \
 	E( QAngle, GetStepAngles, const, (  ), (  ) __VA_OPT__( , ) __VA_ARGS__ ) \
-	E( IServerVehicle*, GetServerVehicle, , (  ), (  ) __VA_OPT__( , ) __VA_ARGS__ ) \
 	E( const char *, GetPlayerName, const, (  ), (  ) __VA_OPT__( , ) __VA_ARGS__ ) \
 	E( int, GetDamageType, const, (  ), (  ) __VA_OPT__( , ) __VA_ARGS__ ) \
 	E( CBaseAnimatingOverlay *, GetBaseAnimatingOverlay, , (  ), (  ) __VA_OPT__( , ) __VA_ARGS__ ) \

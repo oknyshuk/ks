@@ -5,7 +5,26 @@
 // Purpose: Interfaces between the client.dll and engine
 
 import std;
-import ks.tier1;
+import ks.core.basetypes;
+import ks.core.memalloc;
+import ks.core.platform;
+import ks.core.types;
+import ks.core.wchartypes;
+import ks.math.compressed_vector;
+import ks.math.mathlib;
+import ks.math.ssemath;
+import ks.math.vector;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+import ks.tier1.bitbuf;
+import ks.tier1.checksum_crc;
+import ks.tier1.convar;
+import ks.tier1.icvar;
+import ks.tier1.createinterface;
+import ks.tier1.interfaces;
+import ks.tier1.keyvalues;
+import ks.vstdlib.jobthread;
 #include "const.h"
 #include "datamap.h"
 #include "inputsystem/ButtonCode.h"

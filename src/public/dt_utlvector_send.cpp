@@ -2,6 +2,7 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 #include "dt_utlvector_send.h"
+import ks.core.basetypes;
 
 extern char const *s_ElementNames[MAX_ARRAY_ELEMENTS];
 

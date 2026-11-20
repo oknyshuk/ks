@@ -9,6 +9,7 @@
 #include "materialsystem/ishaderapi.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "shaderlib/baseshader_declarations.h"
+import ks.core.basetypes;
 
 //-----------------------------------------------------------------------------
 // Forward declarations

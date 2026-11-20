@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) Valve Corporation
 
-import ks.tier1;
+import ks.platform;
+import ks.simd;
+import ks.tier1.convar;
 #include "sos_op.h"
 import std;
 

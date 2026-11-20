@@ -1,6 +1,11 @@
-#pragma once
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
+
+#pragma once
+
+import ks.platform;
+import ks.simd;
+import ks.tier1.keyvalues;
 
 #include "viewport_panel_names.h"
 
@@ -48,5 +53,4 @@ public:
 	virtual void PostMessageToPanel( const char *pName, KeyValues *pKeyValues ) = 0;
 };
 
-extern IViewPort *GetViewPortInterface();
-extern IViewPort *GetFullscreenViewPortInterface();
+// GetViewPortInterface and GetFullscreenViewPortInterface are the client's (game_controls/baseviewport.h).

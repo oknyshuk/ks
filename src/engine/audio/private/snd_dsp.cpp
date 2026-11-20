@@ -7,7 +7,26 @@ import std;
 
 
 
-import ks.vstdlib;
+import ks.core.basetypes;
+import ks.core.cache_hints;
+import ks.core.dbg;
+import ks.core.memalloc;
+import ks.core.numeric;
+import ks.core.platform;
+import ks.core.random;
+import ks.core.types;
+import ks.core.vprof;
+import ks.math.ssemath;
+import ks.math.vector2d;
+import ks.platform;
+import ks.simd;
+import ks.tier1.byte_reader;
+import ks.tier1.convar;
+import ks.tier1.cvar;
+import ks.tier1.iconvar;
+import ks.tier1.icvar;
+import ks.tier1.interfaces;
+import ks.tier1.strtools;
 #include "tier2/riff.h"
 #include "sound.h"
 #include "soundservice.h"

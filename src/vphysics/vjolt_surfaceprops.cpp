@@ -34,7 +34,13 @@
 #include <Jolt/Physics/Constraints/SliderConstraint.h>
 #include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
 import std;
-import ks.tier1;
+import ks.core.platform;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
+import ks.tier1.createinterface;
+import ks.tier1.keyvalues;
+import ks.tier1.map_ops;
 #include "compat/branch_overrides.h"
 #include "vcollide_parse.h"
 

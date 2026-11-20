@@ -2,13 +2,15 @@
 // Copyright (c) Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.math:volumeculler;
+export module ks.math.volumeculler;
 
 import std;
-import ks.core;
+import ks.core.mem;
+import ks.core.platform;
+import ks.platform;
 import ks.simd;
-export import :vplane;
-export import :ssemath;
+export import ks.math.vplane;
+export import ks.math.ssemath;
 
 export extern "C++" {
 

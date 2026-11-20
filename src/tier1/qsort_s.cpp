@@ -24,6 +24,7 @@
 
 
 import std;
+import ks.tier1.qsort_s;
 
 /*
 **  swap nbytes between a and b

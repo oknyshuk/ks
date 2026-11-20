@@ -2,7 +2,9 @@
 // Copyright (c) 1996-2005 Valve Corporation
 
 import std;
-import ks.core;
+import ks.core.l2cache;
+import ks.platform;
+import ks.simd;
 
 //-----------------------------------------------------------------------------
 // Purpose:

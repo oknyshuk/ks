@@ -2,11 +2,14 @@
 // Copyright (c) 1996-2011 Valve Corporation
 // Copyright (c) 2026 oknyshuk
 
-export module ks.tier1:sparsematrix;
+export module ks.tier1.sparsematrix;
 
 import std;
-import ks.math;
-export import :utlvector;
+import ks.math.mathlib;
+import ks.math.vmatrix;
+import ks.platform;
+import ks.simd;
+export import ks.tier1.utlvector;
 
 export extern "C++" {
 

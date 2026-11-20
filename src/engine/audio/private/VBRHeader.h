@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Valve-Source-1-SDK
 // Copyright (c) 1996-2005 Valve Corporation
 
-import ks.core;
+import ks.core.types;
+import ks.platform;
+import ks.simd;
 // for XING VBR Header flags
 inline constexpr auto FRAMES_FLAG = 0x0001;
 inline constexpr auto BYTES_FLAG = 0x0002;
